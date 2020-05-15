@@ -24,7 +24,6 @@ using namespace std;
 #include "functions.hh"
 #include "consts.hh"
 #include "var.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
-#include "PMCMC.h"     // The particle MCMC algorithm
 
 int main(int argc, char** argv)
 {

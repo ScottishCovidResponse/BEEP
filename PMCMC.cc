@@ -1,4 +1,15 @@
-// This header file implements the particle MCMC algorithm
+// The particle MCMC algorithm
+
+#include <fstream>
+#include <iostream>
+#include "math.h"
+
+using namespace std;
+
+#include "var.hh"
+
+#include "functions.hh"
+
 
 void PMCMC()
 {
