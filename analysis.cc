@@ -7,8 +7,6 @@
 // To run in inference mode: ./analysis 1024 1000 0
 // Here the second number gives the number of PMCMC samples
 
-using namespace std;
-
 #include <stdio.h>
 #include <fstream>
 #include <iostream>
@@ -20,7 +18,14 @@ using namespace std;
 #include <iomanip>
 #include <sys/stat.h>
 
-#include "var.h"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+using namespace std;
+
+#include "types.hh"
+#include "function_decls.hh"
+#include "consts.hh"
+#include "var_decl.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+#include "functions.h"
+
 #include "model.h"     // All the code related to the compartmental model (i.e. what happens after exposure)
 #include "simulate.h"  // Implements a modified Gillespie algorithm to simulate from the model
 #include "PMCMC.h"     // The particle MCMC algorithm
