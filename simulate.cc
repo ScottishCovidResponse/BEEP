@@ -26,7 +26,8 @@ void simulatedata()
 	part[0]->partinit(0);
 	
 	timesim -= clock();
-	part[0]->gillespie(0,tmax);
+	assert(siminf == 1);
+	part[0]->gillespie(0,tmax, 1 /* simulating */);
 	timesim += clock();
 		
 	num = part[0]->getnumtrans("I","H",0,tmax);

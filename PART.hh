@@ -28,7 +28,7 @@ class PART                                 // Stores all the things related to a
 	long tdnext, tdfnext;                    // Stores when the next future compartmental transition will occur
 
 	public: 
-		void gillespie(double ti, double tf);
+		void gillespie(double ti, double tf, short siminf);
 		void partinit(long p);
 		void dofe();
 		long nextinfection();

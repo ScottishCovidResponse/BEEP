@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include "math.h"
+#include "assert.h"
 
 using namespace std;
 
@@ -85,7 +86,9 @@ static double sample()
 
 		for(p = 0; p < npart; p++){
 			timesim -= clock();
-			part[p]->gillespie(tt,ttnext); // Simulates the particle
+			assert(siminf == 0);
+
+			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
 			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
 			timesim += clock();
 		}

@@ -174,7 +174,7 @@ void PART::addfev(double t, long trans, long i)
 }
 
 // Performs the modified Gillespie algorithm between times ti and tf 
-void PART::gillespie(double ti, double tf)
+void PART::gillespie(double ti, double tf, short siminf)
 {
 	long td, j, c, NIfine[Cfine];
 	double t, tpl;
