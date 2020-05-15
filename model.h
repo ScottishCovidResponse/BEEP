@@ -130,9 +130,9 @@ void betaspline()
 	
 	p = 0;
 	for(s = 0; s < nsettime; s++){
-		t = double((s+1)*tmax)/(nsettime-1);
-		settime[s] = t;
+		settime[s] = double((s+1)*tmax)/nsettime;;
 		
+		t = double((s+0.5)*tmax)/nsettime;
 		while(p < nspline-1 && t > splinet[p+1]) p++;
 		
 		fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
