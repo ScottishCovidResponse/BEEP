@@ -1,5 +1,11 @@
 #pragma once
 
+#include <string>
+
+#include "types.hh"
+
+using namespace std;
+
 void emsg(string msg);
 double ran();
 bool compNEV(NEV lhs, NEV rhs);

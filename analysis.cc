@@ -7,27 +7,19 @@
 // To run in inference mode: ./analysis 1024 1000 0
 // Here the second number gives the number of PMCMC samples
 
-#include <stdio.h>
-#include <fstream>
 #include <iostream>
-#include <math.h>
-#include <time.h>
-#include <sstream>
-#include <vector>
-#include <algorithm>
-#include <iomanip>
-#include <sys/stat.h>
 
-using namespace std;
+#include "stdlib.h"
+#include "time.h"
 
-#include "types.hh"
 #include "functions.hh"
-#include "consts.hh"
-#include "var.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+#include "var.hh"        // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+#include "init.hh"
 #include "model.hh"
 #include "simulate.hh"
 #include "PMCMC.hh"
-#include "init.hh"
+
+using namespace std;
 
 void init();
 
