@@ -145,27 +145,6 @@ static double bootstrap()
 	return Limax + log(av);
 }
 
-
-
-// Measures how well the particle agrees with the observations within a given time period
-// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf)
-{
-	short tt, r;
-	double mean, var;
-	vector <long> num;
-
-	Li = 0;	
-	for(tt = ti; tt < tf; tt += 7){
-		num = getnumtrans("I","H",tt,tt+7);
-		for(r = 0; r < nregion; r++){
-			mean = ncase[r][tt/7];
-			var = mean; if(var < 5) var = 5;
-			Li += invT*(-0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var));
-		}
-	}
-}
-
 // Reads in simulated case data
 static void readdata()
 {
