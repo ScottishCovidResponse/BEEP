@@ -130,9 +130,9 @@ void betaspline()
 	
 	p = 0;
 	for(s = 0; s < nsettime; s++){
-		t = double(0.9999999*s*tmax)/(nsettime-1);
-		settime[s] = t;
+		settime[s] = double((s+1)*tmax)/nsettime;;
 		
+		t = double((s+0.5)*tmax)/nsettime;
 		while(p < nspline-1 && t > splinet[p+1]) p++;
 		
 		fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
@@ -176,7 +176,7 @@ void PART::addinfc(long c, double t)
 {
 	long l, i, cc, k, kmax;
 	double dR, sum;
-	
+
 	kmax = indinf[c].size();
 	do{
 		l = long(ran()*long(subpop[c].size()));
@@ -201,9 +201,9 @@ void PART::simmodel(long i, short enter, double t)
 	short c, k, kmax, tra;
 	double tnext, tnextmin, mean, sd;
 	TRANS tr;
-	
+
 	N[enter]++;
-	
+	double dt;
 	c = enter;
 	do{
 		kmax = comp[c].trans.size();
@@ -219,7 +219,8 @@ void PART::simmodel(long i, short enter, double t)
 				
 				case GAMMA_DIST:
 					mean = param[tr.param1].val; sd = param[tr.param2].val;
-					tnext = t + gammasamp(mean*mean/(sd*sd),mean/(sd*sd)); 
+					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
+					tnext = t + dt; 
 					break;
 			}
 			
@@ -245,7 +246,7 @@ void PART::addfev(double t, long trans, long i)
 	d = long((t/tmax)*fediv);
 	j = 0; jmax = fev[d].size();
 	while(j < jmax && t > fev[d][j].t) j++;
-	if(j == fev[d].size()) fev[d].push_back(fe);
+	if(j == jmax) fev[d].push_back(fe);
 	else fev[d].insert(fev[d].begin()+j,fe);
 	
 	if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
