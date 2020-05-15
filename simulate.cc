@@ -1,4 +1,17 @@
-// This header contains functions associated with simulation
+
+// Implements a modified Gillespie algorithm to simulate from the model
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+
+#include "math.h"
+
+#include "types.hh"
+#include "functions.hh"
+#include "var.hh"
+
+using namespace std;
 
 // Generates weekly case data (similar to the actual data we currently have from Covid-19)
 void simulatedata()
