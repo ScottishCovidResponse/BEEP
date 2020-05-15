@@ -1,5 +1,5 @@
 
-CXXFLAGS := -g -Wall
+CXXFLAGS := -g
 
 srcs := analysis.cc
 hdrs := $(wildcard *.h)
