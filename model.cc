@@ -14,10 +14,9 @@
 
 using namespace std;
 
-void addcomp(string name, double infectivity);
-void addparam(string name, double val, double min, double max);
-void addtrans(string from, string to, short type, string param1, string param2);
-void betaspline();
+static void addcomp(string name, double infectivity);
+static void addparam(string name, double val, double min, double max);
+static void addtrans(string from, string to, short type, string param1, string param2);
 
 void definemodel()
 {
@@ -95,7 +94,7 @@ void definemodel()
 	cout << "\n";
 }
 
-void addcomp(string name, double infectivity)
+static void addcomp(string name, double infectivity)
 {
 	COMP co;
 	co.name = name;
@@ -103,7 +102,7 @@ void addcomp(string name, double infectivity)
 	comp.push_back(co);	
 }
 
-void addparam(string name, double val, double min, double max)
+static void addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
@@ -111,7 +110,7 @@ void addparam(string name, double val, double min, double max)
 	param.push_back(par);
 }
 
-void addtrans(string from, string to, short type, string param1, string param2)
+static void addtrans(string from, string to, short type, string param1, string param2)
 {
 	short c, cmax, p, pmax;
 	TRANS tr;
@@ -159,7 +158,7 @@ void betaspline()
 	}
 }
 
-double gammasamp(double a, double b)             // Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
+static double gammasamp(double a, double b)             // Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 {
   if(a < 0 || b < 0) emsg("Model: EC1");
 

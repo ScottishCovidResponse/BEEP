@@ -10,9 +10,9 @@ using namespace std;
 #include "model.hh"
 #include "functions.hh"
 
-void readdata();
-double sample();
-double bootstrap();
+static void readdata();
+static double sample();
+static double bootstrap();
 
 void PMCMC()
 {
@@ -71,7 +71,7 @@ void PMCMC()
 }
 
 // This samples from the model using particles and returns an overall measure of how well the observations agreed with it 
-double sample()
+static double sample()
 {
 	short p, step = 7;
 	double tt, ttnext, Liav;
@@ -133,7 +133,7 @@ void PART::partinit(long p)
 }
 
 // This step culls some particles (which are not agreeing well with the observations) and copies others 
-double bootstrap()
+static double bootstrap()
 {
 	long p, pp;
 	double Limax, av, z, sum, sumst[npart], flag[npart];
@@ -215,7 +215,7 @@ void PART::Lobs(short ti, short tf)
 }
 
 // Reads in simulated case data
-void readdata()
+static void readdata()
 {
 	long week, tt, r;
 	
