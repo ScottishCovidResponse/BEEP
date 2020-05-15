@@ -71,31 +71,6 @@ int main(int argc, char** argv)
 	cout << double(timeboot)/CLOCKS_PER_SEC << " Bootstrap time\n";
 }
 
-// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
-// in different regions over the time range ti - tf
-vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
-{
-	long d, k, r, tra;
-	FEV fe;
-	vector <long> num;
-	
-	tra = 0; while(tra < trans.size() && !(comp[trans[tra].from].name == from && comp[trans[tra].to].name == to)) tra++;
-	if(tra == trans.size()) emsg("Finescale: Cannot find transition");
-	
-	for(r = 0; r < nregion; r++) num.push_back(0);
-
-	for(d = long(fediv*double(ti)/tmax); d <= long(fediv*double(tf)/tmax); d++){
-		if(d < fediv){
-			for(k = 0; k < fev[d].size(); k++){
-				fe = fev[d][k];
-				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[ind[fe.ind].region]++;
-			}
-		}
-	}
-	
-	return num;
-}
 
 // Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 void init()
