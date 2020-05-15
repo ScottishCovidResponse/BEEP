@@ -7,6 +7,8 @@ using namespace std;
 #include "functions.hh"
 #include "consts.hh"
 
+class PART;
+
 short siminf;                              // Set to 1 for simulation and 0 for inference
 long nsamp;                                // The number of PMCMC samples
 long areamax;                              // The maximum number of areas 

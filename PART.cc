@@ -4,6 +4,8 @@
 #include "types.hh"
 #include "var.hh"
 #include "functions.hh"
+#include "PART.hh"
+
 
 // Initialises a particle
 void PART::partinit(long p)

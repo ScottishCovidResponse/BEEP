@@ -9,6 +9,7 @@ using namespace std;
 #include "var.hh"
 #include "model.hh"
 #include "functions.hh"
+#include "PART.hh"
 
 static void readdata();
 static double sample();
