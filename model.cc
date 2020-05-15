@@ -1,5 +1,24 @@
 // This file defines the compartmental model and is used to simulate compartmental dynamics after an individual becomes infected
 
+// All the code related to the compartmental model (i.e. what happens after exposure)
+
+#include <string>
+#include <sstream>
+#include <iostream>
+
+#include "math.h"
+
+#include "var.hh"
+#include "consts.hh"
+#include "functions.hh"
+
+using namespace std;
+
+void addcomp(string name, double infectivity);
+void addparam(string name, double val, double min, double max);
+void addtrans(string from, string to, short type, string param1, string param2);
+void betaspline();
+
 void definemodel()
 {
 	// R0 determines how many individuals an infected individual on average infects

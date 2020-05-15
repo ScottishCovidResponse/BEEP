@@ -24,8 +24,6 @@ using namespace std;
 #include "functions.hh"
 #include "consts.hh"
 #include "var.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
-
-#include "model.h"     // All the code related to the compartmental model (i.e. what happens after exposure)
 #include "simulate.h"  // Implements a modified Gillespie algorithm to simulate from the model
 #include "PMCMC.h"     // The particle MCMC algorithm
 

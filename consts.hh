@@ -1,3 +1,5 @@
+#pragma once
+
 const short FEV_EV=0, INF_EV=1, SET_EV=2;  // Used to characterise an event type (future event/infection/settime)
 const double tiny = 0.00000001;            // Used to represent a tiny number
 const double large = 10000000;             // Used to represent a big number
