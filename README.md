@@ -1,5 +1,5 @@
 
-# CoronaBICI
+# CoronaPMCMC
 
 C. M. Pooley† [1] and Glenn Marion [1]
 
