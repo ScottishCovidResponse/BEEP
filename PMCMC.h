@@ -109,6 +109,7 @@ void PART::partinit(long p)
 	sett = 0;
 	
 	tdnext = fediv;
+	
 	// For simplicity we assume three randomly distributed initally exposed individuals
 	// This will be changed in the proper analysis
 	for(loop = 0; loop < 3; loop++){

@@ -42,7 +42,7 @@ void PART::gillespie(double ti, double tf)
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		while(sett < nsettime && settime[sett] < t) sett++;
+		//while(sett < nsettime && settime[sett] < t) sett++;
 		n.t = settime[sett];
 		n.type = SET_EV;
 		nev.push_back(n); 
@@ -70,7 +70,7 @@ void PART::gillespie(double ti, double tf)
 	
 		switch(nev[0].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
-			sett++;
+			sett++; if(sett >= nsettime) emsg("Simulate: EC1a");
 			break;
 		
 		case INF_EV:                 // These are infection events
