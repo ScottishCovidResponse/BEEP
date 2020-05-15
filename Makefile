@@ -1,7 +1,7 @@
 
 CXXFLAGS := -g -O3
 
-srcs := analysis.cc var.cc
+srcs := analysis.cc var.cc functions.cc
 hdrs := $(wildcard *.h) $(wildcard *.hh)
 
 exe := analysis
