@@ -7,9 +7,12 @@
 using namespace std;
 
 #include "var.hh"
-
+#include "model.hh"
 #include "functions.hh"
 
+void readdata();
+double sample();
+double bootstrap();
 
 void PMCMC()
 {
