@@ -23,7 +23,7 @@ using namespace std;
 #include "types.hh"
 #include "function_decls.hh"
 #include "consts.hh"
-#include "var_decl.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+#include "var.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
 #include "functions.h"
 
 #include "model.h"     // All the code related to the compartmental model (i.e. what happens after exposure)
