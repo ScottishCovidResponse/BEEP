@@ -4,7 +4,7 @@
 using namespace std;
 
 #include "types.hh"
-#include "function_decls.hh"
+#include "functions.hh"
 #include "consts.hh"
 
 short siminf;                              // Set to 1 for simulation and 0 for inference

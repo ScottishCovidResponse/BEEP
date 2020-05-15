@@ -6,7 +6,7 @@
 #include "math.h"
 
 #include "types.hh"
-#include "function_decls.hh"
+#include "functions.hh"
 #include "consts.hh"
 #include "var.hh"
 

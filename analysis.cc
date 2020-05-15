@@ -21,7 +21,7 @@
 using namespace std;
 
 #include "types.hh"
-#include "function_decls.hh"
+#include "functions.hh"
 #include "consts.hh"
 #include "var.hh"       // Stores all the global variables (Sorry Ian, I know you are shaking your head)
 
