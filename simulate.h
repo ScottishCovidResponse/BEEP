@@ -42,7 +42,6 @@ void PART::gillespie(double ti, double tf)
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		//while(sett < nsettime && settime[sett] < t) sett++;
 		n.t = settime[sett];
 		n.type = SET_EV;
 		nev.push_back(n); 
