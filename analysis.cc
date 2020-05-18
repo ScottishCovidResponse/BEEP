@@ -24,6 +24,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
 	POPTREE poptree;
+	long nsamp;       // The number of PMCMC samples
 
 	switch(argc){
 	case 3:   // Simulation mode
@@ -57,7 +58,7 @@ int main(int argc, char** argv)
 	timetot = -clock();
 
 	if(siminf == 1) simulatedata(model,poptree);
-	else PMCMC(model,poptree);
+	else PMCMC(model,poptree,nsamp);
 
 	timetot += clock();
 	

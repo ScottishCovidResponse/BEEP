@@ -16,7 +16,7 @@ static void readdata();
 static double sample();
 static double bootstrap();
 
-void PMCMC(MODEL &model, POPTREE &poptree)
+void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
 	long p, samp, burnin = nsamp/3;
 	double Li, Lf, valst, al;
