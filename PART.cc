@@ -11,6 +11,10 @@ using namespace std;
 #include "functions.hh"
 #include "PART.hh"
 
+PART::PART(MODEL &model) : model(model), comp(model.comp), trans(model.trans)
+{
+}
+
 
 /// Initialises a particle
 void PART::partinit(long p)
@@ -135,11 +139,11 @@ void PART::simmodel(long i, short enter, double t)
 			tr = trans[comp[c].trans[k]];
 			switch(tr.type){
 				case EXP_DIST:
-					tnext = t - log(ran())/param[tr.param1].val;
+					tnext = t - log(ran())/model.param[tr.param1].val;
 					break;
 				
 				case GAMMA_DIST:
-					mean = param[tr.param1].val; sd = param[tr.param2].val;
+					mean = model.param[tr.param1].val; sd = model.param[tr.param2].val;
 					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 					tnext = t + dt; 
 					break;
@@ -187,7 +191,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		n.t = settime[sett];
+		n.t = model.settime[sett];
 		n.type = SET_EV;
 		nev.push_back(n); 
 		 
@@ -195,7 +199,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 		n.type = FEV_EV;
 		nev.push_back(n);
 	
-		if(Rtot[0][0] < tiny) n.t = tf; else n.t = t - log(ran())/(beta[sett]*Rtot[0][0]);
+		if(Rtot[0][0] < tiny) n.t = tf; else n.t = t - log(ran())/(model.beta[sett]*Rtot[0][0]);
 		n.type = INF_EV;
 		nev.push_back(n);
 		

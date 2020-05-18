@@ -1,1 +1,1 @@
-void simulatedata();
+void simulatedata(MODEL &model);

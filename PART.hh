@@ -5,10 +5,13 @@
 using namespace std;
 
 #include "types.hh"
+#include "model.hh"
 
 class PART                                 // Stores all the things related to a particle 
 {
 	public:
+	PART(MODEL &model);
+
 	long pst;                                // The number of the particle
 	
  	double Li;                               // The observation likelihood
@@ -26,6 +29,10 @@ class PART                                 // Stores all the things related to a
 	short sett;                              // Index used to track time changes in beta
 
 	long tdnext, tdfnext;                    // Stores when the next future compartmental transition will occur
+
+	MODEL  &model;
+	vector <TRANS> &trans;
+	vector <COMP> &comp;
 
 	public: 
 		void gillespie(double ti, double tf, short siminf);

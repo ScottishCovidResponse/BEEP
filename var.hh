@@ -27,10 +27,3 @@ extern vector <IND> ind;
 extern PART* part[partmax];                       // Pointers to each of the particles 
 extern long npart;                                // The number of particles used
 extern long timetot, timesim, timeboot;     // Stores the CPU clock times for different parts of the algorithm
-extern double settime[nsettime];
-extern double beta[nsettime];
-extern short nspline;                             // The spline points which are parameters in the model
-extern vector <double> splinet;
-extern vector <PARAM> param;
-extern vector <TRANS> trans;
-extern vector <COMP> comp;	

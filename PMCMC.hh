@@ -1,1 +1,1 @@
-void PMCMC();
+void PMCMC(MODEL &model);

@@ -46,14 +46,16 @@ int main(int argc, char** argv)
 
 	init();	
 	
-	definemodel();
+	MODEL model;
+
+	model.definemodel();
 
 	cout << "Running....\n";
 
 	timetot = -clock();
 
-	if(siminf == 1) simulatedata();
-	else PMCMC();
+	if(siminf == 1) simulatedata(model);
+	else PMCMC(model);
 
 	timetot += clock();
 	

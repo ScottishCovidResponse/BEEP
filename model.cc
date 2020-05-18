@@ -15,11 +15,7 @@
 
 using namespace std;
 
-static void addcomp(string name, double infectivity);
-static void addparam(string name, double val, double min, double max);
-static void addtrans(string from, string to, short type, string param1, string param2);
-
-void definemodel()
+void MODEL::definemodel()
 {
 	// R0 determines how many individuals an infected individual on average infects
 	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
@@ -96,7 +92,7 @@ void definemodel()
 	cout << "\n";
 }
 
-static void addcomp(string name, double infectivity)
+void MODEL::addcomp(string name, double infectivity)
 {
 	COMP co;
 	co.name = name;
@@ -104,7 +100,7 @@ static void addcomp(string name, double infectivity)
 	comp.push_back(co);	
 }
 
-static void addparam(string name, double val, double min, double max)
+void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
@@ -112,7 +108,7 @@ static void addparam(string name, double val, double min, double max)
 	param.push_back(par);
 }
 
-static void addtrans(string from, string to, short type, string param1, string param2)
+void MODEL::addtrans(string from, string to, short type, string param1, string param2)
 {
 	short c, cmax, p, pmax;
 	TRANS tr;
