@@ -6,11 +6,12 @@ using namespace std;
 
 #include "types.hh"
 #include "model.hh"
+#include "poptree.hh"
 
 class PART                                 // Stores all the things related to a particle 
 {
 	public:
-	PART(MODEL &model);
+	PART(MODEL &model, POPTREE &poptree);
 
 	long pst;                                // The number of the particle
 	
@@ -33,6 +34,9 @@ class PART                                 // Stores all the things related to a
 	MODEL  &model;
 	vector <TRANS> &trans;
 	vector <COMP> &comp;
+
+	POPTREE &poptree;
+	vector <LEVEL> &lev;
 
 	public: 
 		void gillespie(double ti, double tf, short siminf);

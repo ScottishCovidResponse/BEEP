@@ -1,1 +1,1 @@
-void simulatedata(MODEL &model);
+void simulatedata(MODEL &model, POPTREE &poptree);

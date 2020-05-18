@@ -16,7 +16,7 @@ static void readdata();
 static double sample();
 static double bootstrap();
 
-void PMCMC(MODEL &model)
+void PMCMC(MODEL &model, POPTREE &poptree)
 {
 	long p, samp, burnin = nsamp/3;
 	double Li, Lf, valst, al;
@@ -26,7 +26,7 @@ void PMCMC(MODEL &model)
 	readdata();                                                    // Reads in weekly case data 
 	 
 	npart = 100;  // This is the number of particles (which much be sufficiently large for the simulations to capture the data)
-	for(p = 0; p < npart; p++){ part[p] = new PART(model); }
+	for(p = 0; p < npart; p++){ part[p] = new PART(model,poptree); }
 	
 	ofstream trace("trace.txt");
 	trace << "state"; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].name; trace << "\n";

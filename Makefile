@@ -1,7 +1,7 @@
 
 CXXFLAGS := -g -O3
 
-srcs := analysis.cc var.cc functions.cc model.cc simulate.cc PMCMC.cc PART.cc init.cc
+srcs := analysis.cc var.cc functions.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc
 hdrs := $(wildcard *.h) $(wildcard *.hh)
 
 exe := analysis

@@ -1,1 +1,1 @@
-void PMCMC(MODEL &model);
+void PMCMC(MODEL &model, POPTREE &poptree);

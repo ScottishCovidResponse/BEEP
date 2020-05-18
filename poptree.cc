@@ -8,10 +8,11 @@ using namespace std;
 
 #include "var.hh"
 #include "functions.hh"
+#include "poptree.hh"
 
 
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
-void init()
+void POPTREE::init()
 {
 	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, c, cmax, cc, ccc, par, s, popu, L, n, flag;
 	double x, y, xx, yy, grsi, dd, sum, fac;
