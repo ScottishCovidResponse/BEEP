@@ -1,12 +1,10 @@
 #pragma once
 
-extern void betaspline(long nsettime, short tmax, const vector <double> &splinet, short nspline, const vector <PARAM> &param,
-											 double settime[nsettime], double beta[nsettime]);
-
 class MODEL
 {
 public:
 	void definemodel();
+	void betaspline();
 
 	double settime[nsettime];
 	double beta[nsettime];

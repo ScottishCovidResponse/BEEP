@@ -44,8 +44,7 @@ void PMCMC(MODEL &model)
 				valst = param[p].val;
 				param[p].val += normal(0,param[p].jump); 
 				if(p < model.nspline)
-					betaspline(nsettime, tmax, model.splinet, model.nspline, param,
-										 model.settime, model.beta);
+					model.betaspline();
 				if(param[p].val < param[p].min || param[p].val > param[p].max) al = 0;
 				else{
 					Lf = sample();
@@ -61,8 +60,7 @@ void PMCMC(MODEL &model)
 				else{
 					param[p].val = valst;
 					if(p < model.nspline)
-						betaspline(nsettime, tmax, model.splinet, model.nspline, param,
-											 model.settime, model.beta);
+						model.betaspline();
 
 					if(samp < burnin) param[p].jump *= 0.95;
 				}
