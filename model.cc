@@ -1,5 +1,24 @@
 // This file defines the compartmental model and is used to simulate compartmental dynamics after an individual becomes infected
 
+// All the code related to the compartmental model (i.e. what happens after exposure)
+
+#include <string>
+#include <sstream>
+#include <iostream>
+
+#include "math.h"
+
+#include "var.hh"
+#include "consts.hh"
+#include "functions.hh"
+#include "model.hh"
+
+using namespace std;
+
+static void addcomp(string name, double infectivity);
+static void addparam(string name, double val, double min, double max);
+static void addtrans(string from, string to, short type, string param1, string param2);
+
 void definemodel()
 {
 	// R0 determines how many individuals an infected individual on average infects
@@ -76,7 +95,7 @@ void definemodel()
 	cout << "\n";
 }
 
-void addcomp(string name, double infectivity)
+static void addcomp(string name, double infectivity)
 {
 	COMP co;
 	co.name = name;
@@ -84,7 +103,7 @@ void addcomp(string name, double infectivity)
 	comp.push_back(co);	
 }
 
-void addparam(string name, double val, double min, double max)
+static void addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
@@ -92,7 +111,7 @@ void addparam(string name, double val, double min, double max)
 	param.push_back(par);
 }
 
-void addtrans(string from, string to, short type, string param1, string param2)
+static void addtrans(string from, string to, short type, string param1, string param2)
 {
 	short c, cmax, p, pmax;
 	TRANS tr;
@@ -138,117 +157,4 @@ void betaspline()
 		fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
 		beta[s] = param[p].val*(1-fac) + param[p+1].val*fac;
 	}
-}
-
-double gammasamp(double a, double b)             // Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
-{
-  if(a < 0 || b < 0) emsg("Model: EC1");
-
-  if(a < 1){
-    double u = ran();
-    return gammasamp(1.0 + a, b) * pow (u, 1.0 / a);
-  }
-  else{
-    double x, v, u;
-    double d = a - 1.0 / 3.0;
-    double c = (1.0 / 3.0) / sqrt (d);
- 
-    while(1 == 1){
-      do{
-        x = sqrt(-2*log(ran()))*cos(2*M_PI*ran());
-        v = 1.0 + c * x;
-      }while (v < 0);
-
-      v = v*v*v;
-      u = ran();
-
-      if (u < 1 - 0.0331*x*x*x*x) break;
-
-      if (log(u) < 0.5*x*x + d*(1 - v + log(v))) break;
-    }
-
-    return d*v/b;
-  }
-}
-
-// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
-void PART::addinfc(long c, double t)
-{
-	long l, i, cc, k, kmax;
-	double dR, sum;
-
-	kmax = indinf[c].size();
-	do{
-		l = long(ran()*long(subpop[c].size()));
-		i = subpop[c][l];
-		for(k = 0; k < kmax; k++) if(indinf[c][k] == i) break;
-	}while(k < kmax);
-	indinf[c].push_back(i);
-	
-	l = level-1; cc = c;
-	dR = -Rtot[l][c]/pop[l][cc];
-	do{
-		Rtot[l][cc] += dR;
-		pop[l][cc]--;
-		cc = lev[l].node[cc].parent; l--;
-	}while(l >= 0);
-	simmodel(i,0,t);
-}
-
-// Once an individual goes into the exposed class, this function simulates all the subsequent future events
-void PART::simmodel(long i, short enter, double t)
-{
-	short c, k, kmax, tra;
-	double tnext, tnextmin, mean, sd;
-	TRANS tr;
-
-	N[enter]++;
-	double dt;
-	c = enter;
-	do{
-		kmax = comp[c].trans.size();
-		if(kmax == 0) break;
-		
-		tnextmin = large;
-		for(k = 0; k < kmax; k++){
-			tr = trans[comp[c].trans[k]];
-			switch(tr.type){
-				case EXP_DIST:
-					tnext = t - log(ran())/param[tr.param1].val;
-					break;
-				
-				case GAMMA_DIST:
-					mean = param[tr.param1].val; sd = param[tr.param2].val;
-					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
-					tnext = t + dt; 
-					break;
-			}
-			
-			if(tnext < tnextmin){ tnextmin = tnext; tra = comp[c].trans[k];}
-		}
-		if(tnextmin == large) emsg("Model: EC2");
-		
-		addfev(tnextmin,tra,i);
-
-		c = trans[tra].to; t = tnextmin;
-	}while(1 == 1);
-}
-
-// Adds a future event to the timeline
-void PART::addfev(double t, long trans, long i)
-{
-	long d, j, jmax;
-	
-	if(t >= tmax) return;
-	
-	FEV fe; fe.t = t; fe.trans = trans; fe.ind = i; fe.done = 0;
-	
-	d = long((t/tmax)*fediv);
-	j = 0; jmax = fev[d].size();
-	while(j < jmax && t > fev[d][j].t) j++;
-	if(j == jmax) fev[d].push_back(fe);
-	else fev[d].insert(fev[d].begin()+j,fe);
-	
-	if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
-	if(d < tdnext){ tdnext = d; tdfnext = j;}
 }

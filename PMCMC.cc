@@ -1,4 +1,20 @@
-// This header file implements the particle MCMC algorithm
+// The particle MCMC algorithm
+
+#include <fstream>
+#include <iostream>
+#include "math.h"
+#include "assert.h"
+
+using namespace std;
+
+#include "var.hh"
+#include "model.hh"
+#include "functions.hh"
+#include "PART.hh"
+
+static void readdata();
+static double sample();
+static double bootstrap();
 
 void PMCMC()
 {
@@ -57,7 +73,7 @@ void PMCMC()
 }
 
 // This samples from the model using particles and returns an overall measure of how well the observations agreed with it 
-double sample()
+static double sample()
 {
 	short p, step = 7;
 	double tt, ttnext, Liav;
@@ -70,7 +86,9 @@ double sample()
 
 		for(p = 0; p < npart; p++){
 			timesim -= clock();
-			part[p]->gillespie(tt,ttnext); // Simulates the particle
+			assert(siminf == 0);
+
+			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
 			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
 			timesim += clock();
 		}
@@ -84,42 +102,8 @@ double sample()
 	return Liav;
 }
 
-// Initialises a particle
-void PART::partinit(long p)
-{
-	long c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, popu, loop;
-	
-	pst = p;
-	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
- 
-	ffine.clear(); 
-	ffine.resize(Cfine); for(c = 0; c < Cfine; c++) ffine[c] = 0;
-
-	indinf.clear(); indinf.resize(Cfine);
-	
-	fev.clear(); fev.resize(fediv);
-
-	Rtot.resize(level); addlater.resize(level); pop.resize(level);
-	for(l = 0; l < level; l++){
-		cmax = lev[l].node.size();
-		Rtot[l].resize(cmax); addlater[l].resize(cmax); pop[l].resize(cmax);
-		for(c = 0; c < cmax; c++){ Rtot[l][c] = 0; addlater[l][c] = 0; pop[l][c] = lev[l].node[c].popu;}
-	}
-	
-	sett = 0;
-	
-	tdnext = fediv;
-	
-	// For simplicity we assume three randomly distributed initally exposed individuals
-	// This will be changed in the proper analysis
-	for(loop = 0; loop < 3; loop++){
-		do{ c = long(ran()*Cfine);}while(long(subpop[c].size()) - long(indinf[c].size()) == 0);
-		addinfc(c,0);
-	}
-}
-
 // This step culls some particles (which are not agreeing well with the observations) and copies others 
-double bootstrap()
+static double bootstrap()
 {
 	long p, pp;
 	double Limax, av, z, sum, sumst[npart], flag[npart];
@@ -164,44 +148,8 @@ double bootstrap()
 	return Limax + log(av);
 }
 
-// Copies in all the information from another particle
-void PART::copy(long pfrom)
-{
-	short c;
-	
-	ffine = part[pfrom]->ffine;
-	indinf = part[pfrom]->indinf;
-	Rtot = part[pfrom]->Rtot; 
-	pop = part[pfrom]->pop;
-	addlater = part[pfrom]->addlater;
-	fev = part[pfrom]->fev;
-	for(c = 0; c < comp.size(); c++) N[c] = part[pfrom]->N[c];
-	tdnext = part[pfrom]->tdnext;
-	tdfnext = part[pfrom]->tdfnext;
-	sett = part[pfrom]->sett;
-}
-
-// Measures how well the particle agrees with the observations within a given time period
-// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf)
-{
-	short tt, r;
-	double mean, var;
-	vector <long> num;
-
-	Li = 0;	
-	for(tt = ti; tt < tf; tt += 7){
-		num = getnumtrans("I","H",tt,tt+7);
-		for(r = 0; r < nregion; r++){
-			mean = ncase[r][tt/7];
-			var = mean; if(var < 5) var = 5;
-			Li += invT*(-0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var));
-		}
-	}
-}
-
 // Reads in simulated case data
-void readdata()
+static void readdata()
 {
 	long week, tt, r;
 	

@@ -17,7 +17,7 @@ Parameter inference is performed using particle MCMC (PMCMC). This relies on bei
 
 To compile the code use:
 
-g++ analysis.cc -o analysis -O3
+make
 
 To simulate from the model use:
 
