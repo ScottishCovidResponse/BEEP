@@ -72,7 +72,7 @@ void PMCMC()
 	}
 }
 
-// This samples from the model using particles and returns an overall measure of how well the observations agreed with it 
+/// This samples from the model using particles and returns an overall measure of how well the observations agreed with it 
 static double sample()
 {
 	short p, step = 7;
@@ -102,7 +102,7 @@ static double sample()
 	return Liav;
 }
 
-// This step culls some particles (which are not agreeing well with the observations) and copies others 
+/// This step culls some particles (which are not agreeing well with the observations) and copies others 
 static double bootstrap()
 {
 	long p, pp;
@@ -148,7 +148,7 @@ static double bootstrap()
 	return Limax + log(av);
 }
 
-// Reads in simulated case data
+/// Reads in simulated case data
 static void readdata()
 {
 	long week, tt, r;

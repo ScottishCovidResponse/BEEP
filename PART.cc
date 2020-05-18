@@ -12,7 +12,7 @@ using namespace std;
 #include "PART.hh"
 
 
-// Initialises a particle
+/// Initialises a particle
 void PART::partinit(long p)
 {
 	long c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, popu, loop;
@@ -45,7 +45,7 @@ void PART::partinit(long p)
 	}
 }
 
-// Copies in all the information from another particle
+/// Copies in all the information from another particle
 void PART::copy(long pfrom)
 {
 	short c;
@@ -62,8 +62,8 @@ void PART::copy(long pfrom)
 	sett = part[pfrom]->sett;
 }
 
-// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
-// in different regions over the time range ti - tf
+/// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
+/// in different regions over the time range ti - tf
 vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
 {
 	long d, k, r, tra;
@@ -88,7 +88,7 @@ vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
 	return num;
 }
 
-// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
+/// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
 void PART::addinfc(long c, double t)
 {
 	long l, i, cc, k, kmax;
@@ -114,7 +114,7 @@ void PART::addinfc(long c, double t)
 
 
 
-// Once an individual goes into the exposed class, this function simulates all the subsequent future events
+/// Once an individual goes into the exposed class, this function simulates all the subsequent future events
 void PART::simmodel(long i, short enter, double t)
 {
 	short c, k, kmax, tra;
@@ -155,7 +155,7 @@ void PART::simmodel(long i, short enter, double t)
 	}while(1 == 1);
 }
 
-// Adds a future event to the timeline
+/// Adds a future event to the timeline
 void PART::addfev(double t, long trans, long i)
 {
 	long d, j, jmax;
@@ -174,7 +174,7 @@ void PART::addfev(double t, long trans, long i)
 	if(d < tdnext){ tdnext = d; tdfnext = j;}
 }
 
-// Performs the modified Gillespie algorithm between times ti and tf 
+/// Performs the modified Gillespie algorithm between times ti and tf 
 void PART::gillespie(double ti, double tf, short siminf)
 {
 	long td, j, c, NIfine[Cfine];
@@ -231,7 +231,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	}while(t < tf);
 }
 
-// Makes changes corresponding to a compartmental transition in one of the individuals
+/// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
 	long i, c, cmax, cc, ccc, j, jmax, k, kmax, l, ll;
@@ -320,7 +320,7 @@ void PART::dofe()
 	}
 }
 
-// This samples the node on the fine scale in which the next infection occurs
+/// This samples the node on the fine scale in which the next infection occurs
 long PART::nextinfection()
 {
 	long l, c, cc, j, jmax;
@@ -360,8 +360,8 @@ long PART::nextinfection()
 	return c;
 }
 
-// Measures how well the particle agrees with the observations within a given time period
-// (which in this case is weekly hospitalised case data)
+/// Measures how well the particle agrees with the observations within a given time period
+/// (which in this case is weekly hospitalised case data)
 void PART::Lobs(short ti, short tf)
 {
 	short tt, r;
