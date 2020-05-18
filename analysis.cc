@@ -21,8 +21,6 @@
 
 using namespace std;
 
-void init();
-
 int main(int argc, char** argv)
 {
 	switch(argc){
