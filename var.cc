@@ -27,10 +27,3 @@ vector <IND> ind;
 PART* part[partmax];                       ///< Pointers to each of the particles 
 long npart;                                ///< The number of particles used
 long timetot=0, timesim=0, timeboot=0;     ///< Stores the CPU clock times for different parts of the algorithm
-double settime[nsettime];
-double beta[nsettime];
-short nspline;                             ///< The spline points which are parameters in the model
-vector <double> splinet;
-vector <PARAM> param;
-vector <TRANS> trans;
-vector <COMP> comp;	
