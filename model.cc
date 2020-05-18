@@ -44,7 +44,8 @@ void definemodel()
 		stringstream ss; ss << "beta_" << p;
 		r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
 	}		
-	betaspline();
+	betaspline(nsettime, tmax, splinet, nspline, param,
+						 settime, beta);
 
 	addparam("tEA",tEA,tEA,tEA);                             // We define all the parameters in the model (with uniform priors)
 	addparam("sdEA",tEA/2,tEA/2,tEA/2);
@@ -142,7 +143,8 @@ static void addtrans(string from, string to, short type, string param1, string p
 	
 // Converts the spline points to a finer timestep for use in simulations.
 // At the moment the spline is just linear, but it will probably become cubic at some point.
-void betaspline()
+void betaspline(long nsettime, short tmax, const vector <double> &splinet, short nspline, const vector <PARAM> &param,
+								double settime[nsettime], double beta[nsettime])
 {
 	short s, p;
 	double t, fac;

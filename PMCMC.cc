@@ -40,7 +40,10 @@ void PMCMC()
 		for(p = 0; p < param.size(); p++){
 			if(param[p].min != param[p].max){
 				valst = param[p].val;
-				param[p].val += normal(0,param[p].jump); if(p < nspline) betaspline();
+				param[p].val += normal(0,param[p].jump); 
+				if(p < nspline)
+					betaspline(nsettime, tmax, splinet, nspline, param,
+										 settime, beta);
 				if(param[p].val < param[p].min || param[p].val > param[p].max) al = 0;
 				else{
 					Lf = sample();
@@ -54,7 +57,11 @@ void PMCMC()
 					if(samp < burnin) param[p].jump *= 1.1;
 				}
 				else{
-					param[p].val = valst; if(p < nspline) betaspline();
+					param[p].val = valst;
+					if(p < nspline)
+						betaspline(nsettime, tmax, splinet, nspline, param,
+											 settime, beta);
+
 					if(samp < burnin) param[p].jump *= 0.95;
 				}
 			}
