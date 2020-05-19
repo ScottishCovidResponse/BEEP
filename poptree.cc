@@ -110,7 +110,7 @@ void POPTREE::init()
 	l = level-1;
 	Cfine = lev[l].node.size();
 	
-	cout << level << " Number of levels\n" << Cfine << " Number of regions\n";
+	cout << level << " Number of levels" << endl << Cfine << " Number of regions" << endl;
 
 	cmax = lev[l].node.size();                    // On each node store all descendent nodes on the fine scale
 	for(c = 0; c < cmax; c++) lev[l].node[c].fine.push_back(c);
@@ -188,7 +188,7 @@ void POPTREE::init()
 		Mnoderef_temp.clear(); Mnoderef_temp.resize(level);
 		addnoderef_temp.clear(); addnoderef_temp.resize(level);
 		
-		if(c%1000 == 0) cout << c << " / "  << Cfine << " Constructing matrix M\n";
+		if(c%1000 == 0) cout << c << " / "  << Cfine << " Constructing matrix M" << endl;
 		l = level-1;
 		
 		x = lev[l].node[c].x;

@@ -33,11 +33,11 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 	for(p = 0; p < npart; p++){ part[p] = new PART(model,poptree); }
 	
 	ofstream trace("trace.txt");
-	trace << "state"; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].name; trace << "\n";
+	trace << "state"; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].name; trace << endl;
 	
 	Li = -large;
 	for(samp = 0; samp < nsamp; samp++){
-		if(samp%1 == 0) cout << "Sample: " << samp << "\n";
+		if(samp%1 == 0) cout << "Sample: " << samp << endl;
 
 		// Each PMCMC step consists of making a change to a parameter 
 		// This change is probablisitically either accepted or rejected based
@@ -71,15 +71,15 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 			}
 		}
 	
-		trace << samp; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].val; trace << "\n";	
+		trace << samp; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].val; trace << endl;	
 	}
 	
 	// This gives the acceptance rates for different MCMC proposals on different parameters
-	cout << "MCMC diagnostics:\n";
+	cout << "MCMC diagnostics:" << endl;
 	for(p = 0; p < param.size(); p++){
 		cout << param[p].name << ": ";
-		if(param[p].ntr == 0) cout << "Fixed\n";
-		else cout << "Acceptance rate " << double(param[p].nac)/param[p].ntr << "\n";
+		if(param[p].ntr == 0) cout << "Fixed" << endl;
+		else cout << "Acceptance rate " << double(param[p].nac)/param[p].ntr << endl;
 	}
 }
 

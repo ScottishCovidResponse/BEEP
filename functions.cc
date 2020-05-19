@@ -24,7 +24,7 @@ double ran(){
 double normal(float mu, float sd){ return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());}
 
 /// Displays any error messages
-void emsg(string msg){ cout << msg << "\n"; exit (EXIT_FAILURE);}
+void emsg(string msg){ cout << msg << endl; exit (EXIT_FAILURE);}
 
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 double gammasamp(double a, double b)

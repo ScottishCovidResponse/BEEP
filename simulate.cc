@@ -30,15 +30,15 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 	timers.timesim += clock();
 		
 	num = part->getnumtrans("I","H",0,tmax);
-	cout << "\nTotal number of hospitalised cases:\n";
-	for(r = 0; r < nregion; r++) cout <<	"Region " <<  r << ": " << num[r] << "\n";
-	cout << "\n";
+	cout << endl << "Total number of hospitalised cases:" << endl;
+	for(r = 0; r < nregion; r++) cout <<	"Region " <<  r << ": " << num[r] << endl;
+	cout << endl;
 	
 	ofstream regplot("Weekly case data.txt");
 	//ofstream regplot("Weekly case data.txt");
 	for(week = 0; week < tmax/7; week++){
 		regplot << week << " ";
 		num = part->getnumtrans("I","H",week*7,week*7+7);
-		for(r = 0; r < nregion; r++) regplot << num[r] << " "; regplot << "\n";
+		for(r = 0; r < nregion; r++) regplot << num[r] << " "; regplot << endl;
 	}
 }

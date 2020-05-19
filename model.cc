@@ -61,33 +61,33 @@ void MODEL::definemodel()
 	addtrans("H","D",EXP_DIST,"rHD","");
 	addtrans("H","R",EXP_DIST,"rHR","");
 	
-	cout << "\n";                                            //Outputs a summary of the model
-	cout << "Parameters:\n";
+	cout << endl;                                            //Outputs a summary of the model
+	cout << "Parameters:" << endl;
 	for(p = 0; p < param.size(); p++){
-		cout << param[p].name << " " << param[p].val << " (" << param[p].min << " - " << param[p].max << ")\n";
+		cout << param[p].name << " " << param[p].val << " (" << param[p].min << " - " << param[p].max << ")" << endl;
 	}
-	cout << "\n";
+	cout << endl;
 		
-	cout << "Compartments:\n"; 
+	cout << "Compartments:" << endl; 
 	for(c = 0; c < comp.size(); c++){
-		cout << comp[c].name << "  Infectivity: " << comp[c].infectivity << "\n"; 
+		cout << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 
 	}
-	cout << "\n";
+	cout << endl;
 	
-	cout << "Transitions:\n"; 
+	cout << "Transitions:" << endl; 
 	for(t = 0; t < trans.size(); t++){
 		cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name << "  ";
 		switch(trans[t].type){
 			case EXP_DIST:
-				cout << " Exponentially distributed with rate " << param[trans[t].param1].name << "\n";
+				cout << " Exponentially distributed with rate " << param[trans[t].param1].name << endl;
 				break;
 			case GAMMA_DIST:
 				cout << " Gamma distributed with mean " << param[trans[t].param1].name 
-						<< " and standard deviation " << param[trans[t].param2].name  << "\n"; 
+						<< " and standard deviation " << param[trans[t].param2].name  << endl; 
 				break;
 		}
 	}
-	cout << "\n";
+	cout << endl;
 }
 
 void MODEL::addcomp(string name, double infectivity)

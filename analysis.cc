@@ -42,11 +42,11 @@ int main(int argc, char** argv)
 		break;
 		
 	default:
-		emsg("Wrong number of input parameters\n");
+		emsg("Wrong number of input parameters");
 		break;
 	}
 	
-	cout << "Initialising....\n";
+	cout << "Initialising...." << endl;
 
 	poptree.init();	
 	
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 
 	model.definemodel();
 
-	cout << "Running....\n";
+	cout << "Running...." << endl;
 
 	timers.timetot = -clock();
 
@@ -63,8 +63,8 @@ int main(int argc, char** argv)
 
 	timers.timetot += clock();
 	
-	cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time\n";
-	cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time\n";
-	cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time\n";
+	cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time" << endl;
+	cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time" << endl;
+	cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time" << endl;
 }
 

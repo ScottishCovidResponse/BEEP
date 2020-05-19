@@ -223,7 +223,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 			while(t > tpl){ 
 				cout  << "Time: " << tpl;
 				for(c =0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
-				cout << "\n";
+				cout << endl;
 				tpl++;
 			}
 		}
