@@ -42,3 +42,10 @@ struct FEV {                               // Stores information about a compart
 	double t;                                // The time of the transition
 	short done;                              // Set to 1 if that transition is in the past 
 };
+
+// Stores the CPU clock times for different parts of the algorithm
+struct TIMERS {
+	long timetot;
+	long timesim;
+	long timeboot;
+};

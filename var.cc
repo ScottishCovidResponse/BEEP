@@ -9,4 +9,4 @@ using namespace std;
 
 class PART;
 
-long timetot=0, timesim=0, timeboot=0;     ///< Stores the CPU clock times for different parts of the algorithm
+TIMERS timers; // Stores the CPU clock times for different parts of the algorithm

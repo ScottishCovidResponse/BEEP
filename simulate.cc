@@ -26,9 +26,9 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 	
 	part->partinit(0);
 	
-	timesim -= clock();
+	timers.timesim -= clock();
 	part->gillespie(0,tmax, 1 /* simulating */);
-	timesim += clock();
+	timers.timesim += clock();
 		
 	num = part->getnumtrans("I","H",0,tmax);
 	cout << "\nTotal number of hospitalised cases:\n";

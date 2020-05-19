@@ -96,14 +96,14 @@ static double sample()
 		ttnext = tt+step; if(ttnext > tmax) tt = tmax;
 
 		for(p = 0; p < npart; p++){
-			timesim -= clock();
+			timers.timesim -= clock();
 			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
 			part[p]->Lobs(tt,ttnext, ncase);      // Measures how well it agrees with the observations (weekly number of cases)
-			timesim += clock();
+			timers.timesim += clock();
 		}
-		timeboot -= clock();
+		timers.timeboot -= clock();
 		Liav += bootstrap();             // Culls or copies particles based on how well they represent observations
-		timeboot += clock();
+		timers.timeboot += clock();
 			
 		tt = ttnext;
 	}while(tt < tmax);	

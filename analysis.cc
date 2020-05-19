@@ -56,15 +56,15 @@ int main(int argc, char** argv)
 
 	cout << "Running....\n";
 
-	timetot = -clock();
+	timers.timetot = -clock();
 
 	if(siminf == 1) simulatedata(model,poptree);
 	else PMCMC(model,poptree,nsamp);
 
-	timetot += clock();
+	timers.timetot += clock();
 	
-	cout << double(timetot)/CLOCKS_PER_SEC << " Total time\n";
-	cout << double(timesim)/CLOCKS_PER_SEC << " Simulation time\n";
-	cout << double(timeboot)/CLOCKS_PER_SEC << " Bootstrap time\n";
+	cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time\n";
+	cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time\n";
+	cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time\n";
 }
 
