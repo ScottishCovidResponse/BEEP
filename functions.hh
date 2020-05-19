@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include "types.hh"
-
 using namespace std;
 
 void emsg(string msg);

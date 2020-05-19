@@ -1,6 +1,10 @@
 
 #pragma once
 
+#include <vector>
+
+using namespace std;
+
 struct HOUSE {                             // Defines a house
  	double x, y;                             // Position
 	vector <long> ind;                       // Individuals which belong to the house

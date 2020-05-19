@@ -8,7 +8,6 @@
 #include "assert.h"
 #include "math.h"
 
-#include "types.hh"
 #include "functions.hh"
 #include "timers.hh"
 #include "PART.hh"

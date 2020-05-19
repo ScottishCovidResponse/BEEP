@@ -5,7 +5,6 @@
 #include "stdlib.h"
 #include "math.h"
 
-#include "types.hh"
 #include "functions.hh"
 #include "consts.hh"
 
