@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#include "var.hh"
+#include "timers.hh"
 #include "model.hh"
 #include "functions.hh"
 #include "PART.hh"
@@ -15,6 +15,10 @@ using namespace std;
 static void readdata();
 static double sample();
 static double bootstrap();
+
+PART* part[partmax];                       // Pointers to each of the particles 
+long npart;                                // The number of particles used
+long ncase[nregion][tmax/7+1];             // Number of cases in each region as a function of time
 
 void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
@@ -92,16 +96,14 @@ static double sample()
 		ttnext = tt+step; if(ttnext > tmax) tt = tmax;
 
 		for(p = 0; p < npart; p++){
-			timesim -= clock();
-			assert(siminf == 0);
-
+			timers.timesim -= clock();
 			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
-			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
-			timesim += clock();
+			part[p]->Lobs(tt,ttnext, ncase);      // Measures how well it agrees with the observations (weekly number of cases)
+			timers.timesim += clock();
 		}
-		timeboot -= clock();
+		timers.timeboot -= clock();
 		Liav += bootstrap();             // Culls or copies particles based on how well they represent observations
-		timeboot += clock();
+		timers.timeboot += clock();
 			
 		tt = ttnext;
 	}while(tt < tmax);	
@@ -145,7 +147,7 @@ static double bootstrap()
 		if(flag[p] == 0){
 			if(copylist.size() == 0) emsg("PMCMC: EC2");
 			pp = copylist[long(copylist.size())-1];
-			part[p]->copy(pp);
+			part[p]->copy(*part[pp]);
 			
 			copylist.pop_back();
 		}

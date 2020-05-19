@@ -6,10 +6,24 @@ using namespace std;
 
 #include "math.h"
 
-#include "types.hh"
-#include "var.hh"
 #include "functions.hh"
 #include "PART.hh"
+
+struct NEV {                               // Information about the immediate next events
+  short type; double t;
+};
+
+struct FEV {                               // Stores information about a compartmental transition
+  long trans;                              // References the transition type
+	long ind;                                // The individual on which the transition happens
+	double t;                                // The time of the transition
+	short done;                              // Set to 1 if that transition is in the past 
+};
+
+static bool compNEV(NEV lhs, NEV rhs)
+{
+	return lhs.t < rhs.t;
+};
 
 PART::PART(MODEL &model, POPTREE &poptree) : model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
 {
@@ -50,20 +64,20 @@ void PART::partinit(long p)
 }
 
 /// Copies in all the information from another particle
-void PART::copy(long pfrom)
+void PART::copy(const PART &other)
 {
 	short c;
 	
-	ffine = part[pfrom]->ffine;
-	indinf = part[pfrom]->indinf;
-	Rtot = part[pfrom]->Rtot; 
-	pop = part[pfrom]->pop;
-	addlater = part[pfrom]->addlater;
-	fev = part[pfrom]->fev;
-	for(c = 0; c < comp.size(); c++) N[c] = part[pfrom]->N[c];
-	tdnext = part[pfrom]->tdnext;
-	tdfnext = part[pfrom]->tdfnext;
-	sett = part[pfrom]->sett;
+	ffine = other.ffine;
+	indinf = other.indinf;
+	Rtot = other.Rtot; 
+	pop = other.pop;
+	addlater = other.addlater;
+	fev = other.fev;
+	for(c = 0; c < comp.size(); c++) N[c] = other.N[c];
+	tdnext = other.tdnext;
+	tdfnext = other.tdfnext;
+	sett = other.sett;
 }
 
 /// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
@@ -370,7 +384,7 @@ long PART::nextinfection()
 
 /// Measures how well the particle agrees with the observations within a given time period
 /// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf)
+void PART::Lobs(short ti, short tf, long ncase[nregion][tmax/7+1])
 {
 	short tt, r;
 	double mean, var;

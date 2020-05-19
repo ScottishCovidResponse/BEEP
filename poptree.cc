@@ -6,9 +6,9 @@
 
 using namespace std;
 
-#include "var.hh"
 #include "functions.hh"
 #include "poptree.hh"
+#include "consts.hh"
 
 
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale

@@ -8,7 +8,6 @@
 
 #include "math.h"
 
-#include "var.hh"
 #include "consts.hh"
 #include "functions.hh"
 #include "model.hh"

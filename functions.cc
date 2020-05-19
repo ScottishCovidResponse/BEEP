@@ -5,14 +5,11 @@
 #include "stdlib.h"
 #include "math.h"
 
-#include "types.hh"
 #include "functions.hh"
 #include "consts.hh"
-#include "var.hh"
 
 using namespace std;
 
-bool compNEV(NEV lhs, NEV rhs) { return lhs.t < rhs.t; }
 
 /// Draws a random number between 0 and 1
 double ran(){

@@ -4,9 +4,10 @@
 
 using namespace std;
 
-#include "types.hh"
 #include "model.hh"
 #include "poptree.hh"
+
+class FEV;
 
 class PART                                 // Stores all the things related to a particle 
 {
@@ -46,7 +47,7 @@ class PART                                 // Stores all the things related to a
 		void addinfc(long c, double t);
 		void addfev(double t, long tr, long i);
 		vector <long> getnumtrans(string from, string to, short ti, short tf);
-		void Lobs(short ti, short tf);
-		void copy(long pfrom);
+		void Lobs(short ti, short tf, long ncase[nregion][tmax/7+1]);
+		void copy(const PART &other);
 		void simmodel(long i, short enter, double t);
 };
