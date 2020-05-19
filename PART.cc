@@ -50,20 +50,20 @@ void PART::partinit(long p)
 }
 
 /// Copies in all the information from another particle
-void PART::copy(long pfrom)
+void PART::copy(const PART &other)
 {
 	short c;
 	
-	ffine = part[pfrom]->ffine;
-	indinf = part[pfrom]->indinf;
-	Rtot = part[pfrom]->Rtot; 
-	pop = part[pfrom]->pop;
-	addlater = part[pfrom]->addlater;
-	fev = part[pfrom]->fev;
-	for(c = 0; c < comp.size(); c++) N[c] = part[pfrom]->N[c];
-	tdnext = part[pfrom]->tdnext;
-	tdfnext = part[pfrom]->tdfnext;
-	sett = part[pfrom]->sett;
+	ffine = other.ffine;
+	indinf = other.indinf;
+	Rtot = other.Rtot; 
+	pop = other.pop;
+	addlater = other.addlater;
+	fev = other.fev;
+	for(c = 0; c < comp.size(); c++) N[c] = other.N[c];
+	tdnext = other.tdnext;
+	tdfnext = other.tdfnext;
+	sett = other.sett;
 }
 
 /// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 

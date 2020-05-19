@@ -20,18 +20,19 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 {
 	long week, r;
 	vector <long> num;
+	PART *part;
 	
-	part[0] = new PART(model,poptree);
+	part = new PART(model,poptree);
   npart = 1;
 	
-	part[0]->partinit(0);
+	part->partinit(0);
 	
 	timesim -= clock();
 	assert(siminf == 1);
-	part[0]->gillespie(0,tmax, 1 /* simulating */);
+	part->gillespie(0,tmax, 1 /* simulating */);
 	timesim += clock();
 		
-	num = part[0]->getnumtrans("I","H",0,tmax);
+	num = part->getnumtrans("I","H",0,tmax);
 	cout << "\nTotal number of hospitalised cases:\n";
 	for(r = 0; r < nregion; r++) cout <<	"Region " <<  r << ": " << num[r] << "\n";
 	cout << "\n";
@@ -40,7 +41,7 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 	//ofstream regplot("Weekly case data.txt");
 	for(week = 0; week < tmax/7; week++){
 		regplot << week << " ";
-		num = part[0]->getnumtrans("I","H",week*7,week*7+7);
+		num = part->getnumtrans("I","H",week*7,week*7+7);
 		for(r = 0; r < nregion; r++) regplot << num[r] << " "; regplot << "\n";
 	}
 }

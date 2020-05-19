@@ -47,6 +47,6 @@ class PART                                 // Stores all the things related to a
 		void addfev(double t, long tr, long i);
 		vector <long> getnumtrans(string from, string to, short ti, short tf);
 		void Lobs(short ti, short tf);
-		void copy(long pfrom);
+		void copy(const PART &other);
 		void simmodel(long i, short enter, double t);
 };

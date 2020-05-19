@@ -16,6 +16,8 @@ static void readdata();
 static double sample();
 static double bootstrap();
 
+PART* part[partmax];                       // Pointers to each of the particles 
+
 void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
 	long p, samp, burnin = nsamp/3;
@@ -145,7 +147,7 @@ static double bootstrap()
 		if(flag[p] == 0){
 			if(copylist.size() == 0) emsg("PMCMC: EC2");
 			pp = copylist[long(copylist.size())-1];
-			part[p]->copy(pp);
+			part[p]->copy(*part[pp]);
 			
 			copylist.pop_back();
 		}
