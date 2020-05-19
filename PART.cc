@@ -6,7 +6,7 @@ using namespace std;
 
 #include "math.h"
 
-#include "functions.hh"
+#include "utils.hh"
 #include "PART.hh"
 
 struct NEV {                               // Information about the immediate next events
@@ -131,6 +131,37 @@ void PART::addinfc(long c, double t)
 }
 
 
+/// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
+static double gammasamp(double a, double b)
+{
+  if(a < 0 || b < 0) emsg("Model: EC1");
+
+  if(a < 1){
+    double u = ran();
+    return gammasamp(1.0 + a, b) * pow (u, 1.0 / a);
+  }
+  else{
+    double x, v, u;
+    double d = a - 1.0 / 3.0;
+    double c = (1.0 / 3.0) / sqrt (d);
+ 
+    while(1 == 1){
+      do{
+        x = sqrt(-2*log(ran()))*cos(2*M_PI*ran());
+        v = 1.0 + c * x;
+      }while (v < 0);
+
+      v = v*v*v;
+      u = ran();
+
+      if (u < 1 - 0.0331*x*x*x*x) break;
+
+      if (log(u) < 0.5*x*x + d*(1 - v + log(v))) break;
+    }
+
+    return d*v/b;
+  }
+}
 
 /// Once an individual goes into the exposed class, this function simulates all the subsequent future events
 void PART::simmodel(long i, short enter, double t)

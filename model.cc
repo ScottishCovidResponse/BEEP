@@ -9,7 +9,7 @@
 #include "math.h"
 
 #include "consts.hh"
-#include "functions.hh"
+#include "utils.hh"
 #include "model.hh"
 
 using namespace std;
