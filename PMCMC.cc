@@ -15,6 +15,7 @@ using namespace std;
 static void readdata();
 static double sample();
 static double bootstrap();
+static double normal(float mu, float sd);
 
 PART* part[partmax];                       // Pointers to each of the particles 
 long npart;                                // The number of particles used
@@ -167,4 +168,10 @@ static void readdata()
 		regplot >> tt;
 		for(r = 0; r < nregion; r++) regplot >> ncase[r][week];
 	}
+}
+
+/// Draws a normally distributed number with mean mu and standard deviation sd
+static double normal(float mu, float sd)
+{
+	return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());
 }

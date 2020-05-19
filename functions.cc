@@ -19,12 +19,6 @@ double ran(){
 	else return double(0.999999999*rand())/RAND_MAX;
 }
 
-/// Draws a normally distributed number with mean mu and standard deviation sd
-double normal(float mu, float sd)
-{
-	return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());
-}
-
 /// Displays any error messages
 void emsg(string msg){ cout << msg << endl; exit (EXIT_FAILURE);}
 
