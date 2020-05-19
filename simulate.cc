@@ -10,7 +10,7 @@
 
 #include "types.hh"
 #include "functions.hh"
-#include "var.hh"
+#include "timers.hh"
 #include "PART.hh"
 
 using namespace std;

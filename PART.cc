@@ -7,7 +7,6 @@ using namespace std;
 #include "math.h"
 
 #include "types.hh"
-#include "var.hh"
 #include "functions.hh"
 #include "PART.hh"
 

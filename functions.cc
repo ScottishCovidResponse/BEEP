@@ -8,7 +8,6 @@
 #include "types.hh"
 #include "functions.hh"
 #include "consts.hh"
-#include "var.hh"
 
 using namespace std;
 

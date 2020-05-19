@@ -13,7 +13,7 @@
 #include "time.h"
 
 #include "functions.hh"
-#include "var.hh"        // Stores all the global variables (Sorry Ian, I know you are shaking your head)
+#include "timers.hh"
 #include "poptree.hh"
 #include "model.hh"
 #include "simulate.hh"
