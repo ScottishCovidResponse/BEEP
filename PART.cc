@@ -370,7 +370,7 @@ long PART::nextinfection()
 
 /// Measures how well the particle agrees with the observations within a given time period
 /// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf)
+void PART::Lobs(short ti, short tf, long ncase[nregion][tmax/7+1])
 {
 	short tt, r;
 	double mean, var;

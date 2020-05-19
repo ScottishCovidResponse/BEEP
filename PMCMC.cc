@@ -18,6 +18,7 @@ static double bootstrap();
 
 PART* part[partmax];                       // Pointers to each of the particles 
 long npart;                                // The number of particles used
+long ncase[nregion][tmax/7+1];             // Number of cases in each region as a function of time
 
 void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
@@ -97,7 +98,7 @@ static double sample()
 		for(p = 0; p < npart; p++){
 			timesim -= clock();
 			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
-			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
+			part[p]->Lobs(tt,ttnext, ncase);      // Measures how well it agrees with the observations (weekly number of cases)
 			timesim += clock();
 		}
 		timeboot -= clock();
