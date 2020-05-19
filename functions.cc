@@ -12,8 +12,6 @@
 
 using namespace std;
 
-bool compX(long lhs, long rhs) { return house[lhs].x < house[rhs].x; }
-bool compY(long lhs, long rhs) { return house[lhs].y < house[rhs].y; }
 bool compNEV(NEV lhs, NEV rhs) { return lhs.t < rhs.t; }
 
 /// Draws a random number between 0 and 1

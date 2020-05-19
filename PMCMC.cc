@@ -16,15 +16,17 @@ static void readdata();
 static double sample();
 static double bootstrap();
 
-void PMCMC()
+void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
 	long p, samp, burnin = nsamp/3;
 	double Li, Lf, valst, al;
 
+	vector <PARAM> &param(model.param);
+
 	readdata();                                                    // Reads in weekly case data 
 	 
 	npart = 100;  // This is the number of particles (which much be sufficiently large for the simulations to capture the data)
-	for(p = 0; p < npart; p++){ part[p] = new PART; }
+	for(p = 0; p < npart; p++){ part[p] = new PART(model,poptree); }
 	
 	ofstream trace("trace.txt");
 	trace << "state"; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].name; trace << "\n";
@@ -40,7 +42,9 @@ void PMCMC()
 		for(p = 0; p < param.size(); p++){
 			if(param[p].min != param[p].max){
 				valst = param[p].val;
-				param[p].val += normal(0,param[p].jump); if(p < nspline) betaspline();
+				param[p].val += normal(0,param[p].jump); 
+				if(p < model.nspline)
+					model.betaspline();
 				if(param[p].val < param[p].min || param[p].val > param[p].max) al = 0;
 				else{
 					Lf = sample();
@@ -54,7 +58,10 @@ void PMCMC()
 					if(samp < burnin) param[p].jump *= 1.1;
 				}
 				else{
-					param[p].val = valst; if(p < nspline) betaspline();
+					param[p].val = valst;
+					if(p < model.nspline)
+						model.betaspline();
+
 					if(samp < burnin) param[p].jump *= 0.95;
 				}
 			}

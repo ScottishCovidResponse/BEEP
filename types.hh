@@ -5,30 +5,6 @@
 
 using namespace std;
 
-struct PARAM{                              // Store information about a model parameter
- 	string name;                             // Its name
- 	double val;                              // The simulation value or starting value for inference
-	double sim;                              // The simulation value
-	double min;                              // The minimum value (assuming a uniform prior) 
-	double max;                              // The maximum value (assuming a uniform prior)
-	double jump;                             // The size of proposed changes in PMCMC
-	long ntr, nac;                           // Store the number of proposals tried and accepted	
-};
-
-struct COMP{                               // Stores information about a compartment in the model
-	string name;                             // Its name
-	double infectivity;                      // How infectious that compartment is
-	vector <long> trans;                     // The transitions leaving that compartment
-};
-
-struct TRANS{                              // Stores information about a compartmental model transition
-	short from;                              // Which compartment the individual is coming from
-	short to;                                // Which compartment the individual is going to
-	short type;                              // The type of transition (exponential or gamma)
-	short param1;                            // First characteristic parameter (e.g. rate)
-	short param2;                            // Second characteristic parameter (e.g. standard deviation in the case of gamma) 
-};
-
 struct HOUSE {                             // Defines a house
  	double x, y;                             // Position
 	vector <long> ind;                       // Individuals which belong to the house

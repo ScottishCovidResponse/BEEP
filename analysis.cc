@@ -14,7 +14,7 @@
 
 #include "functions.hh"
 #include "var.hh"        // Stores all the global variables (Sorry Ian, I know you are shaking your head)
-#include "init.hh"
+#include "poptree.hh"
 #include "model.hh"
 #include "simulate.hh"
 #include "PMCMC.hh"
@@ -23,16 +23,19 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+	POPTREE poptree;
+	long nsamp;       // The number of PMCMC samples
+
 	switch(argc){
 	case 3:   // Simulation mode
 		siminf = 1;
-		areamax = atoi(argv[1]);   
+		poptree.areamax = atoi(argv[1]);   
 		srand(atoi(argv[2]));
 		break;
 		
 	case 4:   // Inference mode
 		siminf = 0;
-		areamax = atoi(argv[1]);   
+		poptree.areamax = atoi(argv[1]);   
 		nsamp = atoi(argv[2]);               
 		srand(atoi(argv[3]));
 		break;
@@ -44,16 +47,18 @@ int main(int argc, char** argv)
 	
 	cout << "Initialising....\n";
 
-	init();	
+	poptree.init();	
 	
-	definemodel();
+	MODEL model;
+
+	model.definemodel();
 
 	cout << "Running....\n";
 
 	timetot = -clock();
 
-	if(siminf == 1) simulatedata();
-	else PMCMC();
+	if(siminf == 1) simulatedata(model,poptree);
+	else PMCMC(model,poptree,nsamp);
 
 	timetot += clock();
 	

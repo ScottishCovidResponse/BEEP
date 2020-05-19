@@ -16,12 +16,12 @@
 using namespace std;
 
 // Generates weekly case data (similar to the actual data we currently have from Covid-19)
-void simulatedata()
+void simulatedata(MODEL &model, POPTREE &poptree)
 {
 	long week, r;
 	vector <long> num;
 	
-	part[0] = new PART;
+	part[0] = new PART(model,poptree);
   npart = 1;
 	
 	part[0]->partinit(0);

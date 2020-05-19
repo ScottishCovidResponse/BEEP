@@ -11,6 +11,10 @@ using namespace std;
 #include "functions.hh"
 #include "PART.hh"
 
+PART::PART(MODEL &model, POPTREE &poptree) : model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
+{
+}
+
 
 /// Initialises a particle
 void PART::partinit(long p)
@@ -21,14 +25,14 @@ void PART::partinit(long p)
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
  
 	ffine.clear(); 
-	ffine.resize(Cfine); for(c = 0; c < Cfine; c++) ffine[c] = 0;
+	ffine.resize(poptree.Cfine); for(c = 0; c < poptree.Cfine; c++) ffine[c] = 0;
 
-	indinf.clear(); indinf.resize(Cfine);
+	indinf.clear(); indinf.resize(poptree.Cfine);
 	
 	fev.clear(); fev.resize(fediv);
 
-	Rtot.resize(level); addlater.resize(level); pop.resize(level);
-	for(l = 0; l < level; l++){
+	Rtot.resize(poptree.level); addlater.resize(poptree.level); pop.resize(poptree.level);
+	for(l = 0; l < poptree.level; l++){
 		cmax = lev[l].node.size();
 		Rtot[l].resize(cmax); addlater[l].resize(cmax); pop[l].resize(cmax);
 		for(c = 0; c < cmax; c++){ Rtot[l][c] = 0; addlater[l][c] = 0; pop[l][c] = lev[l].node[c].popu;}
@@ -40,7 +44,7 @@ void PART::partinit(long p)
 	// For simplicity we assume three randomly distributed initally exposed individuals
 	// This will be changed in the proper analysis
 	for(loop = 0; loop < 3; loop++){
-		do{ c = long(ran()*Cfine);}while(long(subpop[c].size()) - long(indinf[c].size()) == 0);
+		do{ c = long(ran()*poptree.Cfine);}while(long(poptree.subpop[c].size()) - long(indinf[c].size()) == 0);
 		addinfc(c,0);
 	}
 }
@@ -80,7 +84,7 @@ vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
 			for(k = 0; k < fev[d].size(); k++){
 				fe = fev[d][k];
 				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[ind[fe.ind].region]++;
+				if(fe.t > ti && fe.trans == tra) num[poptree.ind[fe.ind].region]++;
 			}
 		}
 	}
@@ -96,13 +100,13 @@ void PART::addinfc(long c, double t)
 	
 	kmax = indinf[c].size();
 	do{
-		l = long(ran()*long(subpop[c].size()));
-		i = subpop[c][l];
+		l = long(ran()*long(poptree.subpop[c].size()));
+		i = poptree.subpop[c][l];
 		for(k = 0; k < kmax; k++) if(indinf[c][k] == i) break;
 	}while(k < kmax);
 	indinf[c].push_back(i);
 	
-	l = level-1; cc = c;
+	l = poptree.level-1; cc = c;
 	dR = -Rtot[l][c]/pop[l][cc];
 	do{
 		Rtot[l][cc] += dR;
@@ -135,11 +139,11 @@ void PART::simmodel(long i, short enter, double t)
 			tr = trans[comp[c].trans[k]];
 			switch(tr.type){
 				case EXP_DIST:
-					tnext = t - log(ran())/param[tr.param1].val;
+					tnext = t - log(ran())/model.param[tr.param1].val;
 					break;
 				
 				case GAMMA_DIST:
-					mean = param[tr.param1].val; sd = param[tr.param2].val;
+					mean = model.param[tr.param1].val; sd = model.param[tr.param2].val;
 					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 					tnext = t + dt; 
 					break;
@@ -177,7 +181,7 @@ void PART::addfev(double t, long trans, long i)
 /// Performs the modified Gillespie algorithm between times ti and tf 
 void PART::gillespie(double ti, double tf, short siminf)
 {
-	long td, j, c, NIfine[Cfine];
+	long td, j, c, NIfine[poptree.Cfine];
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
@@ -187,7 +191,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		n.t = settime[sett];
+		n.t = model.settime[sett];
 		n.type = SET_EV;
 		nev.push_back(n); 
 		 
@@ -195,7 +199,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 		n.type = FEV_EV;
 		nev.push_back(n);
 	
-		if(Rtot[0][0] < tiny) n.t = tf; else n.t = t - log(ran())/(beta[sett]*Rtot[0][0]);
+		if(Rtot[0][0] < tiny) n.t = tf; else n.t = t - log(ran())/(model.beta[sett]*Rtot[0][0]);
 		n.type = INF_EV;
 		nev.push_back(n);
 		
@@ -238,9 +242,13 @@ void PART::dofe()
 	double fac, val, num, dd, ffnew;
 	TRANS tr;
 
+	long **&nMval(poptree.nMval);
+	long ***&Mnoderef(poptree.Mnoderef);
+	float ***&Mval(poptree.Mval);
+
 	i = fev[tdnext][tdfnext].ind; if(fev[tdnext][tdfnext].done != 0) emsg("Simulate: EC3");
 	fev[tdnext][tdfnext].done = 1;
-	c = ind[i].noderef;
+	c = poptree.ind[i].noderef;
 
 	tr = trans[fev[tdnext][tdfnext].trans];
 	N[tr.from]--; if(N[tr.from] < 0) emsg("Simulate: EC4"); 
@@ -257,7 +265,7 @@ void PART::dofe()
 	if(fac == 0) return;
 	
 	if(checkon == 1){                           // These are checks to see if the algorithm is working properly
-		for(l = level-1; l >= 0; l--){
+		for(l = poptree.level-1; l >= 0; l--){
 			kmax = nMval[c][l];
 			for(k = 0; k < kmax; k++){
 				cc = Mnoderef[c][l][k];
@@ -274,7 +282,7 @@ void PART::dofe()
 		}
 	}
 		
-	for(l = level-1; l >= 0; l--){              // This updates the different levels of Rtot (used for sampling later) 
+	for(l = poptree.level-1; l >= 0; l--){              // This updates the different levels of Rtot (used for sampling later) 
 		kmax = nMval[c][l];
 		for(k = 0; k < kmax; k++){
 			cc = Mnoderef[c][l][k];
@@ -283,16 +291,16 @@ void PART::dofe()
 			Rtot[l][cc] += val;
 		}
 		
-		kmax = naddnoderef[c][l];
+		kmax = poptree.naddnoderef[c][l];
 		for(k = 0; k < kmax; k++){
-			cc = addnoderef[c][l][k];
+			cc = poptree.addnoderef[c][l][k];
 			jmax = lev[l].node[cc].child.size();
 			val = 0; for(j = 0; j < jmax; j++) val += lev[l+1].add[lev[l].node[cc].child[j]];
 			lev[l].add[cc] = val;
 			Rtot[l][cc] += val;
 		}
 
-		if(l < level-1){
+		if(l < poptree.level-1){
 			kmax = nMval[c][l];
 			for(k = 0; k < kmax; k++){
 				cc = Mnoderef[c][l][k];
@@ -302,19 +310,19 @@ void PART::dofe()
 		}
 	}
 	
-	for(l = level-1; l >= 0; l--){
+	for(l = poptree.level-1; l >= 0; l--){
 		kmax = nMval[c][l]; for(k = 0; k < kmax; k++) lev[l].add[Mnoderef[c][l][k]] = 0;
-		kmax = naddnoderef[c][l]; for(k = 0; k < kmax; k++) lev[l].add[addnoderef[c][l][k]] = 0;
+		kmax = poptree.naddnoderef[c][l]; for(k = 0; k < kmax; k++) lev[l].add[poptree.addnoderef[c][l][k]] = 0;
 	}
 		
 	if(checkon == 1){
-		for(l = 0; l < level; l++){
+		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].add.size();
 			for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Simulate: EC6");}
 		}	
 		
 		double sum=0;
-		for(cc = 0; cc < Cfine; cc++) sum += ffine[cc]*pop[level-1][cc];    
+		for(cc = 0; cc < poptree.Cfine; cc++) sum += ffine[cc]*pop[poptree.level-1][cc];    
 		dd = Rtot[0][0] - sum;
 		if(dd < -tiny || dd > tiny)	emsg("Simulate: EC7");
 	}
@@ -327,7 +335,7 @@ long PART::nextinfection()
 	double z, sum, sumst[4], val, dd, Rnew;
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
-	while(l < level-1){
+	while(l < poptree.level-1){
 		val = addlater[l][c]; addlater[l][c] = 0;
 	
 		jmax = lev[l].node[c].child.size();
