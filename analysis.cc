@@ -25,6 +25,7 @@ int main(int argc, char** argv)
 {
 	POPTREE poptree;
 	long nsamp;       // The number of PMCMC samples
+	short siminf;     // Set to 1 for simulation and 0 for inference
 
 	switch(argc){
 	case 3:   // Simulation mode

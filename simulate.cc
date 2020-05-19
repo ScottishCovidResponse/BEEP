@@ -27,7 +27,6 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 	part->partinit(0);
 	
 	timesim -= clock();
-	assert(siminf == 1);
 	part->gillespie(0,tmax, 1 /* simulating */);
 	timesim += clock();
 		

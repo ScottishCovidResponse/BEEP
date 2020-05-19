@@ -96,8 +96,6 @@ static double sample()
 
 		for(p = 0; p < npart; p++){
 			timesim -= clock();
-			assert(siminf == 0);
-
 			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
 			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
 			timesim += clock();
