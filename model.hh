@@ -1,5 +1,7 @@
 #pragma once
 
+#include "consts.hh"
+
 struct PARAM{                              // Store information about a model parameter
  	string name;                             // Its name
  	double val;                              // The simulation value or starting value for inference
