@@ -23,7 +23,6 @@ void simulatedata(MODEL &model, POPTREE &poptree)
 	PART *part;
 	
 	part = new PART(model,poptree);
-  npart = 1;
 	
 	part->partinit(0);
 	

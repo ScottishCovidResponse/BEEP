@@ -17,6 +17,7 @@ static double sample();
 static double bootstrap();
 
 PART* part[partmax];                       // Pointers to each of the particles 
+long npart;                                // The number of particles used
 
 void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 {
