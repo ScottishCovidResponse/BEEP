@@ -6,7 +6,7 @@ using namespace std;
 
 #include "math.h"
 
-#include "functions.hh"
+#include "utils.hh"
 #include "PART.hh"
 
 struct NEV {                               // Information about the immediate next events

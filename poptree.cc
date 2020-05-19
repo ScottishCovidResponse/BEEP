@@ -6,7 +6,7 @@
 
 using namespace std;
 
-#include "functions.hh"
+#include "utils.hh"
 #include "poptree.hh"
 #include "consts.hh"
 

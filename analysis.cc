@@ -12,7 +12,7 @@
 #include "stdlib.h"
 #include "time.h"
 
-#include "functions.hh"
+#include "utils.hh"
 #include "timers.hh"
 #include "poptree.hh"
 #include "model.hh"

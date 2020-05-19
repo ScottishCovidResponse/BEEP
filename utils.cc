@@ -5,7 +5,7 @@
 #include "stdlib.h"
 #include "math.h"
 
-#include "functions.hh"
+#include "utils.hh"
 #include "consts.hh"
 
 using namespace std;

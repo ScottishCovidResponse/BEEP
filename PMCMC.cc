@@ -9,7 +9,7 @@ using namespace std;
 
 #include "timers.hh"
 #include "model.hh"
-#include "functions.hh"
+#include "utils.hh"
 #include "PART.hh"
 
 static void readdata();
