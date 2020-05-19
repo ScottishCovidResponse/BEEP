@@ -5,10 +5,6 @@
 
 using namespace std;
 
-struct NEV {                               // Information about the immediate next events
-  short type; double t;
-};
-
 struct FEV {                               // Stores information about a compartmental transition
   long trans;                              // References the transition type
 	long ind;                                // The individual on which the transition happens

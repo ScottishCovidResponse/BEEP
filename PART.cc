@@ -10,6 +10,15 @@ using namespace std;
 #include "functions.hh"
 #include "PART.hh"
 
+struct NEV {                               // Information about the immediate next events
+  short type; double t;
+};
+
+static bool compNEV(NEV lhs, NEV rhs)
+{
+	return lhs.t < rhs.t;
+};
+
 PART::PART(MODEL &model, POPTREE &poptree) : model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
 {
 }
