@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 /// Draws a random number between 0 and 1
 double ran(){
 	if(RAND_MAX == 32767){
@@ -21,7 +20,10 @@ double ran(){
 }
 
 /// Draws a normally distributed number with mean mu and standard deviation sd
-double normal(float mu, float sd){ return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());}
+double normal(float mu, float sd)
+{
+	return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());
+}
 
 /// Displays any error messages
 void emsg(string msg){ cout << msg << endl; exit (EXIT_FAILURE);}
