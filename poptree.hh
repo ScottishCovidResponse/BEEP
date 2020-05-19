@@ -72,8 +72,6 @@ class POPTREE
 	}
 
 	void init();
-	// bool compX(long lhs, long rhs) { return house[lhs].x < house[rhs].x; }
-	// bool compY(long lhs, long rhs) { return house[lhs].y < house[rhs].y; }
 
 	vector <HOUSE> house;                      // List of all the houses
 	vector <LEVEL> lev;
