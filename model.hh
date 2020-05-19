@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+
+using namespace std;
+
 #include "consts.hh"
 
 struct PARAM{                              // Store information about a model parameter

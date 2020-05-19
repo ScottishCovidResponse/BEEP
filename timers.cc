@@ -1,4 +1,4 @@
 
-#include "types.hh"
+#include "timers.hh"
 
 TIMERS timers; // Stores the CPU clock times for different parts of the algorithm
