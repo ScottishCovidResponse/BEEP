@@ -14,6 +14,13 @@ struct NEV {                               // Information about the immediate ne
   short type; double t;
 };
 
+struct FEV {                               // Stores information about a compartmental transition
+  long trans;                              // References the transition type
+	long ind;                                // The individual on which the transition happens
+	double t;                                // The time of the transition
+	short done;                              // Set to 1 if that transition is in the past 
+};
+
 static bool compNEV(NEV lhs, NEV rhs)
 {
 	return lhs.t < rhs.t;

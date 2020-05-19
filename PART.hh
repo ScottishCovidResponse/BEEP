@@ -4,9 +4,10 @@
 
 using namespace std;
 
-#include "types.hh"
 #include "model.hh"
 #include "poptree.hh"
+
+class FEV;
 
 class PART                                 // Stores all the things related to a particle 
 {
