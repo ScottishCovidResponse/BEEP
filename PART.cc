@@ -58,12 +58,6 @@ void PART::partinit(long p)
 	sett = 0;
 	
 	tdnext = fediv;
-	// For simplicity we assume three randomly distributed initally exposed individuals
-	// This will be changed in the proper analysis
-	for(loop = 0; loop < 3; loop++){
-		do{ c = long(ran()*poptree.Cfine);}while(long(poptree.subpop[c].size()) - long(indinf[c].size()) == 0);
-		addinfc(c,0);
-	}
 }
 
 /// Copies in all the information from another particle
@@ -269,6 +263,10 @@ void PART::gillespie(double ti, double tf, short siminf)
 		n.type = INF_EV;
 		nev.push_back(n);
 		
+		n.t = t - log(ran())/(sussum[0][0]*model.param[model.phiparam].val);
+		n.type = EXT_EV;
+		nev.push_back(n);
+		
 		sort(nev.begin(),nev.end(),compNEV);
 		
 		if(siminf == 1){
@@ -294,6 +292,11 @@ void PART::gillespie(double ti, double tf, short siminf)
 			
 		case FEV_EV:                 // These correspond to other compartmental transitions (e.g. E->A, E->I etc...)
 			dofe();
+			break;
+			
+		case EXT_EV:
+			c = externalinfection();
+			addinfc(c,t);	
 			break;
 			
 		default: emsg("Simulate: EC2"); break;
@@ -394,6 +397,31 @@ void PART::dofe()
 	}
 }
 
+long PART::externalinfection()       // An infection is caused by something external to the system (i.e. from abroad)
+{
+	long l, c, cc, j, jmax;
+	double z, sum, sumst[4];
+	
+	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
+	while(l < poptree.level-1){
+		jmax = lev[l].node[c].child.size();
+		sum = 0;
+		for(j = 0; j < jmax; j++){
+			cc = lev[l].node[c].child[j];
+			sum += sussum[l+1][cc];
+			sumst[j] = sum;
+		}
+		
+		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
+		if(j == jmax) emsg("Simulate: EC9");
+		
+		c = lev[l].node[c].child[j];
+		l++;
+	};
+	
+	return c;
+}
+	
 /// This samples the node on the fine scale in which the next infection occurs
 long PART::nextinfection()
 {

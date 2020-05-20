@@ -43,6 +43,7 @@ class PART                                 // Stores all the things related to a
 		void gillespie(double ti, double tf, short siminf);
 		void partinit(long p);
 		void dofe();
+		long externalinfection();
 		long nextinfection();
 		void addinfc(long c, double t);
 		void addfev(double t, long tr, long i);

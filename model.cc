@@ -42,6 +42,9 @@ void MODEL::definemodel()
 	}		
 	betaspline();
 
+	phiparam = param.size();
+	r = 1.0/popsize; addparam("phi",r,r,r);                         // Adds a small external force of infection
+	
 	fix_sus_param.resize(nfix); fix_inf_param.resize(nfix);
 	for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
 		fix_sus_param[fi] = param.size(); 

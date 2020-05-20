@@ -41,6 +41,7 @@ public:
 
 	double settime[nsettime];
 	double beta[nsettime];
+	short phiparam;
 	short nspline;                             // The spline points which are parameters in the model
 	vector <double> splinet;
 	vector <PARAM> param;

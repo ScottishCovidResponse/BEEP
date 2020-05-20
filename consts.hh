@@ -1,6 +1,7 @@
 #pragma once
 
-const short FEV_EV=0, INF_EV=1, SET_EV=2;  // Used to characterise an event type (future event/infection/settime)
+const short FEV_EV=0, INF_EV=1, SET_EV=2;  // Used to characterise an event type (future event/infection/settime/external)
+const short EXT_EV=3;
 const double tiny = 0.00000001;            // Used to represent a tiny number
 const double large = 10000000;             // Used to represent a big number
 const double invT = 1;                     // The inverse temperature (used to relax the observation model)
@@ -12,7 +13,7 @@ const short checkon = 0;                   // Set to one to check algorithm is p
 const double finegridsize = 0.02;          // The range in distance over which the fine grid is used 
 const double d0 = 0.05;                    // The minumum distance cut-off for the matrix M
 const short tmax = 105;                    // The time over which simulation / inference is performed
-const short RX = 1, RY = 1;                // When siumlating this gives a hypothetical grid of regions
+const short RX = 4, RY = 4;                // When siumlating this gives a hypothetical grid of regions
 const short nregion = RX*RY;               // When the real data is analysed these will be Healthboard level regions
 const long fediv = 1000;                   // The number of divisions into which the global timeline is divided
 const long partmax = 10000;                // The maximum number of particles (arbitrarily set)
