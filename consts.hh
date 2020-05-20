@@ -4,10 +4,10 @@ const short FEV_EV=0, INF_EV=1, SET_EV=2;  // Used to characterise an event type
 const double tiny = 0.00000001;            // Used to represent a tiny number
 const double large = 10000000;             // Used to represent a big number
 const double invT = 1;                     // The inverse temperature (used to relax the observation model)
-//const long popsize = 5000000;              // Number of individuals in Scotland (approximately)
-//const long nhouse = 1500000;               // Number of houses
-const long popsize = 10000;                 // A smaller test case
-const long nhouse = 3000;               
+const long popsize = 5500000;              // Number of individuals in Scotland (approximately)
+const long nhouse = 1500000;               // Number of houses
+//const long popsize = 10000;                 // A smaller test case
+//const long nhouse = 3000;               
 const short checkon = 0;                   // Set to one to check algorithm is performing correctly
 const double finegridsize = 0.02;          // The range in distance over which the fine grid is used 
 const double d0 = 0.05;                    // The minumum distance cut-off for the matrix M
