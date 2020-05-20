@@ -18,3 +18,4 @@ const long fediv = 1000;                   // The number of divisions into which
 const long partmax = 10000;                // The maximum number of particles (arbitrarily set)
 const short EXP_DIST=0, GAMMA_DIST=1;      // Denotes exponential or gamma distributed 
 const long nsettime = 100;                 // The number of time divisions used to represent changes in beta
+const short nfix = 1;                      // The number of fixed effects                         

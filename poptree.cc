@@ -14,8 +14,8 @@ using namespace std;
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 void POPTREE::init()
 {
-	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, c, cmax, cc, ccc, par, s, popu, L, n, flag;
-	double x, y, xx, yy, grsi, dd, sum, fac;
+	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
+	double av, x, y, xx, yy, grsi, dd, sum, fac;
 	HOUSE ho;
 	NODE node;
 	
@@ -39,7 +39,7 @@ void POPTREE::init()
 		h = long(ran()*nhouse);
 		house[h].ind.push_back(i);
 	}
-
+	
 																															  // Here a "node" represents a collection of houses
 	lev.push_back(LEVEL ());                                      // The first level contains a single node
 	for(h = 0; h < nhouse; h++) node.houseref.push_back(h);       // with all the houses
@@ -128,16 +128,16 @@ void POPTREE::init()
 	}
 	
 	l = level-1;
-	for(c = 0; c < Cfine; c++){                    // Calculates the population and position of each node
-		x = 0; y = 0; popu = 0; 
+	for(c = 0; c < Cfine; c++){                    // Calculates positions and populations of each node
+		x = 0; y = 0; pop = 0;
 		imax = lev[l].node[c].houseref.size();
 		for(i = 0; i < imax; i++){
 			h = lev[l].node[c].houseref[i];
-			popu += house[lev[l].node[c].houseref[i]].ind.size();
+			pop += house[h].ind.size();
 			x += house[h].x;
 			y += house[h].y;
 		}
-		lev[l].node[c].popu = popu;
+		lev[l].node[c].population = pop;
 		lev[l].node[c].x = x/imax;
 		lev[l].node[c].y = y/imax;
 		lev[l].node[c].done = 0;
@@ -145,15 +145,15 @@ void POPTREE::init()
 	
 	for(l = level-2; l >= 0; l--){
 		for(c = 0; c < lev[l].node.size(); c++){
-			x = 0; y = 0; popu = 0;
+			x = 0; y = 0; pop = 0;
 			jmax = lev[l].node[c].child.size();
 			for(j = 0; j < jmax; j++){
 				cc = lev[l].node[c].child[j];
-				popu += lev[l+1].node[cc].popu;
+				pop += lev[l+1].node[cc].population;
 				x += lev[l+1].node[cc].x;
 				y += lev[l+1].node[cc].y;
 			}
-			lev[l].node[c].popu = popu;
+			lev[l].node[c].population = pop;
 			lev[l].node[c].x = x/jmax;
 			lev[l].node[c].y = y/jmax;
 			lev[l].node[c].done = 0;
@@ -200,7 +200,7 @@ void POPTREE::init()
 				kmax = lev[l+1].donelist.size();
 				for(k = 0; k < kmax; k++){
 					cc = lev[l+1].donelist[k];
-					par = lev[l+1].node[cc].parent; if(par == -1) emsg("Finescale: EC1");
+					par = lev[l+1].node[cc].parent; if(par == -1) emsg("Poptree: EC1");
 					if(lev[l].node[par].done == 0){
 						lev[l].node[par].done = 1;
 						lev[l].donelist.push_back(par);
@@ -225,7 +225,7 @@ void POPTREE::init()
 
 			L = grL[l];	grsi = grsize[l];
 			i = long(L*x+0.5)-1;
-			j = long(L*x+0.5)-1;
+			j = long(L*y+0.5)-1;
 
 			for(ii = i; ii <= i+1; ii++){
 				for(jj = j; jj <= j+1; jj++){
@@ -255,12 +255,12 @@ void POPTREE::init()
 					}
 				}
 			}
-		}
-	
+		}		
+
 		sum = 0;                             // Normalises short range M contribution to 0.8 
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); 
-			for(k = 0; k < kmax; k++) sum += Mval_sr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].popu;
+			for(k = 0; k < kmax; k++) sum += Mval_sr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
 		fac = 0.8/sum;
@@ -271,7 +271,7 @@ void POPTREE::init()
 		sum = 0;                              // Normalises long range M contribution to 0.2
 		for(l = 0; l < level; l++){
 			kmax = Mval_lr_temp[l].size(); 
-			for(k = 0; k < kmax; k++) sum += Mval_lr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].popu;
+			for(k = 0; k < kmax; k++) sum += Mval_lr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
 		fac = 0.2/sum;
@@ -311,12 +311,12 @@ void POPTREE::init()
 		}
 		
 		if(checkon == 1){
-			popu = 0;
+			pop = 0;
 			for(l = 0; l < level; l++){
-				kmax = nMval[c][l]; 
-				for(k = 0; k < kmax; k++) popu += lev[l].node[Mnoderef[c][l][k]].popu;
+				kmax = nMval[c][l];
+				for(k = 0; k < kmax; k++) pop += lev[l].node[Mnoderef[c][l][k]].population;
 			}
-			if(popu != popsize) emsg("Finescale: EC2");
+			if(pop != popsize) emsg("Poptree: EC2");
 		
 			for(l = 0; l < level; l++){
 				cmax = lev[l].node.size();
@@ -335,10 +335,26 @@ void POPTREE::init()
 				ind[i].noderef = c;
 				ind[i].houseref = h;
 				ind[i].region = short(house[h].y*RY)*RX + short(house[h].x*RX);
+				ind[i].X.resize(nfix);
+				for(fi = 0; fi < nfix; fi++){
+					switch(fi){
+						case 0:  // Uses sex as a simple fixed effect
+							ind[i].X[fi] = short(2*ran());
+						  break;
+					}
+				}
 			}
+			
 		}		
 	}
 
+	for(fi = 0; fi < nfix; fi++){                 // Shifts X to give a population average of 0
+		av = 0;
+		for(i = 0; i < ind.size(); i++) av += ind[i].X[fi];
+		av /= ind.size();
+		for(i = 0; i < ind.size(); i++) ind[i].X[fi] -= av;
+	}
+	
 	for(l = 0; l < level; l++){
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++) lev[l].add.push_back(0); 
@@ -352,4 +368,52 @@ void POPTREE::init()
 			for(i = 0; i < house[h].ind.size(); i++) subpop[c].push_back(house[h].ind[i]);
 		}
 	}
+}
+  
+void POPTREE::setsus(MODEL &model)             // Defines the relative susceptibility of individuals
+{
+	long i, fi, l, c, cc, j, jmax;
+	double val, sum;
+	
+	for(i = 0; i < ind.size(); i++) ind[i].sus = 0;
+	
+	for(fi = 0; fi < nfix; fi++){
+		val = model.param[model.fix_sus_param[fi]].val;
+		for(i = 0; i < ind.size(); i++) ind[i].sus += ind[i].X[fi]*val;
+	}
+	
+	for(i = 0; i < ind.size(); i++) ind[i].sus = exp(ind[i].sus);
+	
+	l = level-1;                                  // Places the sumes susceptibilities onto the nodes
+	for(c = 0; c < Cfine; c++){
+		sum = 0; for(j = 0; j < subpop[c].size(); j++) sum += ind[subpop[c][j]].sus;
+		lev[l].node[c].sussum = sum;
+	}
+	
+	for(l = level-2; l >= 0; l--){
+		for(c = 0; c < lev[l].node.size(); c++){
+			sum = 0;
+			jmax = lev[l].node[c].child.size();
+			for(j = 0; j < jmax; j++){
+				cc = lev[l].node[c].child[j];
+				sum += lev[l+1].node[cc].sussum;
+			}
+			lev[l].node[c].sussum = sum;
+		}
+	}
+}
+
+void POPTREE::setinf(MODEL &model)             // Defines the relative infectivity of individuals
+{
+	long i, fi;
+	double val;
+	
+	for(i = 0; i < ind.size(); i++) ind[i].inf = 0;
+	
+	for(fi = 0; fi < nfix; fi++){
+		val = model.param[model.fix_inf_param[fi]].val;
+		for(i = 0; i < ind.size(); i++) ind[i].inf += ind[i].X[fi]*val;
+	}
+	
+	for(i = 0; i < ind.size(); i++) ind[i].inf = exp(ind[i].inf);
 }

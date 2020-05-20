@@ -20,7 +20,7 @@ class PART                                 // Stores all the things related to a
  	
 	vector <double> ffine;                   // Stores the force of infection on nodes on the fine scale
 	vector <vector <long> > indinf;          // Lists all infected individuals  
-	vector <vector <long> > pop;             // The total popualtion for nodes on different levels 
+	vector <vector <double> > sussum;        // The total susceptibility for nodes on different levels 
 	vector <vector <double> > Rtot;          // The total infection rate for nodes on different levels
 	vector <vector <double> > addlater;      // A change to the rates Rtot which may be performed later when sampling is performed
 

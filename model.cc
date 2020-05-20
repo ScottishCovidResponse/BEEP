@@ -18,13 +18,13 @@ void MODEL::definemodel()
 {
 	// R0 determines how many individuals an infected individual on average infects
 	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
-	double R0sim[5] = {3,2.5,1.5,0.5,0.5};       
+	double R0sim[5] = {2.3,2.0,1.5,0.5,0.5};       
 	
 	double tEA = 2.5, tAI = 3, tAR = 3.5, tIR = 16.7;            // Estimates of transition times from literature
 	double tIH = 3.1, tID = 12.9, tHD = 8, tHR = 13.1;
 	
 	double r, rAI, rAR, rIR, rIH, rID, tinfav;
-	short p, c, t;
+	short p, c, t, fi;
 		
 	addcomp("E",0); addcomp("A",0.2); addcomp("I",1);            // Different compartment in the model
 	addcomp("H",0); addcomp("R",0); addcomp("D",0); 
@@ -38,9 +38,23 @@ void MODEL::definemodel()
 		splinet.push_back(double(p*tmax)/(nspline-1));
 		stringstream ss; ss << "beta_" << p;
 		r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
+		param[long(param.size())-1].betachange = 1;
 	}		
 	betaspline();
 
+	fix_sus_param.resize(nfix); fix_inf_param.resize(nfix);
+	for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
+		fix_sus_param[fi] = param.size(); 
+		stringstream sssus; sssus << "fixsus_" << fi;
+		addparam(sssus.str(),0.1,-1,1);
+		param[long(param.size())-1].suschange = 1;
+		
+		fix_inf_param[fi] = param.size(); 
+		stringstream ssinf; ssinf << "fixinf_" << fi;
+		addparam(ssinf.str(),0.1,-1,1);
+		param[long(param.size())-1].infchange = 1;
+	}
+	
 	addparam("tEA",tEA,tEA,tEA);                             // We define all the parameters in the model (with uniform priors)
 	addparam("sdEA",tEA/2,tEA/2,tEA/2);
 	r = 1.0/tEA; addparam("rEA",r,r,r);
@@ -83,7 +97,7 @@ void MODEL::definemodel()
 				break;
 			case GAMMA_DIST:
 				cout << " Gamma distributed with mean " << param[trans[t].param1].name 
-						<< " and standard deviation " << param[trans[t].param2].name  << endl; 
+						 << " and standard deviation " << param[trans[t].param2].name  << endl; 
 				break;
 		}
 	}
@@ -102,6 +116,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
+	par.betachange = 0;	par.suschange = 0; par.infchange = 0;
 
 	param.push_back(par);
 }
