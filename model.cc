@@ -139,17 +139,48 @@ void MODEL::addtrans(string from, string to, short type, string param1, string p
 // At the moment the spline is just linear, but it will probably become cubic at some point.
 void MODEL::betaspline()
 {
-	short s, p;
-	double t, fac;
+  short p, s, n = nspline-1;
+	double t,  fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
-	p = 0;
-	for(s = 0; s < nsettime; s++){
-		settime[s] = double((s+1)*tmax)/nsettime;;
+	if(1 == 1){   // This uses a cubic spline
+		for(p = 0; p <= n; p++) a[p] = log(param[p].val);
+		for(p = 0; p < n; p++) h[p] = splinet[p+1]-splinet[p];
+		for(p = 1; p < n; p++) alpha[p] = (3/h[p])*(a[p+1]-a[p]) - (3/h[p-1])*(a[p]-a[p-1]);
+
+		l[0]=1; mu[0]=0; z[0]=0;
+		for(p = 1; p < n; p++){
+			l[p] = 2*(splinet[p+1]-splinet[p-1]) - h[p-1]*mu[p-1];
+			mu[p] = h[p]/l[p];
+			z[p] = (alpha[p]-h[p-1]*z[p-1])/l[p];
+		}
+		l[n] = 1; z[n] = 0; c[n] = 0;
+		for(p = n-1; p >= 0; p--){
+			c[p] = z[p]-mu[p]*c[p+1];
+			b[p] = (a[p+1]-a[p])/h[p] - h[p]*(c[p+1]+2*c[p])/3;
+			d[p] = (c[p+1]-c[p])/(3*h[p]);
+		}
 		
-		t = double((s+0.5)*tmax)/nsettime;
-		while(p < nspline-1 && t > splinet[p+1]) p++;
-		
-		fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
-		beta[s] = param[p].val*(1-fac) + param[p+1].val*fac;
+		p = 0;
+		for(s = 0; s < nsettime; s++){
+			settime[s] = double((s+1)*tmax)/nsettime;;
+			
+			t = double((s+0.5)*tmax)/nsettime;
+			while(p < nspline-1 && t > splinet[p+1]) p++;
+			
+			dt = t-splinet[p];	
+			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
+		}
+	}
+	else{  // This uses a linear spline
+		p = 0;
+		for(s = 0; s < nsettime; s++){
+			settime[s] = double((s+1)*tmax)/nsettime;;
+			
+			t = double((s+0.5)*tmax)/nsettime;
+			while(p < nspline-1 && t > splinet[p+1]) p++;
+			
+			fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
+			beta[s] = param[p].val*(1-fac) + param[p+1].val*fac;
+		}
 	}
 }
