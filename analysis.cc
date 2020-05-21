@@ -18,11 +18,14 @@
 #include "model.hh"
 #include "simulate.hh"
 #include "PMCMC.hh"
+#include "gitversion.hh"
 
 using namespace std;
 
 int main(int argc, char** argv)
 {
+	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+
 	POPTREE poptree;
 	long nsamp;       // The number of PMCMC samples
 	short siminf;     // Set to 1 for simulation and 0 for inference
