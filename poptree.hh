@@ -2,6 +2,7 @@
 #pragma once
 
 #include <vector>
+#include "model.hh"
 
 using namespace std;
 
@@ -15,7 +16,8 @@ struct NODE {                              // Provides information about a node
 	long parent;                             // The parent node
 	vector <long> child;                     // The child nodes
 	vector <long> fine;                      // The child nodes on the fine scale
-	long popu;                               // The total population in the node
+	long population;                         // The total population in the node
+	double sussum;                           // The sum of the relative susceptibility of the population in the node
 	double x, y;                             // The position of the node (given by the average of all the houses)
 	short done;                              // A flag used to determine if this node has been analysed or not
 };
@@ -30,8 +32,10 @@ struct IND {                               // Provides information about an indi
 	long noderef;                            // The node on the finescale to which the individual belongs
 	long houseref;                           // The house to which the individual belongs
 	short region;                            // The region to which the individual belongs
+	float sus;                               // The relative susceptibility of an individual
+	float inf;                               // The relative infectivity of an individual
+	vector <float> X;                        // The design matrix for fixed effects
 };
-
 
 struct HouseRefComparatorX
 {
@@ -76,6 +80,8 @@ class POPTREE
 	}
 
 	void init();
+	void setsus(MODEL &model);                 // Sets the relative susceptibility of individuals
+	void setinf(MODEL &model);                 // Sets the relative infectivity of individuals
 
 	vector <HOUSE> house;                      // List of all the houses
 	vector <LEVEL> lev;

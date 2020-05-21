@@ -13,6 +13,9 @@ struct PARAM{                              // Store information about a model pa
 	double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
 	double jump;                             // The size of proposed changes in PMCMC
+	short betachange;                        // Set to one if there is a change in the beta spline
+	short suschange;                         // Set to one if there us a change in a fixed effect for susceptibility
+	short infchange;                         // Set to one if there us a change in a fixed effect for infectivity
 	long ntr, nac;                           // Store the number of proposals tried and accepted	
 };
 
@@ -38,12 +41,16 @@ public:
 
 	double settime[nsettime];
 	double beta[nsettime];
+	short phiparam;
 	short nspline;                             // The spline points which are parameters in the model
 	vector <double> splinet;
 	vector <PARAM> param;
 	vector <TRANS> trans;
 	vector <COMP> comp;	
 
+	vector <long> fix_sus_param;               // The parameters related to fixed effect for susceptibility
+	vector <long> fix_inf_param;               // The parameters related to fixed effect for infectivity
+	
 private:
 	void addcomp(string name, double infectivity);
 	void addparam(string name, double val, double min, double max);

@@ -54,8 +54,12 @@ int main(int argc, char** argv)
 
 	model.definemodel();
 
+	poptree.setsus(model);
+	poptree.setinf(model);
+	
 	cout << "Running...." << endl;
 
+	timersinit();
 	timers.timetot = -clock();
 
 	if(siminf == 1) simulatedata(model,poptree);

@@ -6,6 +6,7 @@ using namespace std;
 
 #include "math.h"
 
+#include "timers.hh"
 #include "utils.hh"
 #include "PART.hh"
 
@@ -29,11 +30,10 @@ PART::PART(MODEL &model, POPTREE &poptree) : model(model), comp(model.comp), tra
 {
 }
 
-
 /// Initialises a particle
 void PART::partinit(long p)
 {
-	long c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, popu, loop;
+	long c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, loop;
 	
 	pst = p;
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
@@ -45,22 +45,19 @@ void PART::partinit(long p)
 	
 	fev.clear(); fev.resize(fediv);
 
-	Rtot.resize(poptree.level); addlater.resize(poptree.level); pop.resize(poptree.level);
+	Rtot.resize(poptree.level); addlater.resize(poptree.level); sussum.resize(poptree.level);
 	for(l = 0; l < poptree.level; l++){
 		cmax = lev[l].node.size();
-		Rtot[l].resize(cmax); addlater[l].resize(cmax); pop[l].resize(cmax);
-		for(c = 0; c < cmax; c++){ Rtot[l][c] = 0; addlater[l][c] = 0; pop[l][c] = lev[l].node[c].popu;}
+		Rtot[l].resize(cmax); addlater[l].resize(cmax); sussum[l].resize(cmax);
+		for(c = 0; c < cmax; c++){ 
+			Rtot[l][c] = 0; addlater[l][c] = 0;
+			sussum[l][c] = lev[l].node[c].sussum;
+		}
 	}
 	
 	sett = 0;
 	
 	tdnext = fediv;
-	// For simplicity we assume three randomly distributed initally exposed individuals
-	// This will be changed in the proper analysis
-	for(loop = 0; loop < 3; loop++){
-		do{ c = long(ran()*poptree.Cfine);}while(long(poptree.subpop[c].size()) - long(indinf[c].size()) == 0);
-		addinfc(c,0);
-	}
 }
 
 /// Copies in all the information from another particle
@@ -71,7 +68,7 @@ void PART::copy(const PART &other)
 	ffine = other.ffine;
 	indinf = other.indinf;
 	Rtot = other.Rtot; 
-	pop = other.pop;
+	sussum = other.sussum;
 	addlater = other.addlater;
 	fev = other.fev;
 	for(c = 0; c < comp.size(); c++) N[c] = other.N[c];
@@ -109,8 +106,27 @@ vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
 /// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
 void PART::addinfc(long c, double t)
 {
-	long l, i, cc, k, kmax;
-	double dR, sum;
+	long l, i, j, jmax, cc, k, kmax;
+	double dR, sum, sus, z;
+	vector <double> sumst;
+	
+	jmax = poptree.subpop[c].size(); 
+	sumst.resize(jmax);
+	sum = 0; 
+	for(j = 0; j < jmax; j++){
+		sum += poptree.ind[poptree.subpop[c][j]].sus;
+		sumst[j] = sum;
+	}
+
+	kmax = indinf[c].size();
+	do{
+	  z = ran()*sum;                                           // Samples in proportion to individual susceptibility
+		j = 0; while(j < jmax && z > sumst[j]) j++; if(j == jmax) emsg("Part: EC9");
+		i = poptree.subpop[c][j];
+		
+		for(k = 0; k < kmax; k++) if(indinf[c][k] == i) break;   // Checks selected individual is not infected
+	}while(k < kmax);
+	indinf[c].push_back(i);
 	
 	kmax = indinf[c].size();
 	do{
@@ -121,15 +137,15 @@ void PART::addinfc(long c, double t)
 	indinf[c].push_back(i);
 	
 	l = poptree.level-1; cc = c;
-	dR = -Rtot[l][c]/pop[l][cc];
+	sus = poptree.ind[i].sus;
+	dR = -sus*Rtot[l][c]/sussum[l][cc];
 	do{
 		Rtot[l][cc] += dR;
-		pop[l][cc]--;
+		sussum[l][cc] -= sus;
 		cc = lev[l].node[cc].parent; l--;
 	}while(l >= 0);
 	simmodel(i,0,t);
 }
-
 
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 static double gammasamp(double a, double b)
@@ -171,7 +187,6 @@ void PART::simmodel(long i, short enter, double t)
 	TRANS tr;
 	
 	N[enter]++;
-
 	double dt;
 	
 	c = enter;
@@ -248,6 +263,10 @@ void PART::gillespie(double ti, double tf, short siminf)
 		n.type = INF_EV;
 		nev.push_back(n);
 		
+		n.t = t - log(ran())/(sussum[0][0]*model.param[model.phiparam].val);
+		n.type = EXT_EV;
+		nev.push_back(n);
+		
 		sort(nev.begin(),nev.end(),compNEV);
 		
 		if(siminf == 1){
@@ -275,6 +294,11 @@ void PART::gillespie(double ti, double tf, short siminf)
 			dofe();
 			break;
 			
+		case EXT_EV:
+			c = externalinfection();
+			addinfc(c,t);	
+			break;
+			
 		default: emsg("Simulate: EC2"); break;
 		}
 	}while(t < tf);
@@ -290,7 +314,7 @@ void PART::dofe()
 	long **&nMval(poptree.nMval);
 	long ***&Mnoderef(poptree.Mnoderef);
 	float ***&Mval(poptree.Mval);
-
+	
 	i = fev[tdnext][tdfnext].ind; if(fev[tdnext][tdfnext].done != 0) emsg("Simulate: EC3");
 	fev[tdnext][tdfnext].done = 1;
 	c = poptree.ind[i].noderef;
@@ -299,7 +323,7 @@ void PART::dofe()
 	N[tr.from]--; if(N[tr.from] < 0) emsg("Simulate: EC4"); 
 	N[tr.to]++;
 	
-	fac = comp[tr.to].infectivity - comp[tr.from].infectivity;
+	fac = poptree.ind[i].inf*(comp[tr.to].infectivity - comp[tr.from].infectivity);
 
 	tdfnext++;
 	if(tdfnext == fev[tdnext].size()){
@@ -308,7 +332,7 @@ void PART::dofe()
 	}
 		
 	if(fac == 0) return;
-	
+
 	if(checkon == 1){                           // These are checks to see if the algorithm is working properly
 		for(l = poptree.level-1; l >= 0; l--){
 			kmax = nMval[c][l];
@@ -316,7 +340,7 @@ void PART::dofe()
 				cc = Mnoderef[c][l][k];
 				val = fac*Mval[c][l][k];
 			
-				num = val*pop[l][cc];
+				num = val*sussum[l][cc];
 				jmax = lev[l].node[cc].fine.size();
 				for(j = 0; j < jmax; j++){
 					ccc = lev[l].node[cc].fine[j];
@@ -331,7 +355,7 @@ void PART::dofe()
 		kmax = nMval[c][l];
 		for(k = 0; k < kmax; k++){
 			cc = Mnoderef[c][l][k];
-			val = fac*Mval[c][l][k]*pop[l][cc];
+			val = fac*Mval[c][l][k]*sussum[l][cc];
 			lev[l].add[cc] = val;
 			Rtot[l][cc] += val;
 		}
@@ -367,12 +391,37 @@ void PART::dofe()
 		}	
 		
 		double sum=0;
-		for(cc = 0; cc < poptree.Cfine; cc++) sum += ffine[cc]*pop[poptree.level-1][cc];    
+		for(cc = 0; cc < poptree.Cfine; cc++) sum += ffine[cc]*sussum[poptree.level-1][cc];    
 		dd = Rtot[0][0] - sum;
 		if(dd < -tiny || dd > tiny)	emsg("Simulate: EC7");
 	}
 }
 
+long PART::externalinfection()       // An infection is caused by something external to the system (i.e. from abroad)
+{
+	long l, c, cc, j, jmax;
+	double z, sum, sumst[4];
+	
+	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
+	while(l < poptree.level-1){
+		jmax = lev[l].node[c].child.size();
+		sum = 0;
+		for(j = 0; j < jmax; j++){
+			cc = lev[l].node[c].child[j];
+			sum += sussum[l+1][cc];
+			sumst[j] = sum;
+		}
+		
+		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
+		if(j == jmax) emsg("Simulate: EC9");
+		
+		c = lev[l].node[c].child[j];
+		l++;
+	};
+	
+	return c;
+}
+	
 /// This samples the node on the fine scale in which the next infection occurs
 long PART::nextinfection()
 {
@@ -389,7 +438,7 @@ long PART::nextinfection()
 			cc = lev[l].node[c].child[j];
 			
 			if(val != 0){
-				Rnew = Rtot[l+1][cc]+val*pop[l+1][cc]; if(Rnew < 0){ if(Rnew < -tiny) emsg("Simulate: EC8"); Rnew = 0;}
+				Rnew = Rtot[l+1][cc]+val*sussum[l+1][cc]; if(Rnew < 0){ if(Rnew < -tiny) emsg("Simulate: EC8"); Rnew = 0;}
 				Rtot[l+1][cc] = Rnew;
 				addlater[l+1][cc] += val;
 			}	
@@ -406,7 +455,7 @@ long PART::nextinfection()
 	};
 	
 	if(checkon == 1){
-		dd = ffine[c]*pop[l][c] - Rtot[l][c];
+		dd = ffine[c]*sussum[l][c] - Rtot[l][c];
 		if(dd < -tiny || dd > tiny) emsg("Simulate: EC10"); 
 	}
 	

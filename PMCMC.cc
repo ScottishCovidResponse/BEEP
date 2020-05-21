@@ -48,8 +48,11 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 			if(param[p].min != param[p].max){
 				valst = param[p].val;
 				param[p].val += normal(0,param[p].jump); 
-				if(p < model.nspline)
-					model.betaspline();
+				
+				if(param[p].betachange == 1) model.betaspline();
+				if(param[p].suschange == 1) poptree.setsus(model);
+				if(param[p].infchange == 1) poptree.setinf(model);
+				
 				if(param[p].val < param[p].min || param[p].val > param[p].max) al = 0;
 				else{
 					Lf = sample();
@@ -64,9 +67,10 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp)
 				}
 				else{
 					param[p].val = valst;
-					if(p < model.nspline)
-						model.betaspline();
-
+					if(param[p].betachange == 1) model.betaspline();
+					if(param[p].suschange == 1) poptree.setsus(model);
+					if(param[p].infchange == 1) poptree.setinf(model);
+				
 					if(samp < burnin) param[p].jump *= 0.95;
 				}
 			}

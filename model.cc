@@ -18,13 +18,13 @@ void MODEL::definemodel()
 {
 	// R0 determines how many individuals an infected individual on average infects
 	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
-	double R0sim[5] = {3,2.5,1.5,0.5,0.5};       
+	double R0sim[5] = {2.3,2.0,1.5,0.5,0.5};       
 	
 	double tEA = 2.5, tAI = 3, tAR = 3.5, tIR = 16.7;            // Estimates of transition times from literature
 	double tIH = 3.1, tID = 12.9, tHD = 8, tHR = 13.1;
 	
 	double r, rAI, rAR, rIR, rIH, rID, tinfav;
-	short p, c, t;
+	short p, c, t, fi;
 		
 	addcomp("E",0); addcomp("A",0.2); addcomp("I",1);            // Different compartment in the model
 	addcomp("H",0); addcomp("R",0); addcomp("D",0); 
@@ -38,9 +38,26 @@ void MODEL::definemodel()
 		splinet.push_back(double(p*tmax)/(nspline-1));
 		stringstream ss; ss << "beta_" << p;
 		r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
+		param[long(param.size())-1].betachange = 1;
 	}		
 	betaspline();
 
+	phiparam = param.size();
+	r = 1.0/popsize; addparam("phi",r,r,r);                         // Adds a small external force of infection
+	
+	fix_sus_param.resize(nfix); fix_inf_param.resize(nfix);
+	for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
+		fix_sus_param[fi] = param.size(); 
+		stringstream sssus; sssus << "fixsus_" << fi;
+		addparam(sssus.str(),0.1,-1,1);
+		param[long(param.size())-1].suschange = 1;
+		
+		fix_inf_param[fi] = param.size(); 
+		stringstream ssinf; ssinf << "fixinf_" << fi;
+		addparam(ssinf.str(),0.1,-1,1);
+		param[long(param.size())-1].infchange = 1;
+	}
+	
 	addparam("tEA",tEA,tEA,tEA);                             // We define all the parameters in the model (with uniform priors)
 	addparam("sdEA",tEA/2,tEA/2,tEA/2);
 	r = 1.0/tEA; addparam("rEA",r,r,r);
@@ -83,7 +100,7 @@ void MODEL::definemodel()
 				break;
 			case GAMMA_DIST:
 				cout << " Gamma distributed with mean " << param[trans[t].param1].name 
-						<< " and standard deviation " << param[trans[t].param2].name  << endl; 
+						 << " and standard deviation " << param[trans[t].param2].name  << endl; 
 				break;
 		}
 	}
@@ -102,6 +119,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
+	par.betachange = 0;	par.suschange = 0; par.infchange = 0;
 
 	param.push_back(par);
 }
@@ -139,17 +157,48 @@ void MODEL::addtrans(string from, string to, short type, string param1, string p
 // At the moment the spline is just linear, but it will probably become cubic at some point.
 void MODEL::betaspline()
 {
-	short s, p;
-	double t, fac;
+  short p, s, n = nspline-1;
+	double t,  fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
-	p = 0;
-	for(s = 0; s < nsettime; s++){
-		settime[s] = double((s+1)*tmax)/nsettime;;
+	if(1 == 1){   // This uses a cubic spline
+		for(p = 0; p <= n; p++) a[p] = log(param[p].val);
+		for(p = 0; p < n; p++) h[p] = splinet[p+1]-splinet[p];
+		for(p = 1; p < n; p++) alpha[p] = (3/h[p])*(a[p+1]-a[p]) - (3/h[p-1])*(a[p]-a[p-1]);
+
+		l[0]=1; mu[0]=0; z[0]=0;
+		for(p = 1; p < n; p++){
+			l[p] = 2*(splinet[p+1]-splinet[p-1]) - h[p-1]*mu[p-1];
+			mu[p] = h[p]/l[p];
+			z[p] = (alpha[p]-h[p-1]*z[p-1])/l[p];
+		}
+		l[n] = 1; z[n] = 0; c[n] = 0;
+		for(p = n-1; p >= 0; p--){
+			c[p] = z[p]-mu[p]*c[p+1];
+			b[p] = (a[p+1]-a[p])/h[p] - h[p]*(c[p+1]+2*c[p])/3;
+			d[p] = (c[p+1]-c[p])/(3*h[p]);
+		}
 		
-		t = double((s+0.5)*tmax)/nsettime;
-		while(p < nspline-1 && t > splinet[p+1]) p++;
-		
-		fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
-		beta[s] = param[p].val*(1-fac) + param[p+1].val*fac;
+		p = 0;
+		for(s = 0; s < nsettime; s++){
+			settime[s] = double((s+1)*tmax)/nsettime;;
+			
+			t = double((s+0.5)*tmax)/nsettime;
+			while(p < nspline-1 && t > splinet[p+1]) p++;
+			
+			dt = t-splinet[p];	
+			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
+		}
+	}
+	else{  // This uses a linear spline
+		p = 0;
+		for(s = 0; s < nsettime; s++){
+			settime[s] = double((s+1)*tmax)/nsettime;;
+			
+			t = double((s+0.5)*tmax)/nsettime;
+			while(p < nspline-1 && t > splinet[p+1]) p++;
+			
+			fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
+			beta[s] = param[p].val*(1-fac) + param[p+1].val*fac;
+		}
 	}
 }
