@@ -7,7 +7,7 @@ hdrs := $(wildcard *.h) $(wildcard *.hh)
 exe := analysis
 
 $(exe): $(srcs) $(hdrs)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(srcs) -o $(exe)
+	$(MPICXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(srcs) -o $(exe)
 
 .PHONY : all
 all: $(exe)

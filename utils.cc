@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -31,5 +30,6 @@ double ran()
 void emsg(string msg)
 {
 	cout << msg << endl;
+	MPI_Finalize();
 	exit (EXIT_FAILURE);
 }

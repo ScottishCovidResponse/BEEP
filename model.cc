@@ -14,7 +14,7 @@
 
 using namespace std;
 
-void MODEL::definemodel()
+void MODEL::definemodel(short core)
 {
 	// R0 determines how many individuals an infected individual on average infects
 	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
@@ -49,12 +49,14 @@ void MODEL::definemodel()
 	for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
 		fix_sus_param[fi] = param.size(); 
 		stringstream sssus; sssus << "fixsus_" << fi;
-		addparam(sssus.str(),0.1,-1,1);
+		//addparam(sssus.str(),0.1,-1,1);
+		addparam(sssus.str(),0.1,0.1,0.1);
 		param[long(param.size())-1].suschange = 1;
 		
 		fix_inf_param[fi] = param.size(); 
 		stringstream ssinf; ssinf << "fixinf_" << fi;
-		addparam(ssinf.str(),0.1,-1,1);
+		//addparam(ssinf.str(),0.1,-1,1);
+		addparam(ssinf.str(),0.1,0.1,0.1);
 		param[long(param.size())-1].infchange = 1;
 	}
 	
@@ -78,33 +80,35 @@ void MODEL::definemodel()
 	addtrans("H","D",EXP_DIST,"rHD","");
 	addtrans("H","R",EXP_DIST,"rHR","");
 	
-	cout << endl;                                            //Outputs a summary of the model
-	cout << "Parameters:" << endl;
-	for(p = 0; p < param.size(); p++){
-		cout << param[p].name << " " << param[p].val << " (" << param[p].min << " - " << param[p].max << ")" << endl;
-	}
-	cout << endl;
-		
-	cout << "Compartments:" << endl; 
-	for(c = 0; c < comp.size(); c++){
-		cout << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 
-	}
-	cout << endl;
-	
-	cout << "Transitions:" << endl; 
-	for(t = 0; t < trans.size(); t++){
-		cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name << "  ";
-		switch(trans[t].type){
-			case EXP_DIST:
-				cout << " Exponentially distributed with rate " << param[trans[t].param1].name << endl;
-				break;
-			case GAMMA_DIST:
-				cout << " Gamma distributed with mean " << param[trans[t].param1].name 
-						 << " and standard deviation " << param[trans[t].param2].name  << endl; 
-				break;
+	if(core == 0){
+		cout << endl;                                            //Outputs a summary of the model
+		cout << "Parameters:" << endl;
+		for(p = 0; p < param.size(); p++){
+			cout << param[p].name << " " << param[p].val << " (" << param[p].min << " - " << param[p].max << ")" << endl;
 		}
+		cout << endl;
+			
+		cout << "Compartments:" << endl; 
+		for(c = 0; c < comp.size(); c++){
+			cout << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 
+		}
+		cout << endl;
+		
+		cout << "Transitions:" << endl; 
+		for(t = 0; t < trans.size(); t++){
+			cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name << "  ";
+			switch(trans[t].type){
+				case EXP_DIST:
+					cout << " Exponentially distributed with rate " << param[trans[t].param1].name << endl;
+					break;
+				case GAMMA_DIST:
+					cout << " Gamma distributed with mean " << param[trans[t].param1].name 
+							 << " and standard deviation " << param[trans[t].param2].name  << endl; 
+					break;
+			}
+		}
+		cout << endl;
 	}
-	cout << endl;
 }
 
 void MODEL::addcomp(string name, double infectivity)

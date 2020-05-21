@@ -36,7 +36,7 @@ struct TRANS{                              // Stores information about a compart
 class MODEL
 {
 public:
-	void definemodel();
+	void definemodel(short core);
 	void betaspline();
 
 	double settime[nsettime];

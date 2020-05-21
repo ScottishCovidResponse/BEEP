@@ -69,9 +69,6 @@ private:
 	vector <HOUSE> &house;
 };
 
-
-
-
 class POPTREE
 {
  	public:
@@ -79,7 +76,7 @@ class POPTREE
 	{
 	}
 
-	void init();
+	void init(short core);
 	void setsus(MODEL &model);                 // Sets the relative susceptibility of individuals
 	void setinf(MODEL &model);                 // Sets the relative infectivity of individuals
 
