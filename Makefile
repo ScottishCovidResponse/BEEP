@@ -2,7 +2,7 @@
 CXXFLAGS := -g -O3
 
 srcs := analysis.cc timers.cc utils.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc
-hdrs := $(wildcard *.h) $(wildcard *.hh)
+hdrs := PART.hh PMCMC.hh consts.hh model.hh poptree.hh simulate.hh timers.hh utils.hh
 
 exe := analysis
 
