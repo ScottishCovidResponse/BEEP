@@ -36,8 +36,8 @@ struct TRANS{                              // Stores information about a compart
 class MODEL
 {
 public:
-	void definemodel(short core);
-	void betaspline();
+	void definemodel(short core, double tmax, long popsize);
+	void betaspline(double tmax);
 
 	double settime[nsettime];
 	double beta[nsettime];
@@ -48,6 +48,8 @@ public:
 	vector <TRANS> trans;
 	vector <COMP> comp;	
 
+	long ntr, nac;                             // Gets the base acceptance rate
+	
 	vector <long> fix_sus_param;               // The parameters related to fixed effect for susceptibility
 	vector <long> fix_inf_param;               // The parameters related to fixed effect for infectivity
 	

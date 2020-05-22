@@ -14,7 +14,7 @@
 
 using namespace std;
 
-void MODEL::definemodel(short core)
+void MODEL::definemodel(short core, double tmax, long popsize)
 {
 	// R0 determines how many individuals an infected individual on average infects
 	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
@@ -40,7 +40,7 @@ void MODEL::definemodel(short core)
 		r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
 		param[long(param.size())-1].betachange = 1;
 	}		
-	betaspline();
+	betaspline(tmax);
 
 	phiparam = param.size();
 	r = 1.0/popsize; addparam("phi",r,r,r);                         // Adds a small external force of infection
@@ -79,6 +79,8 @@ void MODEL::definemodel(short core)
 	addtrans("I","D",EXP_DIST,"rID","");
 	addtrans("H","D",EXP_DIST,"rHD","");
 	addtrans("H","R",EXP_DIST,"rHR","");
+	
+	ntr = 0; nac = 0;
 	
 	if(core == 0){
 		cout << endl;                                            //Outputs a summary of the model
@@ -159,7 +161,7 @@ void MODEL::addtrans(string from, string to, short type, string param1, string p
 	
 // Converts the spline points to a finer timestep for use in simulations.
 // At the moment the spline is just linear, but it will probably become cubic at some point.
-void MODEL::betaspline()
+void MODEL::betaspline(double tmax)
 {
   short p, s, n = nspline-1;
 	double t,  fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];

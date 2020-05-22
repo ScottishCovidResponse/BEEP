@@ -1,15 +1,10 @@
-
 #pragma once
 
 #include <vector>
 #include "model.hh"
+#include "data.hh"
 
 using namespace std;
-
-struct HOUSE {                             // Defines a house
- 	double x, y;                             // Position
-	vector <long> ind;                       // Individuals which belong to the house
-};
 
 struct NODE {                              // Provides information about a node
 	vector <long> houseref;                  // References the list of houses within the node
@@ -31,56 +26,19 @@ struct LEVEL {                             // Stores information about different
 struct IND {                               // Provides information about an individual
 	long noderef;                            // The node on the finescale to which the individual belongs
 	long houseref;                           // The house to which the individual belongs
-	short region;                            // The region to which the individual belongs
-	float sus;                               // The relative susceptibility of an individual
+  float sus;                               // The relative susceptibility of an individual
 	float inf;                               // The relative infectivity of an individual
 	vector <float> X;                        // The design matrix for fixed effects
-};
-
-struct HouseRefComparatorX
-{
-	public:
-	HouseRefComparatorX(vector <HOUSE> &house) : house(house)
-	{
-	}
-
-  bool operator()(const long &a, const long &b) const
-	{
-		return house[a].x < house[b].x;
-	}
-
-private:
-	vector <HOUSE> &house;
-};
-
-struct HouseRefComparatorY
-{
-	public:
-	HouseRefComparatorY(vector <HOUSE> &house) : house(house)
-	{
-	}
-
-  bool operator()(const long &a, const long &b) const
-	{
-		return house[a].y < house[b].y;
-	}
-
-private:
-	vector <HOUSE> &house;
 };
 
 class POPTREE
 {
  	public:
-	POPTREE() : compX(house), compY(house)
-	{
-	}
 
-	void init(short core);
+	void init(DATA &data, short core);
 	void setsus(MODEL &model);                 // Sets the relative susceptibility of individuals
 	void setinf(MODEL &model);                 // Sets the relative infectivity of individuals
 
-	vector <HOUSE> house;                      // List of all the houses
 	vector <LEVEL> lev;
 	short level;                               // The number of levels of scale in the model
 	vector <vector <long> > subpop;            // List of all individuals in node on the fine scale
@@ -92,7 +50,4 @@ class POPTREE
 	long ***Mnoderef;
 	long **naddnoderef;
 	long ***addnoderef;
-
-	HouseRefComparatorX compX;
-	HouseRefComparatorY compY;
 };

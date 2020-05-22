@@ -6,17 +6,17 @@
 #include "math.h"
 #include "assert.h"
 
-#include <mpi.h>
-
 using namespace std;
 
 #include "timers.hh"
 #include "model.hh"
 #include "utils.hh"
 #include "PART.hh"
+#include "output.hh"
 
-static void readdata();
-static double sample(short core, short ncore);
+long timebo = 0;
+
+static double sample(short core, short ncore, double tmax);
 static double bootstrap();
 static double bootstrap_parallel(short core, short ncore);
 static double normal(float mu, float sd);
@@ -24,31 +24,24 @@ static double normal(float mu, float sd);
 PART* part[partmax];                       // Pointers to each of the particles 
 long npart;                                // The number of particles used within this process
 
-long ncase[nregion][tmax/7+1];             // Number of cases in each region as a function of time
-
-ofstream trace;
-
-void PMCMC(MODEL &model, POPTREE &poptree, long nsamp, short core, short ncore)
+void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, long nsamp, short core, short ncore)
 {
-	long p, samp, burnin = nsamp/3, ntr, nac, accept;
+	long p, samp, burnin = nsamp/3, accept;
 	double Li, Lf, valst, al;
+	vector < vector <FEV> > xi;   // Stores the current event sequence
+	vector <SAMPLE> opsamp;       // Stores sample for generating satatistics later
 
 	srand(core);
 		
 	vector <PARAM> &param(model.param);
-
-	readdata();                                                    // Reads in weekly case data 
-		
-	npart = 5;                                                     // The number of particles per core
 	
-	for(p = 0; p < npart; p++){ part[p] = new PART(model,poptree); }
-
-	if(core == 0){
-		trace.open("trace.txt");		
-		trace << "state"; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].name; trace << "\tLi"; trace << endl;
-	}
+	npart = 25;                                                     // The number of particles per core
 	
-	Li = -large; ntr = 0; nac = 0;
+	for(p = 0; p < npart; p++){ part[p] = new PART(data,model,poptree);}
+
+	if(core == 0) outputinit(model);
+	
+	Li = -large;
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << endl;
 
@@ -56,21 +49,21 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp, short core, short ncore)
 		// This change is probablisitically either accepted or rejected based
 		// on whether the observations agree better with new value or the old one.			
 	
-		for(p = 0; p < param.size(); p++){
+		for(p = 0; p < -long(param.size()); p++){
 			if(param[p].min != param[p].max){
 				valst = param[p].val;
 				
 				if(core == 0) param[p].val += normal(0,param[p].jump); 
-					
+				
 				MPI_Bcast(&param[p].val,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-				if(param[p].betachange == 1) model.betaspline();
+				if(param[p].betachange == 1) model.betaspline(data.tmax);
 				if(param[p].suschange == 1) poptree.setsus(model);
 				if(param[p].infchange == 1) poptree.setinf(model);
 				
 				if(param[p].val < param[p].min || param[p].val > param[p].max) al = 0;
 				else{
-					Lf = sample(core,ncore);
+					Lf = sample(core,ncore,data.tmax);
 					if(core == 0) al = exp(Lf-Li);
 				}
 				if(core == 0){ if(ran() < al) accept = 1; else accept = 0;}
@@ -79,43 +72,38 @@ void PMCMC(MODEL &model, POPTREE &poptree, long nsamp, short core, short ncore)
 					
 				param[p].ntr++;
 				if(accept == 1){
-					param[p].nac++;
-					
-					Li = Lf;
-					if(samp < burnin) param[p].jump *= 1.1;
+					if(core == 0){
+						param[p].nac++;
+						xi = part[0]->fev;
+						Li = Lf;
+						if(samp < burnin) param[p].jump *= 1.1;
+					}
 				}
 				else{
 					param[p].val = valst;
-					if(param[p].betachange == 1) model.betaspline();
+					if(param[p].betachange == 1) model.betaspline(data.tmax);
 					if(param[p].suschange == 1) poptree.setsus(model);
 					if(param[p].infchange == 1) poptree.setinf(model);
 				
-					if(samp < burnin) param[p].jump *= 0.95;
+					if(core == 0){
+						if(samp < burnin) param[p].jump *= 0.95;
+					}
 				}
 			}
 		}
-	
-		Lf = sample(core,ncore);
-		if(core == 0){ al = exp(Lf-Li); ntr++; if(ran() < al){ nac++; Li = Lf;}}
-	
-		if(core == 0){
-			trace << samp; for(p = 0; p < param.size(); p++) trace << "\t" << param[p].val; trace << "\t" << Li; trace << endl;
-		}			
-	}
 		
-	if(core == 0){      // This gives the acceptance rates for different MCMC proposals on different parameters
-		cout << "MCMC diagnostics:" << endl;
-		cout << "Base acceptance rate " << double(nac)/ntr << endl;
-		for(p = 0; p < param.size(); p++){
-			cout << param[p].name << ": ";
-			if(param[p].ntr == 0) cout << "Fixed" << endl;
-			else cout << "Acceptance rate " << double(param[p].nac)/param[p].ntr << endl;
-		}
+		Lf = sample(core,ncore,data.tmax);
+		if(core == 0){ al = exp(Lf-Li); model.ntr++; if(ran() < al){ xi = part[0]->fev; model.nac++; Li = Lf;}}
+	
+		if(core == 0) opsamp.push_back(outputsamp(samp,Li,data,model,poptree,xi));	
 	}
+			cout << double(timebo)/CLOCKS_PER_SEC << " Timebo" << endl;
+			
+	if(core == 0) outputresults(data,model,opsamp);
 }
 
 /// This samples from the model using particles and returns an overall measure of how well the observations agreed with it 
-static double sample(short core, short ncore)
+static double sample(short core, short ncore, double tmax)
 {
 	short p, step = 7;
 	double tt, ttnext, Liav;
@@ -128,20 +116,21 @@ static double sample(short core, short ncore)
 
 		for(p = 0; p < npart; p++){
 			timers.timesim -= clock();
+	
 			part[p]->gillespie(tt,ttnext, 0 /* Inference */); // Simulates the particle
-			part[p]->Lobs(tt,ttnext, ncase);      // Measures how well it agrees with the observations (weekly number of cases)
+	
+			part[p]->Lobs(tt,ttnext);      // Measures how well it agrees with the observations (weekly number of cases)
 			timers.timesim += clock();
 		}
+		
 		timers.timeboot -= clock();
-		
 		//Liav += bootstrap();             // Culls or copies particles based on how well they represent observations
-		
 		Liav += bootstrap_parallel(core,ncore);  // Culls or copies particles based on how well they represent observations
 		timers.timeboot += clock();
 			
 		tt = ttnext;
 	}while(tt < tmax);	
-	
+
 	return Liav;
 }
 
@@ -183,6 +172,7 @@ static double bootstrap_parallel(short core, short ncore)
 
 		for(p = 0; p < nparttot; p++) copynum[p] = 0;
 			
+		timebo -= clock();
 		for(p = 0; p < nparttot; p++){                                      // Calculates how many copies of particle to be kept
 			z = sum*ran();
 			pp = 0; while(pp < nparttot && z > sumst[pp]) pp++;
@@ -190,7 +180,8 @@ static double bootstrap_parallel(short core, short ncore)
 			
 			copynum[pp]++;
 		}
-
+	timebo += clock();
+	
 		res = Limax + log(av);
 	}
 	else{
@@ -315,18 +306,6 @@ static double bootstrap()
 	if(copylist.size() != 0) emsg("PMCMC: EC3");
  
 	return Limax + log(av);
-}
-
-/// Reads in simulated case data
-static void readdata()
-{
-	long week, tt, r;
-	
-	ifstream regplot("Weekly case data.txt");
-	for(week = 0; week < tmax/7; week++){
-		regplot >> tt;
-		for(r = 0; r < nregion; r++) regplot >> ncase[r][week];
-	}
 }
 
 /// Draws a normally distributed number with mean mu and standard deviation sd

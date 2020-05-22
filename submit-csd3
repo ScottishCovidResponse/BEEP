@@ -75,9 +75,9 @@ echo
 echo "Running inference"
 echo "================="
 echo
-./analysis $groups $samples $seed
+#./analysis $groups $samples $seed
 
-#mpirun -n $nprocs ./analysis $groups $samples $seed
+mpirun -n $nprocs ./analysis $groups $samples $seed
 
 EOF
 

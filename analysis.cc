@@ -1,29 +1,21 @@
-// Compile with g++ analysis.cc -o analysis -O3
-// Compile with mpic++ analysis.cc -O3 -o analysis
-//
 
 /*
 Load mpi: module load mpi/openmpi-x86_64
-Compile using:    mpic++ -O3   analysis.cc timers.cc utils.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc -o analysis
+Compile using:    mpicxx -O3   analysis.cc timers.cc utils.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc -o analysis
 
-Run using:        mpirun -n 1 ./analysis 65536 0
+Simulate using:        mpirun -n 1 ./analysis 65536 0
 
 -n 4 gives the number nodes (i.e. MCMC chains)
-"Scotland_bici_input.xml" is the model/data file to be analysed
-1000000 is the number of MCMC iterations
+The first number gives the number of areas into which the houses are divided (should be a power of 4)
+The second number changes the random seed
+
+Inference using:        mpirun -n 1 ./analysis 65536 10000 0
+
+10000 is the number of MCMC iterations
 */
-
-// To run in simulation mode: ./analysis 1024 0
-
-// The first number gives the number of areas into which the houses are divided (should be a power of 4)
-// The second number changes the random seed
-
-// To run in inference mode: ./analysis 1024 1000 0
-// Here the second number gives the number of PMCMC samples
 
 #include <iostream>
 
-	
 #include "stdlib.h"
 #include "time.h"
 
@@ -31,6 +23,8 @@ Run using:        mpirun -n 1 ./analysis 65536 0
 #include "timers.hh"
 #include "poptree.hh"
 #include "model.hh"
+#include "data.hh"
+
 #include "simulate.hh"
 #include "PMCMC.hh"
 
@@ -66,6 +60,7 @@ int main(int argc, char** argv)
 			#ifdef USE_MPI
 			MPI_Finalize();
 			#endif
+			return 0;
 		}
 		break;
 		
@@ -83,11 +78,14 @@ int main(int argc, char** argv)
 	
 	if(core == 0) cout << "Initialising...." << endl;
 
-	poptree.init(core);	
+	DATA data;
+	data.readdata(siminf);
+	
+	poptree.init(data,core);	
 	
 	MODEL model;
 
-	model.definemodel(core);
+	model.definemodel(core,data.tmax,data.popsize);
 
 	poptree.setsus(model);
 	poptree.setinf(model);
@@ -97,8 +95,8 @@ int main(int argc, char** argv)
 	timersinit();
 	timers.timetot = -clock();
 
-	if(siminf == 1) simulatedata(model,poptree);
-	else PMCMC(model,poptree,nsamp,core,ncore);
+	if(siminf == 1) simulatedata(data,model,poptree);
+	else PMCMC(data,model,poptree,nsamp,core,ncore);
 
 	timers.timetot += clock();
 	
@@ -112,4 +110,6 @@ int main(int argc, char** argv)
 	MPI_Finalize();
 	#endif
 }
+
+
 

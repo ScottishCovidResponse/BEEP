@@ -2,10 +2,6 @@
 #include <iostream>
 #include <algorithm>
 
-//#ifdef USE_MPI
-#include <mpi.h>
-//#endif
-
 using namespace std;
 
 #include "math.h"
@@ -13,16 +9,10 @@ using namespace std;
 #include "timers.hh"
 #include "utils.hh"
 #include "PART.hh"
+#include "output.hh"
 
 struct NEV {                               // Information about the immediate next events
   short type; double t;
-};
-
-struct FEV {                               // Stores information about a compartmental transition
-  long trans;                              // References the transition type
-	long ind;                                // The individual on which the transition happens
-	double t;                                // The time of the transition
-	short done;                              // Set to 1 if that transition is in the past 
 };
 
 static bool compNEV(NEV lhs, NEV rhs)
@@ -30,7 +20,7 @@ static bool compNEV(NEV lhs, NEV rhs)
 	return lhs.t < rhs.t;
 };
 
-PART::PART(MODEL &model, POPTREE &poptree) : model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
+PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
 {
 }
 
@@ -63,32 +53,6 @@ void PART::partinit(long p)
 	sett = 0;
 	
 	tdnext = fediv;
-}
-
-/// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
-/// in different regions over the time range ti - tf
-vector <long> PART::getnumtrans(string from, string to, short ti, short tf)
-{
-	long d, k, r, tra;
-	FEV fe;
-	vector <long> num;
-	
-	tra = 0; while(tra < trans.size() && !(comp[trans[tra].from].name == from && comp[trans[tra].to].name == to)) tra++;
-	if(tra == trans.size()) emsg("Finescale: Cannot find transition");
-	
-	for(r = 0; r < nregion; r++) num.push_back(0);
-
-	for(d = long(fediv*double(ti)/tmax); d <= long(fediv*double(tf)/tmax); d++){
-		if(d < fediv){
-			for(k = 0; k < fev[d].size(); k++){
-				fe = fev[d][k];
-				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[poptree.ind[fe.ind].region]++;
-			}
-		}
-	}
-	
-	return num;
 }
 
 /// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
@@ -206,11 +170,11 @@ void PART::addfev(double t, long trans, long i)
 {
 	long d, j, jmax;
 	
-	if(t >= tmax) return;
+	if(t >= data.tmax) return;
 	
 	FEV fe; fe.t = t; fe.trans = trans; fe.ind = i; fe.done = 0;
 	
-	d = long((t/tmax)*fediv);
+	d = long((t/data.tmax)*fediv);
 	j = 0; jmax = fev[d].size();
 	while(j < jmax && t > fev[d][j].t) j++;
 	if(j == jmax) fev[d].push_back(fe);
@@ -341,6 +305,7 @@ void PART::dofe()
 		
 	if(fac == 0) return;
 
+	/*
 	h = poptree.ind[i].houseref;                               // Updates household effect
 	jmax = poptree.house[h].ind.size();
 	for(j = 0; j < jmax; j++){
@@ -352,6 +317,7 @@ void PART::dofe()
 			}
 		}
 	}
+	*/
 	
 	if(checkon == 1){                           // These are checks to see if the algorithm is working properly
 		for(l = poptree.level-1; l >= 0; l--){
@@ -383,6 +349,7 @@ void PART::dofe()
 		kmax = poptree.naddnoderef[c][l];
 		for(k = 0; k < kmax; k++){
 			cc = poptree.addnoderef[c][l][k];
+
 			jmax = lev[l].node[cc].child.size();
 			val = 0; for(j = 0; j < jmax; j++) val += lev[l+1].add[lev[l].node[cc].child[j]];
 			lev[l].add[cc] = val;
@@ -407,33 +374,6 @@ void PART::dofe()
 	if(checkon == 1) check(1);
 }
 
-/*
-long PART::externalinfection()       // An infection is caused by something external to the system (i.e. from abroad)
-{
-	long l, c, cc, j, jmax;
-	double z, sum, sumst[4];
-	
-	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
-	while(l < poptree.level-1){
-		jmax = lev[l].node[c].child.size();
-		sum = 0;
-		for(j = 0; j < jmax; j++){
-			cc = lev[l].node[c].child[j];
-			sum += sussum[l+1][cc];
-			sumst[j] = sum;
-		}
-		
-		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
-		if(j == jmax) emsg("Simulate: EC9");
-		
-		c = lev[l].node[c].child[j];
-		l++;
-	};
-	
-	return c;
-}
-	*/
-	
 /// This samples the node on the fine scale in which the next infection occurs
 long PART::nextinfection(short type)
 {
@@ -477,17 +417,17 @@ long PART::nextinfection(short type)
 
 /// Measures how well the particle agrees with the observations within a given time period
 /// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf, long ncase[nregion][tmax/7+1])
+void PART::Lobs(short ti, short tf)
 {
 	short tt, r;
 	double mean, var;
 	vector <long> num;
-
+	
 	Li = 0;	
 	for(tt = ti; tt < tf; tt += 7){
-		num = getnumtrans("I","H",tt,tt+7);
-		for(r = 0; r < nregion; r++){
-			mean = ncase[r][tt/7];
+		num = getnumtrans(data,model,poptree,fev,"I","H",tt,tt+7);
+		for(r = 0; r < data.nregion; r++){
+			mean = data.ncase[r][tt/7];
 			var = mean; if(var < 5) var = 5;
 			Li += invT*(-0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var));
 		}

@@ -6,13 +6,19 @@ using namespace std;
 
 #include "model.hh"
 #include "poptree.hh"
+#include "data.hh"
 
-class FEV;
+struct FEV {                               // Stores information about a compartmental transition
+  long trans;                              // References the transition type
+	long ind;                                // The individual on which the transition happens
+	double t;                                // The time of the transition
+	short done;                              // Set to 1 if that transition is in the past 
+};
 
 class PART                                 // Stores all the things related to a particle 
 {
 	public:
-	PART(MODEL &model, POPTREE &poptree);
+	PART(DATA &data, MODEL &model, POPTREE &poptree);
 
 	long pst;                                // The number of the particle
 	
@@ -41,6 +47,8 @@ class PART                                 // Stores all the things related to a
 	POPTREE &poptree;
 	vector <LEVEL> &lev;
 
+	DATA &data;
+		
 	public: 
 		void gillespie(double ti, double tf, short siminf);
 		void partinit(long p);
@@ -49,8 +57,7 @@ class PART                                 // Stores all the things related to a
 		long nextinfection(short type);
 		void addinfc(long c, double t);
 		void addfev(double t, long tr, long i);
-		vector <long> getnumtrans(string from, string to, short ti, short tf);
-		void Lobs(short ti, short tf, long ncase[nregion][tmax/7+1]);
+		void Lobs(short ti, short tf);
 		void copy(const PART &other);
 		void simmodel(long i, short enter, double t);
 		void check(short num);
