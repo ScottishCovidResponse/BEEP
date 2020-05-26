@@ -33,7 +33,7 @@ void PART::partinit(long p)
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
  
 	ffine.clear(); 
-	ffine.resize(poptree.Cfine); for(c = 0; c < poptree.Cfine; c++) ffine[c] = 0;
+	if(checkon == 1){ ffine.resize(poptree.Cfine); for(c = 0; c < poptree.Cfine; c++) ffine[c] = 0;}
 
 	indinf.clear(); indinf.resize(poptree.Cfine);
 	
@@ -73,7 +73,7 @@ void PART::addinfc(long c, double t)
 	kmax = indinf[c].size();
 	do{
 	  z = ran()*sum;                                           // Samples in proportion to individual susceptibility
-		j = 0; while(j < jmax && z > sumst[j]) j++; if(j == jmax) emsg("Part: EC9");
+		j = 0; while(j < jmax && z > sumst[j]) j++; if(j == jmax) emsg("Part: EC1");
 		i = poptree.subpop[c][j];
 		
 		for(k = 0; k < kmax; k++) if(indinf[c][k] == i) break;   // Checks selected individual is not infected
@@ -96,7 +96,7 @@ void PART::addinfc(long c, double t)
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 static double gammasamp(double a, double b)
 {
-  if(a < 0 || b < 0) emsg("Model: EC1");
+  if(a < 0 || b < 0) emsg("Part: EC2");
 
   if(a < 1){
     double u = ran();
@@ -157,7 +157,7 @@ void PART::simmodel(long i, short enter, double t)
 			
 			if(tnext < tnextmin){ tnextmin = tnext; tra = comp[c].trans[k];}
 		}
-		if(tnextmin == large) emsg("Model: EC2");
+		if(tnextmin == large) emsg("Part: EC3");
 		
 		addfev(tnextmin,tra,i);
 
@@ -192,7 +192,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	NEV n;
 	vector <NEV> nev;
 	
-	if(sett == nsettime) emsg("Simulate: EC1");
+	if(sett == nsettime) emsg("Part: EC4");
 	
 	t = ti; tpl = t;
 	do{
@@ -228,7 +228,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	
 		switch(nev[0].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
-			sett++; if(sett >= nsettime) emsg("Simulate: EC1a");
+			sett++; if(sett >= nsettime) emsg("Part: EC5");
 			break;
 		
 		case INF_EV:                 // These are infection events within the system
@@ -241,7 +241,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 			dofe();
 			break;
 		
-		default: emsg("Simulate: EC2"); break;
+		default: emsg("Part: EC6"); break;
 		}
 		
 		if(checkon == 1) check(0);
@@ -254,13 +254,13 @@ void PART::check(short num)
 	double dd;
 	for(l = 0; l < poptree.level; l++){
 		cmax = lev[l].add.size();
-		for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Simulate: EC6b");}
+		for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Part: EC7");}
 	}	
 	
 	double sum=0;
 	for(cc = 0; cc < poptree.Cfine; cc++) sum += ffine[cc]*sussum[poptree.level-1][cc];    
 	dd = Rtot[0][0] - sum;
-	if(dd < -tiny || dd > tiny){ cout << Rtot[0][0] << " " << sum << " "<< num << "num\n";	emsg("Simulate: EC7b");}
+	if(dd < -tiny || dd > tiny) emsg("Part: EC8");
 }
 
 /// Makes changes corresponding to a compartmental transition in one of the individuals
@@ -277,22 +277,22 @@ void PART::dofe()
 	if(checkon == 1){
 		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].add.size();
-			for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Simulate: EC6a");}
+			for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Part: EC9");}
 		}	
 		
 		double sum=0;
 		for(cc = 0; cc < poptree.Cfine; cc++) sum += ffine[cc]*sussum[poptree.level-1][cc];    
 		dd = Rtot[0][0] - sum;
-		if(dd < -tiny || dd > tiny)	emsg("Simulate: EC7a");
+		if(dd < -tiny || dd > tiny)	emsg("Part: EC10");
 	}
 	
 	
-	i = fev[tdnext][tdfnext].ind; if(fev[tdnext][tdfnext].done != 0) emsg("Simulate: EC3");
+	i = fev[tdnext][tdfnext].ind; if(fev[tdnext][tdfnext].done != 0) emsg("Part: EC11");
 	fev[tdnext][tdfnext].done = 1;
 	c = poptree.ind[i].noderef;
 
 	tr = trans[fev[tdnext][tdfnext].trans];
-	N[tr.from]--; if(N[tr.from] < 0) emsg("Simulate: EC4"); 
+	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
 	N[tr.to]++;
 	
 	fac = poptree.ind[i].inf*(comp[tr.to].infectivity - comp[tr.from].infectivity);
@@ -330,7 +330,7 @@ void PART::dofe()
 				jmax = lev[l].node[cc].fine.size();
 				for(j = 0; j < jmax; j++){
 					ccc = lev[l].node[cc].fine[j];
-					ffnew = ffine[ccc]+val; if(ffnew < 0){ if(ffnew < -tiny) emsg("Simulate: EC5"); ffnew = 0;}
+					ffnew = ffine[ccc]+val; if(ffnew < 0){ if(ffnew < -tiny) emsg("Part: EC13"); ffnew = 0;}
 					ffine[ccc] = ffnew;
 				}
 			}
@@ -377,11 +377,12 @@ void PART::dofe()
 /// This samples the node on the fine scale in which the next infection occurs
 long PART::nextinfection(short type)
 {
-	long l, c, cc, j, jmax;
+	long l, lmax, c, cc, j, jmax;
 	double z, sum, sumst[4], val, dd, Rnew;
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
-	while(l < poptree.level-1){
+	lmax = poptree.level;
+	while(l < lmax-1){
 		val = addlater[l][c]; addlater[l][c] = 0;
 	
 		jmax = lev[l].node[c].child.size();
@@ -390,9 +391,10 @@ long PART::nextinfection(short type)
 			cc = lev[l].node[c].child[j];
 			
 			if(val != 0){
-				Rnew = Rtot[l+1][cc]+val*sussum[l+1][cc]; if(Rnew < 0){ if(Rnew < -tiny) emsg("Simulate: EC8"); Rnew = 0;}
+				Rnew = Rtot[l+1][cc]+val*sussum[l+1][cc];
+				if(Rnew < 0){ if(Rnew < -tiny) emsg("Part: EC14"); Rnew = 0;}
 				Rtot[l+1][cc] = Rnew;
-				addlater[l+1][cc] += val;
+				if(l < lmax-2) addlater[l+1][cc] += val;
 			}	
 			if(type == INF_EV) sum += Rtot[l+1][cc];
 			else sum += sussum[l+1][cc];
@@ -401,7 +403,7 @@ long PART::nextinfection(short type)
 		}
 		
 		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
-		if(j == jmax) emsg("Simulate: EC9");
+		if(j == jmax) emsg("Part: EC15");
 		
 		c = lev[l].node[c].child[j];
 		l++;
@@ -409,7 +411,7 @@ long PART::nextinfection(short type)
 	
 	if(checkon == 1){
 		dd = ffine[c]*sussum[l][c] - Rtot[l][c];
-		if(dd < -tiny || dd > tiny) emsg("Simulate: EC10"); 
+		if(dd < -tiny || dd > tiny) emsg("Part: EC16"); 
 	}
 	
 	return c;
@@ -417,20 +419,19 @@ long PART::nextinfection(short type)
 
 /// Measures how well the particle agrees with the observations within a given time period
 /// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short ti, short tf)
+void PART::Lobs(short w, double invT)
 {
-	short tt, r;
+	short r;
 	double mean, var;
 	vector <long> num;
 	
 	Li = 0;	
-	for(tt = ti; tt < tf; tt += 7){
-		num = getnumtrans(data,model,poptree,fev,"I","H",tt,tt+7);
-		for(r = 0; r < data.nregion; r++){
-			mean = data.ncase[r][tt/7];
-			var = mean; if(var < 5) var = 5;
-			Li += invT*(-0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var));
-		}
+	num = getnumtrans(data,model,poptree,fev,"I","H",w*timestep,(w+1)*timestep);
+	for(r = 0; r < data.nregion; r++){
+		mean = data.ncase[r][w];
+		var = mean; if(var < 5) var = 5;
+		//Li += -0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var);
+		Li +=  - invT*(mean-num[r])*(mean-num[r])/(2*var);
 	}
 }
 
@@ -469,11 +470,11 @@ void PART::pack(vector <double> &pac, vector< vector <double> > &vec)
 	}
 }
 
-void PART::pack(vector <double> &pac, vector< vector <FEV> > &vec)
+void PART::pack(vector <double> &pac, vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
 {
 	long imax, i, jmax, j;
 	imax = vec.size(); pac.push_back(imax); 
-	for(i = 0; i < imax; i++){
+	for(i = fedivmin; i < fedivmax; i++){
 		jmax = vec[i].size(); pac.push_back(jmax); 
 		for(j = 0; j < jmax; j++){
 			pac.push_back(vec[i][j].trans);
@@ -484,97 +485,175 @@ void PART::pack(vector <double> &pac, vector< vector <FEV> > &vec)
 	}
 }
 
-void PART::unpack(long &k, vector <double> &pac, long &num)
+void PART::unpack(long &k, double *buffer, long &num)
 {
-	num = pac[k]; k++;
+	num = buffer[k]; k++;
 }
 
-void PART::unpack(long &k, vector <double> &pac, vector <long> &vec)
+void PART::unpack(long &k, double *buffer, vector <long> &vec)
 {
-	long imax, i; imax = pac[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = pac[k]; k++;}
+	long imax, i; imax = buffer[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
-void PART::unpack(long &k, vector <double> &pac, vector <double> &vec)
+void PART::unpack(long &k, double *buffer, vector <double> &vec)
 {
-	long imax, i; imax = pac[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = pac[k]; k++;}
+	long imax, i; imax = buffer[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
-void PART::unpack(long &k, vector <double> &pac, vector< vector <long> > &vec)
+void PART::unpack(long &k, double *buffer, vector< vector <long> > &vec)
 {
 	long imax, i, jmax, j;
-	imax = pac[k]; k++; vec.resize(imax);
+	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
-		jmax = pac[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = pac[k]; k++;}
+		jmax = buffer[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
 	}
 }
 
-void PART::unpack(long &k, vector <double> &pac, vector< vector <double> > &vec)
+void PART::unpack(long &k, double *buffer, vector< vector <double> > &vec)
 {
 	long imax, i, jmax, j;
-	imax = pac[k]; k++; vec.resize(imax);
+	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
-		jmax = pac[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = pac[k]; k++;}
+		jmax = buffer[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
 	}
 }
 
-void PART::unpack(long &k, vector <double> &pac, vector< vector <FEV> > &vec)
+void PART::unpack(long &k, double *buffer, vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
 {
 	long imax, i, jmax, j;
-	imax = pac[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = pac[k]; k++; vec[i].resize(jmax);
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = fedivmin; i < fedivmax; i++){
+		jmax = buffer[k]; k++; vec[i].resize(jmax);
 		for(j = 0; j < jmax; j++){ 
-			vec[i][j].trans = pac[k]; k++;
-			vec[i][j].ind = pac[k]; k++;
-			vec[i][j].t = pac[k]; k++;
-			vec[i][j].done = pac[k]; k++;
+			vec[i][j].trans = buffer[k]; k++;
+			vec[i][j].ind = buffer[k]; k++;
+			vec[i][j].t = buffer[k]; k++;
+			vec[i][j].done = buffer[k]; k++;
 		}
 	}
 }
 
-void PART::partpack(vector <double> &pac)
+long PART::fevpack(double *buffer, short fedivmin, short fedivmax)
 {
-	pac.clear();
-	pack(pac,ffine);
-	pack(pac,indinf);
-	pack(pac,Rtot);
-	pack(pac,sussum);
-	pack(pac,addlater);
-	pack(pac,fev);
-	pack(pac,N);
-	pack(pac,tdnext);
-	pack(pac,tdfnext);
-	pack(pac,sett);
-}
-
-void PART::partunpack(vector <double> &pac)
-{
-	long k=0;
-	unpack(k,pac,ffine);
-	unpack(k,pac,indinf);
-	unpack(k,pac,Rtot);
-	unpack(k,pac,sussum);
-	unpack(k,pac,addlater);
-	unpack(k,pac,fev);
-	unpack(k,pac,N);
-	unpack(k,pac,tdnext);
-	unpack(k,pac,tdfnext);
-	unpack(k,pac,sett);
-	if(k != pac.size()) emsg("PART: EC9");
-}
-
-void PART::copy(const PART &other)
-{
-	short c;
+	long j, jmax;
+	vector <double> pac; 
 	
-	ffine = other.ffine;
+	pack(pac,fev,fedivmin,fedivmax);
+	
+	jmax = pac.size();
+	for(j = 0; j < jmax; j++) buffer[j] = pac[j];
+	
+	return jmax;
+}
+
+long PART::partpack(double *buffer, short fedivmin)
+{
+	long l, c, cmax, cc, j, jmax;
+	double val;
+	vector <double> pac; 
+	
+	for(l = 0; l < poptree.level; l++){        // Process all the add later requests
+		cmax = lev[l].node.size();
+		for(c = 0; c < cmax; c++){
+			val = lev[l].add[c]; lev[l].add[c] = 0;
+			Rtot[l][c] += val*sussum[l][c];
+			if(l <  poptree.level-1){
+				val += addlater[l][c]; addlater[l][c] = 0;
+				for(j = 0; j < 4; j++) lev[l+1].add[ lev[l].node[c].child[j]] += val;
+			}
+		}			
+	}
+	for(l = 0; l < poptree.level; l++){
+		cmax = lev[l].node.size();
+		for(c = 0; c < cmax; c++){
+			if(addlater[l][c] != 0){ cout << l << " " << addlater[l][c] << "p\n";  emsg("Not ze");}
+			if(lev[l].add[c] != 0) emsg("PP");
+		}
+	}
+	
+	l = poptree.level-1;
+	
+	if(checkon == 1) pack(pac,ffine);// cout << pac.size() <<  "f1\n";
+	pack(pac,indinf); //cout << pac.size() <<  "f2\n";
+	pack(pac,Rtot[l]); //cout << pac.size() <<  "f3\n";
+	//pack(pac,Rtot); 
+	//pack(pac,sussum); //cout << pac.size() <<  "f4\n";
+	//pack(pac,addlater); //cout << pac.size() <<  "f5\n";
+	pack(pac,fev,fedivmin,fediv); // cout << pac.size() <<  "f6\n";
+	pack(pac,N);
+	//cout << pac.size() <<  "f7\n";
+	pack(pac,tdnext); //cout << pac.size() <<  "f8\n";
+	pack(pac,tdfnext); //cout << pac.size() <<  "f9\n";
+	pack(pac,sett); //cout << pac.size() <<  "f10\n";
+
+	jmax = pac.size();
+	for(j = 0; j < jmax; j++) buffer[j] = pac[j];
+
+	return jmax;
+}
+
+void PART::partunpack(double *buffer, int max, short fedivmin)
+{
+	long k=0, kmax, j, l, c, cmax, cc;
+	double val, val2;
+	
+	l = poptree.level-1;
+	
+	if(checkon == 1) unpack(k,buffer,ffine);
+	unpack(k,buffer,indinf);
+	unpack(k,buffer,Rtot[l]);
+	unpack(k,buffer,fev,fedivmin,fediv);
+	unpack(k,buffer,N);
+	unpack(k,buffer,tdnext);
+	unpack(k,buffer,tdfnext);
+	unpack(k,buffer,sett);
+	if(k != max) emsg("PART: EC17");
+		
+	cmax = poptree.Cfine;
+	for(c = 0; c < cmax; c++){
+		val = lev[l].node[c].sussum;
+		kmax = indinf[c].size();
+		for(k = 0; k < kmax; k++) val -= poptree.ind[indinf[c][k]].sus;
+		sussum[l][c] = val;
+	}
+	
+	for(l = poptree.level-2; l >= 0; l--){
+		cmax = lev[l].node.size();
+		for(c = 0; c < cmax; c++){
+			val = 0; val2 = 0;
+			for(j = 0; j < 4; j++){
+				cc = lev[l].node[c].child[j];
+				val += sussum[l+1][cc];
+				val2 += Rtot[l+1][cc];
+			}
+			sussum[l][c] = val;
+			Rtot[l][c] = val2;
+			addlater[l][c] = 0;
+		}
+	}
+	
+	if(checkon == 1){
+		for(l = 0; l < poptree.level; l++){
+			cmax = lev[l].node.size();
+			for(c = 0; c < cmax; c++){
+				if(addlater[l][c] != 0) emsg("Not ze");
+				if(lev[l].add[c] != 0) emsg("PP");
+			}
+		}
+	}
+}
+
+void PART::copy(const PART &other, short fedivmin)
+{
+	short d;
+	
+	if(checkon == 1) ffine = other.ffine;
 	indinf = other.indinf;
 	Rtot = other.Rtot; 
 	sussum = other.sussum;
 	addlater = other.addlater;
-	fev = other.fev;
+	for(d = fedivmin; d < fediv; d++) fev[d] = other.fev[d];
 	N = other.N;
-	//for(c = 0; c < comp.size(); c++) N[c] = other.N[c];
 	tdnext = other.tdnext;
 	tdfnext = other.tdfnext;
 	sett = other.sett;

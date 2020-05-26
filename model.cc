@@ -32,7 +32,7 @@ void MODEL::definemodel(short core, double tmax, long popsize)
 	// This calculates the average integral of infectivity after an indvidual becomes infected
 	rAI = 1.0/tAI; rAR = 1.0/tAR; rIH = 1.0/tIH; rIR = 1.0/tIR; rID = 1.0/tID;
 	tinfav = 0.2/(rAI + rAR) + 1*(rAI/(rAI+rAR))*(1.0/(rIH + rIR + rID));
-		
+		 
 	nspline = 5;                                                 // 5 spline points represent time variarion in beta 
 	for(p = 0; p < nspline; p++){
 		splinet.push_back(double(p*tmax)/(nspline-1));
@@ -49,13 +49,11 @@ void MODEL::definemodel(short core, double tmax, long popsize)
 	for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
 		fix_sus_param[fi] = param.size(); 
 		stringstream sssus; sssus << "fixsus_" << fi;
-		//addparam(sssus.str(),0.1,-1,1);
 		addparam(sssus.str(),0.1,0.1,0.1);
 		param[long(param.size())-1].suschange = 1;
 		
 		fix_inf_param[fi] = param.size(); 
 		stringstream ssinf; ssinf << "fixinf_" << fi;
-		//addparam(ssinf.str(),0.1,-1,1);
 		addparam(ssinf.str(),0.1,0.1,0.1);
 		param[long(param.size())-1].infchange = 1;
 	}
@@ -111,6 +109,21 @@ void MODEL::definemodel(short core, double tmax, long popsize)
 		}
 		cout << endl;
 	}
+}
+
+// Gets the transition rate given "from" and "to" compartments
+double MODEL::getrate(string from, string to)
+{
+	short tra;
+	TRANS tr;
+	
+	for(tra = 0; tra < trans.size(); tra++){
+		tr = trans[tra];
+		if(comp[tr.from].name == from && comp[tr.to].name == to){
+			return param[tr.param1].val;
+		}
+	}
+	emsg("Could not find transition");
 }
 
 void MODEL::addcomp(string name, double infectivity)

@@ -53,12 +53,11 @@ class PART                                 // Stores all the things related to a
 		void gillespie(double ti, double tf, short siminf);
 		void partinit(long p);
 		void dofe();
-		//long externalinfection();
 		long nextinfection(short type);
 		void addinfc(long c, double t);
 		void addfev(double t, long tr, long i);
-		void Lobs(short ti, short tf);
-		void copy(const PART &other);
+		void Lobs(short w, double invT);
+		void copy(const PART &other, short fedivmin);
 		void simmodel(long i, short enter, double t);
 		void check(short num);
 		
@@ -67,13 +66,14 @@ class PART                                 // Stores all the things related to a
 		void pack(vector <double> &pac, vector <double> &vec);
 		void pack(vector <double> &pac, vector< vector <long> > &vec);
 		void pack(vector <double> &pac, vector< vector <double> > &vec);
-		void pack(vector <double> &pac, vector< vector <FEV> > &vec);
-		void partpack(vector <double> &pac);
-		void unpack(long &k, vector <double> &pac, long &num);
-		void unpack(long &k, vector <double> &pac, vector <long> &vec);
-		void unpack(long &k, vector <double> &pac, vector <double> &vec);
-		void unpack(long &k, vector <double> &pac, vector< vector <long> > &vec);
-		void unpack(long &k, vector <double> &pac, vector< vector <double> > &vec);
-		void unpack(long &k, vector <double> &pac, vector< vector <FEV> > &vec);
-		void partunpack(vector <double> &pac);
+		void pack(vector <double> &pac, vector< vector <FEV> > &vec, short fedivmin, short fedivmax);
+		long partpack(double *buffer, short fedivmin);
+		long fevpack(double *buffer, short fedivmin, short fedivmax);
+		void unpack(long &k, double *buffer, long &num);
+		void unpack(long &k, double *buffer, vector <long> &vec);
+		void unpack(long &k, double *buffer, vector <double> &vec);
+		void unpack(long &k, double *buffer, vector< vector <long> > &vec);
+		void unpack(long &k, double *buffer, vector< vector <double> > &vec);
+		void unpack(long &k, double *buffer, vector< vector <FEV> > &vec, short fedivmin, short fedivmax);
+		void partunpack( double *buffer, int max, short fedivmin);
 };

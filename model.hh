@@ -53,6 +53,8 @@ public:
 	vector <long> fix_sus_param;               // The parameters related to fixed effect for susceptibility
 	vector <long> fix_inf_param;               // The parameters related to fixed effect for infectivity
 	
+	double getrate(string from, string to);
+	
 private:
 	void addcomp(string name, double infectivity);
 	void addparam(string name, double val, double min, double max);

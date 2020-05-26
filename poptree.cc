@@ -49,7 +49,6 @@ void POPTREE::init(DATA &data, short core)
 		for(c = 0; c < lev[l].node.size(); c++){  
 			data.sortX(lev[l].node[c].houseref);
 			num = lev[l].node[c].houseref.size();
-			
 			housex1.clear(); housex2.clear();
 			for(j = 0; j < num/2; j++) housex1.push_back(lev[l].node[c].houseref[j]);
 			for(j = num/2; j < num; j++) housex2.push_back(lev[l].node[c].houseref[j]);
@@ -96,13 +95,12 @@ void POPTREE::init(DATA &data, short core)
 			}
 		}
 		l++;
-		if(lev[l-1].node.size() >= areamax) break;
+		if(lev[l].node.size() >= areamax) break;
 	}while(flag == 1);
+ 
+	level = l+1;
 
-	level = l;
-	l = level-1;
 	Cfine = lev[l].node.size();
-	
 	if(core == 0) cout << level << " Number of levels" << endl << Cfine << " Number of regions" << endl;
 
 	cmax = lev[l].node.size();                    // On each node store all descendent nodes on the fine scale
@@ -313,7 +311,7 @@ void POPTREE::init(DATA &data, short core)
 		
 			for(l = 0; l < level; l++){
 				cmax = lev[l].node.size();
-				for(cc = 0; cc < cmax; cc++) if(lev[l].node[cc].done != 0) emsg("Finescale: EC3");
+				for(cc = 0; cc < cmax; cc++) if(lev[l].node[cc].done != 0) emsg("Poptree: EC3");
 			}
 		}
 	}	

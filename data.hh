@@ -59,6 +59,9 @@ class DATA
 	void sortY(vector <long> &vec);	
 	HouseRefComparatorX compX;
 	HouseRefComparatorY compY;
+
+	void readdata(short core, short siminf);             // Reads in the data
+	void pack(vector <long> &pac, vector< vector <long> > &vec);
+	void unpack(long &k, vector <long> &pac, vector< vector <long> > &vec);
 	
-	void readdata(short siminf);             // Reads in the data
 };

@@ -20,7 +20,8 @@ using namespace std;
 void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
 	PART *part;
-	
+	vector <SAMPLE> opsamp;  
+		
 	part = new PART(data,model,poptree);
 	
 	part->partinit(0);
@@ -30,4 +31,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 	timers.timesim += clock();
 	
 	outputsimulateddata(data,model,poptree,part->fev);
+	
+	opsamp.push_back(outputsamp(1,0,0,data,model,poptree,part->fev));	
+	outputresults(data,model,opsamp,1,0);
 }

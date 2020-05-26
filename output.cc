@@ -1,10 +1,12 @@
 // Outputs various graphs and statistics
 
+#include <iostream>
 #include <vector>
 #include <fstream>
 #include <sys/stat.h>
 #include <sstream>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -24,29 +26,34 @@ STAT getstat(vector <double> &vec);
 
 ofstream trace;
 
-void outputinit(MODEL &model)
+void outputinit(MODEL &model, long nparttot)
 {
 	long r, p;
 	
-	trace.open("trace.txt");		
+	ensuredirectory("Output");
+	
+	stringstream ss; ss << "Output/trace_" << nparttot << ".txt";
+	trace.open(ss.str().c_str());		
 	trace << "state";
 	for(p = 0; p < model.param.size(); p++) trace << "\t" << model.param[p].name; 
 	trace << "\tLi"; 
+	trace << "\tinvT"; 
 	trace << endl;
-	
-	ensuredirectory("Output");
 }
 
-SAMPLE outputsamp(long samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
+SAMPLE outputsamp(double invT, long samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
-	long p, np, r, week;
+	long p, np, r, week, st;
 	vector <long> num;
+	double rAI, rAR, rIH, rIR, rID, tinfav;
 	
 	np = model.param.size();
+	
 	trace << samp; 
 	for(p = 0; p < np; p++) trace << "\t" << model.param[p].val; 
 	trace << "\t" << Li; 
+	trace << "\t" << invT; 
 	trace << endl;
 	
 	sa.paramval.resize(np);
@@ -55,9 +62,16 @@ SAMPLE outputsamp(long samp, double Li, DATA &data, MODEL &model, POPTREE &poptr
 	sa.ncase.resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.ncase[r].resize(data.nweek);
 	
 	for(week = 0; week < data.nweek; week++){
-		num = getnumtrans(data,model,poptree,fev,"I","H",week*7,week*7+7);
+		num = getnumtrans(data,model,poptree,fev,"I","H",week*timestep,(week+1)*timestep);
 		for(r = 0; r < data.nregion; r++) sa.ncase[r][week] = num[r];
 	}
+
+	rAI = model.getrate("A","I"); rAR = model.getrate("A","R");
+	rIH = model.getrate("I","H");	rIR = model.getrate("I","R");	rID = model.getrate("I","D");
+	tinfav = 0.2/(rAI + rAR) + 1*(rAI/(rAI+rAR))*(1.0/(rIH + rIR + rID));
+
+	sa.R0.resize(nsettime);
+	for(st = 0; st < nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
 	
 	return sa;
 }
@@ -91,27 +105,38 @@ vector <long> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < v
 	return num;
 }
 		
-void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
+void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp, short siminf, long nparttot)
 {      
-	long p, r, s, nopsamp, week;
+	long p, r, s, st, nopsamp, week;
 	vector <double> vec;
 	STAT stat;
 	
 	nopsamp = opsamp.size();
 	
 	for(r = 0; r < data.nregion; r++){
-		stringstream ss; ss << "Output/" << data.regionname[r] << "_data.txt";
+		stringstream ss; ss << "Output/" << data.regionname[r] << "_data_" <<  nparttot << ".txt";
 		ofstream dataout(ss.str().c_str());
 		for(week = 0; week < data.nweek; week++){
 			vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].ncase[r][week]);
 			stat = getstat(vec);
 			
-			dataout << week << " " <<data.ncase[r][week] << " " 
-			        << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << "\n"; 
+			dataout << week << " ";
+			if(siminf == 0) dataout << data.ncase[r][week]; else dataout << stat.mean;
+			dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << "\n"; 
 		}
 	}
 	
-	stringstream ss; ss << "Output/params.txt";
+	stringstream sst; sst << "Output/R0_" << nparttot << ".txt";
+	ofstream R0out(sst.str().c_str());
+	for(st = 0; st < nsettime; st++){
+		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
+		stat = getstat(vec);
+		
+		R0out << (st+0.5)*data.tmax/nsettime << " " 
+		      << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << "\n"; 
+	}
+	
+	stringstream ss; ss << "Output/params_" << nparttot << ".txt";
 	ofstream paramout(ss.str().c_str());
 	for(p = 0; p < model.param.size(); p++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
@@ -143,32 +168,48 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	stringstream sst; sst << "cases_" << type << ".txt";
 	ofstream regplot(sst.str().c_str());
 	
-	regplot << "Week"; for(r = 0; r < data.nregion; r++){ regplot << "\t" << data.regionname[r];} regplot << endl;
+	//regplot << "Week"; for(r = 0; r < data.nregion; r++){ regplot << "\t" << data.regionname[r];} regplot << endl;
 	for(week = 0; week < data.nweek; week++){
 		regplot << week;
-		num = getnumtrans(data,model,poptree,fev,"I","H",week*7,week*7+7);
+		num = getnumtrans(data,model,poptree,fev,"I","H",week*timestep,(week+1)*timestep);
 		for(r = 0; r < data.nregion; r++){ regplot <<  "\t" << num[r];} regplot << endl;
 	}
 	
+	/*
 	stringstream ssw; ssw << "houses_" << type << ".txt";
 	ofstream houseout(ssw.str().c_str());
 	houseout << data.popsize << " " << data.nhouse << "\n";
+	*/
+	/*
 	for(h = 0; h < data.nhouse; h++){
 		houseout << data.house[h].x << " " << data.house[h].y << " " << data.house[h].region << "\n";
 	}
+	*/
 }
 
 STAT getstat(vector <double> &vec)                                          // Calculates diagnostic statistics
 {
 	long n, i, d;
-	double sum, a, cor, f;
+	double sum, sum2, sd, a, cor, f;
 	STAT stat;
 	
 	n = vec.size();
 	
-	sum = 0; for(i = 0; i < n; i++) sum += vec[i];
-	stat.mean = sum/n;
+	sum = 0; sum2 = 0; for(i = 0; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
+	sum /= n; sum2 /= n;
+	stat.mean = sum; 
 	
+	sort(vec.begin(),vec.end());
+			
+	i = long((n-1)*0.05); f = (n-1)*0.05 - i;
+	stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
+			
+	i = long((n-1)*0.95); f = (n-1)*0.95 - i;
+	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
+
+	sd = sqrt(sum2 - sum*sum);
+	for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
+		
 	sum = 1;
 	for(d = 0; d < n/2; d++){             // calculates the effective sample size
 		a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
@@ -178,14 +219,6 @@ STAT getstat(vector <double> &vec)                                          // C
 	}
 	stat.ESS = n/sum;
 	
-	sort(vec.begin(),vec.end());
-			
-	i = long((n-1)*0.05); f = (n-1)*0.05 - i;
-	stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
-			
-	i = long((n-1)*0.95); f = (n-1)*0.95 - i;
-	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
-			
 	return stat;
 }
 

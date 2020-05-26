@@ -1,5 +1,14 @@
 
 /*
+Running on DiRAC
+ ./submit-csd3 --groups 65536 --seed 1 --samples 10 --nprocs 160 --walltime 1:00:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test
+ dos2unix submit-csd3
+ squeue -u dc-pool1
+ scancel <jobid>
+ mybalance
+*/
+
+/*
 Load mpi: module load mpi/openmpi-x86_64
 Compile using:    mpicxx -O3   analysis.cc timers.cc utils.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc -o analysis
 
@@ -9,7 +18,7 @@ Simulate using:        mpirun -n 1 ./analysis 65536 0
 The first number gives the number of areas into which the houses are divided (should be a power of 4)
 The second number changes the random seed
 
-Inference using:        mpirun -n 1 ./analysis 65536 10000 0
+Inference using:        mpirun -n 20 ./analysis 65536 500 1
 
 10000 is the number of MCMC iterations
 */
@@ -32,7 +41,10 @@ using namespace std;
  
 int main(int argc, char** argv)
 {
-	int ncore, core;
+	int ncore, core, npart;
+	POPTREE poptree;
+	long nsamp;       // The number of PMCMC samples
+	short siminf;     // Set to 1 for simulation and 0 for inference
 
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
@@ -45,10 +57,6 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 	
-	POPTREE poptree;
-	long nsamp;       // The number of PMCMC samples
-	short siminf;     // Set to 1 for simulation and 0 for inference
-
 	switch(argc){
 	case 3:   // Simulation mode
 		siminf = 1;
@@ -67,8 +75,9 @@ int main(int argc, char** argv)
 	case 4:   // Inference mode
 		siminf = 0;
 		poptree.areamax = atoi(argv[1]);   
-		nsamp = atoi(argv[2]);               
-		srand(atoi(argv[3]));
+		nsamp = atoi(argv[2]); 
+		npart = atoi(argv[3]);
+		srand(104);
 		break;
 		
 	default:
@@ -77,16 +86,17 @@ int main(int argc, char** argv)
 	}
 	
 	if(core == 0) cout << "Initialising...." << endl;
-
+ 
+	MPI_Barrier(MPI_COMM_WORLD);
 	DATA data;
-	data.readdata(siminf);
-	
+	data.readdata(core, siminf);
+
 	poptree.init(data,core);	
-	
+		
 	MODEL model;
 
 	model.definemodel(core,data.tmax,data.popsize);
-
+	
 	poptree.setsus(model);
 	poptree.setinf(model);
 	
@@ -95,8 +105,10 @@ int main(int argc, char** argv)
 	timersinit();
 	timers.timetot = -clock();
 
+	MPI_Barrier(MPI_COMM_WORLD);
+			
 	if(siminf == 1) simulatedata(data,model,poptree);
-	else PMCMC(data,model,poptree,nsamp,core,ncore);
+	else PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 
 	timers.timetot += clock();
 	
@@ -110,6 +122,3 @@ int main(int argc, char** argv)
 	MPI_Finalize();
 	#endif
 }
-
-
-
