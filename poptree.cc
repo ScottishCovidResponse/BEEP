@@ -1,5 +1,7 @@
+// This code generate a hierarchical representation of the houses at different levels of spatial scale
 
 #include <iostream>
+#include <algorithm>
 
 #include "math.h"
 
@@ -10,12 +12,22 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
+struct POS{
+	long c;
+	double dist;
+};
+bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
+		
 // Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 void POPTREE::init(DATA &data, short core)
 {
-	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
-	double av, x, y, xx, yy, grsi, dd, sum, fac;
+	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
+	double av, x, y, xx, yy, grsi, dd, sum, fac, val;
 	NODE node;
+	
+	const short posmax = 100;   // This gives the maximum number of possibilities for a given level in M 
+	vector <POS> listpos;
+	POS pos;
 	
 	vector <vector <double> > Mval_sr_temp;
 	vector <vector <double> > Mval_lr_temp;
@@ -25,13 +37,7 @@ void POPTREE::init(DATA &data, short core)
 	vector <double> grsize;
 	vector <long> grL;
 	vector< vector< vector <long> > > grid;
-
-	for(h = 0; h < data.nhouse; h++) data.house[h].ind.push_back(h);        // Randomly distributes individuals into houses
-	for(i = data.nhouse; i < data.popsize; i++){
-		h = long(ran()*data.nhouse);
-		data.house[h].ind.push_back(i);
-	}
-																													           		  // Here a "node" represents a collection of houses
+																							           		  // Here a "node" represents a collection of houses
 	lev.push_back(LEVEL ());                                                // The first level contains a single node
 	for(h = 0; h < data.nhouse; h++) node.houseref.push_back(h);            // with all the houses
 	node.parent = -1;
@@ -53,7 +59,6 @@ void POPTREE::init(DATA &data, short core)
 			for(j = 0; j < num/2; j++) housex1.push_back(lev[l].node[c].houseref[j]);
 			for(j = num/2; j < num; j++) housex2.push_back(lev[l].node[c].houseref[j]);
 		
-			//sort(housex1.begin(),housex1.end(),data.compY);
 			data.sortY(housex1);
 			num = housex1.size(); if(num > 2) flag = 1;
 			
@@ -75,7 +80,6 @@ void POPTREE::init(DATA &data, short core)
 			}
 			
 			data.sortY(housex2);
-			//sort(housex2.begin(),housex2.end(),data.compY);
 			num = housex2.size(); if(num > 2) flag = 1;
 			
 			node.houseref.clear(); node.child.clear(); 
@@ -202,11 +206,13 @@ void POPTREE::init(DATA &data, short core)
 							if(lev[l+1].node[ccc].done == 0){
 								xx = lev[l+1].node[ccc].x;
 								yy = lev[l+1].node[ccc].y;
-								dd = ((xx-x)*(xx-x) + (yy-y)*(yy-y))/(d0*d0); if(dd < 0.2) dd = 0.2;
-														
+						
+								dd = sqrt((xx-x)*(xx-x) + (yy-y)*(yy-y));
+				
 								Mnoderef_temp[l+1].push_back(ccc);
-								Mval_sr_temp[l+1].push_back(1.0/dd);
-								Mval_lr_temp[l+1].push_back(1.0/sqrt(dd));
+								Mval_sr_temp[l+1].push_back(1.0/(1+pow(dd/a,b)));
+								if(dd < a) dd = a;
+								Mval_lr_temp[l+1].push_back(1.0/dd);
 								flag = 1;
 							}
 						}
@@ -218,6 +224,7 @@ void POPTREE::init(DATA &data, short core)
 			i = long(L*x+0.5)-1;
 			j = long(L*y+0.5)-1;
 
+			listpos.clear();
 			for(ii = i; ii <= i+1; ii++){
 				for(jj = j; jj <= j+1; jj++){
 					if(ii >= 0 && ii < L && jj >= 0 && jj < L){
@@ -229,26 +236,37 @@ void POPTREE::init(DATA &data, short core)
 								xx = lev[l].node[cc].x;
 								yy = lev[l].node[cc].y;
 		
-								dd = (xx-x)*(xx-x) + (yy-y)*(yy-y);
-								if(dd < grsi*grsi){
-									dd /= d0*d0; if(dd < 0.2) dd = 0.2;
-					
-									Mnoderef_temp[l].push_back(cc);
-									Mval_sr_temp[l].push_back(1.0/dd);
-									Mval_lr_temp[l].push_back(1.0/sqrt(dd));
-									flag = 1;
-									
-									lev[l].node[cc].done = 1;
-									lev[l].donelist.push_back(cc);
+								dd = sqrt((xx-x)*(xx-x) + (yy-y)*(yy-y));
+								if(dd < grsi && dd < ddmax){
+									pos.c = cc; pos.dist = dd;
+									listpos.push_back(pos);
 								}
 							}
 						}
 					}
 				}
 			}
+							
+			if(listpos.size() > posmax){  // Makes sure fine scale does not extend too far
+				sort(listpos.begin(),listpos.end(),ordpos);
+				listpos.resize(posmax);
+			}
+			
+			for(po = 0; po < listpos.size(); po++){
+				cc = listpos[po].c;
+				dd = sqrt(listpos[po].dist);
+				Mnoderef_temp[l].push_back(cc);
+				Mval_sr_temp[l].push_back(1.0/(1+pow(dd/a,b)));
+				if(dd < a) dd = a;
+				Mval_lr_temp[l].push_back(1.0/dd);
+				flag = 1;
+				
+				lev[l].node[cc].done = 1;
+				lev[l].donelist.push_back(cc);
+			}
 		}		
 
-		sum = 0;                             // Normalises short range M contribution to 0.8 
+		sum = 0;                             // Normalises short range M contribution to 1
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); 
 			for(k = 0; k < kmax; k++) sum += Mval_sr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
@@ -257,8 +275,8 @@ void POPTREE::init(DATA &data, short core)
 		fac = 0.8/sum;
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); for(k = 0; k < kmax; k++) Mval_sr_temp[l][k] *= fac;
-		}
-		
+		}	
+	
 		sum = 0;                              // Normalises long range M contribution to 0.2
 		for(l = 0; l < level; l++){
 			kmax = Mval_lr_temp[l].size(); 
@@ -328,9 +346,14 @@ void POPTREE::init(DATA &data, short core)
 			  ind[i].X.resize(nfix);
 				for(fi = 0; fi < nfix; fi++){
 					switch(fi){
+						case 0:  // Uses log of the population density 
+							ind[i].X[fi] = log(data.house[h].density);
+							break;
+						/*
 						case 0:  // Uses sex as a simple fixed effect
 							ind[i].X[fi] = short(2*ran());
 						  break;
+							*/
 					}
 				}
 			}
@@ -360,7 +383,8 @@ void POPTREE::init(DATA &data, short core)
 	}
 }
   
-void POPTREE::setsus(MODEL &model)             // Defines the relative susceptibility of individuals
+/// Defines the relative susceptibility of individuals
+void POPTREE::setsus(MODEL &model)     
 {
 	long i, fi, l, c, cc, j, jmax;
 	double val, sum;
@@ -393,7 +417,8 @@ void POPTREE::setsus(MODEL &model)             // Defines the relative susceptib
 	}
 }
 
-void POPTREE::setinf(MODEL &model)             // Defines the relative infectivity of individuals
+/// Defines the relative infectivity of individuals
+void POPTREE::setinf(MODEL &model)    
 {
 	long i, fi;
 	double val;

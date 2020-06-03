@@ -1,3 +1,4 @@
+// This contains all the code related to particles in PMCMC
 
 #include <iostream>
 #include <algorithm>
@@ -10,6 +11,8 @@ using namespace std;
 #include "utils.hh"
 #include "PART.hh"
 #include "output.hh"
+#include "consts.hh"
+#include "pack.hh"
 
 struct NEV {                               // Information about the immediate next events
   short type; double t;
@@ -31,6 +34,7 @@ void PART::partinit(long p)
 	
 	pst = p;
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
+	N[0] = data.popsize;
  
 	ffine.clear(); 
 	if(checkon == 1){ ffine.resize(poptree.Cfine); for(c = 0; c < poptree.Cfine; c++) ffine[c] = 0;}
@@ -89,58 +93,34 @@ void PART::addinfc(long c, double t)
 		cc = lev[l].node[cc].parent; l--;
 	}while(l >= 0);
 	
-	simmodel(i,0,t);
-	
+	simmodel(i,t);
 }
 
-/// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
-static double gammasamp(double a, double b)
-{
-  if(a < 0 || b < 0) emsg("Part: EC2");
-
-  if(a < 1){
-    double u = ran();
-    return gammasamp(1.0 + a, b) * pow (u, 1.0 / a);
-  }
-  else{
-    double x, v, u;
-    double d = a - 1.0 / 3.0;
-    double c = (1.0 / 3.0) / sqrt (d);
- 
-    while(1 == 1){
-      do{
-        x = sqrt(-2*log(ran()))*cos(2*M_PI*ran());
-        v = 1.0 + c * x;
-      }while (v < 0);
-
-      v = v*v*v;
-      u = ran();
-
-      if (u < 1 - 0.0331*x*x*x*x) break;
-
-      if (log(u) < 0.5*x*x + d*(1 - v + log(v))) break;
-    }
-
-    return d*v/b;
-  }
-}
-
-/// Once an individual goes into the exposed class, this function simulates all the subsequent future events
-void PART::simmodel(long i, short enter, double t)
+/// This function simulates events as in individual passes through the compartmental model
+void PART::simmodel(long i, double t)
 {
 	short c, k, kmax, tra;
-	double tnext, tnextmin, mean, sd;
+	double tnext, tnextmin, mean, sd, dt;
 	TRANS tr;
 	
-	N[enter]++;
-	double dt;
+	switch(modelsel){
+	case MOD_IRISH:
+		if(ran() < model.param[model.afracparam].val) tra = 0;
+		else tra = 1;
+		break;
+		
+	case MOD_OLD:
+		tra = 0;
+		break;
+	}
+	addfev(t,tra,i,1);
+	c = trans[tra].to;
 	
-	c = enter;
 	do{
 		kmax = comp[c].trans.size();
 		if(kmax == 0) break;
 		
-		tnextmin = large;
+		tnextmin = data.tmax;
 		for(k = 0; k < kmax; k++){
 			tr = trans[comp[c].trans[k]];
 			switch(tr.type){
@@ -153,41 +133,61 @@ void PART::simmodel(long i, short enter, double t)
 					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 					tnext = t + dt; 
 					break;
+					
+				case LOGNORM_DIST:
+					mean = model.param[tr.param1].val; sd = model.param[tr.param2].val;
+					dt = exp(normal(mean,sd));
+					tnext = t + dt; 
+					break;
+					
+				default: emsg("Part: EC2b"); break;
 			}
 			
 			if(tnext < tnextmin){ tnextmin = tnext; tra = comp[c].trans[k];}
 		}
-		if(tnextmin == large) emsg("Part: EC3");
 		
-		addfev(tnextmin,tra,i);
+		if(tnextmin == data.tmax) break; 
+		
+		addfev(tnextmin,tra,i,0);
 
 		c = trans[tra].to; t = tnextmin;
 	}while(1 == 1);
 }
 
 /// Adds a future event to the timeline
-void PART::addfev(double t, long trans, long i)
+void PART::addfev(double t, long tra, long i, short done)
 {
 	long d, j, jmax;
 	
 	if(t >= data.tmax) return;
 	
-	FEV fe; fe.t = t; fe.trans = trans; fe.ind = i; fe.done = 0;
+	FEV fe; fe.t = t; fe.trans = tra; fe.ind = i; fe.done = done;
 	
 	d = long((t/data.tmax)*fediv);
 	j = 0; jmax = fev[d].size();
-	while(j < jmax && t > fev[d][j].t) j++;
+	if(done == 0){ while(j < jmax && t >= fev[d][j].t) j++;}
+	else{ while(j < jmax && t >= fev[d][j].t) j++;}
+	
 	if(j == jmax) fev[d].push_back(fe);
 	else fev[d].insert(fev[d].begin()+j,fe);
 	
-	if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
-	if(d < tdnext){ tdnext = d; tdfnext = j;}
+	if(done == 0){
+		if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
+		if(d < tdnext){ tdnext = d; tdfnext = j;}
+	}
+	else{
+		TRANS tr = trans[tra];
+		N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
+		N[tr.to]++;
+		
+		if(d == tdnext) tdfnext++;
+	}
 }
 
 /// Performs the modified Gillespie algorithm between times ti and tf 
 void PART::gillespie(double ti, double tf, short siminf)
 {
-	long td, j, c, NIfine[poptree.Cfine];
+	long td, j, c;
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
@@ -225,7 +225,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 		}
 	
 		t = nev[0].t; if(t >= tf) break;
-	
+
 		switch(nev[0].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
 			sett++; if(sett >= nsettime) emsg("Part: EC5");
@@ -248,6 +248,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 	}while(t < tf);
 }
 
+/// Used to check that various quantities are being correctly updated
 void PART::check(short num)
 {
 	long l, c, cmax, cc;
@@ -275,6 +276,8 @@ void PART::dofe()
 	float ***&Mval(poptree.Mval);
 	
 	if(checkon == 1){
+		if(trans[fev[tdnext][tdfnext].trans].type == INFECTION) emsg("Part: EC8a");
+		
 		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].add.size();
 			for(c = 0; c < cmax; c++){ if(lev[l].add[c] != 0) emsg("Part: EC9");}
@@ -286,8 +289,9 @@ void PART::dofe()
 		if(dd < -tiny || dd > tiny)	emsg("Part: EC10");
 	}
 	
+	if(fev[tdnext][tdfnext].done != 0) emsg("Part: EC11");
 	
-	i = fev[tdnext][tdfnext].ind; if(fev[tdnext][tdfnext].done != 0) emsg("Part: EC11");
+	i = fev[tdnext][tdfnext].ind; 
 	fev[tdnext][tdfnext].done = 1;
 	c = poptree.ind[i].noderef;
 
@@ -417,9 +421,9 @@ long PART::nextinfection(short type)
 	return c;
 }
 
-/// Measures how well the particle agrees with the observations within a given time period
+/// Measures how well the particle agrees with the observations for a given week w
 /// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short w, double invT)
+void PART::Lobs(short w, double varfac)
 {
 	short r;
 	double mean, var;
@@ -430,185 +434,60 @@ void PART::Lobs(short w, double invT)
 	for(r = 0; r < data.nregion; r++){
 		mean = data.ncase[r][w];
 		var = mean; if(var < 5) var = 5;
-		//Li += -0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var);
-		Li +=  - invT*(mean-num[r])*(mean-num[r])/(2*var);
+		var *= varfac;
+		Li += -0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var);
 	}
 }
 
-/// Copies in all the information from another particle
-
-void PART::pack(vector <double> &pac, long num)
-{
-	pac.push_back(num);
-}
-
-void PART::pack(vector <double> &pac, vector <long> &vec)
-{
-	long imax, i; imax = vec.size(); pac.push_back(imax); for(i = 0; i < imax; i++) pac.push_back(vec[i]);
-}
-
-void PART::pack(vector <double> &pac, vector <double> &vec)
-{
-	long imax, i; imax = vec.size(); pac.push_back(imax); for(i = 0; i < imax; i++) pac.push_back(vec[i]);
-}
-
-void PART::pack(vector <double> &pac, vector< vector <long> > &vec)
-{
-	long imax, i, jmax, j;
-	imax = vec.size(); pac.push_back(imax); 
-	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); pac.push_back(jmax); for(j = 0; j < jmax; j++) pac.push_back(vec[i][j]);
-	}
-}
-
-void PART::pack(vector <double> &pac, vector< vector <double> > &vec)
-{
-	long imax, i, jmax, j;
-	imax = vec.size(); pac.push_back(imax); 
-	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); pac.push_back(jmax); for(j = 0; j < jmax; j++) pac.push_back(vec[i][j]);
-	}
-}
-
-void PART::pack(vector <double> &pac, vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
-{
-	long imax, i, jmax, j;
-	imax = vec.size(); pac.push_back(imax); 
-	for(i = fedivmin; i < fedivmax; i++){
-		jmax = vec[i].size(); pac.push_back(jmax); 
-		for(j = 0; j < jmax; j++){
-			pac.push_back(vec[i][j].trans);
-			pac.push_back(vec[i][j].ind);
-			pac.push_back(vec[i][j].t);
-			pac.push_back(vec[i][j].done);
-		}
-	}
-}
-
-void PART::unpack(long &k, double *buffer, long &num)
-{
-	num = buffer[k]; k++;
-}
-
-void PART::unpack(long &k, double *buffer, vector <long> &vec)
-{
-	long imax, i; imax = buffer[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
-}
-
-void PART::unpack(long &k, double *buffer, vector <double> &vec)
-{
-	long imax, i; imax = buffer[k]; k++; vec.resize(imax); for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
-}
-
-void PART::unpack(long &k, double *buffer, vector< vector <long> > &vec)
-{
-	long imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
-	}
-}
-
-void PART::unpack(long &k, double *buffer, vector< vector <double> > &vec)
-{
-	long imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax); for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
-	}
-}
-
-void PART::unpack(long &k, double *buffer, vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
-{
-	long imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = fedivmin; i < fedivmax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ 
-			vec[i][j].trans = buffer[k]; k++;
-			vec[i][j].ind = buffer[k]; k++;
-			vec[i][j].t = buffer[k]; k++;
-			vec[i][j].done = buffer[k]; k++;
-		}
-	}
-}
-
-long PART::fevpack(double *buffer, short fedivmin, short fedivmax)
-{
-	long j, jmax;
-	vector <double> pac; 
-	
-	pack(pac,fev,fedivmin,fedivmax);
-	
-	jmax = pac.size();
-	for(j = 0; j < jmax; j++) buffer[j] = pac[j];
-	
-	return jmax;
-}
-
-long PART::partpack(double *buffer, short fedivmin)
+/// Packs up all the particle information (from time fedivmin until the end) to the be sent by MPI
+void PART::partpack(short fedivmin)
 {
 	long l, c, cmax, cc, j, jmax;
 	double val;
-	vector <double> pac; 
-	
+
 	for(l = 0; l < poptree.level; l++){        // Process all the add later requests
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++){
 			val = lev[l].add[c]; lev[l].add[c] = 0;
 			Rtot[l][c] += val*sussum[l][c];
-			if(l <  poptree.level-1){
+			if(l < poptree.level-1){
 				val += addlater[l][c]; addlater[l][c] = 0;
-				for(j = 0; j < 4; j++) lev[l+1].add[ lev[l].node[c].child[j]] += val;
+				for(j = 0; j < 4; j++) lev[l+1].add[lev[l].node[c].child[j]] += val;
 			}
 		}			
 	}
-	for(l = 0; l < poptree.level; l++){
-		cmax = lev[l].node.size();
-		for(c = 0; c < cmax; c++){
-			if(addlater[l][c] != 0){ cout << l << " " << addlater[l][c] << "p\n";  emsg("Not ze");}
-			if(lev[l].add[c] != 0) emsg("PP");
-		}
-	}
-	
+
 	l = poptree.level-1;
 	
-	if(checkon == 1) pack(pac,ffine);// cout << pac.size() <<  "f1\n";
-	pack(pac,indinf); //cout << pac.size() <<  "f2\n";
-	pack(pac,Rtot[l]); //cout << pac.size() <<  "f3\n";
-	//pack(pac,Rtot); 
-	//pack(pac,sussum); //cout << pac.size() <<  "f4\n";
-	//pack(pac,addlater); //cout << pac.size() <<  "f5\n";
-	pack(pac,fev,fedivmin,fediv); // cout << pac.size() <<  "f6\n";
-	pack(pac,N);
-	//cout << pac.size() <<  "f7\n";
-	pack(pac,tdnext); //cout << pac.size() <<  "f8\n";
-	pack(pac,tdfnext); //cout << pac.size() <<  "f9\n";
-	pack(pac,sett); //cout << pac.size() <<  "f10\n";
-
-	jmax = pac.size();
-	for(j = 0; j < jmax; j++) buffer[j] = pac[j];
-
-	return jmax;
+	packinit();
+	if(checkon == 1) pack(ffine);
+	pack(indinf);
+	pack(Rtot[l]);
+	pack(fev,fedivmin,fediv);
+	pack(N);
+	pack(tdnext); 
+	pack(tdfnext);
+	pack(sett);
 }
 
-void PART::partunpack(double *buffer, int max, short fedivmin)
+/// Unpacks particle 
+void PART::partunpack(short fedivmin)
 {
-	long k=0, kmax, j, l, c, cmax, cc;
+	long k, kmax, j, l, c, cmax, cc;
 	double val, val2;
 	
 	l = poptree.level-1;
 	
-	if(checkon == 1) unpack(k,buffer,ffine);
-	unpack(k,buffer,indinf);
-	unpack(k,buffer,Rtot[l]);
-	unpack(k,buffer,fev,fedivmin,fediv);
-	unpack(k,buffer,N);
-	unpack(k,buffer,tdnext);
-	unpack(k,buffer,tdfnext);
-	unpack(k,buffer,sett);
-	if(k != max) emsg("PART: EC17");
-		
+	packinit();
+	if(checkon == 1) unpack(ffine);
+	unpack(indinf);
+	unpack(Rtot[l]);
+	unpack(fev,fedivmin,fediv);
+	unpack(N);
+	unpack(tdnext);
+	unpack(tdfnext);
+	unpack(sett);
+
 	cmax = poptree.Cfine;
 	for(c = 0; c < cmax; c++){
 		val = lev[l].node[c].sussum;
@@ -616,7 +495,7 @@ void PART::partunpack(double *buffer, int max, short fedivmin)
 		for(k = 0; k < kmax; k++) val -= poptree.ind[indinf[c][k]].sus;
 		sussum[l][c] = val;
 	}
-	
+		
 	for(l = poptree.level-2; l >= 0; l--){
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++){
@@ -631,18 +510,19 @@ void PART::partunpack(double *buffer, int max, short fedivmin)
 			addlater[l][c] = 0;
 		}
 	}
-	
+
 	if(checkon == 1){
 		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].node.size();
 			for(c = 0; c < cmax; c++){
-				if(addlater[l][c] != 0) emsg("Not ze");
-				if(lev[l].add[c] != 0) emsg("PP");
+				if(addlater[l][c] != 0) emsg("Part: EC30");
+				if(lev[l].add[c] != 0) emsg("Part: EC31");
 			}
 		}
 	}
 }
 
+/// Copies in all the information from another particle
 void PART::copy(const PART &other, short fedivmin)
 {
 	short d;

@@ -1,7 +1,9 @@
 MPICXX := mpicxx
 CXXFLAGS := -g -O3
 
-srcs := PMCMC.cc data.cc PART.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
+#srcs := MBPPART.cc  PMBP.cc pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
+srcs :=  pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
+
 hdrs := $(wildcard *.h) $(wildcard *.hh)
 
 exe := analysis

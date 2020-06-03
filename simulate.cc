@@ -34,4 +34,5 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 	
 	opsamp.push_back(outputsamp(1,0,0,data,model,poptree,part->fev));	
 	outputresults(data,model,opsamp,1,0);
+	outputeventsample(part->fev,data,model,poptree);
 }

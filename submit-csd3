@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 1 --walltime 1:00:00 --dir /path/to/run/dir
+# Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 32 --nnode 1 --walltime 1:00:00 --dir /path/to/run/dir
 # dos2unix submit-csd3
 
 set -e
@@ -47,7 +47,9 @@ jobname=$(basename $dir)
 mkdir $dir
 cp -a ./analysis $dir
 
-cp -a ./cases_scotsim.txt $dir
+cp -a ./cases_realscotsim.txt $dir
+
+cp -a ./houses_realscotsim.txt $dir
 
 cat >$dir/submit.sh <<EOF
 #!/bin/bash

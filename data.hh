@@ -4,6 +4,7 @@ struct HOUSE {                             // Defines a house
  	double x, y;                             // Position
 	vector <long> ind;                       // Individuals which belong to the house
 	short region;                            // The region to which an individual belongs
+	float density;
 };
 
 struct HouseRefComparatorX
@@ -59,9 +60,8 @@ class DATA
 	void sortY(vector <long> &vec);	
 	HouseRefComparatorX compX;
 	HouseRefComparatorY compY;
-
-	void readdata(short core, short siminf);             // Reads in the data
-	void pack(vector <long> &pac, vector< vector <long> > &vec);
-	void unpack(long &k, vector <long> &pac, vector< vector <long> > &vec);
+	void readdata(short core, short siminf); 
 	
+	private:
+	void housedensity();
 };

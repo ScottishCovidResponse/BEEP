@@ -41,7 +41,13 @@ public:
 
 	double settime[nsettime];
 	double beta[nsettime];
-	short phiparam;
+	
+	/* MBP*/
+	double betai[nsettime], betap[nsettime];
+	vector <double> parami, paramp;
+	/* MBP END*/
+		
+	short phiparam, afracparam, aIparam;
 	short nspline;                             // The spline points which are parameters in the model
 	vector <double> splinet;
 	vector <PARAM> param;
