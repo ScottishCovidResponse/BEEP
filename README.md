@@ -19,18 +19,35 @@ To compile the code use:
 
 make
 
-To simulate from the model use:
+Simulate using:   mpirun -n 1 ./analysis 65536 1
 
-./analysis 1024 0
- 
-The first number gives the number of groups into which the houses are divided (should be a power of 4) and the second number changes the random seed.
+-n 1 sets the number of cores (set to 1 for simulation)
 
-Simulation generates the file "Weekly case data.txt".
+The first number gives the number of areas into which the houses are divided (should be a power of 4)
+
+The second number gives the random seed
+
+Simulation generates the files
+
+- houses_small.txt: Randomly generated data about houses; eventually this will come from real data
+- cases_small.txt: Simulated case data
+- events_small.txt: Simulated events
 
 Inference can then be performed on this data by using:
 
-./analysis 1024 1000 0
+mpirun -n 20 ./analysis 65536 500 1
 
-Here the first number gives the number of groups into which the houses are divided (should be a power of 4), the second number gives the number of PMCMC samples and the third number changes the random seed.
+-n 20 gives the number cores
 
-Model parameter samples are generated in the file "trace.txt".
+The first number gives the number of areas into which the houses are divided (should be a power of 4)
+
+The second number gives the number of MCMC iterations
+
+The third number gives the number of particles per core
+
+Output appears in the Output directory:
+
+- R0_<N>.txt: R0
+- params_<N>.txt: Estimated parameters with credible intervals etc
+- region_<A>_<B>_data_<N>.txt: Information about what's happening in each region
+- trace_<N>.txt: Model parameter samples
