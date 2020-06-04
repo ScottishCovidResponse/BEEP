@@ -1,0 +1,58 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install packages
+      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich
+
+    - name: Compile
+      run: |
+        make
+
+    - name: Run simulation
+      run: |
+        mpirun -n 1 ./analysis 256 1
+        mkdir Simulation
+        cp cases_small.txt houses_small.txt events_small.txt Simulation
+
+    - name: Upload simulation results
+      uses: actions/upload-artifact@v2
+      with:
+        name: Simulation
+        path: Simulation
+
+    - name: Run inference
+      run: |
+        mpirun -n 1 ./analysis 256 2 50
+
+    - name: Upload inference results
+      uses: actions/upload-artifact@v2
+      with:
+        name: Output
+        path: Output
+
+    - name: Check output files
+      run: |
+        required_files="cases_small.txt houses_small.txt events_small.txt Output Output/R0_0.txt   Output/params_0.txt   Output/region0_0_data_0.txt   Output/region1_0_data_0.txt   Output/trace_20.txt Output/R0_20.txt  Output/params_20.txt  Output/region0_0_data_20.txt  Output/region1_0_data_20.txt  Output/trace_50.txt Output/R0_50.txt  Output/params_50.txt  Output/region0_0_data_50.txt  Output/region1_0_data_50.txt"
+        failures=0
+
+        for f in $required_files ; do
+          if [ ! -r "$f" ]; then
+            echo "Required output file $f not found" >&2
+            failures=$((failures+1))
+          fi
+        done
+
+        if [ $failures -gt 0 ]; then
+          echo "::error ::Failed due to missing output files" >&2
+          exit 1
+        else
+          echo "All required output files found"
+        fi
