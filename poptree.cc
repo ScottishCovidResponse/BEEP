@@ -22,10 +22,11 @@ bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
 void POPTREE::init(DATA &data, short core)
 {
 	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
-	double av, x, y, xx, yy, grsi, dd, sum, fac, val;
+	double av, x, y, xx, yy, grsi, dd, sum, fac, val, valsr, vallr;
 	NODE node;
 	
-	const short posmax = 100;   // This gives the maximum number of possibilities for a given level in M 
+	//const short posmax = 100;   // This gives the maximum number of possibilities for a given level in M 
+	const short posmax = 100;   // ZZ This gives the maximum number of possibilities for a given level in M 
 	vector <POS> listpos;
 	POS pos;
 	
@@ -208,11 +209,13 @@ void POPTREE::init(DATA &data, short core)
 								yy = lev[l+1].node[ccc].y;
 						
 								dd = sqrt((xx-x)*(xx-x) + (yy-y)*(yy-y));
-				
+								if(dd > ddmax){ valsr = 0; vallr = 0;}
+								else{
+								valsr = 1.0/(1+pow(dd/a,b)); vallr = 1.0/(1+(dd/a));}
+								
 								Mnoderef_temp[l+1].push_back(ccc);
-								Mval_sr_temp[l+1].push_back(1.0/(1+pow(dd/a,b)));
-								if(dd < a) dd = a;
-								Mval_lr_temp[l+1].push_back(1.0/dd);
+								Mval_sr_temp[l+1].push_back(valsr);
+								Mval_lr_temp[l+1].push_back(vallr);
 								flag = 1;
 							}
 						}
@@ -247,18 +250,19 @@ void POPTREE::init(DATA &data, short core)
 				}
 			}
 							
-			if(listpos.size() > posmax){  // Makes sure fine scale does not extend too far
+			//if(listpos.size() > posmax){  // Makes sure fine scale does not extend too far
 				sort(listpos.begin(),listpos.end(),ordpos);
-				listpos.resize(posmax);
-			}
+				//listpos.resize(posmax);
+			//}
 			
 			for(po = 0; po < listpos.size(); po++){
 				cc = listpos[po].c;
-				dd = sqrt(listpos[po].dist);
+				dd = listpos[po].dist;
 				Mnoderef_temp[l].push_back(cc);
-				Mval_sr_temp[l].push_back(1.0/(1+pow(dd/a,b)));
-				if(dd < a) dd = a;
-				Mval_lr_temp[l].push_back(1.0/dd);
+				valsr = 1.0/(1+pow(dd/a,b)); vallr = 1.0/(1+(dd/a));
+	
+				Mval_sr_temp[l].push_back(valsr);
+				Mval_lr_temp[l].push_back(vallr);
 				flag = 1;
 				
 				lev[l].node[cc].done = 1;
@@ -272,7 +276,7 @@ void POPTREE::init(DATA &data, short core)
 			for(k = 0; k < kmax; k++) sum += Mval_sr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
-		fac = 0.8/sum;
+		fac = 1/sum;
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); for(k = 0; k < kmax; k++) Mval_sr_temp[l][k] *= fac;
 		}	
@@ -283,7 +287,7 @@ void POPTREE::init(DATA &data, short core)
 			for(k = 0; k < kmax; k++) sum += Mval_lr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
-		fac = 0.2/sum;
+		fac = 0./sum;
 		for(l = 0; l < level; l++){
 			kmax = Mval_lr_temp[l].size(); for(k = 0; k < kmax; k++) Mval_lr_temp[l][k] *= fac;
 		}
@@ -298,6 +302,8 @@ void POPTREE::init(DATA &data, short core)
 				if(lev[l].node[cc].done == 1) addnoderef_temp[l].push_back(cc);
 			}
 		}			
+		
+		//for(l = 0; l < level; l++) cout << Mval_sr_temp[l].size() << ","; cout << "num\n";     
 		
 		for(l = 0; l < level; l++){           // Stores the results
 			kmax = Mval_sr_temp[l].size();
@@ -349,7 +355,7 @@ void POPTREE::init(DATA &data, short core)
 						case 0:  // Uses log of the population density 
 							ind[i].X[fi] = log(data.house[h].density);
 							break;
-						/*
+							/*
 						case 0:  // Uses sex as a simple fixed effect
 							ind[i].X[fi] = short(2*ran());
 						  break;
@@ -357,7 +363,6 @@ void POPTREE::init(DATA &data, short core)
 					}
 				}
 			}
-			
 		}		
 	}
 

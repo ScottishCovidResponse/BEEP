@@ -30,7 +30,7 @@ void DATA::readdata(short core, short siminf)
 		long RX, RY;
 		
 		if(type.substr(0,4) != "real" && siminf == 1){                 // Randomly generates houses and regions
-			if(type == "small"){ RX = 2; RY = 1; popsize = 3000; nhouse = 1024;}  
+			if(type == "small"){ RX = 1; RY = 1; popsize = 3000; nhouse = 1024;}  
 			else{
 				if(type == "med"){ RX = 3; RY = 3; popsize = 3*16384; nhouse = 16384;}
 				else{

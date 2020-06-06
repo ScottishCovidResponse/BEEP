@@ -15,11 +15,13 @@ using namespace std;
 #include "PART.hh"
 #include "output.hh"
 #include "pack.hh"
+#include "consts.hh"
 
 MPI_Request reqs[partmax];               // These are information used Isend and Irecv
 MPI_Status stats[partmax];
-const short SENDRECMAX = 10;        
-const long BUFMAX = 10000000;
+
+//const short SENDRECMAX = 10;        
+//const long BUFMAX = 10000000;
 double sendbuffer[SENDRECMAX][BUFMAX];
 double recibuffer[SENDRECMAX][BUFMAX];
 	
@@ -36,8 +38,8 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, long nsamp, short core, s
 	const short fixinvT = 1;           // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
 	long p, samp, burnin = nsamp/3, accept;
 	double Li, Lf, valst, al;
-	double invT =  1;                  // The inverse temperature (used to relax the observation model)
-	double varfac = 4;                 // Used to change the variances in the observation model
+	double invT = 1;                  // The inverse temperature (used to relax the observation model)
+	double varfac = 1;                 // Used to change the variances in the observation model
 	vector < vector <FEV> > xi, xp;    // Stores the current and proposed event sequences
 	vector <SAMPLE> opsamp;            // Stores sample for generating satatistics later
 	vector <PARAM> &param(model.param);// Copies parameters from the model
@@ -68,7 +70,8 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, long nsamp, short core, s
 		// Each PMCMC step consists of making a change to a parameter 
 		// This change is probablisitically either accepted or rejected based
 		// on whether the observations agree better with new value or the old one.			
-		for(p = 0; p < long(param.size()); p++){
+		//for(p = 0; p < long(param.size()); p++){
+		for(p = 0; p < 8; p++){
 			if(param[p].min != param[p].max){
 				valst = param[p].val;
 				
@@ -152,7 +155,7 @@ static double sample(short core, short ncore, short npart, double tmax, double v
 	return Liav;
 }
 
- /// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap function)
+/// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap function)
 void geneventsample(short core, short ncore, short npart, short nweek, short *backpart, vector < vector <FEV> > &xp)	
 {
 	short p, w, co, d, fedivmin, fedivmax, nparttot = npart*ncore;

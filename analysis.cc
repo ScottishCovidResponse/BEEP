@@ -17,6 +17,9 @@ The second number gives the number of MCMC iterations
 The third number gives the number of particles per core
 */
 
+// ../g++  MBPPART.cc  PMBP.cc pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc
+//  .\g++.exe .\GitHub\MBPPART.cc  .\GitHub\PMBP.cc .\GitHub\pack.cc .\GitHub\PART.cc .\GitHub\PMCMC.cc .\GitHub\data.cc .\GitHub\output.cc .\GitHub\analysis.cc .\GitHub\timers.cc .\GitHub\utils.cc .\GitHub\model.cc .\GitHub\simulate.cc .\GitHub\poptree.cc
+
 /*
  Commands for running on DiRAC:
  ./submit-csd3 --groups 65536 --seed 1 --samples 10 --nprocs 32 --nnode 1  --walltime 1:00:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test
@@ -82,7 +85,7 @@ int main(int argc, char** argv)
 		poptree.areamax = atoi(argv[1]);   
 		nsamp = atoi(argv[2]); 
 		npart = atoi(argv[3]);
-		srand(104);
+		srand(1);
 		break;
 		
 	default:

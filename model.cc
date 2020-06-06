@@ -22,7 +22,8 @@ void MODEL::definemodel(short core, double tmax, long popsize)
 	short p, c, t, fi;
 		
 	if(modelsel == MOD_IRISH){  	// Irish model
-		double R0sim[8] = {2.9,2.8,2.6,1.5,1.1,0.7,0.8,0.9};        // Hypothhetically variation in R0 for simulations
+		//double R0sim[8] = {2.9,2.8,2.6,1.5,1.1,0.7,0.8,0.9};        // Hypothhetically variation in R0 for simulations
+		double R0sim[8] = {3.1,3.0,2.8,1.9,1.1,0.7,0.8,0.9};        // Hypothhetically variation in R0 for simulations
 		//double R0sim[8] = {2.3,2.3,2.3,2.3,0.7,0.7,0.7,0.7};  		
 		double afrac = 0.25, muEA = 1.63, sdEA = 0.5, aI = 0.5;
 		double tIaR = 8, tIH = 2, tHD = 100, tHR = 20;              // Estimates of transition times from literature
@@ -207,7 +208,7 @@ void MODEL::addcomp(string name, double infectivity)
 void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
-	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/10; par.ntr = 0; par.nac = 0;
+	par.name = name; par.val = val; par.sim = val; par.min = min; par.max = max; par.jump = val/3; par.ntr = 0; par.nac = 0;
 	par.betachange = 0;	par.suschange = 0; par.infchange = 0;
 
 	param.push_back(par);

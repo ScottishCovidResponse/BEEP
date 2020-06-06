@@ -12,18 +12,19 @@ const short MOD_IRISH = 0, MOD_OLD = 1;    // Different compartmental models
 const short modelsel = MOD_IRISH;
 
 const short FEV_EV=0, INF_EV=1, SET_EV=2;  // Used to characterise an event type (future event/infection/settime/external)
-const short EXT_EV=3, XIFEV_EV = 4;
+const short EXT_EV=3, XIFEV_EV=4;
 const double tiny = 0.00000001;            // Used to represent a tiny number
 const double large = 1000000;              // Used to represent a big number
 const short timestep = 7;                  // Case data uses week interval
 
 const short checkon = 0;                   // Set to one to check algorithm is performing correctly
-const double finegridsize = 0.02;          // The range in distance over which the fine grid is used 
+const double finegridsize = 1;//0.02;          // ZZ The range in distance over which the fine grid is used 
 
 const double scale = 684;                  // The number of kilometers across Scotland
-const double a = 4.0/scale;                // Parameters used for spatial kernal
-const double b = 3;
-const double ddmax = 1000.0/scale;         // The maximum range for kernal
+//const double a = 4.0/scale;                //  Parameters used for spatial kernal
+const double a = 8.0/scale;                //  Parameters used for spatial kernal
+const double b = 2;     // ZZ
+const double ddmax = 30.0/scale;         // ZZ The maximum range for kernal
 const double rden = 1;                     // Finds the density of houses
 
 const long fediv=17*7*10;                   // The number of divisions into which the global timeline is divided
@@ -35,3 +36,6 @@ const long nsettime = 80;                 // The number of time divisions used t
 const short nfix = 1;                      // The number of fixed effects   
 
 const int MAX_NUMBERS = 10000000;
+
+const short SENDRECMAX = 10;        
+const long BUFMAX = 1000000;

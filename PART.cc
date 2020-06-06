@@ -14,15 +14,6 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 
-struct NEV {                               // Information about the immediate next events
-  short type; double t;
-};
-
-static bool compNEV(NEV lhs, NEV rhs)
-{
-	return lhs.t < rhs.t;
-};
-
 PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
 {
 }

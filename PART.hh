@@ -15,6 +15,15 @@ struct FEV {                               // Stores information about a compart
 	short done;                              // Set to 1 if that transition is in the past 
 };
 
+struct NEV {                               // Information about the immediate next events
+  short type; double t;
+};
+
+static bool compNEV(NEV lhs, NEV rhs)
+{
+	return lhs.t < rhs.t;
+};
+
 class PART                                 // Stores all the things related to a particle 
 {
 	public:
