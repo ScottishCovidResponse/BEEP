@@ -42,12 +42,15 @@ The third number gives the number of particles per core
 
 #include "simulate.hh"
 #include "PMCMC.hh"
+#include "gitversion.hh"
 #include "PMBP.hh"
 
 using namespace std;
  
 int main(int argc, char** argv)
 {
+	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+
 	int ncore, core, npart;
 	POPTREE poptree;
 	long nsamp;       // The number of PMCMC samples
