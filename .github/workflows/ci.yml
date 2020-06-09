@@ -77,6 +77,7 @@ jobs:
         path=coronapmcmc/branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
         ln -s $PWD/{Simulation,Output} $path
+        touch $path/test.txt
         find $path
         rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
         url=https://projectdata.scrc.uk/$path
