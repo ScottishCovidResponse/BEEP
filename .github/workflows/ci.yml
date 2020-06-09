@@ -94,22 +94,18 @@ jobs:
 
         echo "build_job_id = $build_job_id"
 
-        curl -v -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o logs.zip "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
+        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o builddlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
         echo "Exit code: $?"
         echo "Downloaded files:"
         find
-        echo "Content of logs.zip:"
-        cat logs.zip
-        echo "Unzipping"
-        unzip logs.zip
-        echo "Find logs:"
-        find
+        echo "Content of builddlog.txt:"
+        cat builddlog.txt
 
     - name: Upload results to website
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} $path
+        cp -a $PWD/{Simulation,Output} log/builddlog.txt $path
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
