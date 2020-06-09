@@ -86,10 +86,11 @@ jobs:
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
-        find $path
+        find branches
         echo "ls -R"
         ls -R
-        rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
+        # rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
+        rsync -avz branches ian@projectdata.scrc.uk: # goes into ~/www/coronapmcmc on server
         url=https://projectdata.scrc.uk/$path
         echo "::warning ::Build output available at $url" >&2
 
