@@ -86,7 +86,14 @@ jobs:
         echo "{{ needs.build }}"
 
         echo "Jobs:"
-        curl -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+
+        cat jobs.json
+
+        build_job_id = $(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
+
+        echo "build_job_id = $build_job_id"
+
         # echo "Downloaded files:"
         # find
         # echo "Content of logs.zip:"
