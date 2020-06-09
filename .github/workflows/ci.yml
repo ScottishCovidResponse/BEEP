@@ -21,6 +21,7 @@ jobs:
         mpirun -n 1 ./analysis 256 1
         mkdir Simulation
         cp cases_small.txt houses_small.txt events_small.txt Simulation
+        ls Simulation
 
     - name: Upload simulation results
       uses: actions/upload-artifact@v2
@@ -40,7 +41,7 @@ jobs:
 
     - name: Check output files
       run: |
-        required_files="cases_small.txt houses_small.txt events_small.txt Output Output/R0_0.txt   Output/params_0.txt   Output/region0_0_data_0.txt   Output/region1_0_data_0.txt   Output/trace_20.txt Output/R0_20.txt  Output/params_20.txt  Output/region0_0_data_20.txt  Output/region1_0_data_20.txt  Output/trace_50.txt Output/R0_50.txt  Output/params_50.txt  Output/region0_0_data_50.txt  Output/region1_0_data_50.txt"
+        required_files="cases_small.txt houses_small.txt events_small.txt Output Output/trace_50.txt Output/R0_50.txt Output/params_50.txt Output/region0_0_data_50.txt Output/region1_0_data_50.txt"
         failures=0
 
         for f in $required_files ; do
