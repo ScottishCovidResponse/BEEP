@@ -72,6 +72,12 @@ jobs:
       run: |
         echo "projectdata.scrc.uk ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCedi8BdVnymEHtXQ6u7WBi0UAcQdsOEub25kzzCRDMmOOFsicdW30G+wePmw1DbV7HdHONqSo8S5+GmH0Et546TW/8HqaklnOe+1It18XIcvA58Bh8cPv/0r02OJAkmwk7Qja+dOg5iXZSWceTvW6dN/2TuJEXdYGBY1cI9847v8hGGbmH+SZ6wIWrDX/aMgND449ikstfguOckEuBAL1OdOyRm1Li8CtHtQNRefGPZpvtpeKzDB2rkFo+G/nBmBdPJ+kCXiblIMoKK2UhZbz5VYxBmbOUcG4Xq+9EnyxgUcX7VSKfuzIMhJK7OVFbpOs0JTawMhZQzExh9SCKFLavo2arL4WL1EvGKEbZFWedU+lW4vtsaUz2uTg5x6NV7aX+kbSo3Aq2cbxhbAhmt2aw/tFDNil+bUBb0NMWrYbzp5oFCBSw0KpBwGQx/Rc7H+gI0wVGFw24G4Dud1O3JAjv8bBRzihX/m10QsnRm56xVu/JTUuUasaG0Ocyv3uOqfM=" >> ~/.ssh/known_hosts
 
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+
+    - name: Display structure of downloaded files
+      run: ls -R
+
     - name: Upload results to website
       run: |
         path=coronapmcmc/branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
