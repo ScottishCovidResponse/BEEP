@@ -14,7 +14,7 @@ jobs:
 
     - name: Compile
       run: |
-        make CXXFLAGS="-g -O3 -Wall" | tee compile-log.txt
+        make CXXFLAGS="-g -O3 -Wall" 2>&1 | tee compile-log.txt
 
     - name: Upload compilation log
       uses: actions/upload-artifact@v2
