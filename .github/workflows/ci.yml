@@ -90,7 +90,7 @@ jobs:
 
         cat jobs.json
 
-        build_job_id = $(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
+        build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
 
         echo "build_job_id = $build_job_id"
 
