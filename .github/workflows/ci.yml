@@ -10,17 +10,18 @@ jobs:
     - uses: actions/checkout@v2
     
     - name: Install packages
-      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich
+      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha
 
     - name: Compile
       run: |
         make CXXFLAGS="-g -O3 -Wall" 2>&1 | tee compile-log.txt
+        aha < compile-log.txt > compile-log.html
 
     - name: Upload compilation log
       uses: actions/upload-artifact@v2
       with:
         name: compile-log
-        path: compile-log.txt
+        path: compile-log.*
 
     - name: Run simulation
       run: |
@@ -111,7 +112,7 @@ jobs:
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/builddlog.txt compile-log/compile-log.txt $path
+        cp -a $PWD/{Simulation,Output} log/builddlog.txt compile-log/compile-log.* $path
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
