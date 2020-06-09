@@ -94,7 +94,7 @@ jobs:
 
         echo "build_job_id = $build_job_id"
 
-        curl -v -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o logs.zip "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/jobs/${build_job_id}/logs"
+        curl -v -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o logs.zip "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
         echo "Exit code: $?"
         echo "Downloaded files:"
         find
