@@ -14,8 +14,7 @@ jobs:
 
     - name: Compile
       run: |
-        export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
-        make CXXFLAGS="-g -O3 -Wall" 2>&1 | tee compile-log.txt
+        make CXXFLAGS="-g -O3 -Wall -fdiagnostics-color" 2>&1 | tee compile-log.txt
         aha < compile-log.txt > compile-log.html
 
     - name: Upload compilation log
