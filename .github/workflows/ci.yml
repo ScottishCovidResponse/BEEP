@@ -74,7 +74,7 @@ jobs:
 
     - name: Upload results to website
       run: |
-        path=coronapmcmc/branches/$GITHUB_REF/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
+        path=coronapmcmc/branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $(dirname $path)
         ln -s $PWD/{Simulation,Output} $path
         find $path
