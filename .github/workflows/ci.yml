@@ -82,6 +82,9 @@ jobs:
       run: |
         mkdir log
         cd log
+        echo "Job info:"
+        echo "{{ needs.build }}"
+
         echo "Jobs:"
         curl -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
         # echo "Downloaded files:"
