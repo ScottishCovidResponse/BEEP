@@ -83,8 +83,12 @@ jobs:
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
         cp -a $PWD/{Simulation,Output} $path
-        ln -sf $GITHUB_RUN_NUMBER $(dirname $path)/latest
+        echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
+        ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
+        echo "find:"
         find $path
+        echo "ls -R"
+        ls -R
         rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
         url=https://projectdata.scrc.uk/$path
         echo "::warning ::Build output available at $url" >&2
