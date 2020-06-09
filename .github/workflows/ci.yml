@@ -78,6 +78,15 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R
 
+    - name: Download log
+      run: |
+        mkdir log
+        cd log
+        curl -L -o logs.zip -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/logs
+        unzip logs.zip
+        echo "Find logs:"
+        find
+
     - name: Upload results to website
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
