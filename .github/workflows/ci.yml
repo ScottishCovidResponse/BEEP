@@ -82,9 +82,12 @@ jobs:
       run: |
         mkdir log
         cd log
-        curl -L -o logs.zip -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/logs
+        curl -v -L -o logs.zip -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/logs
         echo "Downloaded files:"
         find
+        echo "Content of logs.zip:"
+        cat logs.zip
+        echo "Unzipping"
         unzip logs.zip
         echo "Find logs:"
         find
