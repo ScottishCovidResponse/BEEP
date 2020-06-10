@@ -121,7 +121,7 @@ jobs:
         commit_id="$(jq -r < log/run.json '.head_commit.id')"
         commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1)"
         commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
-        commit_author="$(jq -r < log/run.json '.head_commit.author.name)"
+        commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
         commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
 
         warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
