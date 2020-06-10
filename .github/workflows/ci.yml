@@ -111,10 +111,8 @@ jobs:
         curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o build.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
 
     - name: Write summary page
-
-      conclusion="$(jq < log/buildjob.json '.conclusion')"
-
       run: |
+        conclusion="$(jq < log/buildjob.json '.conclusion')"
         title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
         cat >summary.html <<EOF
         <!DOCTYPE html>
