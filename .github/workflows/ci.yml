@@ -70,6 +70,8 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
+    - uses: actions/checkout@v2
+
     - name: Set up ssh agent
       uses: webfactory/ssh-agent@v0.2.0
       with:
@@ -120,7 +122,7 @@ jobs:
         <head>
         <meta charset="utf-8">
         <title>$title</title>
-        <!-- <link rel="stylesheet" href="style.css"> -->
+        <link rel="stylesheet" href="style.css">
         <!-- <script src="script.js"></script> -->
         </head>
         <body>
@@ -143,7 +145,7 @@ jobs:
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/build.json log/builddlog.txt compile-log/compile-log.* summary.html $path
+        cp -a $PWD/{Simulation,Output} log/build.json log/builddlog.txt compile-log/compile-log.* summary.html .github/workflows/style.css $path
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
