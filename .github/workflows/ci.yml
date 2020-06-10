@@ -152,7 +152,7 @@ jobs:
           <li>Git commit -- the version tested in this run:
             <ul>
               <li><a href="${commit_url}">${commit_message}</a></li>
-              <li>($commit_author, $commit_timestamp)</li>
+              <li>$commit_author, $commit_timestamp</li>
             </ul>
           </li>
           <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
