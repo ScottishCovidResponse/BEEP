@@ -126,11 +126,11 @@ jobs:
         <body>
         <h1>$title</h1>
 
-        <p>Run status: ${status}</p>
+        <p>Run status: ${conclusion}</p>
 
         <ul>
-          <li><a href="log/buildlog.txt">Run logfile</a> -- The log of the whole build and test run</li>
-          <li><a href="compile-log/compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
+          <li><a href="buildlog.txt">Run logfile</a> -- The log of the whole build and test run</li>
+          <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
           <li><a href="Simulation">Simulation output</a> -- The output of the initial test simulation</li>
           <li><a href="Output">Inference output</a> -- The output of the inference</li>
         </ul>
