@@ -112,12 +112,21 @@ jobs:
         cat buildlog.txt
 
         curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o build.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
+        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o run.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
 
     - name: Write summary page
       run: |
         conclusion="$(jq -r < log/build.json '.conclusion')"
+
+        commit_id="$(jq -r < log/run.json '.head_commit.id')"
+        commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1)"
+        commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
+        commit_author="$(jq -r < log/run.json '.head_commit.author.name)"
+        commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
+
         warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
         title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
+
         cat >summary.html <<EOF
         <!DOCTYPE html>
         <html lang="en">
@@ -134,6 +143,11 @@ jobs:
         <p>No. of compilation warnings: ${warnings}</p>
 
         <ul>
+          <li><a href="${commit_url}">Git commit</a> -- The git commit for this run
+            <ul>
+              <li>$commit_message ($commit_author, $commit_timestamp)</li>
+            </ul>
+          </li>
           <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
           <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
           <li>Simulation:
