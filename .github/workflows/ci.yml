@@ -25,9 +25,9 @@ jobs:
 
     - name: Run simulation
       run: |
-        mpirun -n 1 ./analysis 256 1 | tee simulation.log
+        mpirun -n 1 ./analysis 256 1 | tee simulation-log.txt
         mkdir Simulation
-        cp cases_small.txt houses_small.txt events_small.txt simulation.log Simulation
+        cp cases_small.txt houses_small.txt events_small.txt simulation-log.txt Simulation
         ls Simulation
 
     - name: Upload simulation results
@@ -38,8 +38,8 @@ jobs:
 
     - name: Run inference
       run: |
-        mpirun -n 1 ./analysis 256 2 50 | tee inference.log
-        cp inference.log Output
+        mpirun -n 1 ./analysis 256 2 50 | tee inference-log.txt
+        cp inference-log.txt Output
 
     - name: Upload inference results
       uses: actions/upload-artifact@v2
@@ -138,13 +138,13 @@ jobs:
           <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
           <li>Simulation:
             <ul>
-              <li><a href="Simulation/simulation.log">Simulation log</a> -- The log of the simulation run</li>
+              <li><a href="Simulation/simulation-log.txt">Simulation log</a> -- The log of the simulation run</li>
               <li><a href="Simulation">Simulation output</a> -- The output data of the initial test simulation</li>
             </ul>
           </li>
           <li>Inference:
             <ul>
-              <li><a href="Output/inference.log">Inference log</a> -- The log of the inference run</li>
+              <li><a href="Output/inference-log.txt">Inference log</a> -- The log of the inference run</li>
               <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
             </ul>
           </li>
