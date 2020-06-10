@@ -112,7 +112,7 @@ jobs:
 
     - name: Write summary page
       run: |
-        conclusion="$(jq < log/buildjob.json '.conclusion')"
+        conclusion="$(jq < log/build.json '.conclusion')"
         title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
         cat >summary.html <<EOF
         <!DOCTYPE html>
