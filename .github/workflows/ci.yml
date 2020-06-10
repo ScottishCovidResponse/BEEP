@@ -103,12 +103,12 @@ jobs:
 
         echo "build_job_id = $build_job_id"
 
-        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o builddlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
+        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
         echo "Exit code: $?"
         echo "Downloaded files:"
         find
-        echo "Content of builddlog.txt:"
-        cat builddlog.txt
+        echo "Content of buildlog.txt:"
+        cat buildlog.txt
 
         curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o build.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
 
@@ -145,7 +145,7 @@ jobs:
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/build.json log/builddlog.txt compile-log/compile-log.* summary.html .github/workflows/style.css $path
+        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* summary.html .github/workflows/style.css $path
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
