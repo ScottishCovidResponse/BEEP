@@ -115,6 +115,7 @@ jobs:
     - name: Write summary page
       run: |
         conclusion="$(jq < log/build.json '.conclusion')"
+        warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
         title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
         cat >summary.html <<EOF
         <!DOCTYPE html>
@@ -129,6 +130,7 @@ jobs:
         <h1>$title</h1>
 
         <p>Run status: ${conclusion}</p>
+        <p>No. of compilation warnings: ${warnings}</p>
 
         <ul>
           <li><a href="buildlog.txt">Run logfile</a> -- The log of the whole build and test run</li>
