@@ -149,7 +149,12 @@ jobs:
         <p>No. of compilation warnings: ${warnings}</p>
 
         <ul>
-          <li>Git commit: <i><a href="${commit_url}">${commit_message}</a></i> ($commit_author, $commit_timestamp)</li>
+          <li>Git commit -- the version tested in this run:
+            <ul>
+              <li><a href="${commit_url}">${commit_message}</a></li>
+              <li>($commit_author, $commit_timestamp)</li>
+            </ul>
+          </li>
           <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
           <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
           <li>Simulation:
