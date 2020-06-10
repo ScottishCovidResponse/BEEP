@@ -1,5 +1,5 @@
 MPICXX := mpicxx
-CXXFLAGS := -g -O3
+CXXFLAGS := -g -O3 -std=c++11
 
 srcs := MBP.cc MBPCHAIN.cc PART.cc PMCMC.cc analysis.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
 hdrs := MBP.hh MBPCHAIN.hh PART.hh PMCMC.hh consts.hh data.hh model.hh obsmodel.hh output.hh pack.hh poptree.hh simulate.hh timers.hh utils.hh
