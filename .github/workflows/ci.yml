@@ -118,14 +118,20 @@ jobs:
       run: |
         conclusion="$(jq -r < log/build.json '.conclusion')"
 
+        function escape_html()
+        {
+          sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g'
+        }
+
         commit_id="$(jq -r < log/run.json '.head_commit.id')"
-        commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1)"
+        commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1|escape_html)"
         commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
         commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
         commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
 
         warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
         title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
+
 
         cat >summary.html <<EOF
         <!DOCTYPE html>
@@ -143,11 +149,7 @@ jobs:
         <p>No. of compilation warnings: ${warnings}</p>
 
         <ul>
-          <li><a href="${commit_url}">Git commit</a> -- The git commit for this run
-            <ul>
-              <li>$commit_message ($commit_author, $commit_timestamp)</li>
-            </ul>
-          </li>
+          <li>Git commit: <i><a href="${commit_url}">${commit_message}</a></i> ($commit_author, $commit_timestamp)</li>
           <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
           <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
           <li>Simulation:
