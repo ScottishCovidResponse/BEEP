@@ -108,11 +108,44 @@ jobs:
         echo "Content of builddlog.txt:"
         cat builddlog.txt
 
+        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o build.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
+
+    - name: Write summary page
+
+      conclusion="$(jq < log/buildjob.json '.conclusion')"
+
+      run: |
+        title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
+        cat >summary.html <<EOF
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <meta charset="utf-8">
+        <title>$title</title>
+        <!-- <link rel="stylesheet" href="style.css"> -->
+        <!-- <script src="script.js"></script> -->
+        </head>
+        <body>
+        <h1>$title</h1>
+
+        <p>Run status: ${status}</p>
+
+        <ul>
+          <li><a href="log/buildlog.txt">Run logfile</a> -- The log of the whole build and test run</li>
+          <li><a href="compile-log/compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
+          <li><a href="Simulation">Simulation output</a> -- The output of the initial test simulation</li>
+          <li><a href="Output">Inference output</a> -- The output of the inference</li>
+        </ul>
+        </body>
+        </html>
+        EOF
+
+
     - name: Upload results to website
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/builddlog.txt compile-log/compile-log.* $path
+        cp -a $PWD/{Simulation,Output} log/build.json log/builddlog.txt compile-log/compile-log.* summary.html $path
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
