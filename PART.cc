@@ -22,7 +22,7 @@ PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model
 void PART::partinit(int p)
 {
 	int c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, loop;
-	
+
 	fediv = data.fediv;
 		
 	pst = p;

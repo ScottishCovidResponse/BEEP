@@ -18,13 +18,11 @@ using namespace std;
 #include "consts.hh"
 #include "obsmodel.hh"
 
-MPI_Request reqs[partmax];               // These are information used Isend and Irecv
+MPI_Request reqs[partmax];                 // These are information used Isend and Irecv
 MPI_Status stats[partmax];
 
-//const int SENDRECMAX = 10;        
-//const int BUFMAX = 10000000;
-double sendbuffer[SENDRECMAX][BUFMAX];
-double recibuffer[SENDRECMAX][BUFMAX];
+vector < vector<double> > sendbuffer;
+vector < vector<double> > recibuffer;
 	
 static double sample(DATA &data, MODEL &model, POPTREE &poptree, int core, int ncore, int npart, int period,	vector < vector <FEV> > &xinew);
 static double bootstrap(int core, int ncore, int npart, int fedivmin, int w, int *backpart);
@@ -36,13 +34,20 @@ PART* part[partmax];                       // Pointers to each of the particles
 
 void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int ncore, int npart)
 {
-	const int fixinvT = 1;           // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
-	int p, samp, burnin = nsamp/3, accept;
+	const int fixinvT = 1;                   // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
+	double invT = 1;                         // The inverse temperature (used to relax the observation model)
+	vector < vector <FEV> > xi, xp;          // Stores the current and proposed event sequences
+	vector <SAMPLE> opsamp;                  // Stores sample for generating statistics later
+	vector <PARAM> &param(model.param);      // Copies parameters from the model
+	int p, samp, burnin = nsamp/4, accept;
 	double Li, Lf, valst, al;
-	double invT = 1;                  // The inverse temperature (used to relax the observation model)
-	vector < vector <FEV> > xi, xp;    // Stores the current and proposed event sequences
-	vector <SAMPLE> opsamp;            // Stores sample for generating satatistics later
-	vector <PARAM> &param(model.param);// Copies parameters from the model
+
+	sendbuffer.resize(npart);                // Sets up the buffers for sending and receiving messages via MPI
+	recibuffer.resize(npart);
+	for(p = 0; p < npart; p++){
+		sendbuffer[p].resize(BUFMAX);
+		recibuffer[p].resize(BUFMAX);
+	}
 	
 	srand(core);
 	
@@ -52,7 +57,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 
 	Li = -large; 
 	for(samp = 0; samp < nsamp; samp++){
-		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " " << invT << endl;
+		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
  
 		Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
 
@@ -131,11 +136,11 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, int core, int n
 	for(p = 0; p < npart; p++) part[p]->partinit(p);
 
   Liav = 0;
-	for(t = 0; t < period; t++){                                // We step through one measurement at a time
+	for(t = 0; t < period; t++){                                      // We step through one measurement at a time
 		for(p = 0; p < npart; p++){
 			timers.timesim -= clock();
 	
-			part[p]->gillespie(t,t+1, 0 /* Inference */); // Simulates the particle
+			part[p]->gillespie(t,t+1,0);                                  // Simulates the particle
 	
 			part[p]->Li = Lobs(data,model,poptree,t,part[p]->fev,1);      // Measures how well it agrees with the observations
 			timers.timesim += clock();
@@ -144,7 +149,7 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, int core, int n
 		timers.timeboot -= clock();
 		
 		// Culls or copies particles based on how well they represent observations
-		Liav += bootstrap(core,ncore,npart,(data.fediv*(t+1))/period,t,backpart);
+		Liav += bootstrap(core,ncore,npart,(data.fediv*(t+1))/period,t,backpart); 
 		//Liav += bootstrap2(core,ncore,npart,(data.fediv*(t+1))/nperiod,t,back);
 		timers.timeboot += clock();
 	}
@@ -158,8 +163,7 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, int core, int n
 /// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap function)
 void geneventsample(DATA &data, int core, int ncore, int npart, int period, int *backpart, vector < vector <FEV> > &xp)	
 {
-	int p, t, co, d, fedivmin, fedivmax, nparttot = npart*ncore;
-	int siz;
+	int p, t, co, d, fedivmin, fedivmax, nparttot = npart*ncore, siz;
 	
 	if(1 == 0){
 		for(t = 0; t < period; t++){
@@ -180,7 +184,6 @@ void geneventsample(DATA &data, int core, int ncore, int npart, int period, int 
 				for(d = fedivmin; d < fedivmax; d++) xp[d] = part[p%npart]->fev[d];
 			}
 			else{
-				//cout << co << "recieve fro" << endl;
 				MPI_Status status;
 				MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,co,0,MPI_COMM_WORLD,&status);
 				MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= MAX_NUMBERS) emsg("Buffer not big enough");
@@ -200,7 +203,7 @@ void geneventsample(DATA &data, int core, int ncore, int npart, int period, int 
 	}
 }
 
- // Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap2 function)
+/// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap2 function)
 void geneventsample2(DATA &data, int core, int ncore, int npart, int period, int *back, vector < vector <FEV> > &xp)	
 {
 	int p, t, co, d, fedivmin, fedivmax;
@@ -279,7 +282,7 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 			
 		partstep = nparttot/32; if(partstep < 2) partstep = 2;
 		
-		for(p = 0; p < nparttot; p++){                                            // Finds "backpart", the particle which is being copied from
+		for(p = 0; p < nparttot; p++){                                // Finds "backpart", the particle which is being copied from
 			z = sum*ran();
 	
 			pp = 0;
@@ -295,7 +298,7 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 		}
 		
 		j = 0; jmax = extra.size();
-		while(j < jmax){                                                            // Tries to copy to same core (to increase speed)
+		while(j < jmax){                                             // Tries to copy to same core (to increase speed)
 			pp = extra[j];
 			p = pp - pp%npart; pmax = p+npart; while(p < pmax && backpart[p] != -1) p++;
 
@@ -318,9 +321,9 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 		res = 0;
 	}
 	
-	MPI_Bcast(backpart,nparttot,MPI_INT,0,MPI_COMM_WORLD);                                  // Broadcasts back part to all cores
+	MPI_Bcast(backpart,nparttot,MPI_INT,0,MPI_COMM_WORLD);     // Broadcasts backpart to all cores
 	
-	pmin = core*npart;                                                                        // Sets up information to be recieved
+	pmin = core*npart;                                         // Sets up information to be recieved
 	npreclist = 0;
 	for(p = pmin; p < pmin+npart; p++){
 		pp = backpart[p];
@@ -334,14 +337,14 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 					preclistli.push_back(vector <int> ()); 
 					preclistli[npreclist].push_back(p%npart);
 					
-					MPI_Irecv(recibuffer[npreclist],BUFMAX,MPI_DOUBLE,cor,pp,MPI_COMM_WORLD,&reqs[nreqs]); nreqs++;
-					npreclist++; if(npreclist > SENDRECMAX) emsg("PMCMC: EC11"); 
+					MPI_Irecv(&recibuffer[npreclist][0],BUFMAX,MPI_DOUBLE,cor,pp,MPI_COMM_WORLD,&reqs[nreqs]); nreqs++;
+					npreclist++; if(npreclist > npart) emsg("PMCMC: EC11"); 
 				}
 			}
 		}
 	}
 
-	for(p = pmin; p < pmin+npart; p++){                                                    //Initiates information to be sent
+	for(p = pmin; p < pmin+npart; p++){                          // Initiates information to be sent
 		if(p == backpart[p]){ 
 			corlist.clear(); ncorlist = 0;
 			for(pp = 0; pp < nparttot; pp++){
@@ -364,10 +367,10 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 				for(k = 0; k < kmax; k++) sendbuffer[nsendbuf][k+1] = buf[k];
 				
 				for(j = 0; j < ncorlist; j++){
-					MPI_Isend(sendbuffer[nsendbuf],kmax+1,MPI_DOUBLE,corlist[j],p,MPI_COMM_WORLD,&reqs[nreqs]);
+					MPI_Isend(&sendbuffer[nsendbuf][0],kmax+1,MPI_DOUBLE,corlist[j],p,MPI_COMM_WORLD,&reqs[nreqs]);
 					nreqs++;		
 				}				
-				nsendbuf++; if(nsendbuf > SENDRECMAX) emsg("PMCMC: EC21");
+				nsendbuf++; if(nsendbuf > npart) emsg("PMCMC: EC21");
 			}
 		}
 	}
@@ -376,7 +379,7 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 		if(MPI_Waitall(nreqs,reqs,stats) != MPI_SUCCESS) emsg("PMCMC: EC22");
 	}
 		
-	for(rec = 0; rec < npreclist; rec++){                                              	// Unpacks the recieved information
+	for(rec = 0; rec < npreclist; rec++){                           	// Unpacks the recieved information
 		kmax = recibuffer[rec][0]; for(k = 0; k < kmax; k++) buf[k] = recibuffer[rec][k+1];		
 		p = preclistli[rec][0];
 		part[p]->partunpack(fedivmin);
@@ -392,8 +395,8 @@ static double bootstrap(int core, int ncore, int npart, int fedivmin, int t, int
 	return res;
 }
 
-/// This bootstrap proceeds in two stages: First a particle is selected on each core based on observed likeluhood. 
-/// Then each core selects a code based on agregated likelihood
+/// This bootstrap proceeds in two stages: First a particle is selected on each core based on observed likelihood. 
+/// Then each core selects a particle based on aggregated likelihood
 /// Finally the selected particle is copied across all particles within a core. 
 /// This approach can reduces MPI time because each core only either sends or recieves.
 static double bootstrap2(int core, int ncore, int npart, int fedivmin, int t, int *back)
@@ -409,7 +412,7 @@ static double bootstrap2(int core, int ncore, int npart, int fedivmin, int t, in
 		double Limax, av, z, Litot[nparttot], sumind, sumindst[npart], sum, sumst[ncore];
 		vector <int> extra;
 		
-		for(p = 0; p < npart; p++) Litot[p] = part[p]->Li;                          // Gathers together the likelihoods from all cores
+		for(p = 0; p < npart; p++) Litot[p] = part[p]->Li;                 // Gathers together the likelihoods from all cores
 	
 		for(co = 1; co < ncore; co++){
 			MPI_Recv(Litot+npart*co,npart,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
@@ -422,7 +425,7 @@ static double bootstrap2(int core, int ncore, int npart, int fedivmin, int t, in
 		res = Limax + log(av);
 		
 		sum = 0;
-		for(co = 0; co < ncore; co++){                                       // Selects particles on each core
+		for(co = 0; co < ncore; co++){                                      // Selects particles on each core
 			sumind = 0;
 			for(p = 0; p < npart; p++){
 				sumind += exp(Litot[co*npart+p] - Limax);
@@ -498,4 +501,3 @@ static double bootstrap2(int core, int ncore, int npart, int fedivmin, int t, in
 	
 	return res;
 }
-

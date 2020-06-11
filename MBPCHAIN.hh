@@ -8,25 +8,51 @@ using namespace std;
 #include "poptree.hh"
 #include "data.hh"
 
-class MBPCHAIN                                 // Stores all the things related to a particle 
+class MBPCHAIN                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
 	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree);
 
-	// Stores all the information swaped between chains
-	int ch;                      
-	double Li;
-	double invT;
-	vector <float> paramjump;
-	vector <int> ntr, nac;
-	long timeprop;
-	//
+	int ch;                                               // The number of the chain (0=posterior, nchaintot-1=prior)            
+	double Li; 																						// The observation likelihood for the current state
+	double invT;                                          // The inverse temperature 
+	vector <float> paramjump;                             // The size of jumps in parameter space
+	vector <int> ntr, nac;                                // The number of jumps tried and accepted
+	long timeprop;                                        // The time taken for the proporals
 	
-	int fediv;
+	int fediv;                                            // The number of divisions the global timeline is divided into
 	
-	vector < vector <FEV> > xi;
-	int ninftot;   //The total number of infected individuals
-	vector <double> paramval;
+ 	vector < vector <FEV> > xi;                           // The event timeline in the initial state
+	vector < vector <FEV> > xp;                           // The event timeline in the initial state
+	
+ 	vector <double> paramval;                             // The values for the parameters
+
+	vector <double> MIi;                                  // The infectivty map for the initial state
+	vector <double> MIp; 																	// The infectivity map for the proposed state
+
+	vector <double> susboth;                              // Total sus. of an area when both initial and proposal states sus.
+	vector <double> susp;                                 // Total sus. of an area when only proposed state sus.
+
+	vector <double> lami;                                 // Total force of infecion for an area in the initial state
+	vector <double> lamp; 	 															// Total force of infecion for an area in the proposed state
+	
+	int xitdnext, xitdfnext;                              // Stores the next event in the initial state 
+	int xptdnext, xptdfnext;                 					    // Stores the next event in the final state
+	
+	vector <int> stati;                                   // The status of individuals in the initial state
+	vector <int> statp;                                   // The status of individuals in the proposed state
+	
+	int ninftot;                                          // The total number of infected individuals
+	int ninftotprop;   
+	
+	vector <vector <double> > Rtot;                       // Tree giving rate of new infections
+	
+	vector <int> N;                                       // The number of individuals in different compartments
+	
+	int sett;                                             // Index used to track time changes in beta
+	
+	double betai, phii;                                   // The values of beta and phi in the initial state
+	double betap, phip;                                   // The values of beta and phi in the proposed state
 
 	DATA &data;
 	MODEL &model;
@@ -36,33 +62,6 @@ class MBPCHAIN                                 // Stores all the things related 
 	vector <COMP> &comp;
 	vector <LEVEL> &lev;
 	
-	vector <double> MIi;    
-	vector <double> MIp;  
-	vector <double> susboth;    
-	vector <double> susp; 
-	vector <double> lami;    
-	vector <double> lamp; 	
-	
-	vector <vector <double> > Rtot;
-	
-	int tdnext, tdfnext;                    // Stores when the next future compartmental transition will occur
-	int xitdnext, xitdfnext;
-	
-	vector <int> statilist1;    // Lists all the changes to stati and statp
-	vector <int> statplist1, statplist2;
-		
-	vector <int> stati;
-	vector <int> statp;
-	
-	vector < vector <FEV> > fev;             // Stores all compartmental transitions
-	int ninftotprop;   
-	
-	vector <int> N;                         // The number of individuals in different compartments
-	
-	int sett;                               // Index used to track time changes in beta
-	
-	double betai, phii, betap, phip; 
-
 	public:
 		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &xistart, int chstart);
 		void proposal(DATA &data, MODEL &model, POPTREE &poptree, int th, int samp, int burnin);

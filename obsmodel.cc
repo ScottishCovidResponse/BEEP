@@ -1,3 +1,4 @@
+// This describes the observation model. This prescribes how likely the data is given a true event state.
 
 using namespace std;
 
@@ -6,6 +7,7 @@ using namespace std;
 
 vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, int ti, int tf);
 
+/// The total observation probability for a complete set of events fev
 double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, double invT)
 {
 	int t;

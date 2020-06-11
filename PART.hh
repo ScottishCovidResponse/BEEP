@@ -24,18 +24,18 @@ class PART                                 // Stores all the things related to a
 
 	int pst;                                // The number of the particle
 	
- 	double Li;                               // The observation likelihood
+ 	double Li;                              // The observation likelihood
  	
-	vector <double> ffine;                   // Stores the force of infection on nodes on the fine scale
+	vector <double> ffine;                  // Stores the force of infection on nodes on the fine scale
 	vector <vector <int> > indinf;          // Lists all infected individuals 	
 		
-	vector <vector <double> > sussum;        // The total susceptibility for nodes on different levels 
-	//vector <vector <double> > sussumheff;    // The total susceptibility for household effect for nodes on different levels 
-	vector <vector <double> > Rtot;          // The total infection rate for nodes on different levels
-	vector <vector <double> > addlater;      // A change to the rates Rtot which may be performed later when sampling is performed
+	vector <vector <double> > sussum;       // The total susceptibility for nodes on different levels 
+	//vector <vector <double> > sussumheff; // The total susceptibility for household effect for nodes on different levels 
+	vector <vector <double> > Rtot;         // The total infection rate for nodes on different levels
+	vector <vector <double> > addlater;     // A change to the rates Rtot which may be performed later when sampling is performed
 
 	int fediv;
-	vector < vector <FEV> > fev;             // Stores all compartmental transitions
+	vector < vector <FEV> > fev;            // Stores all compartmental transitions
 	
 	vector <int> N;                         // The number of individuals in different compartments
 

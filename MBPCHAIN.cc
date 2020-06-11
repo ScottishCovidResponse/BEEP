@@ -27,9 +27,10 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree) : data(data), mod
 void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &xistart, int chstart)
 {
 	int th, nparam, d, j;
-	
+
 	invT = invTstart;
 	ch = chstart;
+	fediv = data.fediv;
 	timeprop = 0;
 		
 	nparam = model.param.size();
@@ -39,10 +40,10 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 		paramjump[th] = model.param[th].valinit/10;
 		ntr[th] = 0; nac[th] = 0;
 	}
-		
+
 	xi = xistart; 
 	Li = Lobstot(data,model,poptree,xi,1);
-	
+
 	ninftot = 0;
 	for(d = 0; d < fediv; d++){
 		for(j = 0; j < xi[d].size(); j++){
@@ -50,7 +51,6 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 		}
 	}
 }
-
 
 /// Performs an MBP on parameter th
 void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, int th, int samp, int burnin)  
@@ -77,12 +77,14 @@ void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, int th, int 
 		//if(model.param[p].infchange == 1) poptree.setinf(model);
 		model.paramp = paramval; model.betap = model.beta;
 		
+		timers.timembp -= clock();
 		mbpinit();
 		mbp();
-		
+		timers.timembp += clock();
+			
 		if(ninftotprop >= INFMAX) al = 0;
 		else{
-			Lp = Lobstot(data,model,poptree,fev,1);
+			Lp = Lobstot(data,model,poptree,xp,1);
 		
 			al = exp(invT*(Lp-Li));
 		}
@@ -91,8 +93,7 @@ void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, int th, int 
 	ntr[th]++;
 	if(ran() < al){
 		Li = Lp;
-		
-		xi = fev;
+		xi = xp;
 		ninftot = ninftotprop;
 		nac[th]++;
 		if(samp < burnin) paramjump[th] *= 1.1;
@@ -112,7 +113,7 @@ void MBPCHAIN::mbpinit()
 		
 	fediv = data.fediv;
 	
-	fev.clear(); fev.resize(fediv);
+	xp.clear(); xp.resize(fediv);
 	ninftotprop = 0;
 		
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
@@ -140,14 +141,13 @@ void MBPCHAIN::mbpinit()
 		for(c = 0; c < cmax; c++) Rtot[l][c] = 0; 
 	}
 	
-	statilist1.clear(); statplist1.clear(); statplist2.clear();
 	stati.resize(data.popsize); statp.resize(data.popsize);
 	for(i = 0; i < data.popsize; i++){ stati[i] = 0;	statp[i] = 0;}
 	
-	tdnext = fediv;
-	
 	xitdnext = 0; xitdfnext = 0;
 	while(xitdnext < fediv && xi[xitdnext].size() == 0) xitdnext++;	
+	
+	xptdnext = fediv;
 }
 	
 // Performs a MBP
@@ -171,7 +171,7 @@ void MBPCHAIN::mbp()
 		n.type = SET_EV;
 		nev.push_back(n); 
 		 
-		if(tdnext < fediv) n.t = fev[tdnext][tdfnext].t; else n.t = tmax;
+		if(xptdnext < fediv) n.t = xp[xptdnext][xptdfnext].t; else n.t = tmax;
 		n.type = FEV_EV;
 		nev.push_back(n);
 	
@@ -269,18 +269,18 @@ void MBPCHAIN::dofe(int update)
 	int tra;
 	TRANS tr;
 
-	tra = fev[tdnext][tdfnext].trans;
+	tra = xp[xptdnext][xptdfnext].trans;
 	tr = trans[tra];
 	
-	if(update == 1) MIupdate(fev[tdnext][tdfnext].ind,tra,0,1);
+	if(update == 1) MIupdate(xp[xptdnext][xptdfnext].ind,tra,0,1);
 		
 	N[tr.from]--; if(N[tr.from] < 0) emsg("MBPCHAIN: EC6"); 
 	N[tr.to]++;
 	
-	tdfnext++;
-	if(tdfnext == fev[tdnext].size()){
-		tdnext++; tdfnext = 0; 
-		while(tdnext < fediv && fev[tdnext].size() == 0) tdnext++;
+	xptdfnext++;
+	if(xptdfnext == xp[xptdnext].size()){
+		xptdnext++; xptdfnext = 0; 
+		while(xptdnext < fediv && xp[xptdnext].size() == 0) xptdnext++;
 	}
 }
 
@@ -328,7 +328,7 @@ void MBPCHAIN::xidofe()
 	t = xi[xitdnext][xitdfnext].t;                         	// This part decides to copy over event on xi into xp or not
 	if(tr.type == INFECTION){
 		sus = poptree.ind[i].sus;
-		stati[i] = 1; statilist1.push_back(1);
+		stati[i] = 1;
 	
 		if(statp[i] == 0){
 			susboth[c] -= sus;
@@ -336,9 +336,9 @@ void MBPCHAIN::xidofe()
 			al = lamp[c]/lami[c]; 
 			if(ran() < al){                                    // Keeps the infection event
 				ninftotprop++;
-				statp[i] = 2; statplist2.push_back(i);
+				statp[i] = 2;
 			
-				model.addfev(fev,tdnext,tdfnext,t,tra,i,1,data.period,N);
+				model.addfev(xp,xptdnext,xptdfnext,t,tra,i,1,data.period,N);
 			}
 			else susp[c] += sus;                               // Does not keep the infection event
 			updateRtot(c); 
@@ -346,7 +346,7 @@ void MBPCHAIN::xidofe()
 	}
 	else{
 		if(statp[i] == 2){                                   // Keeps the non infection event if infection happened at the same time
-			model.addfev(fev,tdnext,tdfnext,t,tra,i,0,data.period,N);
+			model.addfev(xp,xptdnext,xptdfnext,t,tra,i,0,data.period,N);
 			dofe(0);
 			MIupdate(i,tra,1,1);
 		}
@@ -395,9 +395,9 @@ void MBPCHAIN::addinfc(int c, double t)
 	else susp[c] -= sus;
 	updateRtot(c); 
 	
-	statp[i] = 1; statplist1.push_back(i);
+	statp[i] = 1;
 	
-	model.simmodel(fev,tdnext,tdfnext,i,t,data.period,N);
+	model.simmodel(xp,xptdnext,xptdfnext,i,t,data.period,N);
 }
 
 /// Used for checking the code is running correctly

@@ -17,13 +17,13 @@ using namespace std;
 #include "obsmodel.hh"
 #include "consts.hh"
 
-struct STAT{
-	double mean;
-	double CImin, CImax;
-	double ESS;
+struct STAT{                                           // Stores statistical information
+	double mean;                                         // The mean
+	double CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
+	double ESS;                                          // The estimated sample size
 };
 
-void ensuredirectory(const string &path);
+static void ensuredirectory(const string &path);
 STAT getstat(vector <double> &vec);
 
 ofstream trace, traceLi;
@@ -34,7 +34,6 @@ void outputinit(DATA &data, MODEL &model)
 	int r, p;
 	
 	ensuredirectory(data.outputdir);
-	
 	stringstream ss; ss << data.outputdir << "/trace.txt";
 
 	trace.open(ss.str().c_str());		
@@ -50,6 +49,7 @@ void outputLiinit(DATA &data, int nchaintot)
 {
 	int p;
 	
+	ensuredirectory(data.outputdir);
 	stringstream ss; ss << data.outputdir << "/traceLi.txt";
 
 	traceLi.open(ss.str().c_str());		
@@ -68,7 +68,7 @@ void outputLi(int samp, int nparttot, double *Litot)
 	traceLi << endl;
 }
 
-/// Outputs trace plot form parameters and store state data for plotting later
+/// Outputs trace plot for parameters and store state data for plotting later
 SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
@@ -103,7 +103,7 @@ SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, PO
 			for(t = 0; t < data.period; t++){
 				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
-				sa.transnum[td][r][t] = sum;
+				sa.transnum[td][0][t] = sum;
 			}
 		}
 	}
@@ -131,7 +131,7 @@ SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, PO
 	return sa;
 }
 
-/// Generates posterior plots for transitions, variation in R0 over time, parameter statistices and MCMC diagnoistics 
+/// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 {      
 	int p, r, s, st, nopsamp, t, td, j, jmax;
@@ -139,17 +139,27 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	STAT stat;
 	string name;
 	
+	ensuredirectory(data.outputdir);
+		
 	nopsamp = opsamp.size();
+	
+	cout << endl;
+	if(data.mode == MODE_SIM) cout << "Outputs:" << endl;
+	else cout << "Posterior Outputs:" << endl;
 	
 	for(td = 0; td < data.transdata.size(); td++){
 		name = data.transdata[td].file;
-		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) == ".") j++;
+	
+		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
 		name = name.substr(0,j);
-		
+	
 		if(data.transdata[td].type == "reg"){
 			for(r = 0; r < data.nregion; r++){
 				stringstream ss; ss << data.outputdir << "/" << name << "_" << data.regionname[r] << ".txt";
 				ofstream dataout(ss.str().c_str());
+				
+				cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions for region '" << data.regionname[r] << "'." << endl;
+		
 				for(t = 0; t < data.period; t++){
 					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][r][t]);
 					stat = getstat(vec);
@@ -160,10 +170,29 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 				}
 			}
 		}
+		
+		if(data.transdata[td].type == "all"){
+			stringstream ss; ss << data.outputdir << "/" << name << ".txt";
+			ofstream dataout(ss.str().c_str());
+			
+			cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions." << endl;
+	
+			for(t = 0; t < data.period; t++){
+				vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][0][t]);
+				stat = getstat(vec);
+				
+				dataout << t+0.5 << " ";
+				if(data.mode != MODE_SIM) dataout << data.transdata[td].num[0][t]; else dataout << stat.mean;
+				dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+			}
+		}
 	}
 	
 	stringstream sst; sst << data.outputdir << "/R0" << ".txt";
 	ofstream R0out(sst.str().c_str());
+	
+	cout << "'" << sst.str() << "' gives the time variation in R0." << endl;
+	
 	for(st = 0; st < nsettime; st++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
@@ -172,8 +201,11 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		      << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
-	stringstream ss; ss << data.outputdir << "/params" << ".txt";
+	stringstream ss; ss << data.outputdir << "/parameters" << ".txt";
 	ofstream paramout(ss.str().c_str());
+	
+	cout << "'" << ss.str() << "' gives the model parameters." << endl;
+	
 	for(p = 0; p < model.param.size(); p++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
 		stat = getstat(vec);
@@ -181,19 +213,33 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		paramout << model.param[p].name  <<" " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
 	}
 	
+	if(data.mode != MODE_SIM){
+		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
+	}
+	
+	if(data.mode == MODE_MBP){
+		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
+	}
+
 	// This gives the acceptance rates for different MCMC proposals on different parameters
 	
 	if(data.mode != MODE_SIM){
-		cout << "MCMC diagnostics:" << endl;
+		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
+		ofstream diag(ss.str().c_str()); 
+	
+		cout << "'" << ss.str() << "' gives MCMC diagnostics." << endl;
+	
+		diag << "MCMC diagnostics:" << endl;
 
-		if(data.mode == MODE_PMCMC) cout << "Base acceptance rate " << double(model.nac)/model.ntr << endl;
+		if(data.mode == MODE_PMCMC) diag << "Base acceptance rate " << double(model.nac)/model.ntr << endl;
 		
 		for(p = 0; p < model.param.size(); p++){
-			cout << model.param[p].name << ": ";
-			if(model.param[p].ntr == 0) cout << "Fixed" << endl;
-			else cout << "Acceptance rate " << double(model.param[p].nac)/model.param[p].ntr << endl;
+			diag << model.param[p].name << ": ";
+			if(model.param[p].ntr == 0) diag << "Fixed" << endl;
+			else diag << "Acceptance rate " << double(model.param[p].nac)/model.param[p].ntr << endl;
 		}
 	}
+	cout << endl;
 }
 	
 /// Outputs an event sample fev
@@ -209,6 +255,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
 	}
 	
+	ensuredirectory(data.outputdir);
 	stringstream sst; sst << data.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	
@@ -241,7 +288,6 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 	
 	ofstream plot(file.c_str());
 	for(t = tmin; t < period; t += (period-tmin)/100){
-			cout << file << " " << t << "he\n";
 		while(td < data.fediv && xi[td][tdf].t < t){
 			tra = xi[td][tdf].trans;
 			tr = model.trans[tra];
@@ -277,8 +323,15 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		}
 		cout << "Total: " << tot << endl; 
 		cout << endl;
+	}
 	
+	cout << "Simulated Data:" << endl;
+	for(td = 0; td < data.transdata.size(); td++){
 		ofstream transout(data.transdata[td].file.c_str());
+		
+		cout << "'" << data.transdata[td].file.c_str() << "' gives the observed weekly number of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions";
+		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
+		else cout << "." << endl;
 		
 		transout << "Week"; 
 		for(r = 0; r < data.nregion; r++){ transout << "\t" << data.regionname[r];} transout << endl;
@@ -298,12 +351,17 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	
 	if(data.simtype == "smallsim" || data.simtype == "scotsim" || data.simtype == "uksim"){
 		ofstream houseout(data.housefile.c_str());
+		
+		cout << "'" << data.housefile.c_str() << "' gives data about houses." << endl;
+		
 		houseout << data.popsize << " " << data.nhouse << " "  << data.nregion << " " <<  endl;
 		for(r = 0; r < data.nregion; r++) houseout << data.regionname[r] << endl;
 		for(h = 0; h < data.nhouse; h++){
 			houseout << data.house[h].x << " " << data.house[h].y << " " << data.house[h].region << endl;
 		}
 	}
+	
+	cout << endl;
 }
 
 /// Calculates diagnostic statistics
@@ -342,8 +400,10 @@ STAT getstat(vector <double> &vec)
 	return stat;
 }
 
-// Create a directory if it doesn't already exist
-void ensuredirectory(const string &path) {
+/// Create a directory if it doesn't already exist
+static void ensuredirectory(const string &path) 
+{
+	cout << path << "ensu\n";
 	struct stat st = {0};
 	if (stat(path.c_str(), &st) == -1)
 	{

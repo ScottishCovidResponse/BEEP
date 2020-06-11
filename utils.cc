@@ -1,3 +1,5 @@
+// Stores functions for sampling from different distributions and deals with error messages
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -64,8 +66,7 @@ double gammasamp(double a, double b)
   }
 }
 
-
-/// Displays any error messages
+/// Displays an error message
 void emsg(string msg)
 {
 	cout << msg << endl;

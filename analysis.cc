@@ -2,14 +2,17 @@
 Load mpi: module load mpi/openmpi-x86_64
 Compile using: make
 
-Simulate:         
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=16384 seed=0 period=16 transdata=I,H,reg,trans.txt housedata=house.txt
+INPUTS:
+
+Simulation:         
+mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
+
 
 MBP Inference:    
-mpirun -n 20 ./run mode=mbp model=irish area=16384 nchain=20 nsamp=1000 period=16 transdata=I,H,reg,trans.txt housedata=house.txt
+mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
 
 PMCMC Inference:  
-mpirun -n 20 ./run mode=pmcmc model=irish area=16384 npart=20 nsamp=1000
+mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
 
 The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
 
@@ -48,15 +51,21 @@ simtype - Determines the system on which simulation is performed (simulation mod
 		"uksim" a UK-like system with 20 million houses, 68 million individuals and a 10x10 grid of data regions (used for testing)
 	
  
-OUTPUT
+OUTPUTS:
 
-simulation
+Simulation - This creates the specified 'transdata' and 'housedata' files along with output directory containing:
+1) Plots for the transitions corresponding to the 'transdata' files.
+2) "R0.txt", which gives time variation in R0.
+3) "parameter.txt", which gives the parameter values used in the simulation.
 
+Inference - The output directory contains postior information (with means and 90% credible intervals) for:
+1) Plots for the transitions corresponding to the 'transdata' files.
+2) "R0.txt", which gives posterior plotstime variation in R0.
+3) "parameter.txt", which gives information about parameters.
+4) "trace.txt", which gives trace plots for different models.
+5) "traceLi.txt", which gives trace plots for the likelihoods on different chains (MBPs only).
+6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorthm.
 
-inference
-In simulation mode the code generates the files "cases_system.txt" which gives case numbers (where "system" is taken from the options above) and "houses_system.txt" which gives information about the houses. The simulation parameters are currently defined in definemodel() in model.cc.
-
-In inference mode the code reads in "cases_system.txt" and "houses_system.txt" and outputs posterior estimates.
 */
 
 /*
@@ -277,6 +286,8 @@ int main(int argc, char** argv)
 	MODEL model;
 	model.definemodel(core,data.period,data.popsize,modelsel);
 	
+	data.checktransdata(model);
+	
 	poptree.setsus(model);
 	poptree.setinf(model);
 	
@@ -284,7 +295,7 @@ int main(int argc, char** argv)
 
 	timersinit();
 	timers.timetot = -clock();
-
+	
 	MPI_Barrier(MPI_COMM_WORLD);
 	switch(mode){
 	case MODE_SIM:
@@ -310,10 +321,11 @@ int main(int argc, char** argv)
 	timers.timetot += clock();
 	
 	if(core == 0){
-		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time" << endl;
-		if(mode != MODE_MBP) cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time" << endl;
-		if(mode == MODE_PMCMC) cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time" << endl;
+		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
+		if(mode != MODE_MBP) cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time (seconds)" << endl;
+		if(mode == MODE_PMCMC) cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
 	}
 	
 	#ifdef USE_MPI

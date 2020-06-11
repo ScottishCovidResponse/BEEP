@@ -14,7 +14,7 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 
-/// Reads in case and house data
+/// Reads in transition and house data
 void DATA::readdata(int core, int mod, int per)
 {
 	int t, tt, r, nu, h, hh, si, i, k, nreg, td;
@@ -29,7 +29,7 @@ void DATA::readdata(int core, int mod, int per)
 	if(core == 0){
 		int RX, RY;
 		
-		if(mode == MODE_SIM){                 // Randomly generates houses and regions
+		if(mode == MODE_SIM){      
 			if(simtype == "smallsim"){ RX = 2; RY = 2; popsize = 10000; nhouse = 1024;}  
 			else{
 				if(simtype == "scotsim"){ RX = 4; RY = 4; popsize = 5500000; nhouse = 1500000;}
@@ -78,7 +78,7 @@ void DATA::readdata(int core, int mod, int per)
 			for(r = 0; r < nregion; r++) cout << regionname[r] << "  # Houses: " << regionpop[r] << endl;
 		}
 		
-		if(mode != MODE_SIM){  // Loads transition data for inference
+		if(mode != MODE_SIM){        // Loads transition data for inference
 			if(transdata.size() == 0) emsg("Transition data must be loaded");
 			
 			for(td = 0; td < transdata.size(); td++){
@@ -127,9 +127,7 @@ void DATA::readdata(int core, int mod, int per)
 		}
 	}
 	
-	// Copies the above information to all the other cores
-
-	if(core == 0){
+	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
 		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
 		pack(popsize);	
@@ -204,6 +202,27 @@ void DATA::housedensity()
 		}
 		val = num/(2*3.14159*rden*rden); if(val < 0.5) val = 0.5;
 		house[h].density = val;
+	}
+}
+
+/// Check that the transition data is correct
+void DATA::checktransdata(MODEL &model)
+{
+	short td, tra;
+	string from, to;
+	TRANS tr;
+	
+	for(td = 0; td < transdata.size(); td++){
+		from = transdata[td].from; to = transdata[td].to; 
+		for(tra = 0; tra < model.trans.size(); tra++){
+			tr = model.trans[tra];
+			if(model.comp[tr.from].name == from && model.comp[tr.to].name == to) break;
+		}
+		
+		if(tra == model.trans.size()){
+			stringstream ss; ss << "Cannot find the transition " << from << "→" << to << ".";
+			emsg(ss.str());
+		}
 	}
 }
 

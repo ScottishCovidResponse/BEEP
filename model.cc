@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "math.h"
-
 #include "consts.hh"
 #include "utils.hh"
 #include "model.hh"
@@ -15,30 +14,31 @@ using namespace std;
 /// Defines the compartmental model
 void MODEL::definemodel(int core, double period, int popsize, int mod)
 {
-	// R0 determines how many individuals an infected individual on average infects
-	// These five value represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
+	
 	double r, tinfav;
 	int p, c, t, fi;
 		
 	modelsel = mod;
 	
 	if(modelsel == MOD_IRISH){  	// Irish model
-		//double R0sim[8] = {2.9,2.8,2.6,1.5,1.1,0.7,0.8,0.9};        // Hypothhetically variation in R0 for simulations
-		double R0sim[8] = {3.1,3.0,2.8,1.9,1.1,0.7,0.8,0.9};        // Hypothhetically variation in R0 for simulations
+		// R0 determines how many individuals an infected individual on average infects
+		// These 8 values represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
+		//double R0sim[8] = {2.9,2.8,2.6,1.5,1.1,0.7,0.8,0.9};        
+		double R0sim[8] = {3.1,3.0,2.8,1.9,1.1,0.7,0.8,0.9};      
 		//double R0sim[8] = {2.3,2.3,2.3,2.3,0.7,0.7,0.7,0.7};  	
 		
 		double afrac = 0.25, muEA = 1.63/7.0, sdEA = 0.5/7.0, aI = 0.5;
-		double tIaR = 8/7.0, tIH = 2/7.0, tHD = 100/7.0, tHR = 20/7.0;   // Estimates of transition times from literature
+		double tIaR = 8/7.0, tIH = 2/7.0, tHD = 100/7.0, tHR = 20/7.0; // Estimates of transition times from literature
 
 		addcomp("S",0);
-		addcomp("Ea",0); addcomp("E",0);                            // Different compartment in the model
+		addcomp("Ea",0); addcomp("E",0);                          // Different compartment in the model
 		addcomp("Ia",aI); addcomp("R",0);          
   	addcomp("I",1); addcomp("H",0); addcomp("D",0); 
 		
-		// This calculates the average integral of infectivity after an indvidual becomes infected
-		tinfav = afrac*aI*tIaR + (1-afrac)*tIH;
+		
+		tinfav = afrac*aI*tIaR + (1-afrac)*tIH;                   // Calculates the average integral of infectivity after infected
 			
-		nspline = 8;                                                 // 5 spline points represent time variarion in beta 
+		nspline = 8;                                              // 8 spline points represent time variarion in beta 
 		for(p = 0; p < nspline; p++){
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
@@ -47,7 +47,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 		}		
 		
 		phiparam = param.size();
-		r = 7.0/popsize; addparam("phi",r,0,3*r);                         // Adds a small external force of infection
+		r = 7.0/popsize; addparam("phi",r,0,3*r);                 // Adds a small external force of infection
 		
 		afracparam = param.size();
 		addparam("afrac",afrac,afrac,afrac);  		
@@ -57,7 +57,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 		addparam("aI",aI,aI,aI);  		
 
 		fix_sus_param.resize(nfix); fix_inf_param.resize(nfix);
-		for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
+		for(fi = 0; fi < nfix; fi++){                             // Adds fixed effects for susceptibility
 			fix_sus_param[fi] = param.size(); 
 			stringstream sssus; sssus << "fixsus_" << fi;
 			//addparam(sssus.str(),0.1,0.0,0.2);
@@ -70,7 +70,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 			param[int(param.size())-1].infchange = 1;
 		}
 			
-		addparam("muEA",muEA,muEA,muEA);                             // All the parameters in the model (with uniform priors)
+		addparam("muEA",muEA,muEA,muEA);                          // All the parameters in the model (with uniform priors)
 		addparam("sdEA",sdEA,sdEA,sdEA);
 		//r = 1.0/tIaR; addparam("rIaR",r,0.9*r,1.1*r);
 		//r = 1.0/tIH; addparam("rIH",r,0.9*r,1.1*r);
@@ -84,29 +84,29 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 	
 		addtrans("S","Ea",INFECTION,"",""); 
 		addtrans("S","E",INFECTION,"",""); 
-		addtrans("Ea","Ia",LOGNORM_DIST,"muEA","sdEA");               // We define all the transition in the model
+		addtrans("Ea","Ia",LOGNORM_DIST,"muEA","sdEA");            // We define all the transition in the model
 		addtrans("Ia","R",EXP_DIST,"rIaR","");
 		addtrans("E","I",LOGNORM_DIST,"muEA","sdEA");    		
 		addtrans("I","H",EXP_DIST,"rIH","");
 		addtrans("H","R",EXP_DIST,"rHR","");
 		addtrans("H","D",EXP_DIST,"rHD","");
 	}
-	else{                                                         	// The previous model 
+	else{                                                      	 // The previous model 
 		double R0sim[5] = {2.3,2.0,1.5,0.5,0.5};       
 	
-		double tEA = 2.5, tAI = 3, tAR = 3.5, tIR = 16.7;            // Estimates of transition times from literature
-		double tIH = 3.1, tID = 12.9, tHD = 8, tHR = 13.1;
+		double tEA = 2.5/7.0, tAI = 3/7.0;                         // Estimates of transition times from literature
+		double tIH =  3.1/7.0, tAR = 3.5/7.0, tIR = 16.7/7.0, tID = 12.9/7.0, tHD = 8/7.0, tHR = 13.1/7.0;
 	
 		double rAI, rAR, rIR, rIH, rID;
 
-		addcomp("E",0); addcomp("A",0.2); addcomp("I",1);            // Different compartment in the model
+		addcomp("E",0); addcomp("A",0.2); addcomp("I",1);          // Different compartment in the model
 		addcomp("H",0); addcomp("R",0); addcomp("D",0); 
 		
 		// This calculates the average integral of infectivity after an indvidual becomes infected
 		rAI = 1.0/tAI; rAR = 1.0/tAR; rIH = 1.0/tIH; rIR = 1.0/tIR; rID = 1.0/tID;
 		tinfav = 0.2/(rAI + rAR) + 1*(rAI/(rAI+rAR))*(1.0/(rIH + rIR + rID));
 			 
-		nspline = 5;                                                 // 5 spline points represent time variarion in beta 
+		nspline = 5;                                               // 5 spline points represent time variarion in beta 
 		for(p = 0; p < nspline; p++){
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
@@ -116,10 +116,10 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 		}		
 	
 		phiparam = param.size();
-		r = 7.0/popsize; addparam("phi",r,r,r);                         // Adds a small external force of infection
+		r = 7.0/popsize; addparam("phi",r,r,r);                      // Adds a small external force of infection
 		
 		fix_sus_param.resize(nfix); fix_inf_param.resize(nfix);
-		for(fi = 0; fi < nfix; fi++){                                 // Adds fixed effects for susceptibility
+		for(fi = 0; fi < nfix; fi++){                                // Adds fixed effects for susceptibility
 			fix_sus_param[fi] = param.size(); 
 			stringstream sssus; sssus << "fixsus_" << fi;
 			addparam(sssus.str(),0.1,0.1,0.1);
@@ -131,7 +131,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 			param[int(param.size())-1].infchange = 1;
 		}
 		
-		addparam("tEA",tEA,tEA,tEA);                             // We define all the parameters in the model (with uniform priors)
+		addparam("tEA",tEA,tEA,tEA);                                 // We define parameters in the model (with uniform priors)
 		addparam("sdEA",tEA/2,tEA/2,tEA/2);
 		r = 1.0/tEA; addparam("rEA",r,r,r);
 		r = 1.0/tAI; addparam("rAI",r,r,r);
@@ -142,7 +142,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 		r = 1.0/tHD; addparam("rHD",r,r,r);
 		r = 1.0/tHR; addparam("rHR",r,r,r);
 
-		addtrans("E","A",GAMMA_DIST,"tEA","sdEA");               // We define all the transition in the model
+		addtrans("E","A",GAMMA_DIST,"tEA","sdEA");                   // We define all the transition in the model
 		addtrans("A","I",EXP_DIST,"rAI","");
 		addtrans("A","R",EXP_DIST,"rAR","");
 		addtrans("I","R",EXP_DIST,"rIR","");
@@ -160,7 +160,7 @@ void MODEL::definemodel(int core, double period, int popsize, int mod)
 	betaspline(period);
 
 	if(core == 0){
-		cout << endl;                                            //Outputs a summary of the model
+		cout << endl;                                               // Outputs a summary of the model
 		cout << "Parameters:" << endl;
 		for(p = 0; p < param.size(); p++){
 			cout << param[p].name << " " << param[p].valinit << " (" << param[p].min << " - " << param[p].max << ")" << endl;

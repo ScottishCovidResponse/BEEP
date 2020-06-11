@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model.hh"
+
 struct TRANSDATA{
 	string from;                             // The "from" compartment
  	string to;                               // The "to" compartment 
@@ -10,9 +12,9 @@ struct TRANSDATA{
 
 struct HOUSE {                             // Defines a house
  	double x, y;                             // Position
-	vector <int> ind;                       // Individuals which beint to the house
-	int region;                            // The region to which an individual beints
-	float density;
+	vector <int> ind;                        // Individuals which belong to the house
+	int region;                              // The region to which an individual belongs
+	float density;                           // Measures the density of housing
 };
 
 struct HouseRefComparatorX
@@ -56,18 +58,18 @@ class DATA
 	}
 
 	int mode;                                // Stores if doing simulation/mbp/pmcmc
-	string outputdir;                                // The output directory
-	int fediv;                                       // The number of divisions into which the global timeline is divided
+	string outputdir;                        // The output directory
+	int fediv;                               // The number of divisions into which the global timeline is divided
 
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	string simtype;                          // The system on which simulation is performed
 	
-	int period;                            // The time over which simulation/inference is performed (e.g. in weeks)
+	int period;                              // The time over which simulation/inference is performed (e.g. in weeks)
 	
 	string housefile;                        // The name of the house file
 	
-  int nregion;                           // Number of data regions
-	vector <string> regionname;              // The names of the regions
+  int nregion;                             // Number of data regions
+	vector <string> regionname;              // The names of the data regions
 	int popsize;                             // The total population size 
   int nhouse;                              // The total number of houses
 	vector <HOUSE> house;                    // List of all the houses
@@ -76,7 +78,9 @@ class DATA
 	void sortY(vector <int> &vec);	
 	HouseRefComparatorX compX;
 	HouseRefComparatorY compY;
+	
 	void readdata(int core, int mod, int per); 
+	void checktransdata(MODEL &model);
 	
 	private:
 	void housedensity();

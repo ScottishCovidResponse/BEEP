@@ -1,4 +1,3 @@
-
 // Implements a modified Gillespie algorithm to simulate from the model
 
 #include <iostream>
@@ -34,5 +33,5 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 	
 	opsamp.push_back(outputsamp(1,0,0,data,model,poptree,model.paramval,part->fev));	
 	outputresults(data,model,opsamp);
-	outputeventsample(part->fev,data,model,poptree);
+	//outputeventsample(part->fev,data,model,poptree);
 }

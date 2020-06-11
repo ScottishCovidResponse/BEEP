@@ -1,4 +1,4 @@
-// These are function for packing up quantities to be sent my MPI
+// These are function for packing up quantities to be sent by MPI
 
 #include <vector>
 #include <iostream>

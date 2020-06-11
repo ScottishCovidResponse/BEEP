@@ -18,15 +18,15 @@ struct POS{
 };
 bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
 		
-// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
+/// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 void POPTREE::init(DATA &data, int core, int areama)
 {
 	int h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
 	double av, x, y, xx, yy, grsi, dd, sum, fac, val, valsr, vallr;
 	NODE node;
 	
-	const int posmax = 100;   // This gives the maximum number of possibilities for a given level in M 
-	vector <POS> listpos;
+	const int posmax = 100;                                        // The maximum number of possibilities for a given level in M 
+	vector <POS> listpos;           
 	POS pos;
 	
 	vector <vector <double> > Mval_sr_temp;
@@ -38,10 +38,10 @@ void POPTREE::init(DATA &data, int core, int areama)
 	vector <int> grL;
 	vector< vector< vector <int> > > grid;
 	
-	areamax = areama;                                            					  // Defines the maximum number areas
-																																					// Here a "node" represents a collection of houses
-	lev.push_back(LEVEL ());                                                // The first level contains a single node
-	for(h = 0; h < data.nhouse; h++) node.houseref.push_back(h);            // with all the houses
+	areamax = areama;                                              // Defines the maximum number areas
+
+	lev.push_back(LEVEL ());                                       // The first level contains a single node with all the houses
+	for(h = 0; h < data.nhouse; h++) node.houseref.push_back(h);      
 	node.parent = -1;
 	lev[0].node.push_back(node);
 
