@@ -1,15 +1,17 @@
 #pragma once
 
-struct SAMPLE{                             // Stores information about a sample from the posterior
-	vector <double> paramval;                // A parameter sample
-	vector <vector <long> > ncase;	         // A case sample
-	vector <double> R0;	                     // Time variation in R0
+struct SAMPLE{                               // Stores information about a sample from the posterior
+	vector <double> paramval;                  // A parameter sample
+	vector <vector <vector <int> > > transnum; // Store transition numbers (reflecting the data files)
+	vector <double> R0;	                       // Time variation in R0
 };
 
-void outputinit(MODEL &model, long nparttot);
-SAMPLE outputsamp(double invT, long samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev);
-void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp, short siminf, long nparttot);
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev);
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree);
+void outputinit(DATA &data, MODEL &model);
+void outputLiinit(DATA &data, int nchaintot);
+void outputLi(int samp, int nparttot, double *Litot);
 
-vector <long> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, short ti, short tf);
+SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev);
+void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp);
+void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev);
+void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period);
+void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree);

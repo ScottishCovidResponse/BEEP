@@ -8,4 +8,5 @@ void timersinit()
 	timers.timetot = 0;
 	timers.timesim = 0;
 	timers.timeboot = 0;
+	timers.timembp = 0;
 }

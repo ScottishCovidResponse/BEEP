@@ -16,7 +16,7 @@
 
 using namespace std;
 
-// Generates weekly case data (similar to the actual data we currently have from Covid-19)
+/// Generates transition data (e.g. hostipalisation data similar to the actual data we currently have from Covid-19)
 void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
 	PART *part;
@@ -27,12 +27,12 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 	part->partinit(0);
 	
 	timers.timesim -= clock();
-	part->gillespie(0,data.tmax, 1 /* simulating */);
+	part->gillespie(0,data.period, 1 /* simulating */);
 	timers.timesim += clock();
 	
 	outputsimulateddata(data,model,poptree,part->fev);
 	
-	opsamp.push_back(outputsamp(1,0,0,data,model,poptree,part->fev));	
-	outputresults(data,model,opsamp,1,0);
+	opsamp.push_back(outputsamp(1,0,0,data,model,poptree,model.paramval,part->fev));	
+	outputresults(data,model,opsamp);
 	outputeventsample(part->fev,data,model,poptree);
 }

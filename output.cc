@@ -14,6 +14,8 @@ using namespace std;
 #include "model.hh"
 #include "PART.hh"
 #include "output.hh"
+#include "obsmodel.hh"
+#include "consts.hh"
 
 struct STAT{
 	double mean;
@@ -24,16 +26,16 @@ struct STAT{
 void ensuredirectory(const string &path);
 STAT getstat(vector <double> &vec);
 
-ofstream trace;
+ofstream trace, traceLi;
 
 /// Initialises trace plot for parameters
-void outputinit(MODEL &model, long nparttot)
+void outputinit(DATA &data, MODEL &model)
 {
-	long r, p;
+	int r, p;
 	
-	ensuredirectory("Output");
+	ensuredirectory(data.outputdir);
 	
-	stringstream ss; ss << "Output/trace_" << nparttot << ".txt";
+	stringstream ss; ss << data.outputdir << "/trace.txt";
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
@@ -43,37 +45,74 @@ void outputinit(MODEL &model, long nparttot)
 	trace << endl;
 }
 
+/// Initialises trace plot for likelihoods on difference chains (MBP only)
+void outputLiinit(DATA &data, int nchaintot)
+{
+	int p;
+	
+	stringstream ss; ss << data.outputdir << "/traceLi.txt";
+
+	traceLi.open(ss.str().c_str());		
+	traceLi << "state";
+	for(p = 0; p < nchaintot; p++) traceLi << "\tchain" <<  p; 
+	traceLi << endl;
+}
+
+/// Outputs trace plot for likelihoods on difference chains (MBP only)
+void outputLi(int samp, int nparttot, double *Litot)
+{
+	int p;
+	
+	traceLi << samp;
+	for(p = 0; p < nparttot; p++) traceLi << "\t" << Litot[p]; 
+	traceLi << endl;
+}
+
 /// Outputs trace plot form parameters and store state data for plotting later
-SAMPLE outputsamp(double invT, long samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
+SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
-	long p, np, r, week, st;
-	vector <long> num;
+	int p, np, r, t, st, sum, td;
+	vector <int> num;
 	double rAI, rAR, rIH, rIR, rID, tinfav;
 	
-	np = model.param.size();
+	np = paramval.size();
 	
 	trace << samp; 
-	for(p = 0; p < np; p++) trace << "\t" << model.param[p].val; 
+	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
 	trace << "\t" << Li; 
 	trace << "\t" << invT; 
 	trace << endl;
 	
-	sa.paramval.resize(np);
-	for(p = 0; p < np; p++) sa.paramval[p] = model.param[p].val;
+	sa.paramval = paramval;
 	
-	sa.ncase.resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.ncase[r].resize(data.nweek);
-	
-	for(week = 0; week < data.nweek; week++){
-		num = getnumtrans(data,model,poptree,fev,"I","H",week*timestep,(week+1)*timestep);
-		for(r = 0; r < data.nregion; r++) sa.ncase[r][week] = num[r];
+	sa.transnum.resize(data.transdata.size());
+	for(td = 0; td < data.transdata.size(); td++){
+		if(data.transdata[td].type == "reg"){
+			sa.transnum[td].resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.transnum[td][r].resize(data.period);
+			
+			for(t = 0; t < data.period; t++){
+				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][t] = num[r];
+			}
+		}
+		
+		if(data.transdata[td].type == "all"){
+			sa.transnum[td].resize(1); for(r = 0; r < 1; r++) sa.transnum[td][r].resize(data.period);
+			
+			for(t = 0; t < data.period; t++){
+				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
+				sa.transnum[td][r][t] = sum;
+			}
+		}
 	}
 
-	switch(modelsel){
+	switch(model.modelsel){
 	case MOD_IRISH:
 		double afrac, aI, tIaR, tIH;
-		afrac = model.param[model.afracparam].val;
-		aI = model.param[model.aIparam].val;
+		afrac = paramval[model.afracparam];
+		aI = paramval[model.aIparam];
 		tIaR = 1.0/model.getrate("Ia","R"); tIH = 1.0/model.getrate("I","H"); 
 		tinfav = afrac*aI*tIaR + (1-afrac)*tIH;
 		break;
@@ -85,74 +124,55 @@ SAMPLE outputsamp(double invT, long samp, double Li, DATA &data, MODEL &model, P
 		break;
 	}
 	
+	model.paramval = paramval; model.betaspline(data.period);
 	sa.R0.resize(nsettime);
 	for(st = 0; st < nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
 	
 	return sa;
 }
 
-/// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
-/// in different regions over the time range ti - tf
-vector <long> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, short ti, short tf)
-{
-	long d, k, r, tra;
-	FEV fe;
-	vector <long> num;
+/// Generates posterior plots for transitions, variation in R0 over time, parameter statistices and MCMC diagnoistics 
+void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
+{      
+	int p, r, s, st, nopsamp, t, td, j, jmax;
+	vector <double> vec;
+	STAT stat;
+	string name;
 	
-	tra = 0; 
-	while(tra < model.trans.size() && 
-	     !(model.comp[model.trans[tra].from].name == from && model.comp[model.trans[tra].to].name == to)) tra++;
-	if(tra == model.trans.size()) emsg("Finescale: Cannot find transition");
+	nopsamp = opsamp.size();
 	
-	for(r = 0; r < data.nregion; r++) num.push_back(0);
-
-	if(fev.size() < fediv) emsg("fevsize");
-	for(d = long(fediv*double(ti)/data.tmax); d <= long(fediv*double(tf)/data.tmax); d++){
-		if(d < fediv){
-			for(k = 0; k < fev[d].size(); k++){
-				fe = fev[d][k];
-				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[data.house[poptree.ind[fe.ind].houseref].region]++;
+	for(td = 0; td < data.transdata.size(); td++){
+		name = data.transdata[td].file;
+		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) == ".") j++;
+		name = name.substr(0,j);
+		
+		if(data.transdata[td].type == "reg"){
+			for(r = 0; r < data.nregion; r++){
+				stringstream ss; ss << data.outputdir << "/" << name << "_" << data.regionname[r] << ".txt";
+				ofstream dataout(ss.str().c_str());
+				for(t = 0; t < data.period; t++){
+					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][r][t]);
+					stat = getstat(vec);
+					
+					dataout << t+0.5 << " ";
+					if(data.mode != MODE_SIM) dataout << data.transdata[td].num[r][t]; else dataout << stat.mean;
+					dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+				}
 			}
 		}
 	}
 	
-	return num;
-}
-
-/// Generates posterior plots for cases in different regions, variation in R0 over time, parameter statistices and MCMC diagnoistics 
-void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp, short siminf, long nparttot)
-{      
-	long p, r, s, st, nopsamp, week;
-	vector <double> vec;
-	STAT stat;
-	
-	nopsamp = opsamp.size();
-	
-	for(r = 0; r < data.nregion; r++){
-		stringstream ss; ss << "Output/" << data.regionname[r] << "_data_" <<  nparttot << ".txt";
-		ofstream dataout(ss.str().c_str());
-		for(week = 0; week < data.nweek; week++){
-			vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].ncase[r][week]);
-			stat = getstat(vec);
-			
-			dataout << week+0.5 << " ";
-			if(siminf == 0) dataout << data.ncase[r][week]; else dataout << stat.mean;
-			dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-		}
-	}
-	
-	stringstream sst; sst << "Output/R0_" << nparttot << ".txt";
+	stringstream sst; sst << data.outputdir << "/R0" << ".txt";
 	ofstream R0out(sst.str().c_str());
 	for(st = 0; st < nsettime; st++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
 		
-		R0out << (st+0.5)*data.tmax/nsettime << " " 
+		R0out << (st+0.5)*data.period/nsettime << " " 
 		      << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
-	stringstream ss; ss << "Output/params_" << nparttot << ".txt";
+	stringstream ss; ss << data.outputdir << "/params" << ".txt";
 	ofstream paramout(ss.str().c_str());
 	for(p = 0; p < model.param.size(); p++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
@@ -162,19 +182,24 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp, short simi
 	}
 	
 	// This gives the acceptance rates for different MCMC proposals on different parameters
-	cout << "MCMC diagnostics:" << endl;
-	cout << "Base acceptance rate " << double(model.nac)/model.ntr << endl;
-	for(p = 0; p < model.param.size(); p++){
-		cout << model.param[p].name << ": ";
-		if(model.param[p].ntr == 0) cout << "Fixed" << endl;
-		else cout << "Acceptance rate " << double(model.param[p].nac)/model.param[p].ntr << endl;
+	
+	if(data.mode != MODE_SIM){
+		cout << "MCMC diagnostics:" << endl;
+
+		if(data.mode == MODE_PMCMC) cout << "Base acceptance rate " << double(model.nac)/model.ntr << endl;
+		
+		for(p = 0; p < model.param.size(); p++){
+			cout << model.param[p].name << ": ";
+			if(model.param[p].ntr == 0) cout << "Fixed" << endl;
+			else cout << "Acceptance rate " << double(model.param[p].nac)/model.param[p].ntr << endl;
+		}
 	}
 }
 	
-/// Outputs a given siumlation event sample
+/// Outputs an event sample fev
 void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree)
 {
-	long d, i, j, e, h, nind;
+	int d, i, j, e, h, nind;
 	vector< vector <FEV> > indev;
 	TRANS tr;
 	
@@ -184,7 +209,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
 	}
 	
-	stringstream sst; sst << "events_" << type << ".txt";
+	stringstream sst; sst << data.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	
 	for(i = 0; i < nind; i++){
@@ -201,36 +226,78 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 	}
 }
 
+/// Outputs a population plot for event sequence xi
+void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period)
+{
+	int c, tra, td, tdf;
+	double t;
+	vector <int> N;
+	TRANS tr;
+	
+	N.resize(model.comp.size()); for(c = 0; c < model.comp.size(); c++) N[c] = 0;
+	N[0] = data.popsize;
+		
+	td = 0; tdf = 0; while(td < data.fediv && xi[td].size()==0) td++;
+	
+	ofstream plot(file.c_str());
+	for(t = tmin; t < period; t += (period-tmin)/100){
+			cout << file << " " << t << "he\n";
+		while(td < data.fediv && xi[td][tdf].t < t){
+			tra = xi[td][tdf].trans;
+			tr = model.trans[tra];
+			N[tr.from]--; N[tr.to]++;
+			
+			tdf++;
+			if(tdf == xi[td].size()){
+				td++; tdf = 0; 
+				while(td < data.fediv && xi[td].size() == 0) td++;
+			}
+		}
+		
+		plot << t << " ";
+		for(c = 0; c < model.comp.size(); c++) plot << N[c] << " ";
+		plot << "\n";
+	}
+}
+
 /// Generates case data based on a simulation
 void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
 {
-	long week, r, h, tot;
-	vector <long> num;
+	int t, r, h, tot, td, sum;
+	vector <int> num;
 	
-	num = getnumtrans(data,model,poptree,fev,"I","H",0,data.tmax);
-	tot = 0;
-	cout << endl << "Total number of hospitalised cases:" << endl;
-	for(r = 0; r < data.nregion; r++){
-		cout <<	"Region " <<  r << ": " << num[r] << endl;
-		tot += num[r];
+	for(td = 0; td < data.transdata.size(); td++){
+		num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,0,data.period);
+		
+		tot = 0;
+		cout << endl << "The following number of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions were observed:" << endl;
+		for(r = 0; r < data.nregion; r++){
+			cout <<	data.regionname[r] << ": " << num[r] << endl;
+			tot += num[r];
+		}
+		cout << "Total: " << tot << endl; 
+		cout << endl;
+	
+		ofstream transout(data.transdata[td].file.c_str());
+		
+		transout << "Week"; 
+		for(r = 0; r < data.nregion; r++){ transout << "\t" << data.regionname[r];} transout << endl;
+		for(t = 0; t < data.period; t++){
+			transout << t;
+			num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+			if(data.transdata[td].type == "reg"){				
+				for(r = 0; r < data.nregion; r++){ transout <<  "\t" << num[r];} transout << endl;
+			}
+			
+			if(data.transdata[td].type == "all"){
+				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r]; 
+				transout <<  "\t" << sum << endl;
+			}
+		}
 	}
-	cout << "Total: " << tot << endl; 
-	cout << endl;
 	
-	stringstream sst; sst << "cases_" << type << ".txt";
-	ofstream regplot(sst.str().c_str());
-	
-	regplot << "Week"; 
-	for(r = 0; r < data.nregion; r++){ regplot << "\t" << data.regionname[r];} regplot << endl;
-	for(week = 0; week < data.nweek; week++){
-		regplot << week;
-		num = getnumtrans(data,model,poptree,fev,"I","H",week*timestep,(week+1)*timestep);
-		for(r = 0; r < data.nregion; r++){ regplot <<  "\t" << num[r];} regplot << endl;
-	}
-	
-	if(type.substr(0,4) != "real"){
-		stringstream ssw; ssw << "houses_" << type << ".txt";
-		ofstream houseout(ssw.str().c_str());
+	if(data.simtype == "smallsim" || data.simtype == "scotsim" || data.simtype == "uksim"){
+		ofstream houseout(data.housefile.c_str());
 		houseout << data.popsize << " " << data.nhouse << " "  << data.nregion << " " <<  endl;
 		for(r = 0; r < data.nregion; r++) houseout << data.regionname[r] << endl;
 		for(h = 0; h < data.nhouse; h++){
@@ -242,7 +309,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 /// Calculates diagnostic statistics
 STAT getstat(vector <double> &vec)                           
 {
-	long n, i, d;
+	int n, i, d;
 	double sum, sum2, sd, a, cor, f;
 	STAT stat;
 	
@@ -254,10 +321,10 @@ STAT getstat(vector <double> &vec)
 	
 	sort(vec.begin(),vec.end());
 			
-	i = long((n-1)*0.05); f = (n-1)*0.05 - i;
+	i = int((n-1)*0.05); f = (n-1)*0.05 - i;
 	stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
 			
-	i = long((n-1)*0.95); f = (n-1)*0.95 - i;
+	i = int((n-1)*0.95); f = (n-1)*0.95 - i;
 	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
 
 	sd = sqrt(sum2 - sum*sum);

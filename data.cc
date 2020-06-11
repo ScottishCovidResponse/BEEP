@@ -15,35 +15,32 @@ using namespace std;
 #include "pack.hh"
 
 /// Reads in case and house data
-void DATA::readdata(short core, short siminf)
+void DATA::readdata(int core, int mod, int per)
 {
-	long week, tt, r, nu, h, hh, si, i, k, nreg;
+	int t, tt, r, nu, h, hh, si, i, k, nreg, td;
 	string line, ele, name;
 	HOUSE ho;
-	vector <long> regionpop;
+	vector <int> regionpop;
 	
-	tmax = 17*7;  // The current simulations look at 17 weeks worth of data (similar to the real datasets
-	
-	if(fediv != tmax*10) emsg("Data: EC0");
+	mode = mod;
+	period = per;
+	fediv = 100*per;
 	
 	if(core == 0){
-		long RX, RY;
+		int RX, RY;
 		
-		if(type.substr(0,4) != "real" && siminf == 1){                 // Randomly generates houses and regions
-			if(type == "small"){ RX = 1; RY = 1; popsize = 3000; nhouse = 1024;}  
+		if(mode == MODE_SIM){                 // Randomly generates houses and regions
+			if(simtype == "smallsim"){ RX = 2; RY = 2; popsize = 10000; nhouse = 1024;}  
 			else{
-				if(type == "med"){ RX = 3; RY = 3; popsize = 3*16384; nhouse = 16384;}
+				if(simtype == "scotsim"){ RX = 4; RY = 4; popsize = 5500000; nhouse = 1500000;}
 				else{
-					if(type == "scotsim"){ RX = 4; RY = 4; popsize = 5500000; nhouse = 1500000;}
-					else{
-						if(type == "uksim"){ RX = 10; RY = 10; popsize = 6800000; nhouse = 20000000;}
-						else emsg("Type is wrong");
-					}
+					if(simtype == "uksim"){ RX = 10; RY = 10; popsize = 68000000; nhouse = 20000000;}
+					else emsg("The property 'simtype' is wrong");
 				}
 			}
 	
 			nregion = RX*RY;
-					
+				
 			for(r = 0; r < nregion; r++){
 				stringstream ss; ss << "region" << r%RX << "_" << r/RX; regionname.push_back(ss.str());
 			}
@@ -51,26 +48,29 @@ void DATA::readdata(short core, short siminf)
 			for(h = 0; h < nhouse; h++){                            // Randomly distributes houses
 				ho.x = ran();
 				ho.y = ran();
-				ho.region = short(ho.y*RY)*RX + short(ho.x*RX);
+				ho.region = int(ho.y*RY)*RX + int(ho.x*RX);
 				house.push_back(ho);
 			}
 		}
 		
-		if(siminf == 0 || type.substr(0,4) == "real"){            // Loads houses
-			stringstream ssw; ssw << "houses_" << type << ".txt";
-			ifstream houseout(ssw.str().c_str());
-				
-			getline(houseout,line); 
+		if(mode != MODE_SIM){            // Loads houses	
+			ifstream housein(housefile.c_str());
+			if(housein.fail()){
+				stringstream ss; ss << "The file '" << housefile << "' does not exist";
+				emsg(ss.str());
+			}
+			
+			getline(housein,line); 
 			stringstream ssh(line);	
 			ssh >> popsize >> nhouse >> nregion;
 			for(r = 0; r < nregion; r++){
-				getline(houseout,name); name = name.substr(0,name.length());
+				getline(housein,name); name = name.substr(0,name.length());
 				regionname.push_back(name);
 			}
 
 			regionpop.resize(nregion); for(r =0; r < nregion; r++) regionpop[r] = 0;
 			for(h = 0; h < nhouse; h++){
-				houseout >> ho.x >> ho.y >> ho.region;
+				housein >> ho.x >> ho.y >> ho.region;
 				house.push_back(ho);
 				regionpop[ho.region]++;
 			}
@@ -78,50 +78,61 @@ void DATA::readdata(short core, short siminf)
 			for(r = 0; r < nregion; r++) cout << regionname[r] << "  # Houses: " << regionpop[r] << endl;
 		}
 		
-		if(siminf == 0){  // Loads cases for inference
-			stringstream sst; sst << "cases_" << type << ".txt";    // Loads the cases
-			ifstream regplot(sst.str().c_str());
-		
-			nreg = 0;
-			getline(regplot,line);
-			stringstream ss(line);
-			getline(ss,ele,'\t');
-			while(!ss.eof()){
-				getline(ss,ele,'\t');
-				cout << ele << " " <<  regionname[nreg] << " j\n";
-				if(ele != regionname[nreg]) emsg("Data: EC12");
-				nreg++;
-			}
+		if(mode != MODE_SIM){  // Loads transition data for inference
+			if(transdata.size() == 0) emsg("Transition data must be loaded");
 			
-			tmax = 0;
-			ncase.resize(nregion);
-			do{
-				getline(regplot,line);
-				if(regplot.eof()) break;
+			for(td = 0; td < transdata.size(); td++){
+				ifstream transin(transdata[td].file.c_str());                            // Loads the transition data
+			
+				if(transin.fail()){
+					stringstream ss; ss << "The file '" << housefile << "' does not exist";
+					emsg(ss.str());
+				}
+			
+				nreg = 0;                                                                // Checks regions names match with house file
+				getline(transin,line);
 				stringstream ss(line);
 				getline(ss,ele,'\t');
-				for(r = 0; r < nregion; r++){
+				while(!ss.eof()){
 					getline(ss,ele,'\t');
-					ncase[r].push_back(atoi(ele.c_str()));
+					if(ele != regionname[nreg]) emsg("Data: EC12");
+					nreg++;
 				}
-				tmax += timestep;
-			}while(1 == 1);
+				
+				t = 0;
+				transdata[td].num.resize(nregion);
+				do{
+					getline(transin,line);
+					if(transin.eof()) break;
+					stringstream ss(line);
+					getline(ss,ele,'\t');
+					for(r = 0; r < nregion; r++){
+						getline(ss,ele,'\t');
+						transdata[td].num[r].push_back(atoi(ele.c_str()));
+					}
+					t++;
+				}while(1 == 1);
+				if(t != period){
+					stringstream ss; ss << "The file 'transdata[td].file' has " << t << "' instead of period='" << period << "' rows";
+					emsg(ss.str());
+				}
+			}
 		}
 		
 		for(h = 0; h < nhouse; h++) house[h].ind.push_back(h);   // Randomly distributes individuals into houses
     
 		for(i = nhouse; i < popsize; i++){
-			h = long(ran()*nhouse);
+			h = int(ran()*nhouse);
 			house[h].ind.push_back(i);
-		}	
+		}
 	}
 	
 	// Copies the above information to all the other cores
-	
+
 	if(core == 0){
 		packinit();
-		pack(popsize);
-		pack(ncase);
+		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
+		pack(popsize);	
 		pack(nregion);
 		pack(regionname);
 		pack(nhouse);
@@ -129,58 +140,55 @@ void DATA::readdata(short core, short siminf)
 		si = packsize();
 	}
 	
-	MPI_Bcast(&si,1,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Bcast(&si,1,MPI_INT,0,MPI_COMM_WORLD);
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
 	if(core != 0){
 		packinit();
+		for(td = 0; td < transdata.size(); td++) unpack(transdata[td].num);
 		unpack(popsize);
-		unpack(ncase);
 		unpack(nregion);
 		unpack(regionname);
 		unpack(nhouse);
 		unpack(regionpop);
 		if(si != packsize()) emsg("Data: EC9");
 	}
-	
+
 	h = 0; 
 	do{                                                      // Houses are copied in pieces because they fill up the buffer
 		hh = h + 10000; if(hh > nhouse) hh = nhouse;
 		if(core == 0){ packinit(); pack(house,h,hh); si = packsize();}
 		
-		MPI_Bcast(&si,1,MPI_LONG,0,MPI_COMM_WORLD);
+		MPI_Bcast(&si,1,MPI_INT,0,MPI_COMM_WORLD);
 		MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 		if(core != 0){ packinit(); unpack(house,h,hh);}
 		h = hh;
 	}while(h < nhouse);
 		
-	if(tmax%timestep != 0) emsg("The time must be a multiple of weeks");
-	nweek = tmax/timestep;
-	
 	housedensity();
 }
 
 /// Calculates density of houses for a given house
 void DATA::housedensity()
 {
-	long L, h, hh, i, j, imin, imax, jmin, jmax, num, c, k;
+	int L, h, hh, i, j, imin, imax, jmin, jmax, num, c, k;
 	double x, y, xx, yy, dd, fac = 0.9999999, val;
-	vector< vector <long> > grid;
+	vector< vector <int> > grid;
 	
-	L = short(scale/(2*rden));
+	L = int(scale/(2*rden));
 
 	grid.resize(L*L);
 	for(h = 0; h < nhouse; h++){
-		c = short(fac*house[h].y*L)*L + short(fac*house[h].x*L); if(c < 0 || c >= L*L) emsg("Data: EC11");
+		c = int(fac*house[h].y*L)*L + int(fac*house[h].x*L); if(c < 0 || c >= L*L) emsg("Data: EC11");
 		
 		grid[c].push_back(h);
 	}
 	
 	for(h = 0; h < nhouse; h++){
 		x = house[h].x; y = house[h].y;
-		imin = short(x*L+0.5)-1; imax = imin+1; if(imin < 0) imin = 0; if(imax >= L) imax = L-1;
-		jmin = short(y*L+0.5)-1; jmax = jmin+1; if(jmin < 0) jmin = 0; if(jmax >= L) jmax = L-1;
+		imin = int(x*L+0.5)-1; imax = imin+1; if(imin < 0) imin = 0; if(imax >= L) imax = L-1;
+		jmin = int(y*L+0.5)-1; jmax = jmin+1; if(jmin < 0) jmin = 0; if(jmax >= L) jmax = L-1;
 		
 		num = 0;
 		for(i = imin; i < imax; i++){
@@ -199,5 +207,5 @@ void DATA::housedensity()
 	}
 }
 
-void DATA::sortX(vector <long> &vec){ sort(vec.begin(),vec.end(),compX);}
-void DATA::sortY(vector <long> &vec){ sort(vec.begin(),vec.end(),compY);}
+void DATA::sortX(vector <int> &vec){ sort(vec.begin(),vec.end(),compX);}
+void DATA::sortY(vector <int> &vec){ sort(vec.begin(),vec.end(),compY);}

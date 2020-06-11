@@ -1,0 +1,31 @@
+MPICXX := mpicxx
+CXXFLAGS := -g -O3
+
+#<<<<<<< HEAD
+srcs := MBPPART.cc  PMBP.cc pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
+#srcs :=  pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
+
+hdrs := $(wildcard *.h) $(wildcard *.hh)
+#=======
+srcs := analysis.cc timers.cc utils.cc model.cc simulate.cc PMCMC.cc PART.cc poptree.cc pack.cc data.cc output.cc
+hdrs := PART.hh PMCMC.hh consts.hh model.hh poptree.hh simulate.hh timers.hh utils.hh pack.hh data.hh output.hh
+hdrs += gitversion.hh
+#>>>>>>> c9707e5dd82f7b991f40179e7d835f59905bd13b
+
+exe := analysis
+
+$(exe): $(srcs) $(hdrs) | gitversion
+	$(MPICXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(srcs) -o $(exe)
+
+.PHONY : gitversion
+gitversion:
+	./gitversion.sh gitversion.hh
+
+gitversion.hh : gitversion
+
+.PHONY : all
+all: $(exe)
+
+.PHONY : clean
+clean:
+	rm -f $(exe) gitversion.hh
