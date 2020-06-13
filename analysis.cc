@@ -7,6 +7,13 @@ INPUTS:
 Simulation:         
 mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
 
+mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=20 transdata=E,A,all,transEA.txt transdata=A,R,all,transAR.txt transdata=E,P,all,transEP.txt transdata=P,I,all,transPI.txt  transdata=I,R,all,transIR.txt transdata=I,H,all,transIH.txt transdata=H,R,all,transHR.txt transdata=H,D,all,transHD.txt housedata=house.txt
+
+mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=20 transdata=E,A,all,transEA.txt transdata=A,R,all,transAR.txt transdata=E,P,all,transEP.txt transdata=P,I,all,transPI.txt  transdata=I,R,all,transIR.txt transdata=I,H,all,transIH.txt transdata=H,R,all,transHR.txt transdata=H,D,all,transHD.txt housedata=house.txt
+
+
+mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=300 period=20 transdata=E,A,all,transEA.txt transdata=E,P,all,transEP.txt  housedata=house.txt
+
 
 MBP Inference:    
 mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
@@ -24,8 +31,7 @@ mode - Defines how the code operates:
 		"mbp" performs inference using multi-temperature MBP MCMC.
 
 model - This defines the compartmental model being used:
-		"original" defines the original SEAIHRD model used.
-		"irish" defines a SEIR model for asymtopmatic individuals and SEIRHD for symptomatic.
+		"irish" defines a SEAPIRHD model for asymtopmatic / presymptomatic / symptomatic individuals.
 	
 area - Determines	the number of areas into which the houses are divided (should be a power of 4)
 
@@ -151,7 +157,6 @@ int main(int argc, char** argv)
 		
 		if(command == "model"){
 			flag = 1;
-			if(value == "original"){ flag = 2; modelsel = MOD_OLD;}
 			if(value == "irish"){ flag = 2; modelsel = MOD_IRISH;}
 		}
 		

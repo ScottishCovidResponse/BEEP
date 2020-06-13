@@ -6,12 +6,12 @@ using namespace std;
 
 const int MODE_SIM=0, MODE_PMCMC=1, MODE_MBP=2;         // Different modes of operation 
  
-const int MOD_IRISH = 0, MOD_OLD = 1;                   // Different compartmental models
+const int MOD_IRISH = 0;                                // Different compartmental models
 
 const int FEV_EV=0, INF_EV=1, SET_EV=2;                 // Characterise event types (future event/infection/settime/external)
-const int EXT_EV=3, XIFEV_EV=4;
+const int EXT_EV=3, XIFEV_EV=4, XPFEV_EV=5;
 
-const int EXP_DIST=0, GAMMA_DIST=1;                     // Denotes exponential or gamma distributed 
+const int NO_DIST=-1, EXP_DIST=0, GAMMA_DIST=1;         // Denotes exponential or gamma distributed 
 const int LOGNORM_DIST = 2, INFECTION = 3;
 
 const double tiny = 0.00000001;                         // Used to represent a tiny number
@@ -37,5 +37,3 @@ const int BUFMAX = 2000000;                             // The maximum buffer si
 const double varfac = 4;                                // A factor which relaxes the observation model
 
 const int INFMAX = 50000;                               // The maximum number of infections allowed
-
-

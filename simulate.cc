@@ -25,6 +25,8 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 	
 	part->partinit(0);
 	
+	if(model.settransprob() == 0) emsg("Simulate: EC9");
+		
 	timers.timesim -= clock();
 	part->gillespie(0,data.period, 1 /* simulating */);
 	timers.timesim += clock();

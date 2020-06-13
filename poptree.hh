@@ -50,4 +50,9 @@ class POPTREE
 	int ***Mnoderef;
 	int **naddnoderef;
 	int ***addnoderef;
+	
+	vector <int> nMfineval;                 // These are used to store the matrix M on fine scale
+	vector <vector <float> > Mfineval;
+	vector <vector <int> > Mfinenoderef;
+	vector< vector <vector <int> > > Mfineadd;
 };

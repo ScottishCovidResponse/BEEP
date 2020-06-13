@@ -44,16 +44,20 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int nc
 		
 		loop = 0;
 		do{
-			part->partinit(0);
-			part->gillespie(0,data.period,0);
+			do{
+				model.priorsamp();                                                        // Randomly samples parameters from the prior	
+			}while(model.settransprob() == 0);
+			
+			part->partinit(0);                                
+			part->gillespie(0,data.period,0);                                         // Simulates from the model
 	
 			pp = core*nchain+p;
 			if(nchaintot == 1) invT = 1;
 			else invT = pow(double(nchaintot-1-pp)/(nchaintot-1),5);
 
-			mbpchain[p]->init(data,model,poptree,invT,part->fev,pp);
+			mbpchain[p]->init(data,model,poptree,invT,part->fev,part->indev,pp);
 			loop++;
-		}while(loop < loopmax && mbpchain[p]->ninftot >= INFMAX);
+		}while(loop < loopmax && mbpchain[p]->ninftot >= INFMAX);                   // Checks not too many infected (based on prior)
 		if(loop == loopmax) emsg("Cannot find initial state under INFMAX");
 	}
 
@@ -72,6 +76,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int nc
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 
 		time = clock();
+		short lo;
+		//for(lo = 0; lo < 10; lo++){
 		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = int(ran()*int(model.param.size()));
@@ -82,7 +88,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int nc
 				ntimeprop++;
 			}
 		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-
+		//}
+		
 		timers.timewait -= clock();
 		//if(core == 0) cout << double(clock()-time)/CLOCKS_PER_SEC << " ti before\n";
 		MPI_Barrier(MPI_COMM_WORLD); 
@@ -202,7 +209,6 @@ double calcME()
 	
 	return ME;
 }
-
 
 /// Ouputs a sample from the MBP algorithm
 void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, int core, int ncore, int nchain)

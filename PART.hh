@@ -37,6 +37,8 @@ class PART                                 // Stores all the things related to a
 	int fediv;
 	vector < vector <FEV> > fev;            // Stores all compartmental transitions
 	
+	vector < vector <FEV> > indev;          // For initialising MBP it stores the individual events
+	
 	vector <int> N;                         // The number of individuals in different compartments
 
 	int sett;                               // Index used to track time changes in beta
@@ -58,6 +60,7 @@ class PART                                 // Stores all the things related to a
 		void dofe();
 		int nextinfection(int type);
 		void addinfc(int c, double t);
+		void addfev(FEV fe, double period, double tnow);
 		void copy(const PART &other, int fedivmin);
 		void check(int num);
 		

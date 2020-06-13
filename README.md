@@ -45,8 +45,7 @@ Here is a description of the various inputs:
 		"mbp" performs inference using multi-temperature MBP MCMC.
 
 **model** - This defines the compartmental model being used:
-		"original" defines the original SEAIHRD model used.
-		"irish" defines a SEIR model for asymtopmatic individuals and SEIRHD for symptomatic.
+		"irish" defines a SEAPIRHD model for asymtopmatic / presymptomatic / symptomatic individuals.
 	
 **area** - Determines	the number of areas into which the houses are divided (should be a power of 4)
 

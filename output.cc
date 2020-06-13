@@ -108,23 +108,17 @@ SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, PO
 		}
 	}
 
+	model.paramval = paramval; model.betaspline(data.period);
+
 	switch(model.modelsel){
 	case MOD_IRISH:
-		double afrac, aI, tIaR, tIH;
-		afrac = paramval[model.afracparam];
-		aI = paramval[model.aIparam];
-		tIaR = 1.0/model.getrate("Ia","R"); tIH = 1.0/model.getrate("I","H"); 
-		tinfav = afrac*aI*tIaR + (1-afrac)*tIH;
-		break;
-		
-	case MOD_OLD:
-		rAI = model.getrate("A","I"); rAR = model.getrate("A","R");
-		rIH = model.getrate("I","H");	rIR = model.getrate("I","R");	rID = model.getrate("I","D");
-		tinfav = 0.2/(rAI + rAR) + 1*(rAI/(rAI+rAR))*(1.0/(rIH + rIR + rID));
+		double probA = model.getparam("probA"), Ainf = model.getparam("Ainf"), Pinf = model.getparam("Pinf");
+		double tA = 1.0/model.getparam("rA"), tP = 1.0/model.getparam("rP"), tI = 1.0/model.getparam("rI");
+
+		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
 		break;
 	}
-	
-	model.paramval = paramval; model.betaspline(data.period);
+
 	sa.R0.resize(nsettime);
 	for(st = 0; st < nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
 	
@@ -403,7 +397,6 @@ STAT getstat(vector <double> &vec)
 /// Create a directory if it doesn't already exist
 static void ensuredirectory(const string &path) 
 {
-	cout << path << "ensu\n";
 	struct stat st = {0};
 	if (stat(path.c_str(), &st) == -1)
 	{

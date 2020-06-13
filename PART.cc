@@ -50,6 +50,8 @@ void PART::partinit(int p)
 	sett = 0;
 	
 	tdnext = fediv;
+	
+ indev.resize(data.popsize);
 }
 
 /// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
@@ -58,6 +60,7 @@ void PART::addinfc(int c, double t)
 	int l, i, j, jmax, cc, k, kmax;
 	double dR, sum, sus, z;
 	vector <double> sumst;
+	vector <FEV> evlist;
 	
 	jmax = poptree.subpop[c].size(); 
 	sumst.resize(jmax);
@@ -86,7 +89,8 @@ void PART::addinfc(int c, double t)
 		cc = lev[l].node[cc].parent; l--;
 	}while(l >= 0);
 	
-	model.simmodel(fev,tdnext,tdfnext,i,t,data.period,N);
+	model.simmodel(indev[i],i,0,t);
+	jmax = indev[i].size(); for(j = 0; j < jmax; j++) addfev(indev[i][j],data.period,t);
 }
 
 /// Performs the modified Gillespie algorithm between times ti and tf 
@@ -182,7 +186,7 @@ void PART::dofe()
 	float ***&Mval(poptree.Mval);
 	
 	if(checkon == 1){
-		if(trans[fev[tdnext][tdfnext].trans].type == INFECTION) emsg("Part: EC8a");
+		if(trans[fev[tdnext][tdfnext].trans].from == 0) emsg("Part: EC8a");
 		
 		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].add.size();
@@ -425,4 +429,34 @@ void PART::copy(const PART &other, int fedivmin)
 	tdnext = other.tdnext;
 	tdfnext = other.tdfnext;
 	sett = other.sett;
+}
+
+/// Adds a future event to the timeline
+void PART::addfev(FEV fe, double period, double tnow)
+{
+	int d, j, jmax;
+	double t;
+	
+	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
+	if(t >= period) return;
+	
+	d = int((t/period)*fev.size());
+	j = 0; jmax = fev[d].size();
+	if(t != tnow){ while(j < jmax && t >= fev[d][j].t) j++;}
+	else{ while(j < jmax && t > fev[d][j].t) j++;}
+	
+	if(j == jmax) fev[d].push_back(fe);
+	else fev[d].insert(fev[d].begin()+j,fe);
+	
+	if(t != tnow){
+		if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
+		if(d < tdnext){ tdnext = d; tdfnext = j;}
+	}
+	else{
+		TRANS tr = trans[fe.trans];
+		N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
+		N[tr.to]++;
+		
+		if(d == tdnext) tdfnext++;
+	}
 }

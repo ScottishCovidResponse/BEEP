@@ -387,6 +387,37 @@ void POPTREE::init(DATA &data, int core, int areama)
 			for(i = 0; i < data.house[h].ind.size(); i++) subpop[c].push_back(data.house[h].ind[i]);
 		}
 	}
+	
+	// Generates the Matrix on the finescale for use in MBP (currently assumes all on the fine scale)
+	
+	nMfineval.resize(Cfine); Mfineval.resize(Cfine); Mfinenoderef.resize(Cfine); Mfineadd.resize(Cfine);
+	for(c = 0; c < Cfine; c++){
+		l = level-1;
+		kmax = nMval[c][l];
+		nMfineval[c] = kmax; Mfineval[c].resize(kmax); Mfinenoderef[c].resize(kmax);
+		for(k = 0; k < kmax; k++){
+			Mfinenoderef[c][k] = Mnoderef[c][l][k];
+			Mfineval[c][k] = Mval[c][l][k];
+		}		
+	
+		Mfineadd[c].resize(level);              // Generate this to easily add contribution up the Rtot tree
+		for(k = 0; k < kmax; k++){
+			cc = Mfinenoderef[c][k];
+			
+			l = level-1;
+			do{
+				cc = lev[l].node[cc].parent; l--;
+				if(lev[l].add[cc] == 0){ 
+					lev[l].add[cc] = 1;
+					Mfineadd[c][l].push_back(cc);
+				}	
+			}while(l > 0);
+		}
+		
+		for(l = 0; l < level-1; l++){
+			for(j = 0; j < Mfineadd[c][l].size(); j++) lev[l].add[Mfineadd[c][l][j]] = 0;
+		}
+	}
 }
   
 /// Defines the relative susceptibility of individuals

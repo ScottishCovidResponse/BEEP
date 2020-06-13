@@ -39,8 +39,8 @@ class MBPCHAIN                                          // Stores all the things
 	int xitdnext, xitdfnext;                              // Stores the next event in the initial state 
 	int xptdnext, xptdfnext;                 					    // Stores the next event in the final state
 	
-	vector <int> stati;                                   // The status of individuals in the initial state
-	vector <int> statp;                                   // The status of individuals in the proposed state
+	vector< vector <FEV> > indevi;                        // The individual event sequences for the initial state
+	vector< vector <FEV> > indevp;                        // The individual event sequences for the proposed state
 	
 	int ninftot;                                          // The total number of infected individuals
 	int ninftotprop;   
@@ -63,15 +63,16 @@ class MBPCHAIN                                          // Stores all the things
 	vector <LEVEL> &lev;
 	
 	public:
-		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &xistart, int chstart);
+		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &xistart, vector < vector <FEV> > &indev, int chstart);
 		void proposal(DATA &data, MODEL &model, POPTREE &poptree, int th, int samp, int burnin);
 		void mbpinit();
 		void mbp();
 		int nextinfection();
-		void dofe(int update);
+		void xpdofe(int update);
 		void xidofe();
 		void addinfc(int c, double t);
 		void updateRtot(int c);
 		void check(int num);
 		void MIupdate(int i, int tra, int upMIi, int upMIp);
+		void addxp(FEV fe, double period, double tnow);
 };

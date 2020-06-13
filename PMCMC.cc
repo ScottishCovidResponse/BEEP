@@ -34,7 +34,7 @@ PART* part[partmax];                       // Pointers to each of the particles
 
 void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int ncore, int npart)
 {
-	const int fixinvT = 1;                   // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
+	const int fixinvT = 0.1;                   // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
 	double invT = 1;                         // The inverse temperature (used to relax the observation model)
 	vector < vector <FEV> > xi, xp;          // Stores the current and proposed event sequences
 	vector <SAMPLE> opsamp;                  // Stores sample for generating statistics later
@@ -59,6 +59,9 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
  
+		model.parami = model.paramval; model.paramp = model.paramval;
+		model.settransprob();
+		
 		Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
 
 		if(core == 0){ 
@@ -75,8 +78,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 		// Each PMCMC step consists of making a change to a parameter 
 		// This change is probablisitically either accepted or rejected based
 		// on whether the observations agree better with new value or the old one.			
-		//for(p = 0; p < int(param.size()); p++){
-		for(p = 0; p < 9; p++){
+		for(p = 0; p < int(param.size()); p++){
 			if(param[p].min != param[p].max){
 				valst = model.paramval[p];
 				
@@ -90,9 +92,13 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 				
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
-					Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
-					if(core == 0){ 
-						al = exp(invT*(Lf-Li)); //cout << Lf << " " << Li << " " << al << " al" << endl;
+					model.parami = model.paramval; model.paramp = model.paramval;
+					if(model.settransprob() == 0) al = 0;
+					else{		
+						Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
+						if(core == 0){ 
+							al = exp(invT*(Lf-Li)); //cout << Lf << " " << Li << " " << al << " al" << endl;
+						}
 					}
 				}
 				if(core == 0){ if(ran() < al) accept = 1; else accept = 0;}

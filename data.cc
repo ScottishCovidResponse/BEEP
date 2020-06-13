@@ -167,6 +167,12 @@ void DATA::readdata(int core, int mod, int per)
 	housedensity();
 }
 
+/// Loads the mixing matrix from census flow data
+void DATA::loadM()
+{
+	// "/nfs/tmpshare/stephen/COVID-19 census data/MSOA level/contact matrix.txt"	
+}
+
 /// Calculates density of houses for a given house
 void DATA::housedensity()
 {

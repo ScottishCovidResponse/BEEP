@@ -29,15 +29,22 @@ struct PARAM{                              // Store information about a model pa
 struct COMP{                               // Stores information about a compartment in the model
 	string name;                             // Its name
 	double infectivity;                      // How infectious that compartment is
+
+	int type;                                // The type of distribution for waiting in compartment (exponential or gamma)
+	int param1;                              // First characteristic parameter (e.g. rate)
+	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
+
 	vector <int> trans;                      // The transitions leaving that compartment
+
+	vector <double> prob, probsum;           // The probability of going down transition
+	vector <double> probi;                   // The probability of going down transition for initial state (MBP)
+	vector <double> probp;                   // The probability of going down transition for proposed state (MBP)
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
 	int from;                                // Which compartment the individual is coming from
 	int to;                                  // Which compartment the individual is going to
-	int type;                                // The type of transition (exponential or gamma)
-	int param1;                              // First characteristic parameter (e.g. rate)
-	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma) 
+	int probparam;                           // The parameter for the probability of going down transition
 };
 
 class MODEL                                // Stores all the information about the model
@@ -51,7 +58,7 @@ public:
 	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
 		
-	int phiparam, afracparam, aIparam;       // Stores which parameters relate to phi, afrac and aI
+	int phiparam;   					   // Stores which parameters relate to phi and probA
 	int nspline;                             // The spline points which are parameters in the model
 	vector <double> splinet;                 // The times for the spline points
 	vector <PARAM> param;                    // Information about parameters in the model
@@ -64,15 +71,16 @@ public:
 	vector <int> fix_sus_param;              // The parameters related to fixed effect for susceptibility
 	vector <int> fix_inf_param;              // The parameters related to fixed effect for infectivity
 	
-	double getrate(string from, string to);
-	void simmodel(vector < vector <FEV> > &fev, int &tdnext, int &tdfnext, int i, double t, double period, vector <int> &N);
-	void addfev(vector < vector <FEV> > &fev, int &tdnext, int &tdfnext, double t, int tra, int i, int done, double period, vector <int> &N);
-	
+	double getparam(string name);
+	void simmodel(vector <FEV> &evlist, int i, int c, double t);
+	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void definemodel(int core, double period, int popsize, int mod);
 	void betaspline(double period);
-
+	void priorsamp();
+	int settransprob();
+	
 private:
-	void addcomp(string name, double infectivity);
+	void addcomp(string name, double infectivity, int type, string param1, string param2);
 	void addparam(string name, double val, double min, double max);
-	void addtrans(string from, string to, int type, string param1, string param2);
+	void addtrans(string from, string to, string probparam);
 };

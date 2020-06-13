@@ -84,4 +84,5 @@ class DATA
 	
 	private:
 	void housedensity();
+	void loadM();
 };
