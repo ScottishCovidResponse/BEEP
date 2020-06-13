@@ -174,7 +174,7 @@ static void swap(MODEL &model, int core, int ncore, int nchain)
 	
 	MPI_Scatter(invTtot,nchain,MPI_DOUBLE,invT,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Scatter(chtot,nchain,MPI_INT,ch,nchain,MPI_INT,0,MPI_COMM_WORLD);
-	MPI_Scatter(timeproptot,nchain,MPI_LONG,timeproptot,nchain,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Scatter(timeproptot,nchain,MPI_LONG,timeprop,nchain,MPI_LONG,0,MPI_COMM_WORLD);
 	MPI_Scatter(ntrtot,nchainparam,MPI_INT,ntr,nchainparam,MPI_INT,0,MPI_COMM_WORLD);
 	MPI_Scatter(nactot,nchainparam,MPI_INT,nac,nchainparam,MPI_INT,0,MPI_COMM_WORLD);
 	MPI_Scatter(paramjumptot,nchainparam,MPI_FLOAT,paramjump,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
