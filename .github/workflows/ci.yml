@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-18.04
     defaults:
       run:
-        shell: bash
+        shell: /bin/bash --noprofile --norc -e -o pipefail -o nounset {0}
     
     steps:
     - uses: actions/checkout@v2
