@@ -7,7 +7,9 @@ jobs:
     runs-on: ubuntu-18.04
     defaults:
       run:
-        shell: /bin/bash --noprofile --norc -e -o pipefail -o nounset {0}
+        shell: bash
+        # This doesn't work:
+        # /bin/bash --noprofile --norc -e -o pipefail -o nounset {0}
     
     steps:
     - uses: actions/checkout@v2
@@ -41,8 +43,7 @@ jobs:
 
     - name: Run inference
       run: |
-        echo "SHELLOPTS = $SHELLOPTS"
-        mpirun -n 2 ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee inference-log.txt
+        mpirun -n 2 ./run mode=mbp model=irish area=1024 nchain=2 nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee inference-log.txt
         echo "Exit code: $?"
         cp inference-log.txt Output
 
