@@ -179,7 +179,10 @@ jobs:
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* summary.html .github/workflows/style.css $path
+        # These must always be present, or there is a problem with the CI system
+        cp -a summary.html .github/workflows/style.css $path
+        # These might not be present if the code hasn't worked
+        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* $path || true
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"
