@@ -39,6 +39,7 @@ jobs:
     - name: Run inference
       run: |
         mpirun -n 2 ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output  | tee inference-log.txt
+        echo "Exit code: $?"
         cp inference-log.txt Output
 
     - name: Upload inference results
