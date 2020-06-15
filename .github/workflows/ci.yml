@@ -5,6 +5,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        shell: bash
     
     steps:
     - uses: actions/checkout@v2
