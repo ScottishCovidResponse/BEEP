@@ -6,6 +6,10 @@ jobs:
   build:
     runs-on: ubuntu-18.04
     
+    defaults:
+      run:
+        shell: bash -O pipefail -O errexit -O nounset
+
     steps:
     - uses: actions/checkout@v2
     
@@ -25,6 +29,9 @@ jobs:
 
     - name: Run simulation
       run: |
+        # set -o pipefail
+        # set -o errexit
+        
         mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee simulation-log.txt
         mkdir Simulation
         cp cases.txt deaths.txt house.txt simulation-log.txt Simulation
