@@ -68,7 +68,7 @@ jobs:
 
   upload:
     needs: build
-    if: true
+    if: ${{ always() }}
     runs-on: ubuntu-18.04
 
     steps:
