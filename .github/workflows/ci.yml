@@ -179,6 +179,7 @@ jobs:
               <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
             </ul>
           </li>
+          <li><a href="https://github.com/ScottishCovidResponse/CoronaPMCMC/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
         </ul>
         </body>
         </html>
