@@ -13,33 +13,35 @@ using namespace std;
 #include "data.hh"
 
 struct POS{
-	long c;
+	int c;
 	double dist;
 };
 bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
 		
-// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
-void POPTREE::init(DATA &data, short core)
+/// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
+void POPTREE::init(DATA &data, int core, int areama)
 {
-	long h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
-	double av, x, y, xx, yy, grsi, dd, sum, fac, val;
+	int h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
+	double av, x, y, xx, yy, grsi, dd, sum, fac, val, valsr, vallr;
 	NODE node;
 	
-	const short posmax = 100;   // This gives the maximum number of possibilities for a given level in M 
-	vector <POS> listpos;
+	const int posmax = 100;                                        // The maximum number of possibilities for a given level in M 
+	vector <POS> listpos;           
 	POS pos;
 	
 	vector <vector <double> > Mval_sr_temp;
 	vector <vector <double> > Mval_lr_temp;
-	vector <vector <long> > Mnoderef_temp;
-	vector <vector <long> > addnoderef_temp;
-	vector <long> housex1, housex2;
+	vector <vector <int> > Mnoderef_temp;
+	vector <vector <int> > addnoderef_temp;
+	vector <int> housex1, housex2;
 	vector <double> grsize;
-	vector <long> grL;
-	vector< vector< vector <long> > > grid;
-																							           		  // Here a "node" represents a collection of houses
-	lev.push_back(LEVEL ());                                                // The first level contains a single node
-	for(h = 0; h < data.nhouse; h++) node.houseref.push_back(h);            // with all the houses
+	vector <int> grL;
+	vector< vector< vector <int> > > grid;
+	
+	areamax = areama;                                              // Defines the maximum number areas
+
+	lev.push_back(LEVEL ());                                       // The first level contains a single node with all the houses
+	for(h = 0; h < data.nhouse; h++) node.houseref.push_back(h);      
 	node.parent = -1;
 	lev[0].node.push_back(node);
 
@@ -158,25 +160,25 @@ void POPTREE::init(DATA &data, short core)
 	grsi = finegridsize;                               // Creates grids that maps the locations of nodes at different levels
 	grsize.resize(level); grL.resize(level); grid.resize(level);
 	for(l = level-1; l >= 0; l--){
-		L = long(1.0/(2*grsi)); if(L < 1) L = 1;
+		L = int(1.0/(2*grsi)); if(L < 1) L = 1;
 		grsize[l] = grsi;
 		grL[l] = L;
 		cmax = lev[l].node.size();
 		grid[l].resize(L*L);
 		for(c = 0; c < cmax; c++){
-			i = long(lev[l].node[c].x*L);
-			j = long(lev[l].node[c].y*L);	
+			i = int(lev[l].node[c].x*L);
+			j = int(lev[l].node[c].y*L);	
 			grid[l][j*L+i].push_back(c);
 		}
 		grsi *= 2;
 	}
 	
-	nMval = new long*[Cfine]; Mval = new float**[Cfine]; Mnoderef = new long**[Cfine];
-	naddnoderef = new long*[Cfine]; addnoderef = new long**[Cfine]; 
+	nMval = new int*[Cfine]; Mval = new float**[Cfine]; Mnoderef = new int**[Cfine];
+	naddnoderef = new int*[Cfine]; addnoderef = new int**[Cfine]; 
 	
 	for(c = 0; c < Cfine; c++){                          // Generates the interaction matrix M
-		nMval[c] = new long[level]; Mval[c] = new float*[level]; Mnoderef[c] = new long*[level];
-		naddnoderef[c] = new long[level]; addnoderef[c] = new long*[level]; 
+		nMval[c] = new int[level]; Mval[c] = new float*[level]; Mnoderef[c] = new int*[level];
+		naddnoderef[c] = new int[level]; addnoderef[c] = new int*[level]; 
 		
 		Mval_sr_temp.clear(); Mval_sr_temp.resize(level);
 		Mval_lr_temp.clear(); Mval_lr_temp.resize(level);
@@ -208,11 +210,13 @@ void POPTREE::init(DATA &data, short core)
 								yy = lev[l+1].node[ccc].y;
 						
 								dd = sqrt((xx-x)*(xx-x) + (yy-y)*(yy-y));
-				
+								if(dd > ddmax){ valsr = 0; vallr = 0;}
+								else{
+								valsr = 1.0/(1+pow(dd/a,b)); vallr = 1.0/(1+(dd/a));}
+								
 								Mnoderef_temp[l+1].push_back(ccc);
-								Mval_sr_temp[l+1].push_back(1.0/(1+pow(dd/a,b)));
-								if(dd < a) dd = a;
-								Mval_lr_temp[l+1].push_back(1.0/dd);
+								Mval_sr_temp[l+1].push_back(valsr);
+								Mval_lr_temp[l+1].push_back(vallr);
 								flag = 1;
 							}
 						}
@@ -221,8 +225,8 @@ void POPTREE::init(DATA &data, short core)
 			}
 
 			L = grL[l];	grsi = grsize[l];
-			i = long(L*x+0.5)-1;
-			j = long(L*y+0.5)-1;
+			i = int(L*x+0.5)-1;
+			j = int(L*y+0.5)-1;
 
 			listpos.clear();
 			for(ii = i; ii <= i+1; ii++){
@@ -247,18 +251,19 @@ void POPTREE::init(DATA &data, short core)
 				}
 			}
 							
-			if(listpos.size() > posmax){  // Makes sure fine scale does not extend too far
+			//if(listpos.size() > posmax){  // Makes sure fine scale does not extend too far
 				sort(listpos.begin(),listpos.end(),ordpos);
-				listpos.resize(posmax);
-			}
+				//listpos.resize(posmax);
+			//}
 			
 			for(po = 0; po < listpos.size(); po++){
 				cc = listpos[po].c;
-				dd = sqrt(listpos[po].dist);
+				dd = listpos[po].dist;
 				Mnoderef_temp[l].push_back(cc);
-				Mval_sr_temp[l].push_back(1.0/(1+pow(dd/a,b)));
-				if(dd < a) dd = a;
-				Mval_lr_temp[l].push_back(1.0/dd);
+				valsr = 1.0/(1+pow(dd/a,b)); vallr = 1.0/(1+(dd/a));
+	
+				Mval_sr_temp[l].push_back(valsr);
+				Mval_lr_temp[l].push_back(vallr);
 				flag = 1;
 				
 				lev[l].node[cc].done = 1;
@@ -266,24 +271,24 @@ void POPTREE::init(DATA &data, short core)
 			}
 		}		
 
-		sum = 0;                             // Normalises short range M contribution to 1
+		sum = 0;                             // Normalises int range M contribution to 1
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); 
 			for(k = 0; k < kmax; k++) sum += Mval_sr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
-		fac = 0.8/sum;
+		fac = 1/sum;
 		for(l = 0; l < level; l++){
 			kmax = Mval_sr_temp[l].size(); for(k = 0; k < kmax; k++) Mval_sr_temp[l][k] *= fac;
 		}	
 	
-		sum = 0;                              // Normalises long range M contribution to 0.2
+		sum = 0;                              // Normalises int range M contribution to 0.2
 		for(l = 0; l < level; l++){
 			kmax = Mval_lr_temp[l].size(); 
 			for(k = 0; k < kmax; k++) sum += Mval_lr_temp[l][k]*lev[l].node[Mnoderef_temp[l][k]].population;
 		}
 		
-		fac = 0.2/sum;
+		fac = 0./sum;
 		for(l = 0; l < level; l++){
 			kmax = Mval_lr_temp[l].size(); for(k = 0; k < kmax; k++) Mval_lr_temp[l][k] *= fac;
 		}
@@ -299,16 +304,18 @@ void POPTREE::init(DATA &data, short core)
 			}
 		}			
 		
+		//for(l = 0; l < level; l++) cout << Mval_sr_temp[l].size() << ","; cout << "num\n";     
+		
 		for(l = 0; l < level; l++){           // Stores the results
 			kmax = Mval_sr_temp[l].size();
-			nMval[c][l] = kmax; Mval[c][l] = new float[kmax];	Mnoderef[c][l] = new long[kmax];
+			nMval[c][l] = kmax; Mval[c][l] = new float[kmax];	Mnoderef[c][l] = new int[kmax];
 			for(k = 0; k < kmax; k++){
 				Mval[c][l][k] = Mval_sr_temp[l][k] + Mval_lr_temp[l][k];
 				Mnoderef[c][l][k] = Mnoderef_temp[l][k];
 			}
 			
 			kmax = addnoderef_temp[l].size();
-			naddnoderef[c][l] = kmax; addnoderef[c][l] = new long[kmax];
+			naddnoderef[c][l] = kmax; addnoderef[c][l] = new int[kmax];
 			for(k = 0; k < kmax; k++){
 				addnoderef[c][l][k] = addnoderef_temp[l][k];
 			}
@@ -349,15 +356,14 @@ void POPTREE::init(DATA &data, short core)
 						case 0:  // Uses log of the population density 
 							ind[i].X[fi] = log(data.house[h].density);
 							break;
-						/*
+							/*
 						case 0:  // Uses sex as a simple fixed effect
-							ind[i].X[fi] = short(2*ran());
+							ind[i].X[fi] = int(2*ran());
 						  break;
 							*/
 					}
 				}
 			}
-			
 		}		
 	}
 
@@ -381,18 +387,49 @@ void POPTREE::init(DATA &data, short core)
 			for(i = 0; i < data.house[h].ind.size(); i++) subpop[c].push_back(data.house[h].ind[i]);
 		}
 	}
+	
+	// Generates the Matrix on the finescale for use in MBP (currently assumes all on the fine scale)
+	
+	nMfineval.resize(Cfine); Mfineval.resize(Cfine); Mfinenoderef.resize(Cfine); Mfineadd.resize(Cfine);
+	for(c = 0; c < Cfine; c++){
+		l = level-1;
+		kmax = nMval[c][l];
+		nMfineval[c] = kmax; Mfineval[c].resize(kmax); Mfinenoderef[c].resize(kmax);
+		for(k = 0; k < kmax; k++){
+			Mfinenoderef[c][k] = Mnoderef[c][l][k];
+			Mfineval[c][k] = Mval[c][l][k];
+		}		
+	
+		Mfineadd[c].resize(level);              // Generate this to easily add contribution up the Rtot tree
+		for(k = 0; k < kmax; k++){
+			cc = Mfinenoderef[c][k];
+			
+			l = level-1;
+			do{
+				cc = lev[l].node[cc].parent; l--;
+				if(lev[l].add[cc] == 0){ 
+					lev[l].add[cc] = 1;
+					Mfineadd[c][l].push_back(cc);
+				}	
+			}while(l > 0);
+		}
+		
+		for(l = 0; l < level-1; l++){
+			for(j = 0; j < Mfineadd[c][l].size(); j++) lev[l].add[Mfineadd[c][l][j]] = 0;
+		}
+	}
 }
   
 /// Defines the relative susceptibility of individuals
 void POPTREE::setsus(MODEL &model)     
 {
-	long i, fi, l, c, cc, j, jmax;
+	int i, fi, l, c, cc, j, jmax;
 	double val, sum;
 	
 	for(i = 0; i < ind.size(); i++) ind[i].sus = 0;
 	
 	for(fi = 0; fi < nfix; fi++){
-		val = model.param[model.fix_sus_param[fi]].val;
+		val = model.paramval[model.fix_sus_param[fi]];
 		for(i = 0; i < ind.size(); i++) ind[i].sus += ind[i].X[fi]*val;
 	}
 	
@@ -420,13 +457,13 @@ void POPTREE::setsus(MODEL &model)
 /// Defines the relative infectivity of individuals
 void POPTREE::setinf(MODEL &model)    
 {
-	long i, fi;
+	int i, fi;
 	double val;
 	
 	for(i = 0; i < ind.size(); i++) ind[i].inf = 0;
 	
 	for(fi = 0; fi < nfix; fi++){
-		val = model.param[model.fix_inf_param[fi]].val;
+		val = model.paramval[model.fix_inf_param[fi]];
 		for(i = 0; i < ind.size(); i++) ind[i].inf += ind[i].X[fi]*val;
 	}
 	

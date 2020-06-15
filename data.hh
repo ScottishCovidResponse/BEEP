@@ -1,10 +1,20 @@
 #pragma once
 
+#include "model.hh"
+
+struct TRANSDATA{
+	string from;                             // The "from" compartment
+ 	string to;                               // The "to" compartment 
+	string type;                             // The type (either "reg" for regional or "all" for global)
+ 	string file;                             // The file name of the data 
+	vector <vector <int> > num;              // A table giving the number of that transition type
+};
+
 struct HOUSE {                             // Defines a house
  	double x, y;                             // Position
-	vector <long> ind;                       // Individuals which belong to the house
-	short region;                            // The region to which an individual belongs
-	float density;
+	vector <int> ind;                        // Individuals which belong to the house
+	int region;                              // The region to which an individual belongs
+	float density;                           // Measures the density of housing
 };
 
 struct HouseRefComparatorX
@@ -14,7 +24,7 @@ struct HouseRefComparatorX
 	{
 	}
 
-  bool operator()(const long &a, const long &b) const
+  bool operator()(const int &a, const int &b) const
 	{
 		return house[a].x < house[b].x;
 	}
@@ -30,7 +40,7 @@ struct HouseRefComparatorY
 	{
 	}
 
-  bool operator()(const long &a, const long &b) const
+  bool operator()(const int &a, const int &b) const
 	{
 		return house[a].y < house[b].y;
 	}
@@ -47,21 +57,32 @@ class DATA
 	{
 	}
 
-	short tmax;                              // The time in days over which inference is performed
-	short nweek;                             // The number of weeks
-  short nregion;                           // Number of data regions
-	vector <string> regionname;              // The names of the regions
-	long popsize;                            // The total population size 
-  long nhouse;                             // The total number of houses
-	vector <HOUSE> house;                    // List of all the houses
-	vector <vector <long> > ncase;           // Hospitalised case data
+	int mode;                                // Stores if doing simulation/mbp/pmcmc
+	string outputdir;                        // The output directory
+	int fediv;                               // The number of divisions into which the global timeline is divided
+
+	vector <TRANSDATA> transdata;            // Store information about transition data
+	string simtype;                          // The system on which simulation is performed
 	
-	void sortX(vector <long> &vec);	         // Used for sorting houses by x and y location
-	void sortY(vector <long> &vec);	
+	int period;                              // The time over which simulation/inference is performed (e.g. in weeks)
+	
+	string housefile;                        // The name of the house file
+	
+  int nregion;                             // Number of data regions
+	vector <string> regionname;              // The names of the data regions
+	int popsize;                             // The total population size 
+  int nhouse;                              // The total number of houses
+	vector <HOUSE> house;                    // List of all the houses
+	
+	void sortX(vector <int> &vec);	         // Used for sorting houses by x and y location
+	void sortY(vector <int> &vec);	
 	HouseRefComparatorX compX;
 	HouseRefComparatorY compY;
-	void readdata(short core, short siminf); 
+	
+	void readdata(int core, int mod, int per); 
+	void checktransdata(MODEL &model);
 	
 	private:
 	void housedensity();
+	void loadM();
 };

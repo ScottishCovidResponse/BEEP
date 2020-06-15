@@ -5,6 +5,11 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        shell: bash
+        # This doesn't work:
+        # /bin/bash --noprofile --norc -e -o pipefail -o nounset {0}
     
     steps:
     - uses: actions/checkout@v2
@@ -25,9 +30,9 @@ jobs:
 
     - name: Run simulation
       run: |
-        mpirun -n 1 ./analysis 256 1 | tee simulation-log.txt
+        mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee simulation-log.txt
         mkdir Simulation
-        cp cases_small.txt houses_small.txt events_small.txt simulation-log.txt Simulation
+        cp cases.txt deaths.txt house.txt simulation-log.txt Simulation
         ls Simulation
 
     - name: Upload simulation results
@@ -38,7 +43,8 @@ jobs:
 
     - name: Run inference
       run: |
-        mpirun -n 1 ./analysis 256 2 50 | tee inference-log.txt
+        mpirun -n 2 ./run mode=mbp model=irish area=1024 nchain=2 nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee inference-log.txt
+        echo "Exit code: $?"
         cp inference-log.txt Output
 
     - name: Upload inference results
@@ -49,12 +55,21 @@ jobs:
 
     - name: Check output files
       run: |
-        required_files="cases_small.txt houses_small.txt events_small.txt Output Output/trace_50.txt Output/R0_50.txt Output/params_50.txt Output/region0_0_data_50.txt Output/region1_0_data_50.txt"
         failures=0
+        required_files="cases.txt deaths.txt house.txt"
 
         for f in $required_files ; do
           if [ ! -r "$f" ]; then
             echo "Required output file $f not found" >&2
+            failures=$((failures+1))
+          fi
+        done
+
+        required_files="cases_region0_0.txt cases_region0_1.txt cases_region1_0.txt cases_region1_1.txt deaths.txt MCMCdiagnostic.txt parameters.txt R0.txt traceLi.txt trace.txt"
+
+        for f in $required_files ; do
+          if [ ! -r "Output/$f" ]; then
+            echo "Required output file Output/$f not found" >&2
             failures=$((failures+1))
           fi
         done
@@ -68,6 +83,7 @@ jobs:
 
   upload:
     needs: build
+    if: ${{ always() }}
     runs-on: ubuntu-18.04
 
     steps:
@@ -169,6 +185,7 @@ jobs:
               <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
             </ul>
           </li>
+          <li><a href="https://github.com/ScottishCovidResponse/CoronaPMCMC/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
         </ul>
         </body>
         </html>
@@ -178,7 +195,10 @@ jobs:
       run: |
         path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
         mkdir -p $path
-        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* summary.html .github/workflows/style.css $path
+        # These must always be present, or there is a problem with the CI system
+        cp -a summary.html .github/workflows/style.css $path
+        # These might not be present if the code hasn't worked
+        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* $path || true
         echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
         ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
         echo "find:"

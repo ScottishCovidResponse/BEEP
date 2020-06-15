@@ -14,24 +14,17 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 
-struct NEV {                               // Information about the immediate next events
-  short type; double t;
-};
-
-static bool compNEV(NEV lhs, NEV rhs)
-{
-	return lhs.t < rhs.t;
-};
-
 PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
 {
 }
 
 /// Initialises a particle
-void PART::partinit(long p)
+void PART::partinit(int p)
 {
-	long c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, loop;
-	
+	int c, cmax, cc, k, kmax, h, i, imax, j, jmax, l, loop;
+
+	fediv = data.fediv;
+		
 	pst = p;
 	N.resize(comp.size()); for(c = 0; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
@@ -57,14 +50,17 @@ void PART::partinit(long p)
 	sett = 0;
 	
 	tdnext = fediv;
+	
+ indev.resize(data.popsize);
 }
 
 /// Adds an exposed indivdual on node c on the finest scale (i.e. level-1)
-void PART::addinfc(long c, double t)
+void PART::addinfc(int c, double t)
 {
-	long l, i, j, jmax, cc, k, kmax;
+	int l, i, j, jmax, cc, k, kmax;
 	double dR, sum, sus, z;
 	vector <double> sumst;
+	vector <FEV> evlist;
 	
 	jmax = poptree.subpop[c].size(); 
 	sumst.resize(jmax);
@@ -93,101 +89,14 @@ void PART::addinfc(long c, double t)
 		cc = lev[l].node[cc].parent; l--;
 	}while(l >= 0);
 	
-	simmodel(i,t);
-}
-
-/// This function simulates events as in individual passes through the compartmental model
-void PART::simmodel(long i, double t)
-{
-	short c, k, kmax, tra;
-	double tnext, tnextmin, mean, sd, dt;
-	TRANS tr;
-	
-	switch(modelsel){
-	case MOD_IRISH:
-		if(ran() < model.param[model.afracparam].val) tra = 0;
-		else tra = 1;
-		break;
-		
-	case MOD_OLD:
-		tra = 0;
-		break;
-	}
-	addfev(t,tra,i,1);
-	c = trans[tra].to;
-	
-	do{
-		kmax = comp[c].trans.size();
-		if(kmax == 0) break;
-		
-		tnextmin = data.tmax;
-		for(k = 0; k < kmax; k++){
-			tr = trans[comp[c].trans[k]];
-			switch(tr.type){
-				case EXP_DIST:
-					tnext = t - log(ran())/model.param[tr.param1].val;
-					break;
-				
-				case GAMMA_DIST:
-					mean = model.param[tr.param1].val; sd = model.param[tr.param2].val;
-					dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
-					tnext = t + dt; 
-					break;
-					
-				case LOGNORM_DIST:
-					mean = model.param[tr.param1].val; sd = model.param[tr.param2].val;
-					dt = exp(normal(mean,sd));
-					tnext = t + dt; 
-					break;
-					
-				default: emsg("Part: EC2b"); break;
-			}
-			
-			if(tnext < tnextmin){ tnextmin = tnext; tra = comp[c].trans[k];}
-		}
-		
-		if(tnextmin == data.tmax) break; 
-		
-		addfev(tnextmin,tra,i,0);
-
-		c = trans[tra].to; t = tnextmin;
-	}while(1 == 1);
-}
-
-/// Adds a future event to the timeline
-void PART::addfev(double t, long tra, long i, short done)
-{
-	long d, j, jmax;
-	
-	if(t >= data.tmax) return;
-	
-	FEV fe; fe.t = t; fe.trans = tra; fe.ind = i; fe.done = done;
-	
-	d = long((t/data.tmax)*fediv);
-	j = 0; jmax = fev[d].size();
-	if(done == 0){ while(j < jmax && t >= fev[d][j].t) j++;}
-	else{ while(j < jmax && t >= fev[d][j].t) j++;}
-	
-	if(j == jmax) fev[d].push_back(fe);
-	else fev[d].insert(fev[d].begin()+j,fe);
-	
-	if(done == 0){
-		if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
-		if(d < tdnext){ tdnext = d; tdfnext = j;}
-	}
-	else{
-		TRANS tr = trans[tra];
-		N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
-		N[tr.to]++;
-		
-		if(d == tdnext) tdfnext++;
-	}
+	model.simmodel(indev[i],i,0,t);
+	jmax = indev[i].size(); for(j = 0; j < jmax; j++) addfev(indev[i][j],data.period,t);
 }
 
 /// Performs the modified Gillespie algorithm between times ti and tf 
-void PART::gillespie(double ti, double tf, short siminf)
+void PART::gillespie(double ti, double tf, int outp)
 {
-	long td, j, c;
+	int td, j, c;
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
@@ -209,13 +118,13 @@ void PART::gillespie(double ti, double tf, short siminf)
 		n.type = INF_EV;
 		nev.push_back(n);
 		
-		n.t = t - log(ran())/(sussum[0][0]*model.param[model.phiparam].val);
+		n.t = t - log(ran())/(sussum[0][0]*model.paramval[model.phiparam]);
 		n.type = EXT_EV;
 		nev.push_back(n);
 		
 		sort(nev.begin(),nev.end(),compNEV);
 		
-		if(siminf == 1){
+		if(outp == 1){
 			while(t > tpl){ 
 				cout  << "Time: " << tpl;
 				for(c =0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
@@ -233,6 +142,7 @@ void PART::gillespie(double ti, double tf, short siminf)
 		
 		case INF_EV:                 // These are infection events within the system
  		case EXT_EV:                 // These are external infection events
+
 	  	c = nextinfection(nev[0].type);
 			addinfc(c,t);	
 			break;
@@ -249,9 +159,9 @@ void PART::gillespie(double ti, double tf, short siminf)
 }
 
 /// Used to check that various quantities are being correctly updated
-void PART::check(short num)
+void PART::check(int num)
 {
-	long l, c, cmax, cc;
+	int l, c, cmax, cc;
 	double dd;
 	for(l = 0; l < poptree.level; l++){
 		cmax = lev[l].add.size();
@@ -267,16 +177,16 @@ void PART::check(short num)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	long i, c, cmax, cc, ccc, j, jmax, h, ii, k, kmax, l, ll;
+	int i, c, cmax, cc, ccc, j, jmax, h, ii, k, kmax, l, ll;
 	double fac, val, num, dd, ffnew;
 	TRANS tr;
 
-	long **&nMval(poptree.nMval);
-	long ***&Mnoderef(poptree.Mnoderef);
+	int **&nMval(poptree.nMval);
+	int ***&Mnoderef(poptree.Mnoderef);
 	float ***&Mval(poptree.Mval);
 	
 	if(checkon == 1){
-		if(trans[fev[tdnext][tdfnext].trans].type == INFECTION) emsg("Part: EC8a");
+		if(trans[fev[tdnext][tdfnext].trans].from == 0) emsg("Part: EC8a");
 		
 		for(l = 0; l < poptree.level; l++){
 			cmax = lev[l].add.size();
@@ -296,7 +206,7 @@ void PART::dofe()
 	c = poptree.ind[i].noderef;
 
 	tr = trans[fev[tdnext][tdfnext].trans];
-	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
+	N[tr.from]--; if(N[tr.from] < 0){ cout << tr.from << " " <<  N[tr.from] << " fr\n"; emsg("Part: EC12"); }
 	N[tr.to]++;
 	
 	fac = poptree.ind[i].inf*(comp[tr.to].infectivity - comp[tr.from].infectivity);
@@ -379,9 +289,9 @@ void PART::dofe()
 }
 
 /// This samples the node on the fine scale in which the next infection occurs
-long PART::nextinfection(short type)
+int PART::nextinfection(int type)
 {
-	long l, lmax, c, cc, j, jmax;
+	int l, lmax, c, cc, j, jmax;
 	double z, sum, sumst[4], val, dd, Rnew;
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
@@ -421,28 +331,10 @@ long PART::nextinfection(short type)
 	return c;
 }
 
-/// Measures how well the particle agrees with the observations for a given week w
-/// (which in this case is weekly hospitalised case data)
-void PART::Lobs(short w, double varfac)
-{
-	short r;
-	double mean, var;
-	vector <long> num;
-	
-	Li = 0;	
-	num = getnumtrans(data,model,poptree,fev,"I","H",w*timestep,(w+1)*timestep);
-	for(r = 0; r < data.nregion; r++){
-		mean = data.ncase[r][w];
-		var = mean; if(var < 5) var = 5;
-		var *= varfac;
-		Li += -0.5*log(2*3.141592654*var) - (mean-num[r])*(mean-num[r])/(2*var);
-	}
-}
-
 /// Packs up all the particle information (from time fedivmin until the end) to the be sent by MPI
-void PART::partpack(short fedivmin)
+void PART::partpack(int fedivmin)
 {
-	long l, c, cmax, cc, j, jmax;
+	int l, c, cmax, cc, j, jmax;
 	double val;
 
 	for(l = 0; l < poptree.level; l++){        // Process all the add later requests
@@ -471,9 +363,9 @@ void PART::partpack(short fedivmin)
 }
 
 /// Unpacks particle 
-void PART::partunpack(short fedivmin)
+void PART::partunpack(int fedivmin)
 {
-	long k, kmax, j, l, c, cmax, cc;
+	int k, kmax, j, l, c, cmax, cc;
 	double val, val2;
 	
 	l = poptree.level-1;
@@ -523,9 +415,9 @@ void PART::partunpack(short fedivmin)
 }
 
 /// Copies in all the information from another particle
-void PART::copy(const PART &other, short fedivmin)
+void PART::copy(const PART &other, int fedivmin)
 {
-	short d;
+	int d;
 	
 	if(checkon == 1) ffine = other.ffine;
 	indinf = other.indinf;
@@ -537,4 +429,34 @@ void PART::copy(const PART &other, short fedivmin)
 	tdnext = other.tdnext;
 	tdfnext = other.tdfnext;
 	sett = other.sett;
+}
+
+/// Adds a future event to the timeline
+void PART::addfev(FEV fe, double period, double tnow)
+{
+	int d, j, jmax;
+	double t;
+	
+	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
+	if(t >= period) return;
+	
+	d = int((t/period)*fev.size());
+	j = 0; jmax = fev[d].size();
+	if(t != tnow){ while(j < jmax && t >= fev[d][j].t) j++;}
+	else{ while(j < jmax && t > fev[d][j].t) j++;}
+	
+	if(j == jmax) fev[d].push_back(fe);
+	else fev[d].insert(fev[d].begin()+j,fe);
+	
+	if(t != tnow){
+		if(d == tdnext){ if(j < tdfnext) tdfnext = j;}
+		if(d < tdnext){ tdnext = d; tdfnext = j;}
+	}
+	else{
+		TRANS tr = trans[fe.trans];
+		N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12"); 
+		N[tr.to]++;
+		
+		if(d == tdnext) tdfnext++;
+	}
 }

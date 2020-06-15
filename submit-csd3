@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 32 --nnode 1 --walltime 1:00:00 --dir /path/to/run/dir
+# Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 32 --nnodes 1 --walltime 1:00:00 --dir /path/to/run/dir
 # dos2unix submit-csd3
 
 set -e
@@ -30,8 +30,8 @@ while [ $# -gt 0 ]; do
     elif [ $1 == "--nprocs" ]; then
         nprocs=$2
 	shift 2
-    elif [ $1 == "--nnode" ]; then
-        nnode=$2
+    elif [ $1 == "--nnodes" ]; then
+        nnodes=$2
 	shift 2
     elif [ $1 == "--walltime" ]; then
         walltime=$2
@@ -45,17 +45,17 @@ done
 jobname=$(basename $dir)
 
 mkdir $dir
-cp -a ./analysis $dir
+cp -a ./run $dir
 
-cp -a ./cases_realscotsim.txt $dir
+# cp -a ./cases_realscotsim.txt $dir
 
-cp -a ./houses_realscotsim.txt $dir
+# cp -a ./houses_realscotsim.txt $dir
 
 cat >$dir/submit.sh <<EOF
 #!/bin/bash
 #SBATCH --job-name $jobname
 #SBATCH --account DIRAC-DC003-CPU
-#SBATCH --nodes $nnode
+#SBATCH --nodes $nnodes
 #SBATCH --ntasks $nprocs
 #SBATCH --time $walltime
 #SBATCH --mail-type ALL
@@ -79,12 +79,13 @@ echo
 echo "Running simulation"
 echo "=================="
 echo
-mpirun -n 1 ./analysis $groups $seed
+mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
+
 echo
 echo "Running inference"
 echo "================="
 echo
-mpirun -np $nprocs ./analysis $groups $samples $seed
+mpirun -n $nprocs ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
 
 EOF
 

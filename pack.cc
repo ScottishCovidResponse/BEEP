@@ -1,4 +1,4 @@
-// These are function for packing up quantities to be sent my MPI
+// These are function for packing up quantities to be sent by MPI
 
 #include <vector>
 #include <iostream>
@@ -12,7 +12,7 @@ using namespace std;
 #include "consts.hh"
 #include "utils.hh"
 
-static long k;
+static int k;
 
 double buffer[MAX_NUMBERS];
 
@@ -31,33 +31,33 @@ double * packbuffer()
 	return buffer;	
 }
 
-void pack(short num)
+void pack(int num)
 {
 	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");
 }
 
-void pack(long num)
+void pack(double num)
 {
 	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");
 }
 
-void pack(vector <long> &vec)
+void pack(vector <int> &vec)
 {
-	long imax, i; 
+	int imax, i; 
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
 void pack(vector <double> &vec)
 {	
-	long imax, i; 
+	int imax, i; 
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
-void pack(vector< vector <long> > &vec)
+void pack(vector< vector <int> > &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -67,7 +67,7 @@ void pack(vector< vector <long> > &vec)
 
 void pack(vector< vector <double> > &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -77,7 +77,7 @@ void pack(vector< vector <double> > &vec)
 
 void pack(vector <string> &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -85,9 +85,9 @@ void pack(vector <string> &vec)
 	}
 }
 
-void pack(vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
+void pack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = fedivmin; i < fedivmax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
@@ -100,9 +100,9 @@ void pack(vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
 	}
 }
 
-void pack(vector <HOUSE> &vec, long min, long max)
+void pack(vector <HOUSE> &vec, int min, int max)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = min; i < max; i++){
 		buffer[k] = vec[i].x; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -113,33 +113,33 @@ void pack(vector <HOUSE> &vec, long min, long max)
 	}
 }
 
-void unpack(short &num)
+void unpack(int &num)
 {
 	num = buffer[k]; k++;
 }
 
-void unpack(long &num)
+void unpack(double &num)
 {
 	num = buffer[k]; k++;
 }
 
-void unpack(vector <long> &vec)
+void unpack(vector <int> &vec)
 {
-	long imax, i; 
+	int imax, i; 
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
 void unpack(vector <double> &vec)
 {
-	long imax, i;
+	int imax, i;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
-void unpack(vector< vector <long> > &vec)
+void unpack(vector< vector <int> > &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -149,7 +149,7 @@ void unpack(vector< vector <long> > &vec)
 
 void unpack(vector< vector <double> > &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -159,7 +159,7 @@ void unpack(vector< vector <double> > &vec)
 
 void unpack(vector <string> &vec)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++;
@@ -168,9 +168,9 @@ void unpack(vector <string> &vec)
 	}
 }
 
-void unpack(vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
+void unpack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = fedivmin; i < fedivmax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -183,9 +183,9 @@ void unpack(vector< vector <FEV> > &vec, short fedivmin, short fedivmax)
 	}
 }
 
-void unpack(vector <HOUSE> &vec, long min, long max)
+void unpack(vector <HOUSE> &vec, int min, int max)
 {
-	long imax, i, jmax, j;
+	int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = min; i < max; i++){
 		vec[i].x = buffer[k]; k++;  
