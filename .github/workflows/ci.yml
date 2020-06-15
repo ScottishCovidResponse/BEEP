@@ -63,7 +63,7 @@ jobs:
 
         for f in $required_files ; do
           if [ ! -r "Output/$f" ]; then
-            echo "Required output file $f not found" >&2
+            echo "Required output file Output/$f not found" >&2
             failures=$((failures+1))
           fi
         done
