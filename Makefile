@@ -13,7 +13,7 @@ $(exe): $(srcs) $(hdrs) | gitversion
 
 .PHONY : gitversion
 gitversion:
-	./gitversion.sh gitversion.hh
+	bash ./gitversion.sh gitversion.hh
 
 gitversion.hh : gitversion
 
