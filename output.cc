@@ -31,7 +31,7 @@ ofstream trace, traceLi;
 /// Initialises trace plot for parameters
 void outputinit(DATA &data, MODEL &model)
 {
-	int r, p;
+	unsigned int p;
 	
 	ensuredirectory(data.outputdir);
 	stringstream ss; ss << data.outputdir << "/trace.txt";
@@ -45,9 +45,9 @@ void outputinit(DATA &data, MODEL &model)
 }
 
 /// Initialises trace plot for likelihoods on difference chains (MBP only)
-void outputLiinit(DATA &data, int nchaintot)
+void outputLiinit(DATA &data, unsigned int nchaintot)
 {
-	int p;
+	unsigned int p;
 	
 	ensuredirectory(data.outputdir);
 	stringstream ss; ss << data.outputdir << "/traceLi.txt";
@@ -59,9 +59,9 @@ void outputLiinit(DATA &data, int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void outputLi(int samp, int nparttot, double *Litot)
+void outputLi(unsigned int samp, unsigned int nparttot, double *Litot)
 {
-	int p;
+	unsigned int p;
 	
 	traceLi << samp;
 	for(p = 0; p < nparttot; p++) traceLi << "\t" << Litot[p]; 
@@ -69,12 +69,12 @@ void outputLi(int samp, int nparttot, double *Litot)
 }
 
 /// Outputs trace plot for parameters and store state data for plotting later
-SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
+SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
-	int p, np, r, t, st, sum, td;
-	vector <int> num;
-	double rAI, rAR, rIH, rIR, rID, tinfav;
+	unsigned int p, np, r, t, st, sum, td;
+	vector <unsigned int> num;
+	double tinfav;
 	
 	np = paramval.size();
 	
@@ -128,7 +128,7 @@ SAMPLE outputsamp(double invT, int samp, double Li, DATA &data, MODEL &model, PO
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 {      
-	int p, r, s, st, nopsamp, t, td, j, jmax;
+	unsigned int p, r, s, st, nopsamp, t, td, j, jmax;
 	vector <double> vec;
 	STAT stat;
 	string name;
@@ -239,7 +239,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 /// Outputs an event sample fev
 void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree)
 {
-	int d, i, j, e, h, nind;
+	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
 	TRANS tr;
 	
@@ -272,7 +272,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 /// Outputs a population plot for event sequence xi
 void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period)
 {
-	int c, tra, td, tdf;
+	unsigned int c, tra, td, tdf;
 	double t;
 	vector <int> N;
 	TRANS tr;
@@ -305,8 +305,8 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 /// Generates case data based on a simulation
 void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
 {
-	int t, r, h, tot, td, sum;
-	vector <int> num;
+	unsigned int t, r, tot, td, sum;
+	vector <unsigned int> num;
 	
 	for(td = 0; td < data.transdata.size(); td++){
 		num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,0,data.period);
@@ -365,7 +365,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 /// Calculates diagnostic statistics
 STAT getstat(vector <double> &vec)                           
 {
-	int n, i, d;
+	unsigned int n, i, d;
 	double sum, sum2, sd, a, cor, f;
 	STAT stat;
 	
@@ -377,10 +377,10 @@ STAT getstat(vector <double> &vec)
 	
 	sort(vec.begin(),vec.end());
 			
-	i = int((n-1)*0.05); f = (n-1)*0.05 - i;
+	i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
 	stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
 			
-	i = int((n-1)*0.95); f = (n-1)*0.95 - i;
+	i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
 	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
 
 	sd = sqrt(sum2 - sum*sum);

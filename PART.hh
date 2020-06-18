@@ -9,12 +9,7 @@ using namespace std;
 #include "data.hh"
 
 struct NEV {                               // Information about the immediate next events
-  int type; double t;
-};
-
-static bool compNEV(NEV lhs, NEV rhs)
-{
-	return lhs.t < rhs.t;
+  unsigned int type; double t;
 };
 
 class PART                                 // Stores all the things related to a particle 
@@ -22,11 +17,11 @@ class PART                                 // Stores all the things related to a
 	public:
 	PART(DATA &data, MODEL &model, POPTREE &poptree);
 
-	int pst;                                // The number of the particle
+	unsigned int pst;                       // The number of the particle
 	
  	double Li;                              // The observation likelihood
  	
-	vector <vector <int> > indinf;          // Lists all infected individuals 	
+	vector <vector <unsigned int> > indinf; // Lists all infected individuals 	
 		
 	vector <vector <double> > sussum;       // The total susceptibility for nodes on different levels 
 	vector <vector <double> > sussumst;     // The total susceptibility for nodes on different levels 
@@ -37,16 +32,16 @@ class PART                                 // Stores all the things related to a
 	vector <vector <double> > susage;       // The total susceptibility for different age / area combination
 	vector <vector <double> > susagest;     // The total susceptibility for different age / area combination
 	
-	int fediv;
+	unsigned int fediv;
 	vector < vector <FEV> > fev;            // Stores all compartmental transitions
 	
 	vector < vector <FEV> > indev;          // For initialising MBP it stores the individual events
 	
 	vector <int> N;                         // The number of individuals in different compartments
 
-	int sett;                               // Index used to track time changes in beta
+	unsigned int sett;                      // Index used to track time changes in beta
 
-	int tdnext, tdfnext;                    // Stores when the next future compartmental transition will occur
+	unsigned int tdnext, tdfnext;           // Stores when the next future compartmental transition will occur
 		
 	DATA &data;
 	MODEL  &model;
@@ -58,15 +53,15 @@ class PART                                 // Stores all the things related to a
 	vector <LEVEL> &lev;
 		
 	public: 
-		void gillespie(double ti, double tf, int outp);
-		void partinit(int p);
+		void gillespie(double ti, double tf, unsigned int outp);
+		void partinit(unsigned int p);
 		void dofe();
-		int nextinfection(int type);
-		void addinfc(int c, double t);
+		unsigned int nextinfection(unsigned int type);
+		void addinfc(unsigned int c, double t);
 		void addfev(FEV fe, double period, double tnow);
-		void copy(const PART &other, int fedivmin);
-		void check(int num, double t);
+		void copy(const PART &other, unsigned int fedivmin);
+		void check(unsigned int num, double t);
 		
-		void partpack(int fedivmin);
-		void partunpack(int fedivmin);
+		void partpack(unsigned int fedivmin);
+		void partunpack(unsigned int fedivmin);
 };

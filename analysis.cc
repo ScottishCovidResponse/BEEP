@@ -89,7 +89,7 @@ Inference - The output directory contains postior information (with means and 90
 
 #include "simulate.hh"
 #include "PMCMC.hh"
-#include "gitversion.hh"
+//#include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
 
@@ -97,26 +97,27 @@ using namespace std;
  
 int main(int argc, char** argv)
 {
-	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+	//cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 
-	int ncore, core;                          // Stores the number of cores and the core of the current process
-	int nsamp=-1;                             // The number of samples for inference
+	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
+	unsigned int nsamp=0;                     // The number of samples for inference
+	unsigned int nchain=0;                    // The number of chains per core (MBP only)
+	unsigned int npart=0;                             // The number of particles per core (PMCMC only)
+	
 	int mode=-1;                              // Sets the mode of operation (sim/PMCMC/MBP)
   int modelsel=-1;                          // Sets the model used
-	int npart=-1;                             // The number of particles per core (PMCMC only)
-	int nchain=-1;                            // The number of chains per core (MBP only)
-	//int narea=-1;                             // The number of areas into which houses are seperated
 	int period=-1;                            // The period of time for simulation / inference
 	int seed=0;                               // Sets the random seed for simulation
 	
-	int op, j, jst, jmax, flag;
+	unsigned int op, j, jst, jmax, flag;
 	TRANSDATA transdata;
 	string str, command, value;
 
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD,&ncore);
-  MPI_Comm_rank(MPI_COMM_WORLD,&core);
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore =num;
+  MPI_Comm_rank(MPI_COMM_WORLD,&num); core =num;
   #endif
 	
 	#ifndef USE_MPI
@@ -185,7 +186,7 @@ int main(int argc, char** argv)
 		
 		if(command == "nchain"){
 			flag = 2;
-			int nchaintot = atoi(value.c_str()); 
+			unsigned int nchaintot = atoi(value.c_str()); 
 			if(isnan(nchaintot)){
 				stringstream ss; ss << "Value '" << value << "' is not a number";
 				emsg(ss.str());
@@ -306,14 +307,14 @@ int main(int argc, char** argv)
 		break;
 		
 	case MODE_PMCMC:
-		if(nsamp == -1) emsg("The number of samples must be set");
-		if(npart == -1) emsg("The number of particles must be set");
+		if(nsamp == 0) emsg("The number of samples must be set");
+		if(npart == 0) emsg("The number of particles must be set");
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 
 	case MODE_MBP: 
-		if(nsamp == -1) emsg("The number of samples must be set");
-		if(nchain == -1) emsg("The number of chains must be set");
+		if(nsamp == 0) emsg("The number of samples must be set");
+		if(nchain == 0) emsg("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
 		break;
 

@@ -14,14 +14,15 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 
-PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model), comp(model.comp), trans(model.trans), poptree(poptree), lev(poptree.lev)
+PART::PART(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model),  trans(model.trans), comp(model.comp), poptree(poptree), lev(poptree.lev)
 {
 }
 
 /// Initialises a particle
-void PART::partinit(int p)
+void PART::partinit(unsigned int p)
 {
-	int c, cmax, j, jmax, l, dp, a;
+	unsigned int c, cmax, j, jmax, dp, a;
+	int l;
 	double sum, val;
 
 	fediv = data.fediv;
@@ -76,9 +77,9 @@ void PART::partinit(int p)
 }
 
 /// Performs the modified Gillespie algorithm between times ti and tf 
-void PART::gillespie(double ti, double tf, int outp)
+void PART::gillespie(double ti, double tf, unsigned int outp)
 {
-	int td, j, c;
+	unsigned int c, j, jsel;
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
@@ -104,8 +105,6 @@ void PART::gillespie(double ti, double tf, int outp)
 		n.type = EXT_EV;
 		nev.push_back(n);
 		
-		sort(nev.begin(),nev.end(),compNEV);
-		
 		if(outp == 1){
 			while(t > tpl){ 
 				cout  << "Time: " << tpl;
@@ -115,9 +114,10 @@ void PART::gillespie(double ti, double tf, int outp)
 			}
 		}
 
-		t = nev[0].t; if(t >= tf) break;
+		t = tf; for(j = 0; j < nev.size(); j++){ if(nev[j].t < t){ t = nev[j].t; jsel = j;}}
+		if(t == tf) break;
 		
-		switch(nev[0].type){
+		switch(nev[jsel].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
 			sett++; if(sett >= nsettime) emsg("Part: EC5");
 			break;
@@ -140,9 +140,10 @@ void PART::gillespie(double ti, double tf, int outp)
 }
 
 /// Adds an exposed indivdual in area c
-void PART::addinfc(int c, double t)
+void PART::addinfc(unsigned int c, double t)
 {
-	int l, i, dp, j, jmax, k, kmax, a;
+	unsigned int i, dp, j, jmax, k, kmax, a;
+	int l;
 	double dR, sum, sus, z;
 	vector <double> sumst;
 	vector <FEV> evlist;
@@ -181,9 +182,9 @@ void PART::addinfc(int c, double t)
 }
 
 /// Used to check that various quantities are being correctly updated
-void PART::check(int num, double t)
+void PART::check(unsigned int num, double t)
 {
-	int l, c, cmax, cc, k, j, dp, i, a, aa, v, timep, q;
+	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, timep, q;
 	double dd, sum, sum2, val, inf;
 	vector <double> susag;
 	vector <vector <double> > Qma;
@@ -271,7 +272,8 @@ void PART::check(int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	int i, c, cc, ccc, dp, v, a, l, k, kmax, j, jmax, q, timep;
+	unsigned int i, c, cc, ccc, dp, v, a, k, kmax, j, jmax, q, timep;
+	int l;
 	double sum, val, t;
 	TRANS tr;
 		 
@@ -338,10 +340,10 @@ void PART::dofe()
 }
 
 /// This samples the node on the fine scale in which the next infection occurs
-int PART::nextinfection(int type)
+unsigned int PART::nextinfection(unsigned int type)
 {
-	int l, lmax, c, cc, j, jmax;
-	double z, sum, sumst[4], dd, Rnew;
+	unsigned int l, lmax, c, cc, j, jmax;
+	double z, sum, sumst[4];
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
 	lmax = poptree.level;
@@ -368,25 +370,22 @@ int PART::nextinfection(int type)
 }
 
 /// Packs up all the particle information (from time fedivmin until the end) to the be sent by MPI
-void PART::partpack(int fedivmin)
+void PART::partpack(unsigned int fedivmin)
 {
-	int l, c, cmax, cc, j, jmax;
-
-	l = poptree.level-1;
-	
 	packinit();
 	pack(indinf);
 	pack(Qmap);
 	pack(fev,fedivmin,fediv);
-	pack(N);
+	//pack(N);
 	pack(tdnext); 
 	pack(tdfnext);
 }
 
 /// Unpacks particle 
-void PART::partunpack(int fedivmin)
+void PART::partunpack(unsigned int fedivmin)
 {
-	int k, kmax, j, jmax, l, c, cmax, cc, dp, a;
+	unsigned int k, kmax, j, jmax, c, cmax, cc, dp, a;
+	int l;
 	double val, val2, sus, sum;
 	
 	l = poptree.level-1;
@@ -395,7 +394,7 @@ void PART::partunpack(int fedivmin)
 	unpack(indinf);
 	unpack(Qmap);
 	unpack(fev,fedivmin,fediv);
-	unpack(N);
+	//unpack(N);
 	unpack(tdnext); 
 	unpack(tdfnext);
 
@@ -434,9 +433,9 @@ void PART::partunpack(int fedivmin)
 }
 
 /// Copies in all the information from another particle
-void PART::copy(const PART &other, int fedivmin)
+void PART::copy(const PART &other, unsigned int fedivmin)
 {
-	int d;
+	unsigned int d;
 	
 	indinf = other.indinf;
 	Rtot = other.Rtot; 
@@ -452,13 +451,13 @@ void PART::copy(const PART &other, int fedivmin)
 /// Adds a future event to the timeline
 void PART::addfev(FEV fe, double period, double tnow)
 {
-	int d, j, jmax;
+	unsigned int d, j, jmax;
 	double t;
 	
 	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
 	if(t >= period) return;
 	
-	d = int((t/period)*fev.size());
+	d = (unsigned int)((t/period)*fev.size());
 	j = 0; jmax = fev[d].size();
 	if(t != tnow){ while(j < jmax && t >= fev[d][j].t) j++;}
 	else{ while(j < jmax && t > fev[d][j].t) j++;}

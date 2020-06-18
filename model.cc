@@ -12,12 +12,12 @@
 using namespace std;
 
 /// Defines the compartmental model
-void MODEL::definemodel(DATA &data, int core, double period, int popsize, int mod)
+void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod)
 {
 	//double facmin = 0.8, facmax = 1.2;
 	double facmin = 1, facmax = 1;
 	double r, tinfav,val;
-	int p, c, t, fi;
+	unsigned int p, c, t, fi;
 		
 	ntimeperiod = data.ntimeperiod; // Copies from data
 	timeperiod = data.timeperiod;
@@ -150,12 +150,13 @@ void MODEL::definemodel(DATA &data, int core, double period, int popsize, int mo
 /// Adds in the tensor Q to the model
 void MODEL::addQ(DATA &data)
 {
-	int c, cc, ci, cf, tra, q, qi, qf, timep, timepi, timepf, loop, j, jmax, a, v;
+	unsigned int c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
+	int q, qi, qf;
 	string compi, compf;
 	double fac;
 	vector <int> map;
-	vector <int> nDQadd;               // Stores the mixing matrix between areas and ages 
-	vector< vector <int> > DQtoadd;
+	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
+	vector< vector <unsigned int> > DQtoadd;
 	vector <vector< vector <double> > > DQvaladd;
 	
 	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"");  
@@ -237,7 +238,7 @@ void MODEL::addQ(DATA &data)
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
 void MODEL::priorsamp()
 {
-	int th;
+	unsigned int th;
 	
 	for(th = 0; th < param.size(); th++){	
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
@@ -247,7 +248,7 @@ void MODEL::priorsamp()
 /// Gets a parameter value
 double MODEL::getparam(string name)
 {
-	int th;
+	unsigned int th;
 	
 	for(th = 0; th < param.size(); th++){ if(param[th].name == name) break;}
 	if(th == param.size()) emsg("Cannot get parameter");
@@ -255,9 +256,9 @@ double MODEL::getparam(string name)
 }
 
 /// Adds a compartment to the model
-void MODEL::addcomp(string name, double infectivity, int type, string param1, string param2)
+void MODEL::addcomp(string name, double infectivity, unsigned int type, string param1, string param2)
 {
-	int p, pmax;
+	unsigned int p, pmax;
 	COMP co;
 	co.name = name;
 	co.infectivity = infectivity;
@@ -291,7 +292,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 /// Adds a transition to the model
 void MODEL::addtrans(string from, string to, string probparam)
 {
-	int c, cmax, p, pmax;
+	unsigned int c, cmax, p, pmax;
 	TRANS tr;
 	
 	c = 0; cmax = comp.size(); while(c < cmax && from != comp[c].name) c++;
@@ -318,7 +319,8 @@ void MODEL::addtrans(string from, string to, string probparam)
 /// Converts the spline points to a finer timestep for use in simulations.
 void MODEL::betaspline(double period)
 {
-  int p, s, n = nspline-1;
+  unsigned int s, n = nspline-1;
+	int p;
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
 	settime.resize(nsettime); beta.resize(nsettime);
@@ -368,9 +370,9 @@ void MODEL::betaspline(double period)
 }
 
 /// Sets the transition probabilies based on the parameters
-int MODEL::settransprob()
+unsigned int MODEL::settransprob()
 {
-	int c, p, k, kmax;
+	unsigned int c, p, k, kmax;
 	double sum, sumi, sump, prob;
 	
 	/*
@@ -424,10 +426,10 @@ int MODEL::settransprob()
 }
 
 /// This simulates from the model and generates an event list
-void MODEL::simmodel(vector <FEV> &evlist, int i, int c, double t)
+void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t)
 {
-	int k, kmax, tra, timep;
-	double mean, sd, z, prob, sum;
+	unsigned int k, kmax, tra, timep;
+	double mean, sd, z;
 	FEV ev;
 	vector <double> probsum;
 	
@@ -491,8 +493,8 @@ void MODEL::simmodel(vector <FEV> &evlist, int i, int c, double t)
 /// This does an equivelent MBP for the compartmental model
 void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 {
-	int c, k, kmax, kk, tra, e, emax, i, p, p2, timep;
-	double meani, sdi, meanp, sdp, z, prob, sum, t, dt;
+	unsigned int c, k, kmax, kk, tra, e, emax, i, p, p2, timep;
+	double meani, sdi, meanp, sdp, z, t, dt;
 	FEV ev;
 	vector <double> probsum;
 
@@ -564,7 +566,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 /// Defines the relative susceptibility of individuals
 void MODEL::setsus(DATA &data)     
 {
-	int dp, c, j;
+	unsigned int dp, c, j;
 	double val;
 	
 	sus.resize(data.ndemocatpos);

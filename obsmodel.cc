@@ -5,12 +5,12 @@ using namespace std;
 #include "obsmodel.hh"
 #include "utils.hh"
 
-vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, int ti, int tf);
+vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, unsigned int ti, unsigned int tf);
 
 /// The total observation probability for a complete set of events fev
 double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, double invT)
 {
-	int t;
+	unsigned int t;
 	double Ltot;
 	
 	Ltot = 0; for(t = 0; t < data.period; t++) Ltot += Lobs(data,model,poptree,t,fev,invT);
@@ -19,11 +19,11 @@ double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV>
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree, int t, vector < vector <FEV> > &fev, double invT)
+double Lobs(DATA &data, MODEL &model, POPTREE &poptree, unsigned int t, vector < vector <FEV> > &fev, double invT)
 {
-	int r, td, sum;
+	unsigned int r, td, sum;
 	double mean, var, L;
-	vector <int> num;
+	vector <unsigned int> num;
 	
 	L = 0;	
 	for(td = 0; td < data.transdata.size(); td++){
@@ -55,11 +55,11 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, int t, vector < vector <
 
 /// Returns the number of transitions for individuals going from compartment "from" to compartment "to" 
 /// in different regions over the time range ti - tf
-vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, int ti, int tf)
+vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, unsigned int ti, unsigned int tf)
 {
-	int d, dmax, k, r, tra;
+	unsigned int d, dmax, k, r, tra;
 	FEV fe;
-	vector <int> num;
+	vector <unsigned int> num;
 	
 	tra = 0; 
 	while(tra < model.trans.size() && 
@@ -70,7 +70,7 @@ vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 
 	dmax = fev.size();
 	if(dmax != data.fediv) emsg("fevsize");
-	for(d = int(dmax*double(ti)/data.period); d <= int(dmax*double(tf)/data.period); d++){
+	for(d = (unsigned int)(dmax*double(ti)/data.period); d <= (unsigned int)(dmax*double(tf)/data.period); d++){
 		if(d < dmax){
 			for(k = 0; k < fev[d].size(); k++){
 				fe = fev[d][k];

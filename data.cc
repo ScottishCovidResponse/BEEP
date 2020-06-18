@@ -15,10 +15,11 @@ using namespace std;
 #include "pack.hh"
 
 /// Reads in transition and area data
-void DATA::readdata(int core, int ncore, int mod, int per)
+void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	int t, tt, r, nu, h, hh, si, i, imax, k, nreg, td, j, jst, jmax, jj, c, cc, fl, d, dp, a1, a2, a, aa, vi, vf, q;
-	double v, sum, inf;
+	unsigned int t, r, i, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q;
+	int c;
+	double v, sum;
 	string line, ele, name, regcode;
 	REGION reg;
 	AREA are;
@@ -71,7 +72,10 @@ void DATA::readdata(int core, int ncore, int mod, int per)
 		for(c = 0; c < ndemocat; c++) count[c] = 0;
 		
 		do{
-			democatpos.push_back(count);
+			//democatpos.push_back(count);
+			democatpos.push_back(vector <unsigned int> ());
+			for(c = 0; c < ndemocat; c++) democatpos[democatpos.size()-1].push_back(count[c]);
+			
 			c = ndemocat-1;
 			do{
 				fl = 0;
@@ -108,7 +112,6 @@ void DATA::readdata(int core, int ncore, int mod, int per)
 			
 			stringstream ss(line);	
 			
-			are.noderef = -1;
 			ss >> are.code >> are.x >> are.y >> regcode >> are.density;
 			
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
@@ -136,7 +139,7 @@ void DATA::readdata(int core, int ncore, int mod, int per)
 					if(j == 0) v = val[j][democatpos[dp][j]];
 					else v *= val[j][democatpos[dp][j]]/100.0;
 				}
-				are.pop[dp] = int(v+0.5);
+				are.pop[dp] = (unsigned int)(v+0.5);
 			}
 		
 			area.push_back(are);
@@ -147,7 +150,7 @@ void DATA::readdata(int core, int ncore, int mod, int per)
 		if(1 == 1){
 			for(c = 0; c < narea; c++){
 				cout << nregion << " " << area[c].region << "region\n";
-				cout << area[c].noderef << " " << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
+				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
 			
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
 				cout << endl;	
@@ -301,9 +304,9 @@ void DATA::readdata(int core, int ncore, int mod, int per)
 }
 
 /// Copies data from core zero to all the others
-void DATA::copydata(int core)
+void DATA::copydata(unsigned int core)
 {
-	int td, si;
+	unsigned int td, si;
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
@@ -323,7 +326,7 @@ void DATA::copydata(int core)
 		si = packsize();
 	}
 	
-	MPI_Bcast(&si,1,MPI_INT,0,MPI_COMM_WORLD);
+	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
 	if(core != 0){

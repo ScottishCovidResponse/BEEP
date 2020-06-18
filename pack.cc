@@ -13,7 +13,7 @@ using namespace std;
 #include "utils.hh"
 #include "data.hh"
 
-static int k;
+static unsigned int k;
 
 double buffer[MAX_NUMBERS];
 
@@ -22,7 +22,7 @@ void packinit()
 	k = 0;
 }
 
-int packsize()
+unsigned int packsize()
 {
 	return k;
 }
@@ -32,7 +32,7 @@ double * packbuffer()
 	return buffer;	
 }
 
-void pack(int num)
+void pack(unsigned int num)
 {
 	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");
 }
@@ -44,28 +44,28 @@ void pack(double num)
 
 void pack(string &vec)
 {
-	int jmax, j;
+	unsigned int jmax, j;
 	jmax = vec.length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(j = 0; j < jmax; j++){ buffer[k] = vec.at(j); k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
-void pack(vector <int> &vec)
+void pack(vector <unsigned int> &vec)
 {
-	int imax, i; 
+	unsigned int imax, i; 
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
 void pack(vector <double> &vec)
 {	
-	int imax, i; 
+	unsigned int imax, i; 
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
-void pack(vector< vector <int> > &vec)
+void pack(vector< vector <unsigned int> > &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -75,7 +75,7 @@ void pack(vector< vector <int> > &vec)
 
 void pack(vector< vector <double> > &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -85,7 +85,7 @@ void pack(vector< vector <double> > &vec)
 
 void pack(vector <string> &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
 	for(i = 0; i < imax; i++){
 		jmax = vec[i].length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
@@ -93,9 +93,9 @@ void pack(vector <string> &vec)
 	}
 }
 
-void pack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
+void pack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = fedivmin; i < fedivmax; i++){
 		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
@@ -125,10 +125,9 @@ void pack(vector <HOUSE> &vec, int min, int max)
 
 void pack(vector <AREA> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = 0; i < imax; i++){
-		pack(vec[i].noderef);
 		pack(vec[i].code);
 		pack(vec[i].region);
 		pack(vec[i].x);
@@ -141,7 +140,7 @@ void pack(vector <AREA> &vec)
 
 void pack(vector <REGION> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = 0; i < imax; i++){
 		pack(vec[i].name);
@@ -151,7 +150,7 @@ void pack(vector <REGION> &vec)
 
 void pack(vector <DEMOCAT> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 	for(i = 0; i < imax; i++){
 		pack(vec[i].name);
@@ -159,7 +158,7 @@ void pack(vector <DEMOCAT> &vec)
 	}
 }
 
-void unpack(int &num)
+void unpack(unsigned int &num)
 {
 	num = buffer[k]; k++;
 }
@@ -171,30 +170,30 @@ void unpack(double &num)
 
 void unpack(string &vec)
 {
-	int jmax, j;
+	unsigned int jmax, j;
 	
 	jmax = buffer[k]; k++;
 	stringstream ss; for(j = 0; j < jmax; j++){ ss << (char) buffer[k]; k++;}
 	vec = ss.str();
 }
 
-void unpack(vector <int> &vec)
+void unpack(vector <unsigned int> &vec)
 {
-	int imax, i; 
+	unsigned int imax, i; 
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
 void unpack(vector <double> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
-void unpack(vector< vector <int> > &vec)
+void unpack(vector< vector <unsigned int> > &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -204,7 +203,7 @@ void unpack(vector< vector <int> > &vec)
 
 void unpack(vector< vector <double> > &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -214,7 +213,7 @@ void unpack(vector< vector <double> > &vec)
 
 void unpack(vector <string> &vec)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = 0; i < imax; i++){
 		jmax = buffer[k]; k++;
@@ -223,9 +222,9 @@ void unpack(vector <string> &vec)
 	}
 }
 
-void unpack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
+void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
-	int imax, i, jmax, j;
+	unsigned int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);
 	for(i = fedivmin; i < fedivmax; i++){
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
@@ -255,10 +254,9 @@ void unpack(vector <HOUSE> &vec, int min, int max)
 
 void unpack(vector <AREA> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = 0; i < imax; i++){
-		unpack(vec[i].noderef);
 		unpack(vec[i].code);
 		unpack(vec[i].region);
 		unpack(vec[i].x);
@@ -271,7 +269,7 @@ void unpack(vector <AREA> &vec)
 
 void unpack(vector <REGION> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = 0; i < imax; i++){
 		unpack(vec[i].name);
@@ -281,7 +279,7 @@ void unpack(vector <REGION> &vec)
 
 void unpack(vector <DEMOCAT> &vec)
 {
-	int imax, i;
+	unsigned int imax, i;
 	imax = buffer[k]; k++; vec.resize(imax); 
 	for(i = 0; i < imax; i++){
 		unpack(vec[i].name);

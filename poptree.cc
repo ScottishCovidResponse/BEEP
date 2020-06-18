@@ -13,7 +13,7 @@ using namespace std;
 #include "data.hh"
 
 struct POS{
-	int c;
+	unsigned int c;
 	double dist;
 };
 bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
@@ -21,14 +21,11 @@ bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 void POPTREE::init(DATA &data, int core)
 {
-	int h, l, i, imax, j, jmax, ii, jj, k, kmax, m, mmax, num, po, c, cmax, cc, ccc, par, s, L, n, flag, fi, pop;
-	double av, x, y, xx, yy, grsi, dd, sum, fac, val, valsr, vallr;
+	unsigned int h, l, j, jmax, num, c, cmax, cc, ccc, flag;
 	NODE node;
-	
 	const int posmax = 100;                                        // The maximum number of possibilities for a given level in M 
 	vector <POS> listpos;           
-	POS pos;
-	
+
 	vector <int> areax1, areax2;
 	
 	lev.push_back(LEVEL ());                                       // First level contains a single node with all the areas
