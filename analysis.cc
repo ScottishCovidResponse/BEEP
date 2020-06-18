@@ -79,6 +79,12 @@ Inference - The output directory contains postior information (with means and 90
 #include <iostream>
 #include <sstream>
 #include <math.h>
+#include <map>
+#include <algorithm>
+#include <vector>
+#include <iterator>
+
+#include "toml11/toml.hpp"
 
 #include "stdlib.h"
 #include "time.h"
@@ -97,6 +103,85 @@ Inference - The output directory contains postior information (with means and 90
 
 using namespace std;
  
+
+
+string lookup_string_parameter(const map<string,string> &params,
+															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
+															 const string &key, const string &def="")
+{
+	string val;
+	auto val_it = params.find(key);
+	if (val_it != params.end()) {
+		val = val_it->second;
+	} else {
+		if (tomldata.contains(key)) {
+			val = toml::find<string>(tomldata,key);
+		} else {
+			val = def;
+			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+		}
+	}
+	cout << "  " << key << " = " << val << endl;
+	return val;
+}
+
+
+int lookup_int_parameter(const map<string,string> &params,
+												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
+												 const string &key, int def=-1)
+{
+	int val;
+	auto val_it = params.find(key);
+	if (val_it != params.end()) {
+		val = stoi(val_it->second);
+	} else {
+		if (tomldata.contains(key)) {
+			val = toml::find<int>(tomldata,key);
+		} else {
+			val = def;
+			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+		}
+	}
+	cout << "  " << key << " = " << val << endl;
+	return val;
+}
+
+vector<string> string_split(const string &s)
+{
+	std::stringstream ss(s);
+	std::istream_iterator<std::string> begin(ss);
+	std::istream_iterator<std::string> end;
+	std::vector<std::string> vstrings(begin, end);
+	// std::copy(vstrings.begin(), vstrings.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+	return vstrings;
+}
+
+vector<string> lookup_stringlist_parameter(
+	const map<string,string> &params,
+	const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
+	const string &key)
+{
+	vector<string> val;
+	auto val_it = params.find(key);
+	if (val_it != params.end()) {
+		val = string_split(val_it->second);
+	} else {
+		if (tomldata.contains(key)) {
+			val = toml::find<vector<string>>(tomldata,key);
+		} else {
+			emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+		}
+	}
+	cout << "  " << key << " = ";
+
+	for (auto it = val.begin(); it != val.end(); it++) {
+		cout << *it << " ";
+	}
+	cout << endl;
+	return val;
+}
+
+
 int main(int argc, char** argv)
 {
 	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
@@ -149,6 +234,9 @@ int main(int argc, char** argv)
 	
 	data.outputdir="Output";                // The default output directory
 		
+	map<string,string> params;
+
+	// Store the parameters passed on the command line
 	for(op = 1; op < argc; op++){                                           // Goes the various input options
 		str = string(argv[op]);
 		j = 0; jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
@@ -159,123 +247,126 @@ int main(int argc, char** argv)
 		
 		command = str.substr(0,j);
 		value = str.substr(j+1,jmax-(j+1));
-		
-		flag = 0;
-		
-		if(command == "mode"){
-			flag = 1;
-			if(value == "sim"){ flag = 2; mode = MODE_SIM;}
-			if(value == "pmcmc"){ flag = 2; mode = MODE_PMCMC;}
-			if(value == "mbp"){ flag = 2; mode = MODE_MBP;}
-		}
-		
-		if(command == "model"){
-			flag = 1;
-			if(value == "irish"){ flag = 2; modelsel = MOD_IRISH;}
-		}
-		
-		if(command == "simtype"){
-			flag = 1;
-			if(value == "smallsim"){ flag = 2; data.simtype = "smallsim";}
-			if(value == "scotsim"){ flag = 2; data.simtype = "scotsim";}
-			if(value == "uksim"){ flag = 2; data.simtype = "uksim";}
-		}
-		
-		if(command == "npart"){
-			flag = 2;
-			int nparttot = atoi(value.c_str()); 
-			if(isnan(nparttot)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-			
-			if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
-			npart = nparttot/ncore;
-		}	
-		
-		if(command == "nchain"){
-			flag = 2;
-			unsigned int nchaintot = atoi(value.c_str()); 
-			if(isnan(nchaintot)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-			if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
-			nchain = nchaintot/ncore;
-		}	
-		
-		if(command == "nsamp"){
-			flag = 2;
-			nsamp = atoi(value.c_str()); 
-			if(isnan(nsamp)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-		}	
-		
-		if(command == "period"){
-			flag = 2;
-			period = atoi(value.c_str()); 
-			if(isnan(period)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-		}	
-		
-		if(command == "seed"){
-			flag = 2;
-			seed = atoi(value.c_str()); 
-			if(isnan(seed)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-		}	
-		
-		if(command == "transdata"){
-			flag = 2;
-			j = 0; jmax = value.length();
-			while(j < jmax && value.substr(j,1) != ",") j++;
-			if(j == jmax) emsg("Problem with transition data");
-			transdata.from = value.substr(0,j);
-			j++;
-			
-			jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
-			if(j == jmax) emsg("Problem with transition data");
-			transdata.to = value.substr(jst,j-jst);
-			j++;
-			
-			jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
-			if(j == jmax) emsg("Problem with transition data");
-			transdata.type = value.substr(jst,j-jst);
-			if(transdata.type != "reg" && transdata.type != "all") emsg("Transition data type not recognised"); 
-			j++;
-			
-			transdata.file = value.substr(j,jmax-j);
-			data.transdata.push_back(transdata);
-		}
-		
-		/*
-		if(command == "housedata"){
-			flag = 2;
-			data.housefile = value;
-		}
-		*/
-		
-		if(command == "outputdir"){
-			flag = 2;
-			data.outputdir = value;
-		}			
-		
-		if(flag == 0){
-			stringstream ss; ss << "Cannot understand the command '" << command << "'";			
-			emsg(ss.str());
+
+		if (params.count(command) == 0) {
+			params[command] = value;
+		} else {
+			// Encode repeated parameters as space-separatedd
+			params[command] += " " + value;
 		}
 
-		if(flag == 1){		
-			stringstream ss; ss << "Cannot understand the argument '" << value << "' for '" << command << "'";			
-			emsg(ss.str());
+		// params.push_back(make_pair(command,value));
+	}
+
+	string inputfilename = "/dev/null"; // Otherwise I don't know what type to use
+
+	if (params.count("inputfile") == 1)
+	{
+		inputfilename = params["inputfile"];
+	}
+
+  auto tomldata = toml::parse(inputfilename);
+
+	vector<string>  keys {"mode", "model", "simtype", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir"};
+
+	vector<string>  tomlkeys;
+
+	for (auto it = keys.begin(); it != keys.end(); it++)
+	{
+		string key = *it;
+		if (tomldata.contains(key))
+		{
+			tomlkeys.push_back(key);
+			// params[key] = toml::find<string>(tomldata,key);
 		}
 	}
+
+	/*********************************************************************************
+	/ Process parameters
+  /*********************************************************************************/
+
+	cout << endl << "Parameters:" << endl;
+
+	string key,val;
+
+	// mode
+	val = lookup_string_parameter(params, tomldata, "mode", "UNSET");
+	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"mbp", MODE_MBP}};
+	if (modemap.count(val) != 0) {
+		mode = modemap[val];
+	} else {
+		emsg("Unrecoginsed value " + val + " for mode parameter");
+	}
+
+	// model
+	val = lookup_string_parameter(params, tomldata, "model", "UNSET");
+	if (val == "irish") {
+		modelsel = MOD_IRISH;
+	} else {
+		emsg("Unrecognised value "+val+" for model parameter");
+	}
+
+	// simtype
+	data.simtype = lookup_string_parameter(params, tomldata, "simtype", "UNSET");
+	if (!(data.simtype == "smallsim" || data.simtype == "scotsim" ||
+				data.simtype == "uksim" || data.simtype == "")) {
+		emsg("Unrecognised value \'"+data.simtype+"\' for simtype parameter");
+	}
+
+	// npart
+	int nparttot = lookup_int_parameter(params, tomldata, "npart", npart);
+	if (npart != UNSET) {
+		if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
+		npart = nparttot/ncore;
+	}
+
+	// nchain
+	int nchaintot = lookup_int_parameter(params, tomldata, "nchain");
+	if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
+	nchain = nchaintot/ncore;
+
+	// nsamp
+	nsamp = lookup_int_parameter(params, tomldata, "nsamp");
+
+	// period
+	period = lookup_int_parameter(params, tomldata, "period");
+
+	// seed
+	seed = lookup_int_parameter(params, tomldata, "seed");
+
+	// transdata
+	vector<string> slval = lookup_stringlist_parameter(params, tomldata, "transdata");
+
+	for (auto it = slval.begin(); it != slval.end(); it++) {
+
+		string value = *it;
+
+		j = 0; jmax = value.length();
+		while(j < jmax && value.substr(j,1) != ",") j++;
+		if(j == jmax) emsg("Problem with transition data");
+		transdata.from = value.substr(0,j);
+		j++;
+			
+		jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
+		if(j == jmax) emsg("Problem with transition data");
+		transdata.to = value.substr(jst,j-jst);
+		j++;
+			
+		jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
+		if(j == jmax) emsg("Problem with transition data");
+		transdata.type = value.substr(jst,j-jst);
+		if(transdata.type != "reg" && transdata.type != "all") emsg("Transition data type not recognised"); 
+		j++;
+			
+		transdata.file = value.substr(j,jmax-j);
+		data.transdata.push_back(transdata);
+	}	
+
+	// outputdir
+	data.outputdir = lookup_string_parameter(params, tomldata, "outputdir", data.outputdir);
+
+	// End of parameters
+	cout << endl;
 	
 	if(mode == MODE_SIM && ncore != 1) emsg("Simulation only requires one core");
 	

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 using namespace std;
 
 const unsigned int MODE_SIM=0, MODE_PMCMC=1, MODE_MBP=2;         // Different modes of operation 
