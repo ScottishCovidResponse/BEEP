@@ -71,14 +71,14 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int nc
 	}
 
 	if(core == 0){ outputinit(data,model); outputLiinit(data,ncore*nchain);}
-		
+			
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 
 		time = clock();
 		short lo;
-		//for(lo = 0; lo < 10; lo++){
-		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
+		for(lo = 0; lo < 10; lo++){
+		//do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = int(ran()*int(model.param.size()));
 			if(model.param[th].min != model.param[th].max){
@@ -87,8 +87,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int nc
 				timeprop += clock();
 				ntimeprop++;
 			}
-		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-		//}
+		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
+		}
 		
 		timers.timewait -= clock();
 		//if(core == 0) cout << double(clock()-time)/CLOCKS_PER_SEC << " ti before\n";

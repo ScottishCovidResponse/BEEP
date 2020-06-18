@@ -149,10 +149,10 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 		if(data.transdata[td].type == "reg"){
 			for(r = 0; r < data.nregion; r++){
-				stringstream ss; ss << data.outputdir << "/" << name << "_" << data.regionname[r] << ".txt";
+				stringstream ss; ss << data.outputdir << "/" << name << "_" << data.region[r].name << ".txt";
 				ofstream dataout(ss.str().c_str());
 				
-				cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions for region '" << data.regionname[r] << "'." << endl;
+				cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions for region '" << data.region[r].name << "'." << endl;
 		
 				for(t = 0; t < data.period; t++){
 					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][r][t]);
@@ -243,7 +243,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 	vector< vector <FEV> > indev;
 	TRANS tr;
 	
-	nind = poptree.ind.size();
+	nind = data.ind.size();
 	indev.resize(nind);
 	for(d = 0; d < fev.size(); d++){
 		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
@@ -253,6 +253,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 	stringstream sst; sst << data.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	
+	/*
 	for(i = 0; i < nind; i++){
 		if(indev[i].size() > 0){
 			h = poptree.ind[i].houseref;
@@ -265,6 +266,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 			evsamp << endl;
 		}
 	}
+	*/
 }
 
 /// Outputs a population plot for event sequence xi
@@ -312,7 +314,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		tot = 0;
 		cout << endl << "The following number of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions were observed:" << endl;
 		for(r = 0; r < data.nregion; r++){
-			cout <<	data.regionname[r] << ": " << num[r] << endl;
+			cout <<	data.region[r].name << ": " << num[r] << endl;
 			tot += num[r];
 		}
 		cout << "Total: " << tot << endl; 
@@ -328,7 +330,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		else cout << "." << endl;
 		
 		transout << "Week"; 
-		for(r = 0; r < data.nregion; r++){ transout << "\t" << data.regionname[r];} transout << endl;
+		for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].name;} transout << endl;
 		for(t = 0; t < data.period; t++){
 			transout << t;
 			num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
@@ -343,6 +345,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		}
 	}
 	
+	/*
 	if(data.simtype == "smallsim" || data.simtype == "scotsim" || data.simtype == "uksim"){
 		ofstream houseout(data.housefile.c_str());
 		
@@ -354,6 +357,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 			houseout << data.house[h].x << " " << data.house[h].y << " " << data.house[h].region << endl;
 		}
 	}
+	*/
 	
 	cout << endl;
 }

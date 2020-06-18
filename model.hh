@@ -5,6 +5,7 @@
 using namespace std;
 
 #include "consts.hh"
+#include "data.hh"
 
 struct FEV {                               // Stores information about a compartmental transition
   int trans;                               // References the transition type
@@ -21,7 +22,6 @@ struct PARAM{                              // Store information about a model pa
 	double max;                              // The maximum value (assuming a uniform prior)
 	int betachange;                          // Set to one if there is a change in the beta spline
 	int suschange;                           // Set to one if there us a change in a fixed effect for susceptibility
-	int infchange;                           // Set to one if there us a change in a fixed effect for infectivity
 	int ntr, nac;                            // Store the number of proposals tried and accepted	
 	double jump;
 };
@@ -35,6 +35,7 @@ struct COMP{                               // Stores information about a compart
 	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
 
 	vector <int> trans;                      // The transitions leaving that compartment
+	int transtimep;                          // The time period transitions leaving that compartment
 
 	vector <double> prob, probsum;           // The probability of going down transition
 	vector <double> probi;                   // The probability of going down transition for initial state (MBP)
@@ -45,6 +46,7 @@ struct TRANS{                              // Stores information about a compart
 	int from;                                // Which compartment the individual is coming from
 	int to;                                  // Which compartment the individual is going to
 	int probparam;                           // The parameter for the probability of going down transition
+	vector <int> DQ;                         // The change in the Q tensor for going down the transition
 };
 
 class MODEL                                // Stores all the information about the model
@@ -54,11 +56,13 @@ public:
 
 	vector <double> settime;                 // The timings at which beta changes
 	vector <double> beta;                    // The value for beta at the various times
+	vector <double> sus;                     // The susceptibility for different demographic categories
 	
 	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
-		
-	int phiparam;   					   // Stores which parameters relate to phi and probA
+	vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
+			
+	int phiparam;               					   // Stores which parameters relate to phi and probA
 	int nspline;                             // The spline points which are parameters in the model
 	vector <double> splinet;                 // The times for the spline points
 	vector <PARAM> param;                    // Information about parameters in the model
@@ -69,15 +73,24 @@ public:
 	int ntr, nac;                            // Gets the base acceptance rate
 	
 	vector <int> fix_sus_param;              // The parameters related to fixed effect for susceptibility
-	vector <int> fix_inf_param;              // The parameters related to fixed effect for infectivity
+	
+	int ntimeperiod;                         // The number of different time periods (2: before and after lockdown)
+	vector <double> timeperiod;              // The timings of changes to Q;
+	
+	vector <vector <int> > nDQ;               // Stores the changes in the mixing matrix between areas and ages 
+	vector <vector< vector <int> > > DQto;
+	vector <vector <vector< vector <double> > > > DQval;
 	
 	double getparam(string name);
 	void simmodel(vector <FEV> &evlist, int i, int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
-	void definemodel(int core, double period, int popsize, int mod);
+	void definemodel(DATA &data, int core, double period, int popsize, int mod);
+	void addQ(DATA &data);
 	void betaspline(double period);
 	void priorsamp();
 	int settransprob();
+	void setsus(DATA &data);           
+	void checktransdata(DATA &data);
 	
 private:
 	void addcomp(string name, double infectivity, int type, string param1, string param2);

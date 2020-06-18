@@ -14,68 +14,180 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 
-/// Reads in transition and house data
-void DATA::readdata(int core, int mod, int per)
+/// Reads in transition and area data
+void DATA::readdata(int core, int ncore, int mod, int per)
 {
-	int t, tt, r, nu, h, hh, si, i, k, nreg, td;
-	string line, ele, name;
-	HOUSE ho;
-	vector <int> regionpop;
+	int t, tt, r, nu, h, hh, si, i, imax, k, nreg, td, j, jst, jmax, jj, c, cc, fl, d, dp, a1, a2, a, aa, vi, vf, q;
+	double v, sum, inf;
+	string line, ele, name, regcode;
+	REGION reg;
+	AREA are;
+	DEMOCAT dem;
+	IND indi;
+	vector <int> count;
+	vector <vector <double> > val;
 	
 	mode = mod;
 	period = per;
 	fediv = 100*per;
 	
 	if(core == 0){
-		int RX, RY;
+		//democatfile = "Data_uk/democat.txt";
+		democatfile = "Data_small/democat.txt";
+		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
+		do{
+			getline(demoin,line); line = strip(line);
+			if(demoin.eof()) break;
+			
+			j = 0; jmax = line.length(); while(j < jmax && line.substr(j,1) != ":") j++;
+			if(j == jmax) emsg("Problem loading: ",democatfile);
+			dem.name = line.substr(0,j);
+			j++;
+			
+			dem.value.clear();
+			while(j < jmax){	
+				while(j < jmax && line.substr(j,1) == " " ) j++;
+				jst = j;
+				while(j < jmax && line.substr(j,1) != "," ) j++;
+				dem.value.push_back(line.substr(jst,j-jst));
+				j++;
+			}
+			democat.push_back(dem);
+		}while(1 == 1);
+		ndemocat = democat.size();
+		nage = democat[0].value.size();
 		
-		if(mode == MODE_SIM){      
-			if(simtype == "smallsim"){ RX = 2; RY = 2; popsize = 10000; nhouse = 1024;}  
-			else{
-				if(simtype == "scotsim"){ RX = 4; RY = 4; popsize = 5500000; nhouse = 1500000;}
-				else{
-					if(simtype == "uksim"){ RX = 10; RY = 10; popsize = 68000000; nhouse = 20000000;}
-					else emsg("The property 'simtype' is wrong");
-				}
+		cout << "Demographic information:" << endl;
+		for(d = 0; d < ndemocat; d++){
+			cout << democat[d].name << ": "; 
+			for(j = 0; j < democat[d].value.size(); j++){
+				if(j > 0) cout << ",";
+				cout << democat[d].value[j] << " ";
 			}
-	
-			nregion = RX*RY;
-				
-			for(r = 0; r < nregion; r++){
-				stringstream ss; ss << "region" << r%RX << "_" << r/RX; regionname.push_back(ss.str());
-			}
-	
-			for(h = 0; h < nhouse; h++){                            // Randomly distributes houses
-				ho.x = ran();
-				ho.y = ran();
-				ho.region = int(ho.y*RY)*RX + int(ho.x*RX);
-				house.push_back(ho);
-			}
+			cout << endl;
 		}
 		
-		if(mode != MODE_SIM){            // Loads houses	
-			ifstream housein(housefile.c_str());
-			if(housein.fail()){
-				stringstream ss; ss << "The file '" << housefile << "' does not exist";
-				emsg(ss.str());
-			}
-			
-			getline(housein,line); 
-			stringstream ssh(line);	
-			ssh >> popsize >> nhouse >> nregion;
-			for(r = 0; r < nregion; r++){
-				getline(housein,name); name = name.substr(0,name.length());
-				regionname.push_back(name);
-			}
+		count.resize(ndemocat);                                     // Defines all the demographic states
+		for(c = 0; c < ndemocat; c++) count[c] = 0;
+		
+		do{
+			democatpos.push_back(count);
+			c = ndemocat-1;
+			do{
+				fl = 0;
+				count[c]++; if(count[c] == democat[c].value.size()){ fl = 1; count[c] = 0; c--;}
+			}while(fl == 1 && c >= 0);
+		}while(c >= 0);
+		ndemocatpos = democatpos.size();
+		ndemocatposperage = ndemocatpos/nage;
 
-			regionpop.resize(nregion); for(r =0; r < nregion; r++) regionpop[r] = 0;
-			for(h = 0; h < nhouse; h++){
-				housein >> ho.x >> ho.y >> ho.region;
-				house.push_back(ho);
-				regionpop[ho.region]++;
+		//regiondatafile = "Data_uk/regiondata.txt";                                  // Loads information about data regions
+		regiondatafile = "Data_small/regiondata.txt";  
+		ifstream regionin(regiondatafile.c_str());      	
+		do{
+			getline(regionin,line); line = strip(line);
+			if(regionin.eof()) break;
+			stringstream ss(line);
+			getline(ss,reg.name,'\t');
+			getline(ss,reg.code,'\t');
+			region.push_back(reg);
+		}while(1 == 1);
+		nregion = region.size();
+		
+		cout << "Region data loaded\n";
+		//for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload\n";
+	
+		//areadatafile = "Data_uk/areadata.txt";                                    // Loads information about areas
+		areadatafile = "Data_small/areadata.txt";  
+		ifstream areain(areadatafile.c_str());      
+		
+		getline(areain,line);
+		do{
+			getline(areain,line); line = strip(line);
+			if(areain.eof()) break;
+			
+			stringstream ss(line);	
+			
+			are.noderef = -1;
+			ss >> are.code >> are.x >> are.y >> regcode >> are.density;
+			
+			r = 0; while(r < nregion && region[r].code != regcode) r++;
+			if(r == nregion) emsg("Region code not recognised: ",regcode);
+			are.region = r;
+			
+			val.resize(democat.size());
+			for(d = 0; d < democat.size(); d++){
+				jmax = democat[d].value.size();
+				val[d].resize(jmax);
+				for(j = 0; j < jmax; j++){
+					ss >> val[d][j];
+					if(isnan(val[d][j])) emsg("Data: EC10");	
+				}
 			}
 			
-			for(r = 0; r < nregion; r++) cout << regionname[r] << "  # Houses: " << regionpop[r] << endl;
+			are.agepop.resize(nage);
+			for(a = 0; a < nage; a++){
+				are.agepop[a] = val[0][a];
+			}
+				
+			are.pop.resize(ndemocatpos);
+			for(dp = 0; dp < ndemocatpos; dp++){
+				for(j = 0; j < democat.size(); j++){
+					if(j == 0) v = val[j][democatpos[dp][j]];
+					else v *= val[j][democatpos[dp][j]]/100.0;
+				}
+				are.pop[dp] = int(v+0.5);
+			}
+		
+			area.push_back(are);
+		}while(1 == 1);
+		narea = area.size();
+		
+		cout << "Areas loaded" << endl;
+		if(1 == 1){
+			for(c = 0; c < narea; c++){
+				cout << nregion << " " << area[c].region << "region\n";
+				cout << area[c].noderef << " " << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
+			
+				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
+				cout << endl;	
+			}
+		}			
+
+		//Mdatafile = "Data_uk/Mdata_cut.txt";                                          // Loads information about mixing matrix
+		Mdatafile = "Data_small/Mdata.txt";
+		ifstream Min(Mdatafile.c_str());      
+		getline(Min,line);
+		
+		nM.resize(narea); Mto.resize(narea); Mval.resize(narea);
+		do{
+			getline(Min,line);
+			if(Min.eof()) break;
+			
+			stringstream ss(line);	
+			ss >> a1 >> a2 >> v;
+			Mto[a1].push_back(a2); Mval[a1].push_back(v);
+			if(a1 != a2){ Mto[a2].push_back(a1); Mval[a2].push_back(v);}
+		}while(1 == 1);
+		
+		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
+
+		//Ndatafile = "Data_uk/Ndata.txt";                                          // Loads information about age mixing
+		Ndatafile = "Data_small/Ndata.txt";   
+		ifstream Nin(Ndatafile.c_str());      
+
+		N.resize(nage);
+		for(j = 0; j < nage; j++){
+			getline(Nin,line);
+			stringstream ss(line);	
+			for(jj = 0; jj < nage; jj++){
+				ss >> v;
+				N[j].push_back(v);
+			}
+		}		
+		
+		for(j = 0; j < nage; j++){
+			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N\n";
 		}
 		
 		if(mode != MODE_SIM){        // Loads transition data for inference
@@ -85,17 +197,17 @@ void DATA::readdata(int core, int mod, int per)
 				ifstream transin(transdata[td].file.c_str());                            // Loads the transition data
 			
 				if(transin.fail()){
-					stringstream ss; ss << "The file '" << housefile << "' does not exist";
+					stringstream ss; ss << "The file '" << transdata[td].file << "' does not exist";
 					emsg(ss.str());
 				}
 			
-				nreg = 0;                                                                // Checks regions names match with house file
+				nreg = 0;                                                                // Checks regions names match with area file
 				getline(transin,line);
 				stringstream ss(line);
 				getline(ss,ele,'\t');
 				while(!ss.eof()){
 					getline(ss,ele,'\t');
-					if(ele != regionname[nreg]) emsg("Data: EC12");
+					if(ele != region[nreg].name) emsg("Data: EC12");
 					nreg++;
 				}
 				
@@ -118,23 +230,96 @@ void DATA::readdata(int core, int mod, int per)
 				}
 			}
 		}
-		
-		for(h = 0; h < nhouse; h++) house[h].ind.push_back(h);   // Randomly distributes individuals into houses
-    
-		for(i = nhouse; i < popsize; i++){
-			h = int(ran()*nhouse);
-			house[h].ind.push_back(i);
+	}
+	
+	if(ncore > 1) copydata(core);
+	
+	for(c = 0; c < narea; c++){                                              // Adds individuals to the system
+		area[c].ind.resize(ndemocatpos);
+		for(dp = 0; dp < ndemocatpos; dp++){
+			imax = area[c].pop[dp];	
+			for(i = 0; i < imax; i++){
+				area[c].ind[dp].push_back(ind.size());
+				
+				indi.area = c;
+				indi.dp = dp;
+				ind.push_back(indi);
+			}
 		}
 	}
+	popsize = ind.size();
+
+	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
+	nardp = narea*ndemocatpos; 
+
+	ntimeperiod = 2;
+	timeperiod.push_back(period/2); timeperiod.push_back(large);      // lockdown happens half way
+	Qnum = 6;
+	
+	Qcomp.resize(Qnum); Qtimeperiod.resize(Qnum); 
+	nQ.resize(Qnum); Qto.resize(Qnum); Qval.resize(Qnum);
+	for(q = 0; q < Qnum; q++){
+		switch(q){
+			case 0: Qcomp[q] = "I"; Qtimeperiod[q] = 0; break;
+			case 1: Qcomp[q] = "I"; Qtimeperiod[q] = 1; break;
+			case 2: Qcomp[q] = "P"; Qtimeperiod[q] = 0; break;
+			case 3: Qcomp[q] = "P"; Qtimeperiod[q] = 1; break;
+			case 4: Qcomp[q] = "A"; Qtimeperiod[q] = 0; break;
+			case 5: Qcomp[q] = "A"; Qtimeperiod[q] = 1; break;
+		}
+		
+		nQ[q].resize(narage); Qto[q].resize(narage); Qval[q].resize(narage);
+		for(c = 0; c < narea; c++){
+			for(a = 0; a < nage; a++){
+				vi = c*nage + a;
+			
+				for(j = 0; j < nM[c]; j++){
+					cc = Mto[c][j]; v = Mval[c][j]; 
+					if(Qtimeperiod[q] == 1) v = sqrt(v);                       // Distribution changed after lockdown
+				
+					k = Qto[q][vi].size();
+					Qto[q][vi].push_back(cc);
+					Qval[q][vi].push_back(vector <double> ());
+					for(aa = 0; aa < nage; aa++) Qval[q][vi][k].push_back(N[a][aa]*v);
+				}
+			}
+		}
+		
+		for(vi = 0; vi < narage; vi++) nQ[q][vi] = Qto[q][vi].size();
+	                                              
+		for(vi = 0; vi < narage; vi++){                                  // Normalisation
+			sum = 0; 
+			for(j = 0; j < nQ[q][vi]; j++){
+				c = Qto[q][vi][j];
+				for(a = 0; a < nage; a++) sum += Qval[q][vi][j][a]*area[c].agepop[a];
+			}
+			for(j = 0; j < nQ[q][vi]; j++){
+				for(a = 0; a < nage; a++) Qval[q][vi][j][a] /= sum;
+			}
+		}
+	}
+}
+
+/// Copies data from core zero to all the others
+void DATA::copydata(int core)
+{
+	int td, si;
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
-		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
-		pack(popsize);	
+		pack(ndemocat);
+		pack(democat);
+		pack(ndemocatpos);
+		pack(democatpos);
 		pack(nregion);
-		pack(regionname);
-		pack(nhouse);
-		pack(regionpop);
+		pack(region);
+		pack(narea);
+		pack(area);
+		pack(nM);
+		pack(Mto);
+		pack(Mval);
+		pack(N);
+		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
 		si = packsize();
 	}
 	
@@ -143,36 +328,24 @@ void DATA::readdata(int core, int mod, int per)
 		
 	if(core != 0){
 		packinit();
-		for(td = 0; td < transdata.size(); td++) unpack(transdata[td].num);
-		unpack(popsize);
+		unpack(ndemocat);
+		unpack(democat);
+		unpack(ndemocatpos);
+		unpack(democatpos);
 		unpack(nregion);
-		unpack(regionname);
-		unpack(nhouse);
-		unpack(regionpop);
+		unpack(region);
+		unpack(narea);
+		unpack(area);
+		unpack(nM);
+		unpack(Mto);
+		unpack(Mval);
+		unpack(N);
+		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
 		if(si != packsize()) emsg("Data: EC9");
 	}
-
-	h = 0; 
-	do{                                                      // Houses are copied in pieces because they fill up the buffer
-		hh = h + 10000; if(hh > nhouse) hh = nhouse;
-		if(core == 0){ packinit(); pack(house,h,hh); si = packsize();}
-		
-		MPI_Bcast(&si,1,MPI_INT,0,MPI_COMM_WORLD);
-		MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
-		if(core != 0){ packinit(); unpack(house,h,hh);}
-		h = hh;
-	}while(h < nhouse);
-		
-	housedensity();
 }
 
-/// Loads the mixing matrix from census flow data
-void DATA::loadM()
-{
-	// "/nfs/tmpshare/stephen/COVID-19 census data/MSOA level/contact matrix.txt"	
-}
-
+/*
 /// Calculates density of houses for a given house
 void DATA::housedensity()
 {
@@ -210,27 +383,16 @@ void DATA::housedensity()
 		house[h].density = val;
 	}
 }
+*/
 
-/// Check that the transition data is correct
-void DATA::checktransdata(MODEL &model)
+string DATA::strip(string line)
 {
-	short td, tra;
-	string from, to;
-	TRANS tr;
-	
-	for(td = 0; td < transdata.size(); td++){
-		from = transdata[td].from; to = transdata[td].to; 
-		for(tra = 0; tra < model.trans.size(); tra++){
-			tr = model.trans[tra];
-			if(model.comp[tr.from].name == from && model.comp[tr.to].name == to) break;
-		}
-		
-		if(tra == model.trans.size()){
-			stringstream ss; ss << "Cannot find the transition " << from << "→" << to << ".";
-			emsg(ss.str());
-		}
+	int len = line.length();
+	if(len > 0){
+		if(line.substr(len-1,1) == "\r") line = line.substr(0,len-1);
 	}
-}
+	return line;
+}	
 
 void DATA::sortX(vector <int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <int> &vec){ sort(vec.begin(),vec.end(),compY);}

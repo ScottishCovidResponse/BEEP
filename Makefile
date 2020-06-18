@@ -1,7 +1,7 @@
 MPICXX := mpicxx
 CXXFLAGS := -g -O3
 
-srcs :=    output.cc model.cc  MBP.cc obsmodel.cc MBPCHAIN.cc PMCMC.cc analysis.cc data.cc  pack.cc PART.cc  timers.cc utils.cc simulate.cc poptree.cc 
+srcs :=MBPCHAIN.cc model.cc  PART.cc   poptree.cc  data.cc    PMCMC.cc analysis.cc pack.cc timers.cc utils.cc simulate.cc  output.cc  MBP.cc obsmodel.cc
 #srcs :=  pack.cc PART.cc PMCMC.cc data.cc output.cc analysis.cc timers.cc utils.cc model.cc simulate.cc poptree.cc 
 
 hdrs := $(wildcard *.h) $(wildcard *.hh)

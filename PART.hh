@@ -26,14 +26,17 @@ class PART                                 // Stores all the things related to a
 	
  	double Li;                              // The observation likelihood
  	
-	vector <double> ffine;                  // Stores the force of infection on nodes on the fine scale
 	vector <vector <int> > indinf;          // Lists all infected individuals 	
 		
 	vector <vector <double> > sussum;       // The total susceptibility for nodes on different levels 
-	//vector <vector <double> > sussumheff; // The total susceptibility for household effect for nodes on different levels 
+	vector <vector <double> > sussumst;     // The total susceptibility for nodes on different levels 
 	vector <vector <double> > Rtot;         // The total infection rate for nodes on different levels
-	vector <vector <double> > addlater;     // A change to the rates Rtot which may be performed later when sampling is performed
-
+	
+	vector <vector <double> > Qmap;         // The infectivity acting on different areas and age groups
+	
+	vector <vector <double> > susage;       // The total susceptibility for different age / area combination
+	vector <vector <double> > susagest;     // The total susceptibility for different age / area combination
+	
 	int fediv;
 	vector < vector <FEV> > fev;            // Stores all compartmental transitions
 	
@@ -62,7 +65,7 @@ class PART                                 // Stores all the things related to a
 		void addinfc(int c, double t);
 		void addfev(FEV fe, double period, double tnow);
 		void copy(const PART &other, int fedivmin);
-		void check(int num);
+		void check(int num, double t);
 		
 		void partpack(int fedivmin);
 		void partunpack(int fedivmin);

@@ -73,3 +73,10 @@ void emsg(string msg)
 	MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
+
+void emsg(string msg, string msg2)
+{
+	cout << msg << msg2 << endl;
+	MPI_Finalize();
+	exit (EXIT_FAILURE);
+}

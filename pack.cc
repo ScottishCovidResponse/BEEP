@@ -11,6 +11,7 @@ using namespace std;
 #include "PART.hh"
 #include "consts.hh"
 #include "utils.hh"
+#include "data.hh"
 
 static int k;
 
@@ -39,6 +40,13 @@ void pack(int num)
 void pack(double num)
 {
 	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");
+}
+
+void pack(string &vec)
+{
+	int jmax, j;
+	jmax = vec.length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(j = 0; j < jmax; j++){ buffer[k] = vec.at(j); k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
 void pack(vector <int> &vec)
@@ -100,6 +108,7 @@ void pack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
 	}
 }
 
+/*
 void pack(vector <HOUSE> &vec, int min, int max)
 {
 	int imax, i, jmax, j;
@@ -112,6 +121,43 @@ void pack(vector <HOUSE> &vec, int min, int max)
 		for(j = 0; j < jmax; j++){ buffer[k] = vec[i].ind[j]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}  
 	}
 }
+*/
+
+void pack(vector <AREA> &vec)
+{
+	int imax, i;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(i = 0; i < imax; i++){
+		pack(vec[i].noderef);
+		pack(vec[i].code);
+		pack(vec[i].region);
+		pack(vec[i].x);
+		pack(vec[i].y);
+		pack(vec[i].density);
+		pack(vec[i].agepop);
+		pack(vec[i].pop);
+	}
+}
+
+void pack(vector <REGION> &vec)
+{
+	int imax, i;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(i = 0; i < imax; i++){
+		pack(vec[i].name);
+		pack(vec[i].code);
+	}
+}
+
+void pack(vector <DEMOCAT> &vec)
+{
+	int imax, i;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(i = 0; i < imax; i++){
+		pack(vec[i].name);
+		pack(vec[i].value);
+	}
+}
 
 void unpack(int &num)
 {
@@ -121,6 +167,15 @@ void unpack(int &num)
 void unpack(double &num)
 {
 	num = buffer[k]; k++;
+}
+
+void unpack(string &vec)
+{
+	int jmax, j;
+	
+	jmax = buffer[k]; k++;
+	stringstream ss; for(j = 0; j < jmax; j++){ ss << (char) buffer[k]; k++;}
+	vec = ss.str();
 }
 
 void unpack(vector <int> &vec)
@@ -183,6 +238,7 @@ void unpack(vector< vector <FEV> > &vec, int fedivmin, int fedivmax)
 	}
 }
 
+/*
 void unpack(vector <HOUSE> &vec, int min, int max)
 {
 	int imax, i, jmax, j;
@@ -193,5 +249,42 @@ void unpack(vector <HOUSE> &vec, int min, int max)
 		vec[i].region = buffer[k]; k++; 
 		jmax = buffer[k]; k++; vec[i].ind.resize(jmax);
 		for(j = 0; j < jmax; j++){ vec[i].ind[j] = buffer[k]; k++;}  
+	}
+}
+*/
+
+void unpack(vector <AREA> &vec)
+{
+	int imax, i;
+	imax = buffer[k]; k++; vec.resize(imax); 
+	for(i = 0; i < imax; i++){
+		unpack(vec[i].noderef);
+		unpack(vec[i].code);
+		unpack(vec[i].region);
+		unpack(vec[i].x);
+		unpack(vec[i].y);
+		unpack(vec[i].density);
+		unpack(vec[i].agepop);
+		unpack(vec[i].pop);
+	}
+}
+
+void unpack(vector <REGION> &vec)
+{
+	int imax, i;
+	imax = buffer[k]; k++; vec.resize(imax); 
+	for(i = 0; i < imax; i++){
+		unpack(vec[i].name);
+		unpack(vec[i].code);
+	}
+}
+
+void unpack(vector <DEMOCAT> &vec)
+{
+	int imax, i;
+	imax = buffer[k]; k++; vec.resize(imax); 
+	for(i = 0; i < imax; i++){
+		unpack(vec[i].name);
+		unpack(vec[i].value);
 	}
 }

@@ -34,8 +34,8 @@ PART* part[partmax];                       // Pointers to each of the particles
 
 void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int ncore, int npart)
 {
-	const int fixinvT = 0.1;                   // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
-	double invT = 1;                         // The inverse temperature (used to relax the observation model)
+	const int fixinvT = 1;                   // Detemines if the inverse temperature invT is fixed or is dynamically tuned 
+	double invT = 0.1;                       // The inverse temperature (used to relax the observation model)
 	vector < vector <FEV> > xi, xp;          // Stores the current and proposed event sequences
 	vector <SAMPLE> opsamp;                  // Stores sample for generating statistics later
 	vector <PARAM> &param(model.param);      // Copies parameters from the model
@@ -87,8 +87,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 				MPI_Bcast(&model.paramval[p],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 				if(param[p].betachange == 1) model.betaspline(data.period);
-				if(param[p].suschange == 1) poptree.setsus(model);
-				if(param[p].infchange == 1) poptree.setinf(model);
+				if(param[p].suschange == 1) model.setsus(data);
 				
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
@@ -117,8 +116,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, int nsamp, int core, int 
 				else{
 					model.paramval[p] = valst;
 					if(param[p].betachange == 1) model.betaspline(data.period);
-					if(param[p].suschange == 1) poptree.setsus(model);
-					if(param[p].infchange == 1) poptree.setinf(model);
+					if(param[p].suschange == 1) model.setsus(data);
 				
 					if(core == 0){
 						if(samp < burnin) param[p].jump *= 0.95;

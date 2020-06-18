@@ -75,7 +75,7 @@ vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 			for(k = 0; k < fev[d].size(); k++){
 				fe = fev[d][k];
 				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[data.house[poptree.ind[fe.ind].houseref].region]++;
+				if(fe.t > ti && fe.trans == tra) num[data.area[data.ind[fe.ind].area].region]++;
 			}
 		}
 	}

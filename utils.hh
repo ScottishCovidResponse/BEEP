@@ -11,6 +11,7 @@
 using namespace std;
 
 void emsg(string msg);
+void emsg(string msg, string msg2);
 double ran();
 double normal(float mu, float sd);
 double gammasamp(double a, double b);
