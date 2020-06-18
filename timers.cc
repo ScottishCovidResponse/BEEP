@@ -11,4 +11,6 @@ void timersinit()
 	timers.timeboot = 0;
 	timers.timembp = 0;
 	timers.timewait = 0;
+	timers.timembpQmap = 0;
+	timers.timembpprop = 0;
 }

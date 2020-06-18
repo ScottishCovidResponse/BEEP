@@ -5,18 +5,10 @@ Compile using: make
 INPUTS:
 
 Simulation:         
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
-
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=20 transdata=E,A,all,transEA.txt transdata=A,R,all,transAR.txt transdata=E,P,all,transEP.txt transdata=P,I,all,transPI.txt  transdata=I,R,all,transIR.txt transdata=I,H,all,transIH.txt transdata=H,R,all,transHR.txt transdata=H,D,all,transHD.txt housedata=house.txt
-
-mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=20 transdata=E,A,all,transEA.txt transdata=A,R,all,transAR.txt transdata=E,P,all,transEP.txt transdata=P,I,all,transPI.txt  transdata=I,R,all,transIR.txt transdata=I,H,all,transIH.txt transdata=H,R,all,transHR.txt transdata=H,D,all,transHD.txt housedata=house.txt
-
-
-mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=300 period=20 transdata=E,A,all,transEA.txt transdata=E,P,all,transEP.txt  housedata=house.txt
-
+mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference:    
-mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
+mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference:  
 mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
@@ -71,7 +63,6 @@ Inference - The output directory contains postior information (with means and 90
 4) "trace.txt", which gives trace plots for different models.
 5) "traceLi.txt", which gives trace plots for the likelihoods on different chains (MBPs only).
 6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorthm.
-
 */
 
 /*
@@ -98,7 +89,7 @@ Inference - The output directory contains postior information (with means and 90
 
 #include "simulate.hh"
 #include "PMCMC.hh"
-#include "gitversion.hh"
+//#include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
 
@@ -106,26 +97,27 @@ using namespace std;
  
 int main(int argc, char** argv)
 {
-	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+	//cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 
-	int ncore, core;                          // Stores the number of cores and the core of the current process
-	int nsamp=-1;                             // The number of samples for inference
+	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
+	unsigned int nsamp=0;                     // The number of samples for inference
+	unsigned int nchain=0;                    // The number of chains per core (MBP only)
+	unsigned int npart=0;                             // The number of particles per core (PMCMC only)
+	
 	int mode=-1;                              // Sets the mode of operation (sim/PMCMC/MBP)
   int modelsel=-1;                          // Sets the model used
-	int npart=-1;                             // The number of particles per core (PMCMC only)
-	int nchain=-1;                            // The number of chains per core (MBP only)
-	int narea=-1;                             // The number of areas into which houses are seperated
 	int period=-1;                            // The period of time for simulation / inference
 	int seed=0;                               // Sets the random seed for simulation
 	
-	int op, j, jst, jmax, flag;
+	unsigned int op, j, jst, jmax, flag;
 	TRANSDATA transdata;
 	string str, command, value;
 
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD,&ncore);
-  MPI_Comm_rank(MPI_COMM_WORLD,&core);
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore =num;
+  MPI_Comm_rank(MPI_COMM_WORLD,&num); core =num;
   #endif
 	
 	#ifndef USE_MPI
@@ -133,7 +125,9 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 
-	DATA data; data.housefile=""; data.outputdir="Output";                // The default output directory
+	DATA data; 
+	data.areadatafile=""; data.democatfile="";
+	data.outputdir="Output";                // The default output directory
 		
 	for(op = 1; op < argc; op++){                                           // Goes the various input options
 		str = string(argv[op]);
@@ -167,6 +161,7 @@ int main(int argc, char** argv)
 			if(value == "uksim"){ flag = 2; data.simtype = "uksim";}
 		}
 		
+		/*
 		if(command == "area"){
 			flag = 2;
 			narea = atoi(value.c_str()); 
@@ -175,6 +170,7 @@ int main(int argc, char** argv)
 				emsg(ss.str());
 			}
 		}	
+		*/
 		
 		if(command == "npart"){
 			flag = 2;
@@ -190,7 +186,7 @@ int main(int argc, char** argv)
 		
 		if(command == "nchain"){
 			flag = 2;
-			int nchaintot = atoi(value.c_str()); 
+			unsigned int nchaintot = atoi(value.c_str()); 
 			if(isnan(nchaintot)){
 				stringstream ss; ss << "Value '" << value << "' is not a number";
 				emsg(ss.str());
@@ -249,10 +245,12 @@ int main(int argc, char** argv)
 			data.transdata.push_back(transdata);
 		}
 		
+		/*
 		if(command == "housedata"){
 			flag = 2;
 			data.housefile = value;
 		}
+		*/
 		
 		if(command == "outputdir"){
 			flag = 2;
@@ -279,22 +277,22 @@ int main(int argc, char** argv)
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if(period==-1) emsg("The property 'period' must be set");
-	if(data.housefile=="") emsg("The property 'housedata' must be set");
+	//if(data.housefile=="") emsg("The property 'housedata' must be set");
 	
-	data.readdata(core,mode,period);
+	data.readdata(core,ncore,mode,period);
 
-	if(narea==-1) emsg("The property 'narea' must be set"); 
+	//if(narea==-1) emsg("The property 'narea' must be set"); 
 	
 	POPTREE poptree;
-	poptree.init(data,core,narea);	
+	poptree.init(data,core);	
 		
 	MODEL model;
-	model.definemodel(core,data.period,data.popsize,modelsel);
+	model.definemodel(data,core,data.period,data.popsize,modelsel);
+	model.addQ(data);
 	
-	data.checktransdata(model);
+	model.checktransdata(data);
 	
-	poptree.setsus(model);
-	poptree.setinf(model);
+	model.setsus(data);
 	
 	if(core == 0) cout << "Running...." << endl;
 
@@ -309,14 +307,14 @@ int main(int argc, char** argv)
 		break;
 		
 	case MODE_PMCMC:
-		if(nsamp == -1) emsg("The number of samples must be set");
-		if(npart == -1) emsg("The number of particles must be set");
+		if(nsamp == 0) emsg("The number of samples must be set");
+		if(npart == 0) emsg("The number of particles must be set");
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 
 	case MODE_MBP: 
-		if(nsamp == -1) emsg("The number of samples must be set");
-		if(nchain == -1) emsg("The number of chains must be set");
+		if(nsamp == 0) emsg("The number of samples must be set");
+		if(nchain == 0) emsg("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
 		break;
 
@@ -329,8 +327,11 @@ int main(int argc, char** argv)
 		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
 		if(mode != MODE_MBP) cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time (seconds)" << endl;
 		if(mode == MODE_PMCMC) cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
 		if(mode == MODE_MBP) cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+		if(mode == MODE_MBP) cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
 	}
 	
 	#ifdef USE_MPI

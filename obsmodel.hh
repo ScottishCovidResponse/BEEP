@@ -15,8 +15,8 @@ using namespace std;
 #include "poptree.hh"
 #include "PART.hh"
 
-vector <int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, int ti, int tf);
+vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, unsigned int ti, unsigned int tf);
 double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, double invT);
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree, int w, vector < vector <FEV> > &fev, double invT);
+double Lobs(DATA &data, MODEL &model, POPTREE &poptree, unsigned int w, vector < vector <FEV> > &fev, double invT);
 
 	

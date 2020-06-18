@@ -30,9 +30,9 @@ jobs:
 
     - name: Run simulation
       run: |
-        mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee simulation-log.txt
+        mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt | tee simulation-log.txt
         mkdir Simulation
-        cp cases.txt deaths.txt house.txt simulation-log.txt Simulation
+        cp cases.txt deaths.txt simulation-log.txt Simulation
         ls Simulation
 
     - name: Upload simulation results
@@ -43,7 +43,7 @@ jobs:
 
     - name: Run inference
       run: |
-        mpirun -n 2 ./run mode=mbp model=irish area=1024 nchain=2 nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output | tee inference-log.txt
+        mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt | tee inference-log.txt
         echo "Exit code: $?"
         cp inference-log.txt Output
 
@@ -56,7 +56,7 @@ jobs:
     - name: Check output files
       run: |
         failures=0
-        required_files="cases.txt deaths.txt house.txt"
+        required_files="cases.txt deaths.txt"
 
         for f in $required_files ; do
           if [ ! -r "$f" ]; then
@@ -65,7 +65,17 @@ jobs:
           fi
         done
 
-        required_files="cases_region0_0.txt cases_region0_1.txt cases_region1_0.txt cases_region1_1.txt deaths.txt MCMCdiagnostic.txt parameters.txt R0.txt traceLi.txt trace.txt"
+        required_files="
+          MCMCdiagnostic.txt
+          R0.txt
+          cases_R0.txt
+          cases_R1.txt
+          cases_R2.txt
+          cases_R3.txt
+          deaths.txt
+          parameters.txt
+          trace.txt
+          traceLi.txt"
 
         for f in $required_files ; do
           if [ ! -r "Output/$f" ]; then
