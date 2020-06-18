@@ -21,21 +21,23 @@ make
 
 Simulation:  
        
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
-
+mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference (expected to be best under most circumstances):   
  
-mpirun -n 20 ./run mode=mbp model=irish area=1024 nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
-
+mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=100 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference (an alternative):  
+
+(TODO: update this)
 
 mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
 
 The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
 
 INPUTS:
+
+(TODO: update this)
 
 Here is a description of the various inputs:
 
@@ -72,6 +74,8 @@ Here is a description of the various inputs:
 	
 	
 OUTPUTS:
+
+(TODO: update this)
 
 Simulation - This creates the specified 'transdata' and 'housedata' files along with output directory containing:
 1) Plots for the transitions corresponding to the 'transdata' files.
