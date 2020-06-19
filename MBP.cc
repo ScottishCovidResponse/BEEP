@@ -30,7 +30,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 {
 	unsigned int p, pp, th, nchaintot = ncore*nchain, loop, loopmax=1000, co;
 	unsigned int samp, burnin = nsamp/4;
-	long timeprop=0, ntimeprop=0;
+	long time, timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	PART *part;
@@ -75,10 +75,10 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 
-		//time = clock();
-		short lo;
-		for(lo = 0; lo < 10; lo++){
-		//do{                         // Does proposals for timeloop seconds (on average 10 proposals)
+		time = clock();
+		//short lo;
+		//for(lo = 0; lo < 10; lo++){
+		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = (unsigned int)(ran()*model.param.size());
 			if(model.param[th].min != model.param[th].max){
@@ -87,8 +87,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				timeprop += clock();
 				ntimeprop++;
 			}
-		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-		}
+		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
+		//}
 		
 		timers.timewait -= clock();
 		
@@ -109,10 +109,12 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		swap(model,core,ncore,nchain);
 		
 		MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		
+		if(samp != 0 && samp%100 == 0){
+			if(core == 0) outputresults(data,model,opsamp);
+			MBPdiagnostic(data,model,core,ncore,nchain);
+		}
 	}
-			
-	if(core == 0) outputresults(data,model,opsamp);
-	MBPdiagnostic(data,model,core,ncore,nchain);
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 

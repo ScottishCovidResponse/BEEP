@@ -244,7 +244,7 @@ void MBPCHAIN::mbpinit()
 	lami.resize(data.nardp); lamp.resize(data.nardp);
 	for(w = 0; w < data.nardp; w++){
 		c = w/data.ndemocatpos; dp = w%data.ndemocatpos;
-		
+
 		if(data.area[c].pop[dp] != indbothlist[w].size()) emsg("MBPchain: EC21");
 		susbothi[w] = model.susi[dp]*data.area[c].pop[dp];
 		susbothp[w] = model.susp[dp]*data.area[c].pop[dp];
@@ -331,7 +331,7 @@ void MBPCHAIN::mbp()
 		default: emsg("MBP: EC4"); break;
 		}
 		
-		if(ninftotprop >= INFMAX) return;  // This limits the total number of infections within the system
+		if(ninftotprop >= INFMAX) break;  // This limits the total number of infections within the system
 	}while(t < tmax);
 
 	if(checkon == 1) check(1,t);
