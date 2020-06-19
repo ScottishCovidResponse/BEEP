@@ -22,7 +22,7 @@ void packinit()
 	k = 0;
 }
 
-unsigned int packsize()
+int packsize()
 {
 	return k;
 }

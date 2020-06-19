@@ -17,15 +17,15 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q;
-	int c;
+	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q;
+	int dc;
 	double v, sum;
 	string line, ele, name, regcode;
 	REGION reg;
 	AREA are;
 	DEMOCAT dem;
 	IND indi;
-	vector <int> count;
+	vector <unsigned int> count;
 	vector <vector <double> > val;
 	
 	mode = mod;
@@ -69,19 +69,17 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}
 		
 		count.resize(ndemocat);                                     // Defines all the demographic states
-		for(c = 0; c < ndemocat; c++) count[c] = 0;
+		for(dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
 		
 		do{
-			//democatpos.push_back(count);
-			democatpos.push_back(vector <unsigned int> ());
-			for(c = 0; c < ndemocat; c++) democatpos[democatpos.size()-1].push_back(count[c]);
+			democatpos.push_back(count);
 			
-			c = ndemocat-1;
+			dc = ndemocat-1;
 			do{
 				fl = 0;
-				count[c]++; if(count[c] == democat[c].value.size()){ fl = 1; count[c] = 0; c--;}
-			}while(fl == 1 && c >= 0);
-		}while(c >= 0);
+				count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
+			}while(fl == 1 && dc >= 0);
+		}while(dc >= 0);
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
 
@@ -306,7 +304,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
-	unsigned int td, si;
+	unsigned int td;
+	int si;
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
@@ -397,5 +396,5 @@ string DATA::strip(string line)
 	return line;
 }	
 
-void DATA::sortX(vector <int> &vec){ sort(vec.begin(),vec.end(),compX);}
-void DATA::sortY(vector <int> &vec){ sort(vec.begin(),vec.end(),compY);}
+void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
+void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}

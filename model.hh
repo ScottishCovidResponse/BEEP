@@ -11,7 +11,7 @@ struct FEV {                               // Stores information about a compart
   unsigned int trans;                      // References the transition type
 	unsigned int ind;                        // The individual on which the transition happens
 	double t;                                // The time of the transition
-	unsigned int done;                                // Set to 1 if that transition is in the past 
+	unsigned int done;                       // Set to 1 if that transition is in the past 
 };
 
 struct PARAM{                              // Store information about a model parameter
@@ -45,8 +45,8 @@ struct COMP{                               // Stores information about a compart
 struct TRANS{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
-	int probparam;                           // The parameter for the probability of going down transition
-	vector <int> DQ;                         // The change in the Q tensor for going down the transition
+	unsigned int probparam;                           // The parameter for the probability of going down transition
+	vector <unsigned int> DQ;                         // The change in the Q tensor for going down the transition
 };
 
 class MODEL                                // Stores all the information about the model

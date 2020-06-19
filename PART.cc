@@ -36,7 +36,7 @@ void PART::partinit(unsigned int p)
 	fev.clear(); fev.resize(fediv);
 
 	Rtot.resize(poptree.level); sussum.resize(poptree.level);
-	for(l = 0; l < poptree.level; l++){
+	for(l = 0; l < int(poptree.level); l++){
 		cmax = lev[l].node.size();
 		Rtot[l].resize(cmax); sussum[l].resize(cmax);
 		for(c = 0; c < cmax; c++) Rtot[l][c] = 0;
@@ -79,7 +79,7 @@ void PART::partinit(unsigned int p)
 /// Performs the modified Gillespie algorithm between times ti and tf 
 void PART::gillespie(double ti, double tf, unsigned int outp)
 {
-	unsigned int c, j, jsel;
+	unsigned int c, j, jsel=0;
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
@@ -272,7 +272,7 @@ void PART::check(unsigned int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	unsigned int i, c, cc, ccc, dp, v, a, k, kmax, j, jmax, q, timep;
+	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax, timep;
 	int l;
 	double sum, val, t;
 	TRANS tr;
@@ -296,12 +296,12 @@ void PART::dofe()
 		
 	timep = 0; while(timep < data.ntimeperiod && t > data.timeperiod[timep]) timep++;
 	if(timep >= tr.DQ.size()) emsg("Part: EC66");
-	q = tr.DQ[timep]; if(q == -1) return;
+	q = tr.DQ[timep]; if(q == UNSET) return;
 	
 	dp = data.ind[i].dp;
 	v = c*data.nage+data.democatpos[dp][0];
 	
-	for(l = 0; l < poptree.level; l++) lev[l].donelist.clear();
+	for(l = 0; l < int(poptree.level); l++) lev[l].donelist.clear();
 	
 	l = poptree.level-1;                                                             // Makes change to Rtot
 	kmax = model.nDQ[q][v];
@@ -343,12 +343,15 @@ void PART::dofe()
 unsigned int PART::nextinfection(unsigned int type)
 {
 	unsigned int l, lmax, c, cc, j, jmax;
-	double z, sum, sumst[4];
+	double z, sum;
+	vector <double> sumst;
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
 	lmax = poptree.level;
 	while(l < lmax-1){
 		jmax = lev[l].node[c].child.size();
+		
+		sumst.resize(jmax);
 		sum = 0;
 		for(j = 0; j < jmax; j++){
 			cc = lev[l].node[c].child[j];

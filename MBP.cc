@@ -28,7 +28,7 @@ static vector <double> invTstore;
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
-	unsigned int p, pp, th, nchaintot = ncore*nchain, loop, loopmax, co;
+	unsigned int p, pp, th, nchaintot = ncore*nchain, loop, loopmax=1000, co;
 	unsigned int samp, burnin = nsamp/4;
 	long timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1;
@@ -91,9 +91,9 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 		
 		timers.timewait -= clock();
-		//if(core == 0) cout << double(clock()-time)/CLOCKS_PER_SEC << " ti before\n";
+		
 		MPI_Barrier(MPI_COMM_WORLD); 
-		//if(core == 0) cout << double(clock()-time)/CLOCKS_PER_SEC << " ti\n";
+	
 		timers.timewait += clock();
 		
 		// This part dynamically adjusts timeloop so that approximately 10 proposals are performed per swap
@@ -245,7 +245,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 		else{
 			MPI_Status status;
 			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
-			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= MAX_NUMBERS) emsg("Buffer not big enough");
+			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
 		
 			packinit();
 			unpack(xiplot,0,data.fediv);

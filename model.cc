@@ -14,10 +14,11 @@ using namespace std;
 /// Defines the compartmental model
 void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod)
 {
+	unsigned int p, c, t;
+	int fi;
 	//double facmin = 0.8, facmax = 1.2;
 	double facmin = 1, facmax = 1;
-	double r, tinfav,val;
-	unsigned int p, c, t, fi;
+	double r, tinfav, val;
 		
 	ntimeperiod = data.ntimeperiod; // Copies from data
 	timeperiod = data.timeperiod;
@@ -140,7 +141,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		cout << "Transitions:" << endl; 
 		for(t = 0; t < trans.size(); t++){
 			cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name;
-			if(trans[t].probparam != -1) cout << "  with probability " << param[trans[t].probparam].name;
+			if(trans[t].probparam != UNSET) cout << "  with probability " << param[trans[t].probparam].name;
 			cout << endl;
 		}
 		cout << endl;
@@ -150,11 +151,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 /// Adds in the tensor Q to the model
 void MODEL::addQ(DATA &data)
 {
-	unsigned int c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
-	int q, qi, qf;
+	unsigned int q, qi, qf, c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
 	string compi, compf;
 	double fac;
-	vector <int> map;
+	vector <unsigned int> map;
 	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
 	vector< vector <unsigned int> > DQtoadd;
 	vector <vector< vector <double> > > DQvaladd;
@@ -168,7 +168,7 @@ void MODEL::addQ(DATA &data)
 		if(data.Qtimeperiod[q] < 0 || data.Qtimeperiod[q] >= ntimeperiod) emsg("The time period for Q is out of range.");
 	}
 	
-	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = -1;
+	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = UNSET;
 	
 	for(tra = 0; tra < trans.size(); tra++){
 		ci = trans[tra].from;
@@ -183,13 +183,13 @@ void MODEL::addQ(DATA &data)
 			
 			if(timepf < ntimeperiod){
 				qi = 0; while(qi < data.Qnum && !(data.Qcomp[qi] == compi && data.Qtimeperiod[qi] == timepi)) qi++;
-				if(qi == data.Qnum) qi = -1;
+				if(qi == data.Qnum) qi = UNSET;
 				
 				qf = 0; while(qf < data.Qnum && !(data.Qcomp[qf] == compf && data.Qtimeperiod[qf] == timepf)) qf++;
-				if(qf == data.Qnum) qf = -1;
+				if(qf == data.Qnum) qf = UNSET;
 				
-				if(qi == -1 && qf == -1){
-					trans[tra].DQ.push_back(-1);
+				if(qi == UNSET && qf == UNSET){
+					trans[tra].DQ.push_back(UNSET);
 				}
 				else{
 					DQtoadd.clear(); DQvaladd.clear();
@@ -202,11 +202,11 @@ void MODEL::addQ(DATA &data)
 							case 0: q = qi; fac = -comp[ci].infectivity; break;
 							case 1: q = qf; fac = comp[cf].infectivity; break;
 							}
-							if(q >= 0){
+							if(q != UNSET){
 								jmax = data.nQ[q][v];
 								for(j = 0; j < jmax; j++){
 									cc = data.Qto[q][v][j];
-									if(map[cc] == -1){
+									if(map[cc] == UNSET){
 										map[cc] = nDQadd[v];
 										DQtoadd[v].push_back(cc);
 										DQvaladd[v].push_back(vector <double> ());
@@ -221,7 +221,7 @@ void MODEL::addQ(DATA &data)
 						}
 					
 					
-						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = -1;
+						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = UNSET;
 					}
 					
 					trans[tra].DQ.push_back(nDQ.size());
@@ -306,7 +306,7 @@ void MODEL::addtrans(string from, string to, string probparam)
 	if(c == cmax) emsg("Cannot find compartment");	
 	tr.to = c;
 	
-	if(probparam == "") tr.probparam = -1;
+	if(probparam == "") tr.probparam = UNSET;
 	else{
 		p = 0; pmax = param.size(); while(p < pmax && probparam != param[p].name) p++;
 		if(p == pmax) emsg("Cannot find parameter");	
@@ -319,8 +319,8 @@ void MODEL::addtrans(string from, string to, string probparam)
 /// Converts the spline points to a finer timestep for use in simulations.
 void MODEL::betaspline(double period)
 {
-  unsigned int s, n = nspline-1;
-	int p;
+  unsigned int s;
+	int p, n = nspline-1;
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
 	settime.resize(nsettime); beta.resize(nsettime);
@@ -348,7 +348,7 @@ void MODEL::betaspline(double period)
 			settime[s] = double((s+1)*period)/nsettime;;
 			
 			t = double((s+0.5)*period)/nsettime;
-			while(p < nspline-1 && t > splinet[p+1]) p++;
+			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			dt = t-splinet[p];	
 			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
@@ -361,7 +361,7 @@ void MODEL::betaspline(double period)
 			
 			t = double((s+0.5)*period)/nsettime;
 			
-			while(p < nspline-1 && t > splinet[p+1]) p++;
+			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
 			beta[s] = paramval[p]*(1-fac) + paramval[p+1]*fac;
@@ -372,7 +372,8 @@ void MODEL::betaspline(double period)
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob()
 {
-	unsigned int c, p, k, kmax;
+	unsigned int c, k, kmax;
+	int p;
 	double sum, sumi, sump, prob;
 	
 	/*
@@ -402,9 +403,7 @@ unsigned int MODEL::settransprob()
 			
 			sum = 0; sumi = 0; sump = 0; 
 			for(k = 0; k < kmax-1; k++){
-				p = trans[comp[c].trans[k]].probparam;
-
-				if(p == -1) emsg("model: EC1a");
+				p = trans[comp[c].trans[k]].probparam; if(p == UNSET) emsg("model: EC1a");
 				
 				prob = paramval[p]; comp[c].prob[k] = prob; sum += prob; if(prob < 0) return 0;
 				prob = parami[p]; comp[c].probi[k] = prob; sumi += prob; if(prob < 0) return 0;
@@ -584,7 +583,7 @@ void MODEL::setsus(DATA &data)
 /// Check that the transition data is correct
 void MODEL::checktransdata(DATA &data)
 {
-	short td, tra;
+	unsigned int td, tra;
 	string from, to;
 	TRANS tr;
 	

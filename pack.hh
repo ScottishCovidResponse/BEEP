@@ -5,7 +5,7 @@ using namespace std;
 #include "PART.hh"
 
 void packinit();
-unsigned int packsize();
+int packsize();
 double * packbuffer();
 
 void pack(unsigned int num);

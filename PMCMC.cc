@@ -27,7 +27,6 @@ vector < vector<double> > recibuffer;
 static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int period,	vector < vector <FEV> > &xinew);
 static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npart, unsigned int fedivmin, unsigned int w, unsigned int *backpart);
 static void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int nweek, unsigned int *backpart, vector < vector <FEV> > &xp);
-static void geneventsample2(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int nweek, unsigned int *back, vector < vector <FEV> > &xp);
 
 PART* part[partmax];                       // Pointers to each of the particles 
 
@@ -164,11 +163,11 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int co
 /// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap function)
 void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int period, unsigned int *backpart, vector < vector <FEV> > &xp)	
 {
-	unsigned int p, co, d, fedivmin, fedivmax, nparttot = npart*ncore;
+	unsigned int p=UNSET, co, d, fedivmin, fedivmax, nparttot = npart*ncore;
 	int t, siz;
 	
-	if(1 == 0){
-		for(t = 0; t < period; t++){
+	if(checkon == 1){
+		for(t = 0; t < int(period); t++){
 			cout << t << ": "; for(p = 0; p < nparttot; p++) cout << backpart[t*nparttot+p] << ",";
 			cout << " Backpart" << endl;  
 		}
@@ -177,7 +176,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 	xp.resize(data.fediv);
 	for(t = period-1; t >= 0; t--){
 		fedivmin = (data.fediv*t)/period;	fedivmax = (data.fediv*(t+1))/period;
-		if(t == period-1) p = backpart[nparttot*t];  // Picks the first final particle
+		if(t == int(period-1)) p = backpart[nparttot*t];  // Picks the first final particle
 		else p = backpart[nparttot*t + p];
 		
 		co = p/npart;
@@ -188,7 +187,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 			else{
 				MPI_Status status;
 				MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,co,0,MPI_COMM_WORLD,&status);
-				MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= MAX_NUMBERS) emsg("Buffer not big enough");
+				MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
 		
 				packinit();
 				unpack(xp,fedivmin,fedivmax);
@@ -209,7 +208,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npart, unsigned int fedivmin, unsigned int t, unsigned int *backpart)
 {
 	unsigned int p, pp, pmin, pmax, cor, j, jmax, k, kmax, nparttot = npart*ncore, partstep;
-	unsigned int	siz, nreqs = 0, nsendbuf = 0, rec,	npreclist, ncorlist;
+	unsigned int nreqs = 0, nsendbuf = 0, rec,	npreclist, ncorlist;
 	double res, *buf = packbuffer();
 	
 	vector <unsigned int> corlist;
@@ -240,7 +239,7 @@ static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npar
 			sumst[p] = sum;
 		}
 
-		for(p = 0; p < nparttot; p++) backpart[p] = -1;
+		for(p = 0; p < nparttot; p++) backpart[p] = UNSET;
 			
 		partstep = nparttot/32; if(partstep < 2) partstep = 2;
 		
@@ -255,21 +254,21 @@ static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npar
 			if(pp == nparttot) emsg("PMCMC: EC1");	
 			if(pp > 0){ if(z < sumst[pp-1]) emsg("PMCMC: EC1a");}
 			
-			if(backpart[pp] == -1) backpart[pp] = pp;
+			if(backpart[pp] == UNSET) backpart[pp] = pp;
 			else extra.push_back(pp);
 		}
 		
 		j = 0; jmax = extra.size();
 		while(j < jmax){                                             // Tries to copy to same core (to increase speed)
 			pp = extra[j];
-			p = pp - pp%npart; pmax = p+npart; while(p < pmax && backpart[p] != -1) p++;
+			p = pp - pp%npart; pmax = p+npart; while(p < pmax && backpart[p] != UNSET) p++;
 
 			if(p < pmax){	backpart[p] = pp; jmax--; extra[j] = extra[jmax]; extra.pop_back();}
 			else j++;
 		}
 		
 		for(p = 0; p < nparttot; p++){  
-			if(backpart[p] == -1){
+			if(backpart[p] == UNSET){
 				pp = extra[extra.size()-1]; extra.pop_back();
 				backpart[p] = pp;
 			}

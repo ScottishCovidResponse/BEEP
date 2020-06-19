@@ -74,7 +74,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	SAMPLE sa;
 	unsigned int p, np, r, t, st, sum, td;
 	vector <unsigned int> num;
-	double tinfav;
+	double tinfav=UNSET, probA, Ainf, Pinf, tA, tP, tI;
 	
 	np = paramval.size();
 	
@@ -112,11 +112,13 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 
 	switch(model.modelsel){
 	case MOD_IRISH:
-		double probA = model.getparam("probA"), Ainf = model.getparam("Ainf"), Pinf = model.getparam("Pinf");
-		double tA = 1.0/model.getparam("rA"), tP = 1.0/model.getparam("rP"), tI = 1.0/model.getparam("rI");
+		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
+		tA = 1.0/model.getparam("rA"); tP = 1.0/model.getparam("rP"); tI = 1.0/model.getparam("rI");
 
 		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
 		break;
+		
+	default: emsg("Output: EC10"); break;
 	}
 
 	sa.R0.resize(nsettime);
