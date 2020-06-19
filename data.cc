@@ -58,7 +58,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocat = democat.size();
 		nage = democat[0].value.size();
 		
-		cout << "Demographic information:" << endl;
+		cout << endl << "Demographic data loaded:" << endl;
 		for(d = 0; d < ndemocat; d++){
 			cout << democat[d].name << ": "; 
 			for(j = 0; j < democat[d].value.size(); j++){
@@ -96,9 +96,11 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}while(1 == 1);
 		nregion = region.size();
 		
-		cout << "Region data loaded\n";
-		//for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload\n";
-	
+		cout << endl << "Region data loaded." << endl;
+		if(checkon == 1){
+			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
+		}
+		
 		//areadatafile = "Data_uk/areadata.txt";                                    // Loads information about areas
 		areadatafile = "Data_small/areadata.txt";  
 		ifstream areain(areadatafile.c_str());      
@@ -144,10 +146,10 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}while(1 == 1);
 		narea = area.size();
 		
-		cout << "Areas loaded" << endl;
-		if(1 == 1){
+		cout << endl << "Area data loaded." << endl;
+		if(checkon == 1){
 			for(c = 0; c < narea; c++){
-				cout << nregion << " " << area[c].region << "region\n";
+				cout << nregion << " " << area[c].region << "region" << endl;
 				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
 			
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
@@ -187,8 +189,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}		
 		
+		cout << endl << "Age contact structure data loaded:" << endl;
 		for(j = 0; j < nage; j++){
-			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N\n";
+			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N" << endl;
 		}
 		
 		if(mode != MODE_SIM){        // Loads transition data for inference
@@ -232,9 +235,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}
 	}
-	
+
 	if(ncore > 1) copydata(core);
-	
+
 	for(c = 0; c < narea; c++){                                              // Adds individuals to the system
 		area[c].ind.resize(ndemocatpos);
 		for(dp = 0; dp < ndemocatpos; dp++){
@@ -321,6 +324,8 @@ void DATA::copydata(unsigned int core)
 		pack(Mto);
 		pack(Mval);
 		pack(N);
+		pack(nage);
+		pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
 		si = packsize();
 	}
@@ -342,7 +347,9 @@ void DATA::copydata(unsigned int core)
 		unpack(Mto);
 		unpack(Mval);
 		unpack(N);
-		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
+		unpack(nage);
+		unpack(ndemocatposperage);
+		for(td = 0; td < transdata.size(); td++) unpack(transdata[td].num);
 		if(si != packsize()) emsg("Data: EC9");
 	}
 }

@@ -57,7 +57,7 @@ void PART::partinit(unsigned int p)
 		}
 		sussum[l][c] = sum;
 	}
-	
+			
 	for(l = poptree.level-2; l >= 0; l--){                                                // Propages sussum up the tree
 		cmax = poptree.lev[l].node.size();
 		for(c = 0; c < cmax; c++){
@@ -66,9 +66,11 @@ void PART::partinit(unsigned int p)
 			sussum[l][c] = sum;
 		}
 	}
+
+	 
 	sussumst = sussum;
 	susagest = susage;
-	
+	 
 	sett = 0;
 
 	tdnext = fediv;
@@ -133,7 +135,8 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 			break;
 		
 		default: emsg("Part: EC6"); break;
-		}		 
+		}		
+		// check(0,t);
 	}while(t < tf);
 	
 	if(checkon == 1) check(0,t);
@@ -246,7 +249,7 @@ void PART::check(unsigned int num, double t)
 		
 	for(c = 0; c < data.narea; c++){
 		for(a = 0; a < data.nage; a++){
-			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny){ cout << Qma[c][a] << " " << Qmap[c][a] << "\n";  emsg("Part: EC22");}
+			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny){ cout << Qma[c][a] << " " << Qmap[c][a] << endl;  emsg("Part: EC22");}
 		}
 	}
 	
@@ -285,7 +288,7 @@ void PART::dofe()
 	c = data.ind[i].area;
 		 
 	tr = trans[fev[tdnext][tdfnext].trans];
-	N[tr.from]--; if(N[tr.from] < 0){ cout << tr.from << " " <<  N[tr.from] << " fr\n"; emsg("Part: EC12"); }
+	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12");
 	N[tr.to]++;
 
 	tdfnext++;
@@ -379,7 +382,7 @@ void PART::partpack(unsigned int fedivmin)
 	pack(indinf);
 	pack(Qmap);
 	pack(fev,fedivmin,fediv);
-	//pack(N);
+	pack(N);
 	pack(tdnext); 
 	pack(tdfnext);
 }
@@ -391,22 +394,20 @@ void PART::partunpack(unsigned int fedivmin)
 	int l;
 	double val, val2, sus, sum;
 	
-	l = poptree.level-1;
-	
 	packinit();
 	unpack(indinf);
 	unpack(Qmap);
 	unpack(fev,fedivmin,fediv);
-	//unpack(N);
+	unpack(N);
 	unpack(tdnext); 
 	unpack(tdfnext);
 
 	sussum = sussumst;
 	susage = susagest;
 	
+	l = poptree.level-1;
 	cmax = data.narea;
 	for(c = 0; c < cmax; c++){
-		val = sussumst[l][c]; 
 		kmax = indinf[c].size();
 		for(k = 0; k < kmax; k++){
 			dp = data.ind[indinf[c][k]].dp;
@@ -414,11 +415,12 @@ void PART::partunpack(unsigned int fedivmin)
 			sussum[l][c] -= sus;
 			susage[c][data.democatpos[dp][0]] -= sus;
 		}
-		
+	
 		sum = 0; for(a = 0; a < data.nage; a++) sum += susage[c][a]*Qmap[c][a];
+
 		Rtot[l][c] = sum;
 	}
-		
+
 	for(l = poptree.level-2; l >= 0; l--){
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++){

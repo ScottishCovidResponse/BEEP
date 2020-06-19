@@ -107,7 +107,7 @@ void POPTREE::init(DATA &data, unsigned int core)
 	for(c = 0; c < data.narea; c++) lev[level-1].node[c].arearef[0] = c;
 	
 	
-	if(core == 0) cout << level << " Number of levels" << endl << data.narea << " Number of areas" << endl;
+	if(core == 0) cout << endl << " Number of levels: " << level << endl <<" Number of areas:" << data.narea << endl;
 
 	for(l = 0; l < level; l++){
 		cmax = lev[l].node.size();

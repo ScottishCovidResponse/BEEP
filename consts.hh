@@ -18,7 +18,7 @@ const double tiny = 0.00000001;                                  // Used to repr
 const double large = 1000000;                                    // Used to represent a big number
 const unsigned int UNSET = 999999999;                        // A large unsigned integer to represent "Unset"
 
-const unsigned int checkon = 1;                                  // Set to one to check algorithm is performing correctly
+const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
 
 const unsigned int partmax = 10000;                              // The maximum number of particles per core (arbitrarily set)
 const unsigned int chainmax = 10000;                             // The maximum number of chains per core (arbitrarily set)

@@ -48,7 +48,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		}
 		
 		phiparam = param.size();
-		r = 4*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
+		r = 1*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
 
 		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
 		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
@@ -88,7 +88,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			fix_sus_param.push_back(param.size());
 			for(fi = 0; fi < int(data.democat[c].value.size())-1; fi++){
 				stringstream sssus; sssus << "fix_" << data.democat[c].name << "_" << data.democat[c].value[fi];
-				val = 0.1*ran(); addparam(sssus.str(),val,val,val);
+				val = 0.05; addparam(sssus.str(),val,val,val);
 				param[int(param.size())-1].suschange = 1;
 			}
 		}
@@ -99,7 +99,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 	parami.resize(param.size()); paramp.resize(param.size());
 
 	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
-	
+ 
 	betaspline(period);
 
 	if(core == 0){
@@ -175,7 +175,7 @@ void MODEL::addQ(DATA &data)
 		cf = trans[tra].to;
 		compi = comp[ci].name;
 		compf = comp[cf].name;
-		//cout << compi << " " << compf << "  transition\n";
+	
 		for(timep = 0; timep < ntimeperiod; timep++){
 			timepi = timep; timepf = timep;
 			
@@ -372,25 +372,23 @@ void MODEL::betaspline(double period)
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob()
 {
-	unsigned int c, k, kmax;
+	unsigned int c, k, kmax, tra;
 	int p;
 	double sum, sumi, sump, prob;
 	
-	/*
-	for(c = 0; c <  comp.size(); c++){
-		cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
-		for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
-		cout << "\n";
-		
-	}
+	if(checkon == 1){
+		for(c = 0; c <  comp.size(); c++){
+			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
+			for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
+			cout << endl;
+			
+		}
 	
-	short tra;
-	for(tra = 0; tra < trans.size(); tra++){
-		cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans\n";
-		for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ\n";
+		for(tra = 0; tra < trans.size(); tra++){
+			cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans" << endl;
+			for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ" << endl;
+		}
 	}
-	emsg("P");
-*/
 	
 	for(c = 0; c < comp.size(); c++){
 		kmax = comp[c].trans.size();
@@ -484,7 +482,6 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		ev.trans = tra; ev.t = t; ev.done = 0;
 		evlist.push_back(ev);
 
-		//cout << i << " " << t << " " << comp[trans[tra].from].name << " -> " << comp[trans[tra].to].name << "\n"; 
 		c = trans[tra].to; 
 	}while(1 == 1);
 }
@@ -567,7 +564,7 @@ void MODEL::setsus(DATA &data)
 {
 	unsigned int dp, c, j;
 	double val;
-	
+
 	sus.resize(data.ndemocatpos);
 	for(dp = 0; dp < data.ndemocatpos; dp++){
 		val = 1;
@@ -578,7 +575,6 @@ void MODEL::setsus(DATA &data)
 		sus[dp] = val;
 	}
 }
-
 
 /// Check that the transition data is correct
 void MODEL::checktransdata(DATA &data)

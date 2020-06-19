@@ -8,10 +8,10 @@ Simulation:
 mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference:    
-mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+mpirun -n 20 ./run mode=mbp model=irish simtype=smallsim nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference:  
-mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
+mpirun -n 20 ./run mode=pmcmc model=irish simtype=smallsim npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
 
@@ -280,7 +280,7 @@ int main(int argc, char** argv)
 
 	if(period == UNSET) emsg("The property 'period' must be set");
 	//if(data.housefile=="") emsg("The property 'housedata' must be set");
-	
+
 	data.readdata(core,ncore,mode,period);
 
 	//if(narea==-1) emsg("The property 'narea' must be set"); 
@@ -295,13 +295,14 @@ int main(int argc, char** argv)
 	model.checktransdata(data);
 	
 	model.setsus(data);
-	
+
 	if(core == 0) cout << "Running...." << endl;
 
 	timersinit();
 	timers.timetot = -clock();
 	
 	MPI_Barrier(MPI_COMM_WORLD);
+
 	switch(mode){
 	case MODE_SIM:
 		srand(seed); 
@@ -311,6 +312,7 @@ int main(int argc, char** argv)
 	case MODE_PMCMC:
 		if(nsamp == UNSET) emsg("The number of samples must be set");
 		if(npart == UNSET) emsg("The number of particles must be set");
+
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 

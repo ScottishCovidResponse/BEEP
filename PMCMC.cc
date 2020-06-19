@@ -46,13 +46,17 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 		sendbuffer[p].resize(BUFMAX);
 		recibuffer[p].resize(BUFMAX);
 	}
-	
+
 	srand(core);
 	
 	for(p = 0; p < npart; p++){ part[p] = new PART(data,model,poptree);}
 
 	if(core == 0) outputinit(data,model);
 
+	MPI_Bcast(&model.paramval[0],model.paramval.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+	model.betaspline(data.period);
+	model.setsus(data);
+ 
 	Li = -large; 
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
@@ -86,7 +90,9 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 
 				if(param[p].betachange == 1) model.betaspline(data.period);
 				if(param[p].suschange == 1) model.setsus(data);
-				
+
+				model.setsus(data);
+				 
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
 					model.parami = model.paramval; model.paramp = model.paramval;
@@ -134,24 +140,25 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int co
 {
 	unsigned int p, t, backpart[ncore*npart*period];
 	double Liav;
-	
-	for(p = 0; p < npart; p++) part[p]->partinit(p);
 
+	for(p = 0; p < npart; p++) part[p]->partinit(p);
+	
   Liav = 0;
 	for(t = 0; t < period; t++){                                      // We step through one measurement at a time
 		for(p = 0; p < npart; p++){
 			timers.timesim -= clock();
 	
 			part[p]->gillespie(t,t+1,0);                                  // Simulates the particle
-	
+
 			part[p]->Li = Lobs(data,model,poptree,t,part[p]->fev,1);      // Measures how well it agrees with the observations
 			timers.timesim += clock();
 		}
 		
 		timers.timeboot -= clock();
-		
+
 		// Culls or copies particles based on how well they represent observations
 		Liav += bootstrap(core,ncore,npart,(data.fediv*(t+1))/period,t,backpart); 
+		
 		timers.timeboot += clock();
 	}
 
