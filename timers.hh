@@ -9,6 +9,7 @@ struct TIMERS {
 	long timembpQmap;
 	long timembpprop;
 	long timembpinit;
+	long timembptemp;	long timembptemp2;	long timembptemp3;	long timembptemp4;
 };
 
 extern TIMERS timers;

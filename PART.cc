@@ -36,7 +36,7 @@ void PART::partinit(unsigned int p)
 	fev.clear(); fev.resize(fediv);
 
 	Rtot.resize(poptree.level); sussum.resize(poptree.level);
-	for(l = 0; l < poptree.level; l++){
+	for(l = 0; l < int(poptree.level); l++){
 		cmax = lev[l].node.size();
 		Rtot[l].resize(cmax); sussum[l].resize(cmax);
 		for(c = 0; c < cmax; c++) Rtot[l][c] = 0;
@@ -57,7 +57,7 @@ void PART::partinit(unsigned int p)
 		}
 		sussum[l][c] = sum;
 	}
-	
+			
 	for(l = poptree.level-2; l >= 0; l--){                                                // Propages sussum up the tree
 		cmax = poptree.lev[l].node.size();
 		for(c = 0; c < cmax; c++){
@@ -66,11 +66,12 @@ void PART::partinit(unsigned int p)
 			sussum[l][c] = sum;
 		}
 	}
+	 
 	sussumst = sussum;
 	susagest = susage;
-	
+	 
 	sett = 0;
-
+	
 	tdnext = fediv;
 	
 	indev.resize(data.popsize);
@@ -79,17 +80,17 @@ void PART::partinit(unsigned int p)
 /// Performs the modified Gillespie algorithm between times ti and tf 
 void PART::gillespie(double ti, double tf, unsigned int outp)
 {
-	unsigned int c, j, jsel;
+	unsigned int c, j, jsel=0;
 	double t, tpl;
 	NEV n;
 	vector <NEV> nev;
 	
-	if(sett == nsettime) emsg("Part: EC4");
+	if(sett == data.nsettime) emsg("Part: EC4");
 						 
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		n.t = model.settime[sett];
+		n.t = data.settime[sett+1];
 		n.type = SET_EV;
 		nev.push_back(n); 
 		 
@@ -101,7 +102,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		n.type = INF_EV;
 		nev.push_back(n);
 		
-		n.t = t - log(ran())/(sussum[0][0]*model.paramval[model.phiparam]);
+		n.t = t - log(ran())/(sussum[0][0]*model.phi[sett]);
 		n.type = EXT_EV;
 		nev.push_back(n);
 		
@@ -119,7 +120,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		switch(nev[jsel].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
-			sett++; if(sett >= nsettime) emsg("Part: EC5");
+			sett++; if(sett >= data.nsettime) emsg("Part: EC5");
 			break;
 		
 		case INF_EV:                 // These are infection events within the system
@@ -133,7 +134,8 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 			break;
 		
 		default: emsg("Part: EC6"); break;
-		}		 
+		}		
+		// check(0,t);
 	}while(t < tf);
 	
 	if(checkon == 1) check(0,t);
@@ -184,7 +186,7 @@ void PART::addinfc(unsigned int c, double t)
 /// Used to check that various quantities are being correctly updated
 void PART::check(unsigned int num, double t)
 {
-	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, timep, q;
+	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, q;
 	double dd, sum, sum2, val, inf;
 	vector <double> susag;
 	vector <vector <double> > Qma;
@@ -220,14 +222,12 @@ void PART::check(unsigned int num, double t)
 	Qma.resize(data.narea);
 	for(c = 0; c < data.narea; c++){ Qma[c].resize(data.nage); for(a = 0; a < data.nage; a++) Qma[c][a] = 0;}
 	
-	timep = 0; while(timep < data.ntimeperiod && t > data.timeperiod[timep]) timep++;
-	
 	for(c = 0; c < data.narea; c++){
 		for(j = 0; j < indinf[c].size(); j++){
 			i = indinf[c][j];
 			k = 0; cc = 0; while(k < indev[i].size() && t >= indev[i][k].t){ cc = trans[indev[i][k].trans].to; k++;}
 			
-			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == timep)) q++;
+			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == indev[i][k].timep)) q++;
 			if(q < data.Qnum){ 			
 				inf = comp[cc].infectivity;
 				
@@ -246,7 +246,7 @@ void PART::check(unsigned int num, double t)
 		
 	for(c = 0; c < data.narea; c++){
 		for(a = 0; a < data.nage; a++){
-			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny){ cout << Qma[c][a] << " " << Qmap[c][a] << "\n";  emsg("Part: EC22");}
+			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny) emsg("Part: EC22");
 		}
 	}
 	
@@ -272,36 +272,33 @@ void PART::check(unsigned int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	unsigned int i, c, cc, ccc, dp, v, a, k, kmax, j, jmax, q, timep;
+	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax;
 	int l;
 	double sum, val, t;
 	TRANS tr;
 		 
-	if(fev[tdnext][tdfnext].done != 0) emsg("Part: EC11");
-	
 	i = fev[tdnext][tdfnext].ind; 
 	t = fev[tdnext][tdfnext].t; 
-	fev[tdnext][tdfnext].done = 1;
 	c = data.ind[i].area;
 		 
 	tr = trans[fev[tdnext][tdfnext].trans];
-	N[tr.from]--; if(N[tr.from] < 0){ cout << tr.from << " " <<  N[tr.from] << " fr\n"; emsg("Part: EC12"); }
+	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12");
 	N[tr.to]++;
 
+	q = tr.DQ[fev[tdnext][tdfnext].timep]; 
+		
 	tdfnext++;
 	if(tdfnext == fev[tdnext].size()){
 		tdnext++; tdfnext = 0; 
 		while(tdnext < fediv && fev[tdnext].size() == 0) tdnext++;
 	}
 		
-	timep = 0; while(timep < data.ntimeperiod && t > data.timeperiod[timep]) timep++;
-	if(timep >= tr.DQ.size()) emsg("Part: EC66");
-	q = tr.DQ[timep]; if(q == -1) return;
+	if(q == UNSET) return;
 	
 	dp = data.ind[i].dp;
 	v = c*data.nage+data.democatpos[dp][0];
 	
-	for(l = 0; l < poptree.level; l++) lev[l].donelist.clear();
+	for(l = 0; l < int(poptree.level); l++) lev[l].donelist.clear();
 	
 	l = poptree.level-1;                                                             // Makes change to Rtot
 	kmax = model.nDQ[q][v];
@@ -343,12 +340,15 @@ void PART::dofe()
 unsigned int PART::nextinfection(unsigned int type)
 {
 	unsigned int l, lmax, c, cc, j, jmax;
-	double z, sum, sumst[4];
+	double z, sum;
+	vector <double> sumst;
 	
 	l = 0; c = 0;                              // We start at the top level l=0 and proceed to fine and finer scales
 	lmax = poptree.level;
 	while(l < lmax-1){
 		jmax = lev[l].node[c].child.size();
+		
+		sumst.resize(jmax);
 		sum = 0;
 		for(j = 0; j < jmax; j++){
 			cc = lev[l].node[c].child[j];
@@ -376,7 +376,7 @@ void PART::partpack(unsigned int fedivmin)
 	pack(indinf);
 	pack(Qmap);
 	pack(fev,fedivmin,fediv);
-	//pack(N);
+	pack(N);
 	pack(tdnext); 
 	pack(tdfnext);
 }
@@ -388,22 +388,20 @@ void PART::partunpack(unsigned int fedivmin)
 	int l;
 	double val, val2, sus, sum;
 	
-	l = poptree.level-1;
-	
 	packinit();
 	unpack(indinf);
 	unpack(Qmap);
 	unpack(fev,fedivmin,fediv);
-	//unpack(N);
+	unpack(N);
 	unpack(tdnext); 
 	unpack(tdfnext);
 
 	sussum = sussumst;
 	susage = susagest;
 	
+	l = poptree.level-1;
 	cmax = data.narea;
 	for(c = 0; c < cmax; c++){
-		val = sussumst[l][c]; 
 		kmax = indinf[c].size();
 		for(k = 0; k < kmax; k++){
 			dp = data.ind[indinf[c][k]].dp;
@@ -411,11 +409,12 @@ void PART::partunpack(unsigned int fedivmin)
 			sussum[l][c] -= sus;
 			susage[c][data.democatpos[dp][0]] -= sus;
 		}
-		
+	
 		sum = 0; for(a = 0; a < data.nage; a++) sum += susage[c][a]*Qmap[c][a];
+
 		Rtot[l][c] = sum;
 	}
-		
+
 	for(l = poptree.level-2; l >= 0; l--){
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++){

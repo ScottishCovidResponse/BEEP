@@ -74,7 +74,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	SAMPLE sa;
 	unsigned int p, np, r, t, st, sum, td;
 	vector <unsigned int> num;
-	double tinfav;
+	double tinfav=UNSET, probA, Ainf, Pinf, tA, tP, tI;
 	
 	np = paramval.size();
 	
@@ -108,19 +108,80 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 		}
 	}
 
-	model.paramval = paramval; model.betaspline(data.period);
+	model.paramval = paramval; model.timevariation(data);
 
 	switch(model.modelsel){
 	case MOD_IRISH:
-		double probA = model.getparam("probA"), Ainf = model.getparam("Ainf"), Pinf = model.getparam("Pinf");
-		double tA = 1.0/model.getparam("rA"), tP = 1.0/model.getparam("rP"), tI = 1.0/model.getparam("rI");
+		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
+		tA = 1.0/model.getparam("rA"); tP = 1.0/model.getparam("rP"); tI = 1.0/model.getparam("rI");
 
 		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
 		break;
+		
+	default: emsg("Output: EC10"); break;
 	}
 
-	sa.R0.resize(nsettime);
-	for(st = 0; st < nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
+	sa.R0.resize(data.nsettime);
+	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
+	
+	return sa;
+}
+
+/// Outputs trace plot for parameters and store state data for plotting later
+SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+{
+	SAMPLE sa;
+	unsigned int p, np, r, t, st, sum, td;
+	vector <unsigned int> num;
+	double tinfav=UNSET, probA, Ainf, Pinf, tA, tP, tI;
+	
+	np = paramval.size();
+	
+	trace << samp; 
+	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
+	trace << "\t" << Li; 
+	trace << "\t" << invT; 
+	trace << endl;
+	
+	sa.paramval = paramval;
+	
+	sa.transnum.resize(data.transdata.size());
+	for(td = 0; td < data.transdata.size(); td++){
+		if(data.transdata[td].type == "reg"){
+			sa.transnum[td].resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.transnum[td][r].resize(data.period);
+			
+			for(t = 0; t < data.period; t++){
+				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][t] = num[r];
+			}
+		}
+		
+		if(data.transdata[td].type == "all"){
+			sa.transnum[td].resize(1); for(r = 0; r < 1; r++) sa.transnum[td][r].resize(data.period);
+			
+			for(t = 0; t < data.period; t++){
+				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
+				sa.transnum[td][0][t] = sum;
+			}
+		}
+	}
+
+	model.paramval = paramval; model.timevariation(data);
+
+	switch(model.modelsel){
+	case MOD_IRISH:
+		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
+		tA = 1.0/model.getparam("rA"); tP = 1.0/model.getparam("rP"); tI = 1.0/model.getparam("rI");
+
+		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
+		break;
+		
+	default: emsg("Output: EC10"); break;
+	}
+
+	sa.R0.resize(data.nsettime);
+	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
 	
 	return sa;
 }
@@ -187,11 +248,11 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 	cout << "'" << sst.str() << "' gives the time variation in R0." << endl;
 	
-	for(st = 0; st < nsettime; st++){
+	for(st = 0; st < data.nsettime; st++){
 		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
 		
-		R0out << (st+0.5)*data.period/nsettime << " " 
+		R0out << (st+0.5)*data.period/data.nsettime << " " 
 		      << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
@@ -345,20 +406,6 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		}
 	}
 	
-	/*
-	if(data.simtype == "smallsim" || data.simtype == "scotsim" || data.simtype == "uksim"){
-		ofstream houseout(data.housefile.c_str());
-		
-		cout << "'" << data.housefile.c_str() << "' gives data about houses." << endl;
-		
-		houseout << data.popsize << " " << data.nhouse << " "  << data.nregion << " " <<  endl;
-		for(r = 0; r < data.nregion; r++) houseout << data.regionname[r] << endl;
-		for(h = 0; h < data.nhouse; h++){
-			houseout << data.house[h].x << " " << data.house[h].y << " " << data.house[h].region << endl;
-		}
-	}
-	*/
-	
 	cout << endl;
 }
 
@@ -384,17 +431,20 @@ STAT getstat(vector <double> &vec)
 	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
 
 	sd = sqrt(sum2 - sum*sum);
-	for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
-		
-	sum = 1;
-	for(d = 0; d < n/2; d++){             // calculates the effective sample size
-		a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
-		cor = a/(n-d);
-		if(cor < 0) break;
-		sum += 0.5*cor;			
+	if(sd == 0) stat.ESS = 0;
+	else{
+		for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
+			
+		sum = 1;
+		for(d = 0; d < n/2; d++){             // calculates the effective sample size
+			a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
+			cor = a/(n-d);
+			if(cor < 0) break;
+			sum += 0.5*cor;			
+		}
+		stat.ESS = n/sum;
 	}
-	stat.ESS = n/sum;
-	
+		
 	return stat;
 }
 

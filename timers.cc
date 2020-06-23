@@ -13,4 +13,6 @@ void timersinit()
 	timers.timewait = 0;
 	timers.timembpQmap = 0;
 	timers.timembpprop = 0;
+	timers.timembptemp = 0;
+		timers.timembptemp2 = 0;	timers.timembptemp3 = 0;	timers.timembptemp4 = 0;
 }

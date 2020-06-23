@@ -77,8 +77,13 @@ class DATA
 
 	unsigned int mode;                       // Stores if doing simulation/mbp/pmcmc
 	string outputdir;                        // The output directory
-	unsigned int fediv;                      // The number of divisions into which the global timeline is divided
+	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
+	unsigned int fepertime;                  // # fediv per nsettime
+	unsigned int settpertime;                // # nsettime per unit time
 
+	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
+	vector <double> settime;                 // The timings at which beta changes
+	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	string simtype;                          // The system on which simulation is performed
 	
@@ -127,8 +132,8 @@ class DATA
 	unsigned int nardp;                      // #area * #ndemocatpos
 	unsigned int ndemocatposperage;          // Demographic states per age group
 
-	void sortX(vector <int> &vec);	         // Used for sorting houses by x and y location
-	void sortY(vector <int> &vec);	
+	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
+	void sortY(vector <unsigned int> &vec);	
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	

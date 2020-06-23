@@ -14,10 +14,11 @@ using namespace std;
 /// Defines the compartmental model
 void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod)
 {
+	unsigned int p, c, t;
+	int fi;
 	//double facmin = 0.8, facmax = 1.2;
 	double facmin = 1, facmax = 1;
-	double r, tinfav,val;
-	unsigned int p, c, t, fi;
+	double r, tinfav, val;
 		
 	ntimeperiod = data.ntimeperiod; // Copies from data
 	timeperiod = data.timeperiod;
@@ -28,7 +29,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
   case MOD_IRISH:  	// Irish model
 		// R0 determines how many individuals an infected individual on average infects
 		// These 8 values represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
-		double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};      
+		//double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};
+
+		//double R0sim[8] = {3.2,3.2,3.1,2.9,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
 		//double R0sim[8] = {4,4,4,4,4,0.7,0.8,0.9};      
 		const double dpw = 7;
 		
@@ -43,12 +47,20 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
 			r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
-			param[int(param.size())-1].betachange = 1;
+			param[int(param.size())-1].timechange = 1;
 		}
 		
-		phiparam = param.size();
-		r = 4*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
+		phparam = param.size();
+		nphitime = 2;
+		phitime.resize(nphitime);
+		phitime[0] = 3; phitime[1] = data.period;
+		
+		r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
+		param[int(param.size())-1].timechange = 1;
 
+		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
+		addparam("phi_zero",tiny,tiny,tiny);  
+	
 		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
 		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
 
@@ -62,7 +74,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 		addparam("probA",probA,probA,probA);  		    // The probability of being asymptomatic
 		addparam("probH",probH,probH,probH);  		    // The probability of hospitalisation given I
-		addparam("probD",probD,0,1);  	            	// The probability of death given H
+		//addparam("probD",probD,0,1);  	            	// The probability of death given H
+		addparam("probD",probD,probD,probD);  	            	// The probability of death given H
 				
 		addcomp("S",0,NO_DIST,"","");                 // Different compartment in the model
 		addcomp("E",0,LOGNORM_DIST,"muE","sdE");           
@@ -87,7 +100,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			fix_sus_param.push_back(param.size());
 			for(fi = 0; fi < int(data.democat[c].value.size())-1; fi++){
 				stringstream sssus; sssus << "fix_" << data.democat[c].name << "_" << data.democat[c].value[fi];
-				val = 0.1*ran(); addparam(sssus.str(),val,val,val);
+				val = 0.05; addparam(sssus.str(),val,val,val);
 				param[int(param.size())-1].suschange = 1;
 			}
 		}
@@ -98,8 +111,9 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 	parami.resize(param.size()); paramp.resize(param.size());
 
 	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
-	
-	betaspline(period);
+ 
+	beta.resize(data.nsettime);	phi.resize(data.nsettime);
+	timevariation(data);
 
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
@@ -140,7 +154,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		cout << "Transitions:" << endl; 
 		for(t = 0; t < trans.size(); t++){
 			cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name;
-			if(trans[t].probparam != -1) cout << "  with probability " << param[trans[t].probparam].name;
+			if(trans[t].probparam != UNSET) cout << "  with probability " << param[trans[t].probparam].name;
 			cout << endl;
 		}
 		cout << endl;
@@ -150,11 +164,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 /// Adds in the tensor Q to the model
 void MODEL::addQ(DATA &data)
 {
-	unsigned int c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
-	int q, qi, qf;
+	unsigned int q, qi, qf, c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
 	string compi, compf;
 	double fac;
-	vector <int> map;
+	vector <unsigned int> map;
 	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
 	vector< vector <unsigned int> > DQtoadd;
 	vector <vector< vector <double> > > DQvaladd;
@@ -168,28 +181,27 @@ void MODEL::addQ(DATA &data)
 		if(data.Qtimeperiod[q] < 0 || data.Qtimeperiod[q] >= ntimeperiod) emsg("The time period for Q is out of range.");
 	}
 	
-	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = -1;
+	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = UNSET;
 	
 	for(tra = 0; tra < trans.size(); tra++){
 		ci = trans[tra].from;
 		cf = trans[tra].to;
 		compi = comp[ci].name;
 		compf = comp[cf].name;
-		//cout << compi << " " << compf << "  transition\n";
+	
 		for(timep = 0; timep < ntimeperiod; timep++){
 			timepi = timep; timepf = timep;
-			
 			if(compi == compf) timepf++;
 			
 			if(timepf < ntimeperiod){
 				qi = 0; while(qi < data.Qnum && !(data.Qcomp[qi] == compi && data.Qtimeperiod[qi] == timepi)) qi++;
-				if(qi == data.Qnum) qi = -1;
+				if(qi == data.Qnum) qi = UNSET;
 				
 				qf = 0; while(qf < data.Qnum && !(data.Qcomp[qf] == compf && data.Qtimeperiod[qf] == timepf)) qf++;
-				if(qf == data.Qnum) qf = -1;
+				if(qf == data.Qnum) qf = UNSET;
 				
-				if(qi == -1 && qf == -1){
-					trans[tra].DQ.push_back(-1);
+				if(qi == UNSET && qf == UNSET){
+					trans[tra].DQ.push_back(UNSET);
 				}
 				else{
 					DQtoadd.clear(); DQvaladd.clear();
@@ -202,11 +214,11 @@ void MODEL::addQ(DATA &data)
 							case 0: q = qi; fac = -comp[ci].infectivity; break;
 							case 1: q = qf; fac = comp[cf].infectivity; break;
 							}
-							if(q >= 0){
+							if(q != UNSET){
 								jmax = data.nQ[q][v];
 								for(j = 0; j < jmax; j++){
 									cc = data.Qto[q][v][j];
-									if(map[cc] == -1){
+									if(map[cc] == UNSET){
 										map[cc] = nDQadd[v];
 										DQtoadd[v].push_back(cc);
 										DQvaladd[v].push_back(vector <double> ());
@@ -221,7 +233,7 @@ void MODEL::addQ(DATA &data)
 						}
 					
 					
-						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = -1;
+						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = UNSET;
 					}
 					
 					trans[tra].DQ.push_back(nDQ.size());
@@ -233,6 +245,8 @@ void MODEL::addQ(DATA &data)
 			}
 		}
 	}
+	
+	DQnum = nDQ.size();
 }
 
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
@@ -241,7 +255,8 @@ void MODEL::priorsamp()
 	unsigned int th;
 	
 	for(th = 0; th < param.size(); th++){	
-		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
+		paramval[th] = param[th].sim;
+		//paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 }
 
@@ -284,7 +299,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.valinit = val; par.sim = val; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = val/10;
-	par.betachange = 0;	par.suschange = 0;
+	par.timechange = 0;	par.suschange = 0;
 
 	param.push_back(par);
 }
@@ -306,7 +321,7 @@ void MODEL::addtrans(string from, string to, string probparam)
 	if(c == cmax) emsg("Cannot find compartment");	
 	tr.to = c;
 	
-	if(probparam == "") tr.probparam = -1;
+	if(probparam == "") tr.probparam = UNSET;
 	else{
 		p = 0; pmax = param.size(); while(p < pmax && probparam != param[p].name) p++;
 		if(p == pmax) emsg("Cannot find parameter");	
@@ -316,16 +331,14 @@ void MODEL::addtrans(string from, string to, string probparam)
 	trans.push_back(tr);
 }
 	
-/// Converts the spline points to a finer timestep for use in simulations.
-void MODEL::betaspline(double period)
+/// Generates the time variation in beta and phi from the parameters
+void MODEL::timevariation(DATA &data)
 {
-  unsigned int s, n = nspline-1;
-	int p;
+  unsigned int s, j;
+	int p, n = nspline-1;
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
-	settime.resize(nsettime); beta.resize(nsettime);
-	
-	if(1 == 0){   // This uses a cubic spline
+	if(1 == 0){   // This uses a cubic spline for beta
 		for(p = 0; p <= n; p++) a[p] = log(paramval[p]);
 		for(p = 0; p < n; p++) h[p] = splinet[p+1]-splinet[p];
 		for(p = 1; p < n; p++) alpha[p] = (3/h[p])*(a[p+1]-a[p]) - (3/h[p-1])*(a[p]-a[p-1]);
@@ -344,52 +357,55 @@ void MODEL::betaspline(double period)
 		}
 		
 		p = 0;
-		for(s = 0; s < nsettime; s++){
-			settime[s] = double((s+1)*period)/nsettime;;
-			
-			t = double((s+0.5)*period)/nsettime;
-			while(p < nspline-1 && t > splinet[p+1]) p++;
+		for(s = 0; s < data.nsettime; s++){		
+			t = double((s+0.5)*data.period)/data.nsettime;
+			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			dt = t-splinet[p];	
 			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
 		}
 	}
-	else{  // This uses a linear spline
+	else{  // This uses a linear spline for beta
 		p = 0;
-		for(s = 0; s < nsettime; s++){
-			settime[s] = double((s+1)*period)/nsettime;;
+		for(s = 0; s < data.nsettime; s++){	
+			t = double((s+0.5)*data.period)/data.nsettime;
 			
-			t = double((s+0.5)*period)/nsettime;
-			
-			while(p < nspline-1 && t > splinet[p+1]) p++;
+			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
 			beta[s] = paramval[p]*(1-fac) + paramval[p+1]*fac;
 		}
 	}
+	
+	s = 0;
+	for(j = 0; j < nphitime; j++){
+		while(s < data.nsettime && data.settime[s] < phitime[j]){
+			phi[s] = paramval[phparam+j];
+			s++;
+		}
+	}
+	if(s != data.nsettime) emsg("Model: EC43");
 }
 
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob()
 {
-	unsigned int c, p, k, kmax;
+	unsigned int c, k, kmax, tra;
+	int p;
 	double sum, sumi, sump, prob;
 	
-	/*
-	for(c = 0; c <  comp.size(); c++){
-		cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
-		for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
-		cout << "\n";
-		
-	}
+	if(checkon == 1){
+		for(c = 0; c <  comp.size(); c++){
+			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
+			for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
+			cout << endl;
+		}
 	
-	short tra;
-	for(tra = 0; tra < trans.size(); tra++){
-		cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans\n";
-		for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ\n";
+		for(tra = 0; tra < trans.size(); tra++){
+			cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans" << endl;
+			for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ" << endl;
+		}
 	}
-	emsg("P");
-*/
 	
 	for(c = 0; c < comp.size(); c++){
 		kmax = comp[c].trans.size();
@@ -402,9 +418,7 @@ unsigned int MODEL::settransprob()
 			
 			sum = 0; sumi = 0; sump = 0; 
 			for(k = 0; k < kmax-1; k++){
-				p = trans[comp[c].trans[k]].probparam;
-
-				if(p == -1) emsg("model: EC1a");
+				p = trans[comp[c].trans[k]].probparam; if(p == UNSET) emsg("model: EC1a");
 				
 				prob = paramval[p]; comp[c].prob[k] = prob; sum += prob; if(prob < 0) return 0;
 				prob = parami[p]; comp[c].probi[k] = prob; sumi += prob; if(prob < 0) return 0;
@@ -434,19 +448,18 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 	vector <double> probsum;
 	
 	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
-	
+
+	ev.ind = i; ev.timep = timep; 
+		
 	if(c == 0){
 		evlist.clear();	
 		tra = 0;
-		ev.trans = tra; ev.ind = i; ev.t = t; ev.done = 1;
+		ev.trans = tra; ev.ind = i; ev.t = t; 
 		evlist.push_back(ev);
 	
 		c = trans[tra].to;
 	}
-	else{
-		ev.ind = i;
-	}
-	
+	 
 	do{
 		kmax = comp[c].trans.size();
 		if(kmax == 0) break;
@@ -469,10 +482,11 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		default: emsg("MODEL: EC2b"); break;
 		}
 
-		while(timeperiod[timep] < t){    // Adds in changes in period
-			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep]; ev.done = 0;
+		while(timeperiod[timep] < t){    // Adds in changes in time period
+			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep];
 			evlist.push_back(ev);
 			timep++;
+			ev.timep = timep; 
 		}
 	
 		if(kmax == 1) tra = comp[c].trans[0];
@@ -482,10 +496,9 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 			tra = comp[c].trans[k];
 		}
 		
-		ev.trans = tra; ev.t = t; ev.done = 0;
+		ev.trans = tra; ev.t = t;
 		evlist.push_back(ev);
 
-		//cout << i << " " << t << " " << comp[trans[tra].from].name << " -> " << comp[trans[tra].to].name << "\n"; 
 		c = trans[tra].to; 
 	}while(1 == 1);
 }
@@ -501,10 +514,8 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 	evlistp.clear();
 	
 	ev = evlisti[0];
-	tra = ev.trans; t = ev.t; i = ev.ind;
+	tra = ev.trans; t = ev.t; i = ev.ind; timep = ev.timep;
 	evlistp.push_back(ev);
-	
-	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
 	
 	c = trans[tra].to;
 	
@@ -553,7 +564,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			}			
 		}
 		
-		ev.trans = tra; ev.t = t; ev.done = 0;
+		ev.trans = tra; ev.t = t;
 		evlistp.push_back(ev);
 
 		c = trans[tra].to; 
@@ -568,7 +579,7 @@ void MODEL::setsus(DATA &data)
 {
 	unsigned int dp, c, j;
 	double val;
-	
+
 	sus.resize(data.ndemocatpos);
 	for(dp = 0; dp < data.ndemocatpos; dp++){
 		val = 1;
@@ -580,11 +591,10 @@ void MODEL::setsus(DATA &data)
 	}
 }
 
-
 /// Check that the transition data is correct
 void MODEL::checktransdata(DATA &data)
 {
-	short td, tra;
+	unsigned int td, tra;
 	string from, to;
 	TRANS tr;
 	

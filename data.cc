@@ -17,24 +17,29 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q;
-	int c;
+	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
+	int dc;
 	double v, sum;
 	string line, ele, name, regcode;
 	REGION reg;
 	AREA are;
 	DEMOCAT dem;
 	IND indi;
-	vector <int> count;
+	vector <unsigned int> count;
 	vector <vector <double> > val;
 	
 	mode = mod;
 	period = per;
-	fediv = 100*per;
+	fepertime = 100;
+	
+	settpertime = 7;
+	nsettime = settpertime*per;
+	settime.resize(nsettime+1);
+	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
+			
+	fediv = nsettime*fepertime;
 	
 	if(core == 0){
-		//democatfile = "Data_uk/democat.txt";
-		democatfile = "Data_small/democat.txt";
 		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
 		do{
 			getline(demoin,line); line = strip(line);
@@ -58,7 +63,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocat = democat.size();
 		nage = democat[0].value.size();
 		
-		cout << "Demographic information:" << endl;
+		cout << endl << "Demographic data loaded:" << endl;
 		for(d = 0; d < ndemocat; d++){
 			cout << democat[d].name << ": "; 
 			for(j = 0; j < democat[d].value.size(); j++){
@@ -69,25 +74,21 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}
 		
 		count.resize(ndemocat);                                     // Defines all the demographic states
-		for(c = 0; c < ndemocat; c++) count[c] = 0;
+		for(dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
 		
 		do{
-			//democatpos.push_back(count);
-			democatpos.push_back(vector <unsigned int> ());
-			for(c = 0; c < ndemocat; c++) democatpos[democatpos.size()-1].push_back(count[c]);
+			democatpos.push_back(count);
 			
-			c = ndemocat-1;
+			dc = ndemocat-1;
 			do{
 				fl = 0;
-				count[c]++; if(count[c] == democat[c].value.size()){ fl = 1; count[c] = 0; c--;}
-			}while(fl == 1 && c >= 0);
-		}while(c >= 0);
+				count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
+			}while(fl == 1 && dc >= 0);
+		}while(dc >= 0);
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
-
-		//regiondatafile = "Data_uk/regiondata.txt";                                  // Loads information about data regions
-		regiondatafile = "Data_small/regiondata.txt";  
-		ifstream regionin(regiondatafile.c_str());      	
+ 
+		ifstream regionin(regiondatafile.c_str());      	             // Loads information about data regions
 		do{
 			getline(regionin,line); line = strip(line);
 			if(regionin.eof()) break;
@@ -98,12 +99,12 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}while(1 == 1);
 		nregion = region.size();
 		
-		cout << "Region data loaded\n";
-		//for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload\n";
+		cout << endl << "Region data loaded." << endl;
+		if(checkon == 1){
+			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
+		}
 	
-		//areadatafile = "Data_uk/areadata.txt";                                    // Loads information about areas
-		areadatafile = "Data_small/areadata.txt";  
-		ifstream areain(areadatafile.c_str());      
+		ifstream areain(areadatafile.c_str());                                        // Loads information about areas
 		
 		getline(areain,line);
 		do{
@@ -146,20 +147,18 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}while(1 == 1);
 		narea = area.size();
 		
-		cout << "Areas loaded" << endl;
-		if(1 == 1){
+		cout << endl << "Area data loaded." << endl;
+		if(checkon == 1){
 			for(c = 0; c < narea; c++){
-				cout << nregion << " " << area[c].region << "region\n";
+				cout << nregion << " " << area[c].region << "region" << endl;
 				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
 			
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
 				cout << endl;	
 			}
 		}			
-
-		//Mdatafile = "Data_uk/Mdata_cut.txt";                                          // Loads information about mixing matrix
-		Mdatafile = "Data_small/Mdata.txt";
-		ifstream Min(Mdatafile.c_str());      
+		
+		ifstream Min(Mdatafile.c_str());                                // Loads information about mixing matrix
 		getline(Min,line);
 		
 		nM.resize(narea); Mto.resize(narea); Mval.resize(narea);
@@ -175,9 +174,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
 
-		//Ndatafile = "Data_uk/Ndata.txt";                                          // Loads information about age mixing
-		Ndatafile = "Data_small/Ndata.txt";   
-		ifstream Nin(Ndatafile.c_str());      
+		ifstream Nin(Ndatafile.c_str());                                   // Loads information about age mixing
 
 		N.resize(nage);
 		for(j = 0; j < nage; j++){
@@ -189,8 +186,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}		
 		
+		cout << endl << "Age contact structure data loaded:" << endl;
 		for(j = 0; j < nage; j++){
-			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N\n";
+			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N" << endl;
 		}
 		
 		if(mode != MODE_SIM){        // Loads transition data for inference
@@ -234,9 +232,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}
 	}
-	
+
 	if(ncore > 1) copydata(core);
-	
+
 	for(c = 0; c < narea; c++){                                              // Adds individuals to the system
 		area[c].ind.resize(ndemocatpos);
 		for(dp = 0; dp < ndemocatpos; dp++){
@@ -306,7 +304,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
-	unsigned int td, si;
+	unsigned int td;
+	int si;
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
@@ -322,6 +321,8 @@ void DATA::copydata(unsigned int core)
 		pack(Mto);
 		pack(Mval);
 		pack(N);
+		pack(nage);
+		pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
 		si = packsize();
 	}
@@ -343,7 +344,9 @@ void DATA::copydata(unsigned int core)
 		unpack(Mto);
 		unpack(Mval);
 		unpack(N);
-		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
+		unpack(nage);
+		unpack(ndemocatposperage);
+		for(td = 0; td < transdata.size(); td++) unpack(transdata[td].num);
 		if(si != packsize()) emsg("Data: EC9");
 	}
 }
@@ -397,5 +400,5 @@ string DATA::strip(string line)
 	return line;
 }	
 
-void DATA::sortX(vector <int> &vec){ sort(vec.begin(),vec.end(),compX);}
-void DATA::sortY(vector <int> &vec){ sort(vec.begin(),vec.end(),compY);}
+void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
+void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}

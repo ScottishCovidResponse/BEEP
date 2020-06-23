@@ -11,7 +11,12 @@ struct FEV {                               // Stores information about a compart
   unsigned int trans;                      // References the transition type
 	unsigned int ind;                        // The individual on which the transition happens
 	double t;                                // The time of the transition
-	unsigned int done;                                // Set to 1 if that transition is in the past 
+	unsigned int timep;                      // The time period in which the transition occurs 
+};
+
+struct EVREF {                             // Used to reference an event
+	unsigned int ind;                        // The individual
+	unsigned int e;	                       // The event number
 };
 
 struct PARAM{                              // Store information about a model parameter
@@ -20,7 +25,7 @@ struct PARAM{                              // Store information about a model pa
 	double sim;                              // The simulation value
 	double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
-	unsigned int betachange;                 // Set to one if there is a change in the beta spline
+	unsigned int timechange;              // Set to one if there is a change in the beta spline
 	unsigned int suschange;                  // Set to one if there us a change in a fixed effect for susceptibility
 	unsigned int ntr, nac;                   // Store the number of proposals tried and accepted	
 	double jump;
@@ -45,8 +50,8 @@ struct COMP{                               // Stores information about a compart
 struct TRANS{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
-	int probparam;                           // The parameter for the probability of going down transition
-	vector <int> DQ;                         // The change in the Q tensor for going down the transition
+	unsigned int probparam;                           // The parameter for the probability of going down transition
+	vector <unsigned int> DQ;                         // The change in the Q tensor for going down the transition
 };
 
 class MODEL                                // Stores all the information about the model
@@ -54,15 +59,19 @@ class MODEL                                // Stores all the information about t
 public:
 	unsigned int modelsel;                   // The model used (e.g. irish, old)
 
-	vector <double> settime;                 // The timings at which beta changes
 	vector <double> beta;                    // The value for beta at the various times
+	vector <double> phi;                     // The value for phi at the various times
 	vector <double> sus;                     // The susceptibility for different demographic categories
 	
 	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
+	vector <double> phii, phip;              // Under MBPs the values of phi for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
 	vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
 			
-	unsigned int phiparam;           			   // Stores which parameters relate to phi and probA
+	unsigned int phparam;           			   // Stores which parameters relate to phi and probA
+	unsigned int nphitime;                   // The number of time periods for changes in phi
+	vector <double> phitime;                 // The times of those changes
+	
 	unsigned int nspline;                    // The spline points which are parameters in the model
 	vector <double> splinet;                 // The times for the spline points
 	vector <PARAM> param;                    // Information about parameters in the model
@@ -80,13 +89,14 @@ public:
 	vector <vector <unsigned int> > nDQ;     // Stores the changes in the mixing matrix between areas and ages 
 	vector <vector< vector <unsigned int> > > DQto;
 	vector <vector <vector< vector <double> > > > DQval;
+	unsigned int DQnum;
 	
 	double getparam(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod);
 	void addQ(DATA &data);
-	void betaspline(double period);
+	void timevariation(DATA &data);
 	void priorsamp();
 	unsigned int settransprob();
 	void setsus(DATA &data);           

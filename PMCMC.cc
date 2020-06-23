@@ -27,7 +27,6 @@ vector < vector<double> > recibuffer;
 static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int period,	vector < vector <FEV> > &xinew);
 static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npart, unsigned int fedivmin, unsigned int w, unsigned int *backpart);
 static void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int nweek, unsigned int *backpart, vector < vector <FEV> > &xp);
-static void geneventsample2(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int nweek, unsigned int *back, vector < vector <FEV> > &xp);
 
 PART* part[partmax];                       // Pointers to each of the particles 
 
@@ -47,13 +46,17 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 		sendbuffer[p].resize(BUFMAX);
 		recibuffer[p].resize(BUFMAX);
 	}
-	
+
 	srand(core);
 	
 	for(p = 0; p < npart; p++){ part[p] = new PART(data,model,poptree);}
 
 	if(core == 0) outputinit(data,model);
 
+	MPI_Bcast(&model.paramval[0],model.paramval.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+	model.timevariation(data);
+	model.setsus(data);
+ 
 	Li = -large; 
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
@@ -85,9 +88,11 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				
 				MPI_Bcast(&model.paramval[p],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-				if(param[p].betachange == 1) model.betaspline(data.period);
+				if(param[p].timechange == 1) model.timevariation(data);
 				if(param[p].suschange == 1) model.setsus(data);
-				
+
+				model.setsus(data);
+				 
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
 					model.parami = model.paramval; model.paramp = model.paramval;
@@ -114,7 +119,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				}
 				else{
 					model.paramval[p] = valst;
-					if(param[p].betachange == 1) model.betaspline(data.period);
+					if(param[p].timechange == 1) model.timevariation(data);
 					if(param[p].suschange == 1) model.setsus(data);
 				
 					if(core == 0){
@@ -135,24 +140,25 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int co
 {
 	unsigned int p, t, backpart[ncore*npart*period];
 	double Liav;
-	
-	for(p = 0; p < npart; p++) part[p]->partinit(p);
 
+	for(p = 0; p < npart; p++) part[p]->partinit(p);
+	
   Liav = 0;
 	for(t = 0; t < period; t++){                                      // We step through one measurement at a time
 		for(p = 0; p < npart; p++){
 			timers.timesim -= clock();
 	
 			part[p]->gillespie(t,t+1,0);                                  // Simulates the particle
-	
+
 			part[p]->Li = Lobs(data,model,poptree,t,part[p]->fev,1);      // Measures how well it agrees with the observations
 			timers.timesim += clock();
 		}
 		
 		timers.timeboot -= clock();
-		
+
 		// Culls or copies particles based on how well they represent observations
 		Liav += bootstrap(core,ncore,npart,(data.fediv*(t+1))/period,t,backpart); 
+		
 		timers.timeboot += clock();
 	}
 
@@ -164,11 +170,11 @@ static double sample(DATA &data, MODEL &model, POPTREE &poptree, unsigned int co
 /// Constructs the event sequence sample by gathering all the pieces from different particles (from the bootstrap function)
 void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned int npart, unsigned int period, unsigned int *backpart, vector < vector <FEV> > &xp)	
 {
-	unsigned int p, co, d, fedivmin, fedivmax, nparttot = npart*ncore;
+	unsigned int p=UNSET, co, d, fedivmin, fedivmax, nparttot = npart*ncore;
 	int t, siz;
 	
-	if(1 == 0){
-		for(t = 0; t < period; t++){
+	if(checkon == 1){
+		for(t = 0; t < int(period); t++){
 			cout << t << ": "; for(p = 0; p < nparttot; p++) cout << backpart[t*nparttot+p] << ",";
 			cout << " Backpart" << endl;  
 		}
@@ -177,7 +183,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 	xp.resize(data.fediv);
 	for(t = period-1; t >= 0; t--){
 		fedivmin = (data.fediv*t)/period;	fedivmax = (data.fediv*(t+1))/period;
-		if(t == period-1) p = backpart[nparttot*t];  // Picks the first final particle
+		if(t == int(period-1)) p = backpart[nparttot*t];  // Picks the first final particle
 		else p = backpart[nparttot*t + p];
 		
 		co = p/npart;
@@ -188,7 +194,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 			else{
 				MPI_Status status;
 				MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,co,0,MPI_COMM_WORLD,&status);
-				MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= MAX_NUMBERS) emsg("Buffer not big enough");
+				MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
 		
 				packinit();
 				unpack(xp,fedivmin,fedivmax);
@@ -209,7 +215,7 @@ void geneventsample(DATA &data, unsigned int core, unsigned int ncore, unsigned 
 static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npart, unsigned int fedivmin, unsigned int t, unsigned int *backpart)
 {
 	unsigned int p, pp, pmin, pmax, cor, j, jmax, k, kmax, nparttot = npart*ncore, partstep;
-	unsigned int	siz, nreqs = 0, nsendbuf = 0, rec,	npreclist, ncorlist;
+	unsigned int nreqs = 0, nsendbuf = 0, rec,	npreclist, ncorlist;
 	double res, *buf = packbuffer();
 	
 	vector <unsigned int> corlist;
@@ -240,7 +246,7 @@ static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npar
 			sumst[p] = sum;
 		}
 
-		for(p = 0; p < nparttot; p++) backpart[p] = -1;
+		for(p = 0; p < nparttot; p++) backpart[p] = UNSET;
 			
 		partstep = nparttot/32; if(partstep < 2) partstep = 2;
 		
@@ -255,21 +261,21 @@ static double bootstrap(unsigned int core, unsigned int ncore, unsigned int npar
 			if(pp == nparttot) emsg("PMCMC: EC1");	
 			if(pp > 0){ if(z < sumst[pp-1]) emsg("PMCMC: EC1a");}
 			
-			if(backpart[pp] == -1) backpart[pp] = pp;
+			if(backpart[pp] == UNSET) backpart[pp] = pp;
 			else extra.push_back(pp);
 		}
 		
 		j = 0; jmax = extra.size();
 		while(j < jmax){                                             // Tries to copy to same core (to increase speed)
 			pp = extra[j];
-			p = pp - pp%npart; pmax = p+npart; while(p < pmax && backpart[p] != -1) p++;
+			p = pp - pp%npart; pmax = p+npart; while(p < pmax && backpart[p] != UNSET) p++;
 
 			if(p < pmax){	backpart[p] = pp; jmax--; extra[j] = extra[jmax]; extra.pop_back();}
 			else j++;
 		}
 		
 		for(p = 0; p < nparttot; p++){  
-			if(backpart[p] == -1){
+			if(backpart[p] == UNSET){
 				pp = extra[extra.size()-1]; extra.pop_back();
 				backpart[p] = pp;
 			}

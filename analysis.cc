@@ -8,10 +8,12 @@ Simulation:
 mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference:    
-mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+mpirun -n 20 ./run mode=mbp model=irish simtype=smallsim nchain=20 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+
+mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=10001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference:  
-mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt
+mpirun -n 20 ./run mode=pmcmc model=irish simtype=smallsim npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
 
@@ -100,16 +102,18 @@ int main(int argc, char** argv)
 	//cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
-	unsigned int nsamp=0;                     // The number of samples for inference
-	unsigned int nchain=0;                    // The number of chains per core (MBP only)
-	unsigned int npart=0;                             // The number of particles per core (PMCMC only)
+	unsigned int nsamp=UNSET;                 // The number of samples for inference
+	unsigned int nchain=UNSET;                // The number of chains per core (MBP only)
+	unsigned int npart=UNSET;                 // The number of particles per core (PMCMC only)
 	
-	int mode=-1;                              // Sets the mode of operation (sim/PMCMC/MBP)
-  int modelsel=-1;                          // Sets the model used
-	int period=-1;                            // The period of time for simulation / inference
+	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/PMCMC/MBP)
+  unsigned int modelsel=UNSET;              // Sets the model used
+	unsigned int period=UNSET;                // The period of time for simulation / inference
+	
 	int seed=0;                               // Sets the random seed for simulation
 	
-	unsigned int op, j, jst, jmax, flag;
+	unsigned int j, jst, jmax, flag;
+	int op;
 	TRANSDATA transdata;
 	string str, command, value;
 
@@ -125,8 +129,24 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 
-	DATA data; 
-	data.areadatafile=""; data.democatfile="";
+	DATA data;    // The following file names will need to be read in by the interface:
+	
+	data.democatfile = "Data_small/democat.txt";
+	data.regiondatafile = "Data_small/regiondata.txt";  
+	data.areadatafile = "Data_small/areadata.txt";  
+	data.Mdatafile = "Data_small/Mdata.txt";
+	data.Ndatafile = "Data_small/Ndata.txt";   
+	
+/*
+	//data.democatfile = "Data_scotland/democat.txt";
+	data.democatfile = "Data_scotland/democat_noage.txt";
+	data.regiondatafile = "Data_scotland/regiondata.txt";  
+	//data.areadatafile = "Data_scotland/areadata.txt";  
+	data.areadatafile = "Data_scotland/areadata_noage.txt";  
+	data.Mdatafile = "Data_scotland/Mdata.txt";
+	data.Ndatafile = "Data_scotland/Ndata.txt";   
+	*/
+	
 	data.outputdir="Output";                // The default output directory
 		
 	for(op = 1; op < argc; op++){                                           // Goes the various input options
@@ -160,17 +180,6 @@ int main(int argc, char** argv)
 			if(value == "scotsim"){ flag = 2; data.simtype = "scotsim";}
 			if(value == "uksim"){ flag = 2; data.simtype = "uksim";}
 		}
-		
-		/*
-		if(command == "area"){
-			flag = 2;
-			narea = atoi(value.c_str()); 
-			if(isnan(narea)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-		}	
-		*/
 		
 		if(command == "npart"){
 			flag = 2;
@@ -272,13 +281,13 @@ int main(int argc, char** argv)
 	
 	if(core == 0) cout << "Initialising...." << endl;
  
-	if(mode == -1) emsg("The property 'mode' must be set"); 
+	if(mode == UNSET) emsg("The property 'mode' must be set"); 
  
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(period==-1) emsg("The property 'period' must be set");
+	if(period == UNSET) emsg("The property 'period' must be set");
 	//if(data.housefile=="") emsg("The property 'housedata' must be set");
-	
+
 	data.readdata(core,ncore,mode,period);
 
 	//if(narea==-1) emsg("The property 'narea' must be set"); 
@@ -293,13 +302,14 @@ int main(int argc, char** argv)
 	model.checktransdata(data);
 	
 	model.setsus(data);
-	
+
 	if(core == 0) cout << "Running...." << endl;
 
 	timersinit();
 	timers.timetot = -clock();
 	
 	MPI_Barrier(MPI_COMM_WORLD);
+
 	switch(mode){
 	case MODE_SIM:
 		srand(seed); 
@@ -307,14 +317,15 @@ int main(int argc, char** argv)
 		break;
 		
 	case MODE_PMCMC:
-		if(nsamp == 0) emsg("The number of samples must be set");
-		if(npart == 0) emsg("The number of particles must be set");
+		if(nsamp == UNSET) emsg("The number of samples must be set");
+		if(npart == UNSET) emsg("The number of particles must be set");
+
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 
 	case MODE_MBP: 
-		if(nsamp == 0) emsg("The number of samples must be set");
-		if(nchain == 0) emsg("The number of chains must be set");
+		if(nsamp == UNSET) emsg("The number of samples must be set");
+		if(nchain == UNSET) emsg("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
 		break;
 
