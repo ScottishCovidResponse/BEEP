@@ -40,7 +40,7 @@ class PART                                 // Stores all the things related to a
 	vector <int> N;                         // The number of individuals in different compartments
 
 	unsigned int sett;                      // Index used to track time changes in beta
-
+	
 	unsigned int tdnext, tdfnext;           // Stores when the next future compartmental transition will occur
 		
 	DATA &data;

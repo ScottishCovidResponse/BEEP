@@ -11,7 +11,12 @@ struct FEV {                               // Stores information about a compart
   unsigned int trans;                      // References the transition type
 	unsigned int ind;                        // The individual on which the transition happens
 	double t;                                // The time of the transition
-	unsigned int done;                       // Set to 1 if that transition is in the past 
+	unsigned int timep;                      // The time period in which the transition occurs 
+};
+
+struct EVREF {                             // Used to reference an event
+	unsigned int ind;                        // The individual
+	unsigned int e;	                       // The event number
 };
 
 struct PARAM{                              // Store information about a model parameter
@@ -54,7 +59,6 @@ class MODEL                                // Stores all the information about t
 public:
 	unsigned int modelsel;                   // The model used (e.g. irish, old)
 
-	vector <double> settime;                 // The timings at which beta changes
 	vector <double> beta;                    // The value for beta at the various times
 	vector <double> sus;                     // The susceptibility for different demographic categories
 	
@@ -80,13 +84,14 @@ public:
 	vector <vector <unsigned int> > nDQ;     // Stores the changes in the mixing matrix between areas and ages 
 	vector <vector< vector <unsigned int> > > DQto;
 	vector <vector <vector< vector <double> > > > DQval;
+	unsigned int DQnum;
 	
 	double getparam(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod);
 	void addQ(DATA &data);
-	void betaspline(double period);
+	void betaspline(DATA &data);
 	void priorsamp();
 	unsigned int settransprob();
 	void setsus(DATA &data);           

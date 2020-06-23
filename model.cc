@@ -29,7 +29,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
   case MOD_IRISH:  	// Irish model
 		// R0 determines how many individuals an infected individual on average infects
 		// These 8 values represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
-		double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};      
+		//double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};
+
+		//double R0sim[8] = {3.2,3.2,3.1,2.9,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
 		//double R0sim[8] = {4,4,4,4,4,0.7,0.8,0.9};      
 		const double dpw = 7;
 		
@@ -48,7 +51,9 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		}
 		
 		phiparam = param.size();
-		r = 1*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
+
+		r = 0.5*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
+		//r =1*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
 
 		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
 		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
@@ -63,7 +68,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 		addparam("probA",probA,probA,probA);  		    // The probability of being asymptomatic
 		addparam("probH",probH,probH,probH);  		    // The probability of hospitalisation given I
-		addparam("probD",probD,0,1);  	            	// The probability of death given H
+		//addparam("probD",probD,0,1);  	            	// The probability of death given H
+		addparam("probD",probD,probD,probD);  	            	// The probability of death given H
 				
 		addcomp("S",0,NO_DIST,"","");                 // Different compartment in the model
 		addcomp("E",0,LOGNORM_DIST,"muE","sdE");           
@@ -100,7 +106,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
  
-	betaspline(period);
+	beta.resize(data.nsettime);
+	betaspline(data);
 
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
@@ -178,7 +185,6 @@ void MODEL::addQ(DATA &data)
 	
 		for(timep = 0; timep < ntimeperiod; timep++){
 			timepi = timep; timepf = timep;
-			
 			if(compi == compf) timepf++;
 			
 			if(timepf < ntimeperiod){
@@ -233,6 +239,8 @@ void MODEL::addQ(DATA &data)
 			}
 		}
 	}
+	
+	DQnum = nDQ.size();
 }
 
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
@@ -241,7 +249,8 @@ void MODEL::priorsamp()
 	unsigned int th;
 	
 	for(th = 0; th < param.size(); th++){	
-		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
+		paramval[th] = param[th].sim;
+		//paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 }
 
@@ -317,13 +326,11 @@ void MODEL::addtrans(string from, string to, string probparam)
 }
 	
 /// Converts the spline points to a finer timestep for use in simulations.
-void MODEL::betaspline(double period)
+void MODEL::betaspline(DATA &data)
 {
   unsigned int s;
 	int p, n = nspline-1;
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
-	
-	settime.resize(nsettime); beta.resize(nsettime);
 	
 	if(1 == 0){   // This uses a cubic spline
 		for(p = 0; p <= n; p++) a[p] = log(paramval[p]);
@@ -344,10 +351,8 @@ void MODEL::betaspline(double period)
 		}
 		
 		p = 0;
-		for(s = 0; s < nsettime; s++){
-			settime[s] = double((s+1)*period)/nsettime;;
-			
-			t = double((s+0.5)*period)/nsettime;
+		for(s = 0; s < data.nsettime; s++){		
+			t = double((s+0.5)*data.period)/data.nsettime;
 			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			dt = t-splinet[p];	
@@ -356,10 +361,8 @@ void MODEL::betaspline(double period)
 	}
 	else{  // This uses a linear spline
 		p = 0;
-		for(s = 0; s < nsettime; s++){
-			settime[s] = double((s+1)*period)/nsettime;;
-			
-			t = double((s+0.5)*period)/nsettime;
+		for(s = 0; s < data.nsettime; s++){	
+			t = double((s+0.5)*data.period)/data.nsettime;
 			
 			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
@@ -381,7 +384,6 @@ unsigned int MODEL::settransprob()
 			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
 			for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
 			cout << endl;
-			
 		}
 	
 		for(tra = 0; tra < trans.size(); tra++){
@@ -431,19 +433,18 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 	vector <double> probsum;
 	
 	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
-	
+
+	ev.ind = i; ev.timep = timep; 
+		
 	if(c == 0){
 		evlist.clear();	
 		tra = 0;
-		ev.trans = tra; ev.ind = i; ev.t = t; ev.done = 1;
+		ev.trans = tra; ev.ind = i; ev.t = t; 
 		evlist.push_back(ev);
 	
 		c = trans[tra].to;
 	}
-	else{
-		ev.ind = i;
-	}
-	
+	 
 	do{
 		kmax = comp[c].trans.size();
 		if(kmax == 0) break;
@@ -466,10 +467,11 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		default: emsg("MODEL: EC2b"); break;
 		}
 
-		while(timeperiod[timep] < t){    // Adds in changes in period
-			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep]; ev.done = 0;
+		while(timeperiod[timep] < t){    // Adds in changes in time period
+			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep];
 			evlist.push_back(ev);
 			timep++;
+			ev.timep = timep; 
 		}
 	
 		if(kmax == 1) tra = comp[c].trans[0];
@@ -479,7 +481,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 			tra = comp[c].trans[k];
 		}
 		
-		ev.trans = tra; ev.t = t; ev.done = 0;
+		ev.trans = tra; ev.t = t;
 		evlist.push_back(ev);
 
 		c = trans[tra].to; 
@@ -497,10 +499,8 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 	evlistp.clear();
 	
 	ev = evlisti[0];
-	tra = ev.trans; t = ev.t; i = ev.ind;
+	tra = ev.trans; t = ev.t; i = ev.ind; timep = ev.timep;
 	evlistp.push_back(ev);
-	
-	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
 	
 	c = trans[tra].to;
 	
@@ -549,7 +549,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			}			
 		}
 		
-		ev.trans = tra; ev.t = t; ev.done = 0;
+		ev.trans = tra; ev.t = t;
 		evlistp.push_back(ev);
 
 		c = trans[tra].to; 

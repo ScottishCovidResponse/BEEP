@@ -22,13 +22,12 @@ const unsigned int checkon = 0;                                  // Set to one t
 
 const unsigned int partmax = 10000;                              // The maximum number of particles per core (arbitrarily set)
 const unsigned int chainmax = 10000;                             // The maximum number of chains per core (arbitrarily set)
-const unsigned int nsettime = 100;                               // The number of time divisions used to represent changes in beta
 
 const unsigned int MAX_NUMBERS = 20000000;                       // The maximum buffer size for Send Recv MPI messages
 const unsigned int BUFMAX = 2000000;                             // The maximum buffer size for SendI RecvI MPI messages
 
-const double varfac = 4;                                         // A factor which relaxes the observation model
+const double varfac = 10;                                         // A factor which relaxes the observation model
 
-const unsigned int INFMAX = 50000;                               // The maximum number of infections allowed
+const unsigned int INFMAX = 200000;                              // The maximum number of infections allowed
 
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs

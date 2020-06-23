@@ -66,13 +66,12 @@ void PART::partinit(unsigned int p)
 			sussum[l][c] = sum;
 		}
 	}
-
 	 
 	sussumst = sussum;
 	susagest = susage;
 	 
 	sett = 0;
-
+	
 	tdnext = fediv;
 	
 	indev.resize(data.popsize);
@@ -86,12 +85,12 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 	NEV n;
 	vector <NEV> nev;
 	
-	if(sett == nsettime) emsg("Part: EC4");
+	if(sett == data.nsettime) emsg("Part: EC4");
 						 
 	t = ti; tpl = t;
 	do{
 		nev.clear();                     // First we decide what event is next
-		n.t = model.settime[sett];
+		n.t = data.settime[sett+1];
 		n.type = SET_EV;
 		nev.push_back(n); 
 		 
@@ -121,7 +120,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		switch(nev[jsel].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
-			sett++; if(sett >= nsettime) emsg("Part: EC5");
+			sett++; if(sett >= data.nsettime) emsg("Part: EC5");
 			break;
 		
 		case INF_EV:                 // These are infection events within the system
@@ -187,7 +186,7 @@ void PART::addinfc(unsigned int c, double t)
 /// Used to check that various quantities are being correctly updated
 void PART::check(unsigned int num, double t)
 {
-	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, timep, q;
+	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, q;
 	double dd, sum, sum2, val, inf;
 	vector <double> susag;
 	vector <vector <double> > Qma;
@@ -223,14 +222,12 @@ void PART::check(unsigned int num, double t)
 	Qma.resize(data.narea);
 	for(c = 0; c < data.narea; c++){ Qma[c].resize(data.nage); for(a = 0; a < data.nage; a++) Qma[c][a] = 0;}
 	
-	timep = 0; while(timep < data.ntimeperiod && t > data.timeperiod[timep]) timep++;
-	
 	for(c = 0; c < data.narea; c++){
 		for(j = 0; j < indinf[c].size(); j++){
 			i = indinf[c][j];
 			k = 0; cc = 0; while(k < indev[i].size() && t >= indev[i][k].t){ cc = trans[indev[i][k].trans].to; k++;}
 			
-			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == timep)) q++;
+			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == indev[i][k].timep)) q++;
 			if(q < data.Qnum){ 			
 				inf = comp[cc].infectivity;
 				
@@ -249,7 +246,7 @@ void PART::check(unsigned int num, double t)
 		
 	for(c = 0; c < data.narea; c++){
 		for(a = 0; a < data.nage; a++){
-			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny){ cout << Qma[c][a] << " " << Qmap[c][a] << endl;  emsg("Part: EC22");}
+			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny) emsg("Part: EC22");
 		}
 	}
 	
@@ -275,31 +272,28 @@ void PART::check(unsigned int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax, timep;
+	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax;
 	int l;
 	double sum, val, t;
 	TRANS tr;
 		 
-	if(fev[tdnext][tdfnext].done != 0) emsg("Part: EC11");
-	
 	i = fev[tdnext][tdfnext].ind; 
 	t = fev[tdnext][tdfnext].t; 
-	fev[tdnext][tdfnext].done = 1;
 	c = data.ind[i].area;
 		 
 	tr = trans[fev[tdnext][tdfnext].trans];
 	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12");
 	N[tr.to]++;
 
+	q = tr.DQ[fev[tdnext][tdfnext].timep]; 
+		
 	tdfnext++;
 	if(tdfnext == fev[tdnext].size()){
 		tdnext++; tdfnext = 0; 
 		while(tdnext < fediv && fev[tdnext].size() == 0) tdnext++;
 	}
 		
-	timep = 0; while(timep < data.ntimeperiod && t > data.timeperiod[timep]) timep++;
-	if(timep >= tr.DQ.size()) emsg("Part: EC66");
-	q = tr.DQ[timep]; if(q == UNSET) return;
+	if(q == UNSET) return;
 	
 	dp = data.ind[i].dp;
 	v = c*data.nage+data.democatpos[dp][0];

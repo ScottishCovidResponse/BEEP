@@ -110,7 +110,6 @@ void pack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fediv
 			buffer[k] = vec[i][j].trans; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 			buffer[k] = vec[i][j].ind; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 			buffer[k] = vec[i][j].t; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
-			buffer[k] = vec[i][j].done; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
 		}
 	}
 }
@@ -162,6 +161,19 @@ void pack(vector <DEMOCAT> &vec)
 	for(i = 0; i < imax; i++){
 		pack(vec[i].name);
 		pack(vec[i].value);
+	}
+}
+
+void pack(vector <vector <EVREF> > &vec)
+{
+	unsigned int imax, i, jmax, j;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(i = 0; i < imax; i++){
+		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
+		for(j = 0; j < jmax; j++){
+			buffer[k] = vec[i][j].ind; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+			buffer[k] = vec[i][j].e; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+		}
 	}
 }
 
@@ -246,7 +258,6 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 			vec[i][j].trans = buffer[k]; k++;
 			vec[i][j].ind = buffer[k]; k++;
 			vec[i][j].t = buffer[k]; k++;
-			vec[i][j].done = buffer[k]; k++;
 		}
 	}
 }
@@ -298,5 +309,18 @@ void unpack(vector <DEMOCAT> &vec)
 	for(i = 0; i < imax; i++){
 		unpack(vec[i].name);
 		unpack(vec[i].value);
+	}
+}
+
+void unpack(vector <vector <EVREF> > &vec)
+{
+	unsigned int imax, i, jmax, j;
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){
+		jmax = buffer[k]; k++; vec[i].resize(jmax);
+		for(j = 0; j < jmax; j++){ 
+			vec[i][j].ind = buffer[k]; k++;
+			vec[i][j].e = buffer[k]; k++;
+		}
 	}
 }

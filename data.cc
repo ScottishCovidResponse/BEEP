@@ -17,7 +17,7 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q;
+	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
 	int dc;
 	double v, sum;
 	string line, ele, name, regcode;
@@ -30,11 +30,16 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 	mode = mod;
 	period = per;
-	fediv = 100*per;
+	fepertime = 100;
+	
+	settpertime = 7;
+	nsettime = settpertime*per;
+	settime.resize(nsettime+1);
+	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
+			
+	fediv = nsettime*fepertime;
 	
 	if(core == 0){
-		//democatfile = "Data_uk/democat.txt";
-		democatfile = "Data_small/democat.txt";
 		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
 		do{
 			getline(demoin,line); line = strip(line);
@@ -82,10 +87,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}while(dc >= 0);
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
-
-		//regiondatafile = "Data_uk/regiondata.txt";                                  // Loads information about data regions
-		regiondatafile = "Data_small/regiondata.txt";  
-		ifstream regionin(regiondatafile.c_str());      	
+ 
+		ifstream regionin(regiondatafile.c_str());      	             // Loads information about data regions
 		do{
 			getline(regionin,line); line = strip(line);
 			if(regionin.eof()) break;
@@ -100,10 +103,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		if(checkon == 1){
 			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
 		}
-		
-		//areadatafile = "Data_uk/areadata.txt";                                    // Loads information about areas
-		areadatafile = "Data_small/areadata.txt";  
-		ifstream areain(areadatafile.c_str());      
+	
+		ifstream areain(areadatafile.c_str());                                        // Loads information about areas
 		
 		getline(areain,line);
 		do{
@@ -156,10 +157,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				cout << endl;	
 			}
 		}			
-
-		//Mdatafile = "Data_uk/Mdata_cut.txt";                                          // Loads information about mixing matrix
-		Mdatafile = "Data_small/Mdata.txt";
-		ifstream Min(Mdatafile.c_str());      
+		
+		ifstream Min(Mdatafile.c_str());                                // Loads information about mixing matrix
 		getline(Min,line);
 		
 		nM.resize(narea); Mto.resize(narea); Mval.resize(narea);
@@ -175,9 +174,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
 
-		//Ndatafile = "Data_uk/Ndata.txt";                                          // Loads information about age mixing
-		Ndatafile = "Data_small/Ndata.txt";   
-		ifstream Nin(Ndatafile.c_str());      
+		ifstream Nin(Ndatafile.c_str());                                   // Loads information about age mixing
 
 		N.resize(nage);
 		for(j = 0; j < nage; j++){

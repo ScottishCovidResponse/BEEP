@@ -8,7 +8,9 @@ Simulation:
 mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference:    
-mpirun -n 20 ./run mode=mbp model=irish simtype=smallsim nchain=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+mpirun -n 20 ./run mode=mbp model=irish simtype=smallsim nchain=20 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+
+mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=10001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference:  
 mpirun -n 20 ./run mode=pmcmc model=irish simtype=smallsim npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
@@ -127,8 +129,24 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 
-	DATA data; 
-	data.areadatafile=""; data.democatfile="";
+	DATA data;    // The following file names will need to be read in by the interface:
+	
+	data.democatfile = "Data_small/democat.txt";
+	data.regiondatafile = "Data_small/regiondata.txt";  
+	data.areadatafile = "Data_small/areadata.txt";  
+	data.Mdatafile = "Data_small/Mdata.txt";
+	data.Ndatafile = "Data_small/Ndata.txt";   
+	
+/*
+	//data.democatfile = "Data_scotland/democat.txt";
+	data.democatfile = "Data_scotland/democat_noage.txt";
+	data.regiondatafile = "Data_scotland/regiondata.txt";  
+	//data.areadatafile = "Data_scotland/areadata.txt";  
+	data.areadatafile = "Data_scotland/areadata_noage.txt";  
+	data.Mdatafile = "Data_scotland/Mdata.txt";
+	data.Ndatafile = "Data_scotland/Ndata.txt";   
+	*/
+	
 	data.outputdir="Output";                // The default output directory
 		
 	for(op = 1; op < argc; op++){                                           // Goes the various input options
@@ -162,17 +180,6 @@ int main(int argc, char** argv)
 			if(value == "scotsim"){ flag = 2; data.simtype = "scotsim";}
 			if(value == "uksim"){ flag = 2; data.simtype = "uksim";}
 		}
-		
-		/*
-		if(command == "area"){
-			flag = 2;
-			narea = atoi(value.c_str()); 
-			if(isnan(narea)){
-				stringstream ss; ss << "Value '" << value << "' is not a number";
-				emsg(ss.str());
-			}
-		}	
-		*/
 		
 		if(command == "npart"){
 			flag = 2;

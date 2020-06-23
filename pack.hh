@@ -21,6 +21,7 @@ void pack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fediv
 void pack(vector <AREA> &vec);
 void pack(vector <REGION> &vec);
 void pack(vector <DEMOCAT> &vec);
+void pack(vector <vector <EVREF> > &vec);
 
 void unpack(unsigned int &num);
 void unpack(double &num);
@@ -35,6 +36,7 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 void unpack(vector <AREA> &vec);
 void unpack(vector <REGION> &vec);
 void unpack(vector <DEMOCAT> &vec);
+void unpack(vector <vector <EVREF> > &vec);
 
 	
 	

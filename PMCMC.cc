@@ -54,7 +54,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 	if(core == 0) outputinit(data,model);
 
 	MPI_Bcast(&model.paramval[0],model.paramval.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
-	model.betaspline(data.period);
+	model.betaspline(data);
 	model.setsus(data);
  
 	Li = -large; 
@@ -88,7 +88,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				
 				MPI_Bcast(&model.paramval[p],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-				if(param[p].betachange == 1) model.betaspline(data.period);
+				if(param[p].betachange == 1) model.betaspline(data);
 				if(param[p].suschange == 1) model.setsus(data);
 
 				model.setsus(data);
@@ -119,7 +119,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				}
 				else{
 					model.paramval[p] = valst;
-					if(param[p].betachange == 1) model.betaspline(data.period);
+					if(param[p].betachange == 1) model.betaspline(data);
 					if(param[p].suschange == 1) model.setsus(data);
 				
 					if(core == 0){
