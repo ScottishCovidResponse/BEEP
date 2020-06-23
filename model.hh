@@ -25,7 +25,7 @@ struct PARAM{                              // Store information about a model pa
 	double sim;                              // The simulation value
 	double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
-	unsigned int betachange;                 // Set to one if there is a change in the beta spline
+	unsigned int timechange;              // Set to one if there is a change in the beta spline
 	unsigned int suschange;                  // Set to one if there us a change in a fixed effect for susceptibility
 	unsigned int ntr, nac;                   // Store the number of proposals tried and accepted	
 	double jump;
@@ -60,13 +60,18 @@ public:
 	unsigned int modelsel;                   // The model used (e.g. irish, old)
 
 	vector <double> beta;                    // The value for beta at the various times
+	vector <double> phi;                     // The value for phi at the various times
 	vector <double> sus;                     // The susceptibility for different demographic categories
 	
 	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
+	vector <double> phii, phip;              // Under MBPs the values of phi for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
 	vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
 			
-	unsigned int phiparam;           			   // Stores which parameters relate to phi and probA
+	unsigned int phparam;           			   // Stores which parameters relate to phi and probA
+	unsigned int nphitime;                   // The number of time periods for changes in phi
+	vector <double> phitime;                 // The times of those changes
+	
 	unsigned int nspline;                    // The spline points which are parameters in the model
 	vector <double> splinet;                 // The times for the spline points
 	vector <PARAM> param;                    // Information about parameters in the model
@@ -91,7 +96,7 @@ public:
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod);
 	void addQ(DATA &data);
-	void betaspline(DATA &data);
+	void timevariation(DATA &data);
 	void priorsamp();
 	unsigned int settransprob();
 	void setsus(DATA &data);           

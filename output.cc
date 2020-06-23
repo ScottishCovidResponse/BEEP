@@ -108,7 +108,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 		}
 	}
 
-	model.paramval = paramval; model.betaspline(data);
+	model.paramval = paramval; model.timevariation(data);
 
 	switch(model.modelsel){
 	case MOD_IRISH:
@@ -167,7 +167,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 		}
 	}
 
-	model.paramval = paramval; model.betaspline(data);
+	model.paramval = paramval; model.timevariation(data);
 
 	switch(model.modelsel){
 	case MOD_IRISH:

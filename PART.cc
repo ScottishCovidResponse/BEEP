@@ -102,7 +102,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		n.type = INF_EV;
 		nev.push_back(n);
 		
-		n.t = t - log(ran())/(sussum[0][0]*model.paramval[model.phiparam]);
+		n.t = t - log(ran())/(sussum[0][0]*model.phi[sett]);
 		n.type = EXT_EV;
 		nev.push_back(n);
 		

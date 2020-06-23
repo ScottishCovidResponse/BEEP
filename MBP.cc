@@ -61,8 +61,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}while(loop < loopmax && mbpchain[p]->indinfi.size() >= INFMAX);           // Checks not too many infected (based on prior)
 		if(loop == loopmax) emsg("Cannot find initial state under INFMAX");
 	}
-
-	//mbpchain[0]->param_prop();
 	
 	if(core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
@@ -84,19 +82,23 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 
 		time = clock();
 		short lo;
+		
 		for(lo = 0; lo < 10; lo++){
 		//do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = (unsigned int)(ran()*model.param.size());
 			if(model.param[th].min != model.param[th].max){
 				timeprop -= clock();
-				mbpchain[p]->proposal(data,model,poptree,th,samp,burnin);
+				mbpchain[p]->proposal(th,samp,burnin);
 				timeprop += clock();
 				ntimeprop++;
 			}
 		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
 		}
 		
+		
+		//for(p = 0; p < nchain; p++) mbpchain[p]->betaphi_prop(samp,burnin);
+			
 		timers.timewait -= clock();
 		
 		MPI_Barrier(MPI_COMM_WORLD); 

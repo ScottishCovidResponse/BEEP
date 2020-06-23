@@ -47,14 +47,20 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
 			r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
-			param[int(param.size())-1].betachange = 1;
+			param[int(param.size())-1].timechange = 1;
 		}
 		
-		phiparam = param.size();
+		phparam = param.size();
+		nphitime = 2;
+		phitime.resize(nphitime);
+		phitime[0] = 3; phitime[1] = data.period;
+		
+		r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
+		param[int(param.size())-1].timechange = 1;
 
-		r = 0.5*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
-		//r =1*7.0/popsize; addparam("phi",r,0,3*r);             // Adds a small external force of infection
-
+		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
+		addparam("phi_zero",tiny,tiny,tiny);  
+	
 		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
 		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
 
@@ -106,8 +112,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
  
-	beta.resize(data.nsettime);
-	betaspline(data);
+	beta.resize(data.nsettime);	phi.resize(data.nsettime);
+	timevariation(data);
 
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
@@ -293,7 +299,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.valinit = val; par.sim = val; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = val/10;
-	par.betachange = 0;	par.suschange = 0;
+	par.timechange = 0;	par.suschange = 0;
 
 	param.push_back(par);
 }
@@ -325,14 +331,14 @@ void MODEL::addtrans(string from, string to, string probparam)
 	trans.push_back(tr);
 }
 	
-/// Converts the spline points to a finer timestep for use in simulations.
-void MODEL::betaspline(DATA &data)
+/// Generates the time variation in beta and phi from the parameters
+void MODEL::timevariation(DATA &data)
 {
-  unsigned int s;
+  unsigned int s, j;
 	int p, n = nspline-1;
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
-	if(1 == 0){   // This uses a cubic spline
+	if(1 == 0){   // This uses a cubic spline for beta
 		for(p = 0; p <= n; p++) a[p] = log(paramval[p]);
 		for(p = 0; p < n; p++) h[p] = splinet[p+1]-splinet[p];
 		for(p = 1; p < n; p++) alpha[p] = (3/h[p])*(a[p+1]-a[p]) - (3/h[p-1])*(a[p]-a[p-1]);
@@ -359,7 +365,7 @@ void MODEL::betaspline(DATA &data)
 			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
 		}
 	}
-	else{  // This uses a linear spline
+	else{  // This uses a linear spline for beta
 		p = 0;
 		for(s = 0; s < data.nsettime; s++){	
 			t = double((s+0.5)*data.period)/data.nsettime;
@@ -370,6 +376,15 @@ void MODEL::betaspline(DATA &data)
 			beta[s] = paramval[p]*(1-fac) + paramval[p+1]*fac;
 		}
 	}
+	
+	s = 0;
+	for(j = 0; j < nphitime; j++){
+		while(s < data.nsettime && data.settime[s] < phitime[j]){
+			phi[s] = paramval[phparam+j];
+			s++;
+		}
+	}
+	if(s != data.nsettime) emsg("Model: EC43");
 }
 
 /// Sets the transition probabilies based on the parameters

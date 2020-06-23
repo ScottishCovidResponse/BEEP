@@ -18,6 +18,10 @@ class MBPCHAIN                                          // Stores all the things
 	double invT;                                          // The inverse temperature 
 	vector <float> paramjump;                             // The size of jumps in parameter space
 	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
+	
+	vector <float> paramjumpxi;                           // The size of jumps in parameter space (fixed event sequence)
+	vector <unsigned int> ntrxi, nacxi;                   // The number of jumps tried and accepted
+	
 	long timeprop;                                        // The time for the proposals
 	
 	vector <EVREF> xi;                                    // Ordered list of references to infection events in init state
@@ -73,8 +77,8 @@ class MBPCHAIN                                          // Stores all the things
 	 
 	public:
 		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &indev, unsigned int chstart);
-		void proposal(DATA &data, MODEL &model, POPTREE &poptree, unsigned int th, unsigned int samp, unsigned int burnin);
-		void param_prop();
+		void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
+		void betaphi_prop( unsigned int samp, unsigned int burnin);
 		void setQmapi();
 						
 	private:
@@ -89,4 +93,5 @@ class MBPCHAIN                                          // Stores all the things
 		void changestat(unsigned int i, unsigned int st);
 		void constructRtot(unsigned int sett);
 		double likelihood();
+
 };

@@ -34,6 +34,13 @@ static bool compEVREFT(EVREFT lhs, EVREFT rhs)
 	return lhs.t < rhs.t;
 };
 
+struct LCONT {                
+	unsigned int w;       
+	unsigned int num;       	
+	double betafac;	              
+	double phifac;	 
+};
+
 /// Initialises an MCMC chain
 void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &indev, unsigned int chstart)
 {
@@ -45,11 +52,16 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	ch = chstart;
 
 	nparam = model.param.size();
-	paramval.resize(nparam); paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);
+	paramval.resize(nparam);
+	paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);
+	paramjumpxi.resize(nparam); ntrxi.resize(nparam); nacxi.resize(nparam);
 	for(th = 0; th < nparam; th++){
 		paramval[th] = model.paramval[th];
 		paramjump[th] = paramval[th]/10;
 		ntr[th] = 0; nac[th] = 0;
+		
+		paramjumpxi[th] = paramval[th]/10;
+		ntrxi[th] = 0; nacxi[th] = 0;
 	}
 
 	indevi = indev;
@@ -192,7 +204,7 @@ void MBPCHAIN::constructRtot(unsigned int sett)
 }
 	
 /// Performs an MBP on parameter 'th'
-void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, unsigned int th, unsigned int samp, unsigned int burnin)  
+void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
 {
 	unsigned int j, jmax;
 	double al, valst, Lp=0;
@@ -201,9 +213,9 @@ void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, unsigned int
 	timers.timembpprop -= clock();
 	
 	model.paramval = paramval;
-	model.betaspline(data);
+	model.timevariation(data);
 	model.setsus(data);
-	model.parami = paramval; model.betai = model.beta; model.susi = model.sus;
+	model.parami = paramval; model.betai = model.beta; model.phii = model.phi; model.susi = model.sus;
 			
 	valst = paramval[th];
 
@@ -212,9 +224,9 @@ void MBPCHAIN::proposal(DATA &data, MODEL &model, POPTREE &poptree, unsigned int
 	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 	else{
 		model.paramval = paramval;
-		model.betaspline(data);
+		model.timevariation(data);
 		model.setsus(data);
-		model.paramp = paramval; model.betap = model.beta; model.susp = model.sus;
+		model.paramp = paramval; model.betap = model.beta; model.phip = model.phi;  model.susp = model.sus;
 		
 		if(model.settransprob() == 0) al = 0;
 		else{
@@ -407,7 +419,7 @@ unsigned int MBPCHAIN::mbp()
 		
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
-		phii = model.parami[model.phiparam]; phip = model.paramp[model.phiparam];	
+		phii = model.phii[sett]; phip = model.phip[sett];	
 		betai = model.betai[sett]; betap = model.betap[sett];
 
 		for(v = 0; v < data.narage; v++){
@@ -647,33 +659,13 @@ void MBPCHAIN::check(unsigned int num, double t, unsigned int sett)
 	}
 }
 
-/// This generates parameter proposals based on fixed event sequence
-void MBPCHAIN::param_prop()
-{
-/*
-
-	vector <vector <double> > Linf_beta, Linf_phi;
-	popw.resize(data.nardp);
-	Linf_beta.resize(data.nsettime); Linf_phi.resize(data.nsettime);
-	*/
-	
-	model.paramval = paramval;
-	model.betaspline(data);
-	model.setsus(data);
-	model.parami = paramval; model.betai = model.beta; model.susi = model.sus;
-		
-	cout << "Lik\n";
-	cout << likelihood() << " " << " L\n";
-	emsg("cl");
-}
-
 /// Calculates the likelihood
 double MBPCHAIN::likelihood()
 {	
-/*
-	unsigned int c, dp, w, v, d, i, j;
-	double L, t, tt;
-			cout << "st\n";
+	unsigned int c, dp, w, v, d, i, j, n, sett;
+	double L, t, tt, tmax, beta, phi;
+	FEV ev;
+	
 	for(c = 0; c < data.narea; c++){
 		for(dp = 0; dp < data.ndemocatpos; dp++){
 			w = c*data.ndemocatpos + dp;
@@ -681,114 +673,195 @@ double MBPCHAIN::likelihood()
 		}
 	}		
 			
-	phii = model.paramval[model.phiparam];
-		
 	L = 0;
 	
+	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
+		beta = model.beta[sett]; phi = model.phi[sett];
+		tmax = data.settime[sett+1];
 		
-	}
-	
-	t = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
-		cout << sett << "s\n";
-		betai = model.betai[sett];
-	  
 		for(c = 0; c < data.narea; c++){
 			for(dp = 0; dp < data.ndemocatpos; dp++){
 				w = c*data.ndemocatpos + dp;
 				v = c*data.nage + data.democatpos[dp][0];
-				lami[w] = model.susi[dp]*(betai*Qmapi[sett][v] + phii);
+				lami[w] = model.sus[dp]*(beta*Qmapi[sett][v] + phi);		
 				if(lami[w] < 0) emsg("n");
 			}
 		}
 		
-		for(d = sett*data.fepertime; d < (sett+1)*data.fepertime; d++){
-			for(j = 0; j < xi[d].size(); j++){
-				if(xi[d][j].trans == 0){
-					tt = xi[d][j].t;
-					for(w = 0; w < data.nardp; w++) L -= lami[w]*popw[w]*(tt-t);
-					t = tt;
-					
-					i = xi[d][j].ind;
-					c = data.ind[i].area;
-					dp = data.ind[i].dp;
-					w = c*data.ndemocatpos + dp;
-					v = c*data.nage + data.democatpos[dp][0]; 
-					cout << L << " " << lami[w] << " kk\n";
-					L += log(lami[w]);
-					if(isnan(L)) emsg("P");
-					popw[w]--;
-				}
-			}
+		while(n < xi.size()){
+			i = xi[n].ind;
+			ev = indevi[i][xi[n].e];
+			tt = ev.t;
+			if(tt >= tmax) break;
+	
+			for(w = 0; w < data.nardp; w++) L -= lami[w]*popw[w]*(tt-t);
+		
+			t = tt;
+			
+			c = data.ind[i].area;
+			w = c*data.ndemocatpos + data.ind[i].dp;
+			L += log(lami[w]);
+			if(isnan(L)) emsg("MBPchain: EC87");
+			popw[w]--;
+			n++;
 		}
 		
-		tt = data.settime[sett+1]; cout << tt << " tt\n";
-		for(w = 0; w < data.nardp; w++) L -= lami[w]*popw[w]*(tt-t);
-		t = tt;
+		for(w = 0; w < data.nardp; w++) L -= lami[w]*popw[w]*(tmax-t);
+		t = tmax;
 	} 
 	
 	return L;
-	*/
 }
 
-/*
-/// Calculates the likelihood
-void MBPCHAIN::param_prop()
-{
-	L = 0;
-		numinf[sett] = 0;
+/// Makes proposal to beta and phi
+void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
+{	
+	unsigned int c, dp, w, v, d, i, j, jmax, n, sett, loop, loopmax=10, th;
+	double L, t, tt, tmax, betasum, phisum, beta, phi, al, Li, Lp, valst;
+	vector <unsigned int> map;
+	FEV ev;
+	vector <double> betafac, phifac;
+	LCONT lcont;
+	vector <LCONT> lcontlist;
+	vector<	vector <LCONT> > lc;
+		
+	model.paramval = paramval;
+	model.timevariation(data);
+	model.setsus(data);
 	
-	inf_beta.clear(); inf_phi.clear();
+	map.resize(data.nardp); for(w = 0; w < data.nardp; w++) map[w] = 0;
+	
+	for(c = 0; c < data.narea; c++){
+		for(dp = 0; dp < data.ndemocatpos; dp++){
+			w = c*data.ndemocatpos + dp;
+			popw[w] = data.area[c].ind[dp].size();
+		}
+	}		
+			
+	betafac.resize(data.nsettime); phifac.resize(data.nsettime);
+	
+	t = 0; n = 0;
+	for(sett = 0; sett < data.nsettime; sett++){
+		beta = model.beta[sett]; phi = model.phi[sett];
+		tmax = data.settime[sett+1];
 
-	for(d = sett*data.fepertime; d < (sett+1)*data.fepertime; d++){
-			for(j = 0; j < xi[d].size(); j++){
-				if(xi[d][j].trans == 0){
-					tt = xi[d][j].t;
-					
-					for(w = 0; w < data.nardp; w++){
-						L -= lami[w]*popw[w]*(tt-t);
-					}
-					
-					for(c = 0; c < data.narea; c++){
-						for(dp = 0; dp < data.ndemocatpos; dp++){
-							w = c*data.ndemocatpos+dp;
-							v = c*data.nage + data.democatpos[dp][0]; 
-							beta_dt[w] += popw[w]*model.susi[dp]*Qmapi[sett][v]*(tt-t);
-							phi_dt[w] += popw[w]*model.susi[dp]*(tt-t);
-						}
-					}
-					
-					i = xi[d][j].ind;
-					c = data.ind[i].area;
-					dp = data.ind[i].dp;
-					w = c*data.ndemocatpos + dp;
-					v = c*data.nage + data.democatpos[dp][0]; 
-					L += log(lami[w]);
-					Linf_beta.push_back(model.susi[dp]*Qmapi[sett][v]);
-					Linf_phi.push_back(model.susi[dp]);
-				}
+		lcontlist.clear();
+		
+		betasum = 0; phisum = 0;
+		for(c = 0; c < data.narea; c++){
+			for(dp = 0; dp < data.ndemocatpos; dp++){
+				w = c*data.ndemocatpos + dp;
+				v = c*data.nage + data.democatpos[dp][0];
+				lami[w] = model.sus[dp]*(beta*Qmapi[sett][v] + phi);
+				if(lami[w] < 0) emsg("MBBchain: EC88");
+				
+				betasum -= model.sus[dp]*Qmapi[sett][v]*popw[w]*(tmax-t);
+				phisum -= model.sus[dp]*popw[w]*(tmax-t);
 			}
 		}
+		
+		while(n < xi.size()){
+			i = xi[n].ind;
+			ev = indevi[i][xi[n].e];
+			tt = ev.t;
+			if(tt >= tmax) break;
+	
+			t = tt;
+			
+			c = data.ind[i].area;
+			dp = data.ind[i].dp;
+			w = c*data.ndemocatpos + dp;
+			v = c*data.nage + data.democatpos[dp][0]; 
+			
+			if(map[w] == 0){
+				lcont.w = w; lcont.betafac = model.sus[dp]*Qmapi[sett][v]; lcont.phifac = model.sus[dp];
+				lcontlist.push_back(lcont);
+			}
+			map[w]++;
+		
+			betasum += model.sus[dp]*Qmapi[sett][v]*(tmax-t);
+			phisum += model.sus[dp]*(tmax-t);
+			popw[w]--;
+			n++;
+		}
+		
+		betafac[sett] = betasum; phifac[sett] = phisum;
+					
+		for(j = 0; j < lcontlist.size(); j++){
+			w = lcontlist[j].w;
+			lcontlist[j].num = map[w];
+			map[w] = 0;
+		}
+					
+		lc.push_back(lcontlist);
+		
+		t = tmax;
 	} 
-			for(d = sett*data.fepertime; d < (sett+1)*data.fepertime; d++){
-			for(j = 0; j < xi[d].size(); j++){
-				if(xi[d][j].trans == 0){
-					tt = xi[d][j].t;
-					
-					for(w = 0; w < data.nardp; w++) L -= lami[w]*popw[w]*(tt-t);
-					
-					i = xi[d][j].ind;
-					c = data.ind[i].area;
-					dp = data.ind[i].dp;
-					w = c*data.ndemocatpos + dp;
-					v = c*data.nage + data.democatpos[dp][0]; 
-					L += log(lami[w]);
-					Linf_beta.push_back(model.susi[dp]*Qmapi[sett][v]);
-					Linf_phi.push_back(model.susi[dp]);
+	
+	for(loop = 0; loop < loopmax; loop++){
+		cout << loop << "Lop\n";
+		for(th = 0; th < model.phparam + model.nphitime; th++) cout << th << " " << paramval[th] << "before\n"; 
+
+		th = (unsigned int)(ran()*(model.phparam + model.nphitime)); 
+	
+cout << th << "th\n";	
+		if(loop > 0){
+			valst = paramval[th];
+			paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
+		}
+		
+		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+		else{
+			if(paramval[th] < 0) emsg("yy");
+			
+			model.paramval = paramval;
+			model.timevariation(data);
+			model.setsus(data);
+			model.paramp = paramval; model.betap = model.beta; model.phip = model.phi;  model.susp = model.sus;
+		
+			L = 0; 
+			for(sett = 0; sett < data.nsettime; sett++){
+				beta = model.beta[sett]; phi = model.phi[sett]; if(beta < 0){
+for(th = 0; th < model.phparam + model.nphitime; th++) cout << th << " " << paramval[th] << "val\n"; 
+				emsg("beta");
 				}
+				L += betafac[sett]*beta + phifac[sett]*phi;
+				
+				jmax = lc[sett].size();
+		if(isnan(L)) emsg("MBPchain: EC77");
+				for(j = 0; j < jmax; j++){
+					L += lc[sett][j].num*log(lc[sett][j].betafac*beta + lc[sett][j].phifac*phi);
+					if(isnan(L)){
+						cout << lc[sett][j].num << " "<< lc[sett][j].betafac << " " << beta << " " <<lc[sett][j].phifac <<  " " <<phi << " yy\n";
+						emsg("MBPchain: EC77b");
+					}
+				}
+				if(isnan(L)) emsg("MBPchain: EC77b");
+			}
+			cout << L << " " << likelihood() << " Laft\n";
+		
+			if(loop != 0){
+				Lp = L;
+				al = exp(Lp-Li); cout << al << "al\n";
 			}
 		}
-	} 
+			
+		if(loop == 0) Li = L; 
+		else{
+			ntrxi[th]++;
+			if(ran() < al){
+				Li = Lp;
+				paramval[th] = valst;
+			if(paramval[th] < 0) emsg("yy2");
+			
+				nac[th]++;
+				if(samp < burnin) paramjumpxi[th] *= 1.1;
+			}
+			else{
+				if(samp < burnin) paramjumpxi[th] *= 1.1;
+			}
+		}
+	}
 }
-*/
+
