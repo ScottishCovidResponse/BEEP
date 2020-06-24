@@ -26,7 +26,7 @@ $(exe): $(objs)
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
-	time $(MPICXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+	$(MPICXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
 
 # $(TARGET_ARCH)
 
