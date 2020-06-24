@@ -107,7 +107,7 @@ using namespace std;
 
 string lookup_string_parameter(const map<string,string> &params,
 															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-															 const string &key, const string &def="")
+															 const string &key, bool verbose, const string &def="")
 {
 	string val;
 	auto val_it = params.find(key);
@@ -121,14 +121,15 @@ string lookup_string_parameter(const map<string,string> &params,
 			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
-	cout << "  " << key << " = " << val << endl;
+	if (verbose)
+		cout << "  " << key << " = " << val << endl;
 	return val;
 }
 
 
 int lookup_int_parameter(const map<string,string> &params,
 												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-												 const string &key, int def=-1)
+												 const string &key, bool verbose, int def=-1)
 {
 	int val;
 	auto val_it = params.find(key);
@@ -142,7 +143,8 @@ int lookup_int_parameter(const map<string,string> &params,
 			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
-	cout << "  " << key << " = " << val << endl;
+	if (verbose)
+		cout << "  " << key << " = " << val << endl;
 	return val;
 }
 
@@ -159,7 +161,7 @@ vector<string> string_split(const string &s)
 vector<string> lookup_stringlist_parameter(
 	const map<string,string> &params,
 	const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-	const string &key)
+	const string &key, bool verbose)
 {
 	vector<string> val;
 	auto val_it = params.find(key);
@@ -172,12 +174,15 @@ vector<string> lookup_stringlist_parameter(
 			emsg("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
-	cout << "  " << key << " = ";
 
-	for (auto it = val.begin(); it != val.end(); it++) {
-		cout << *it << " ";
+	if (verbose) {
+		cout << "  " << key << " = ";
+
+		for (auto it = val.begin(); it != val.end(); it++) {
+			cout << *it << " ";
+		}
+		cout << endl;
 	}
-	cout << endl;
 	return val;
 }
 
@@ -254,8 +259,6 @@ vector<string> keys_of_map(map<string,string> m)
 
 int main(int argc, char** argv)
 {
-	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
-
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
 	unsigned int nsamp=UNSET;                 // The number of samples for inference
 	unsigned int nchain=UNSET;                // The number of chains per core (MBP only)
@@ -278,12 +281,15 @@ int main(int argc, char** argv)
 	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore =num;
   MPI_Comm_rank(MPI_COMM_WORLD,&num); core =num;
   #endif
-	
+
 	#ifndef USE_MPI
 	ncore = 1;
 	core = 0;
 	#endif
 
+	if (core == 0)
+		cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+	
 	DATA data;    // The following file names will need to be read in by the interface:
 	
 	data.democatfile = "Data_small/democat.txt";
@@ -332,12 +338,15 @@ int main(int argc, char** argv)
 	/ Process parameters
   /*********************************************************************************/
 
-	cout << endl << "Parameters:" << endl;
+	bool param_verbose = (core == 0);
+
+	if (param_verbose)
+		cout << endl << "Parameters:" << endl;
 
 	string key,val;
 
 	// mode
-	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", "UNSET");
+	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");
 	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"mbp", MODE_MBP}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
@@ -346,7 +355,7 @@ int main(int argc, char** argv)
 	}
 
 	// model
-	val = lookup_string_parameter(cmdlineparams, tomldata, "model", "UNSET");
+	val = lookup_string_parameter(cmdlineparams, tomldata, "model", param_verbose, "UNSET");
 	if (val == "irish") {
 		modelsel = MOD_IRISH;
 	} else {
@@ -354,37 +363,38 @@ int main(int argc, char** argv)
 	}
 
 	// simtype
-	data.simtype = lookup_string_parameter(cmdlineparams, tomldata, "simtype", "UNSET");
+	data.simtype = lookup_string_parameter(cmdlineparams, tomldata, "simtype", param_verbose, "UNSET");
 	if (!(data.simtype == "smallsim" || data.simtype == "scotsim" ||
 				data.simtype == "uksim" || data.simtype == "")) {
 		emsg("Unrecognised value \'"+data.simtype+"\' for simtype parameter");
 	}
 
 	// npart
-	int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", npart);
+	int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", param_verbose, npart);
 	if (npart != UNSET) {
 		if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
 		npart = nparttot/ncore;
 	}
 
 	// nchain
-	int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", UNSET);
+	int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
 	if (nchaintot != UNSET) {
 		if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
 		nchain = nchaintot/ncore;
 	}
 
 	// nsamp
-	nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp");
+	nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
 
 	// period
-	period = lookup_int_parameter(cmdlineparams, tomldata, "period");
+	period = lookup_int_parameter(cmdlineparams, tomldata, "period", param_verbose);
 
 	// seed
-	seed = lookup_int_parameter(cmdlineparams, tomldata, "seed");
+	seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 
 	// transdata
-	vector<string> slval = lookup_stringlist_parameter(cmdlineparams, tomldata, "transdata");
+	vector<string> slval = lookup_stringlist_parameter(cmdlineparams, tomldata, "transdata",
+																										 param_verbose);
 
 	for (auto it = slval.begin(); it != slval.end(); it++) {
 
@@ -412,10 +422,12 @@ int main(int argc, char** argv)
 	}	
 
 	// outputdir
-	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", data.outputdir);
+	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose,
+																					 data.outputdir);
 
 	// End of parameters
-	cout << endl;
+	if (param_verbose)
+		cout << endl;
 	
 	if(mode == MODE_SIM && ncore != 1) emsg("Simulation only requires one core");
 	
