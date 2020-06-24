@@ -91,7 +91,7 @@ Inference - The output directory contains postior information (with means and 90
 
 #include "simulate.hh"
 #include "PMCMC.hh"
-//#include "gitversion.hh"
+#include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
 
@@ -99,7 +99,7 @@ using namespace std;
  
 int main(int argc, char** argv)
 {
-	//cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+	cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
 	unsigned int nsamp=UNSET;                 // The number of samples for inference
