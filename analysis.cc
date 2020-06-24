@@ -216,6 +216,41 @@ void check_for_undefined_parameters(vector<string> allowed, vector<string> given
 	}
 }
 
+map<string,string> get_command_line_params(int argc, char *argv[])
+{
+	map<string,string> cmdlineparams;
+
+	// Store the parameters passed on the command line in cmdlineparams
+	for(int op = 1; op < argc; op++){ // Goes the various input options
+		string str = string(argv[op]);
+		int j = 0; int jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
+		if(j == jmax){
+			stringstream ss; ss << "Cannot understand " << str; 
+			emsg(ss.str());
+		}
+		
+		string command = str.substr(0,j);
+		string value = str.substr(j+1,jmax-(j+1));
+
+		if (cmdlineparams.count(command) == 0) {
+			cmdlineparams[command] = value;
+		} else {
+			// Encode repeated parameters as space-separatedd
+			cmdlineparams[command] += " " + value;
+		}
+	}
+	return cmdlineparams;
+}
+
+vector<string> keys_of_map(map<string,string> m)
+{
+	vector<string> keys;
+	for (const auto &p : m) {
+		keys.push_back(p.first);
+	}
+	return keys;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -269,42 +304,21 @@ int main(int argc, char** argv)
 	
 	data.outputdir="Output";                // The default output directory
 		
-	map<string,string> cmdlineparams;
-	vector<string>  cmdlineparamkeys;
-
+	// A list of all supported parameters
 	vector<string>  definedparams {"mode", "model", "simtype", "npart", "nchain", "nsamp",
 																 "period", "seed", "transdata", "outputdir", "inputfile"};
 
-	// Store the parameters passed on the command line in cmdlineparams
-	for(op = 1; op < argc; op++){ // Goes the various input options
-		str = string(argv[op]);
-		j = 0; jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
-		if(j == jmax){
-			stringstream ss; ss << "Cannot understand " << str; 
-			emsg(ss.str());
-		}
-		
-		command = str.substr(0,j);
-		value = str.substr(j+1,jmax-(j+1));
-
-		if (cmdlineparams.count(command) == 0) {
-			cmdlineparams[command] = value;
-		} else {
-			// Encode repeated parameters as space-separatedd
-			cmdlineparams[command] += " " + value;
-		}
-		cmdlineparamkeys.push_back(command);
-	}
-
-	// Read the TOML parameters if an inputfile has been specified on the command line
+	// Read command line parameters
+	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
+	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");
+	
+	// Read TOML parameters
 	string inputfilename = "/dev/null";
 	if (cmdlineparams.count("inputfile") == 1) {
 		inputfilename = cmdlineparams["inputfile"];
 	}
   auto tomldata = toml::parse(inputfilename);
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
-
-	check_for_undefined_parameters(definedparams, cmdlineparamkeys, "on command line");
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
 	/*********************************************************************************
