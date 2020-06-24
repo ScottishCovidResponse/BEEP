@@ -321,6 +321,13 @@ int main(int argc, char** argv)
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
+	// The code could be simplified by reading the TOML parameters into a
+	// map<string,string> and merging it with cmdlineparams. However, this would
+	// require casting all the TOML values to strings, and we would lose the
+	// vectors and types in the TOML file, and have to parse them out of
+	// strings. An alternative would be to interpret the command line as a TOML
+	// fragment, and work with just TOML values. That might be a better approach.
+
 	/*********************************************************************************
 	/ Process parameters
   /*********************************************************************************/
