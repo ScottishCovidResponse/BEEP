@@ -423,12 +423,20 @@ STAT getstat(vector <double> &vec)
 	stat.mean = sum; 
 	
 	sort(vec.begin(),vec.end());
+	
+	if (n >= 2)
+	{
+		i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
+		stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
 			
-	i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
-	stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
-			
-	i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
-	stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
+		i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
+		stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
+	}
+	else
+	{
+		stat.CImin = vec[0];
+		stat.CImax = vec[0];
+	}
 
 	sd = sqrt(sum2 - sum*sum);
 	if(sd == 0) stat.ESS = 0;
