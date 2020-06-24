@@ -181,6 +181,41 @@ vector<string> lookup_stringlist_parameter(
 	return val;
 }
 
+vector<string> get_toml_keys(
+	const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data)
+{
+	vector<string> keys;
+	for(const auto& p : data.as_table())
+	{
+		keys.push_back(p.first);
+	}
+	return keys;
+}
+
+void check_for_undefined_parameters(vector<string> allowed, vector<string> given,
+																		const string &context)
+{
+	vector<string> undefined;
+
+	sort(allowed.begin(), allowed.end());
+	sort(given.begin(), given.end());
+
+	set_difference(given.begin(), given.end(),
+								 allowed.begin(), allowed.end(),
+								 inserter(undefined, undefined.begin()));
+
+	if (undefined.size() != 0) {
+		stringstream ss;
+		ss << "Unrecognised parameter(s) "+context+":";
+
+		for (const auto &k : undefined) {
+			ss << " " << k;
+		}
+		
+		emsg(ss.str());
+	}
+}
+
 
 int main(int argc, char** argv)
 {
@@ -234,10 +269,14 @@ int main(int argc, char** argv)
 	
 	data.outputdir="Output";                // The default output directory
 		
-	map<string,string> params;
+	map<string,string> cmdlineparams;
+	vector<string>  cmdlineparamkeys;
 
-	// Store the parameters passed on the command line
-	for(op = 1; op < argc; op++){                                           // Goes the various input options
+	vector<string>  definedparams {"mode", "model", "simtype", "npart", "nchain", "nsamp",
+																 "period", "seed", "transdata", "outputdir", "inputfile"};
+
+	// Store the parameters passed on the command line in cmdlineparams
+	for(op = 1; op < argc; op++){ // Goes the various input options
 		str = string(argv[op]);
 		j = 0; jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
@@ -248,38 +287,25 @@ int main(int argc, char** argv)
 		command = str.substr(0,j);
 		value = str.substr(j+1,jmax-(j+1));
 
-		if (params.count(command) == 0) {
-			params[command] = value;
+		if (cmdlineparams.count(command) == 0) {
+			cmdlineparams[command] = value;
 		} else {
 			// Encode repeated parameters as space-separatedd
-			params[command] += " " + value;
+			cmdlineparams[command] += " " + value;
 		}
-
-		// params.push_back(make_pair(command,value));
+		cmdlineparamkeys.push_back(command);
 	}
 
-	string inputfilename = "/dev/null"; // Otherwise I don't know what type to use
-
-	if (params.count("inputfile") == 1)
-	{
-		inputfilename = params["inputfile"];
+	// Read the TOML parameters if an inputfile has been specified on the command line
+	string inputfilename = "/dev/null";
+	if (cmdlineparams.count("inputfile") == 1) {
+		inputfilename = cmdlineparams["inputfile"];
 	}
-
   auto tomldata = toml::parse(inputfilename);
+	vector<string>  tomlkeys = get_toml_keys(tomldata);
 
-	vector<string>  keys {"mode", "model", "simtype", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir"};
-
-	vector<string>  tomlkeys;
-
-	for (auto it = keys.begin(); it != keys.end(); it++)
-	{
-		string key = *it;
-		if (tomldata.contains(key))
-		{
-			tomlkeys.push_back(key);
-			// params[key] = toml::find<string>(tomldata,key);
-		}
-	}
+	check_for_undefined_parameters(definedparams, cmdlineparamkeys, "on command line");
+	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
 	/*********************************************************************************
 	/ Process parameters
@@ -290,7 +316,7 @@ int main(int argc, char** argv)
 	string key,val;
 
 	// mode
-	val = lookup_string_parameter(params, tomldata, "mode", "UNSET");
+	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", "UNSET");
 	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"mbp", MODE_MBP}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
@@ -299,7 +325,7 @@ int main(int argc, char** argv)
 	}
 
 	// model
-	val = lookup_string_parameter(params, tomldata, "model", "UNSET");
+	val = lookup_string_parameter(cmdlineparams, tomldata, "model", "UNSET");
 	if (val == "irish") {
 		modelsel = MOD_IRISH;
 	} else {
@@ -307,35 +333,37 @@ int main(int argc, char** argv)
 	}
 
 	// simtype
-	data.simtype = lookup_string_parameter(params, tomldata, "simtype", "UNSET");
+	data.simtype = lookup_string_parameter(cmdlineparams, tomldata, "simtype", "UNSET");
 	if (!(data.simtype == "smallsim" || data.simtype == "scotsim" ||
 				data.simtype == "uksim" || data.simtype == "")) {
 		emsg("Unrecognised value \'"+data.simtype+"\' for simtype parameter");
 	}
 
 	// npart
-	int nparttot = lookup_int_parameter(params, tomldata, "npart", npart);
+	int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", npart);
 	if (npart != UNSET) {
 		if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
 		npart = nparttot/ncore;
 	}
 
 	// nchain
-	int nchaintot = lookup_int_parameter(params, tomldata, "nchain");
-	if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
-	nchain = nchaintot/ncore;
+	int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", UNSET);
+	if (nchaintot != UNSET) {
+		if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
+		nchain = nchaintot/ncore;
+	}
 
 	// nsamp
-	nsamp = lookup_int_parameter(params, tomldata, "nsamp");
+	nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp");
 
 	// period
-	period = lookup_int_parameter(params, tomldata, "period");
+	period = lookup_int_parameter(cmdlineparams, tomldata, "period");
 
 	// seed
-	seed = lookup_int_parameter(params, tomldata, "seed");
+	seed = lookup_int_parameter(cmdlineparams, tomldata, "seed");
 
 	// transdata
-	vector<string> slval = lookup_stringlist_parameter(params, tomldata, "transdata");
+	vector<string> slval = lookup_stringlist_parameter(cmdlineparams, tomldata, "transdata");
 
 	for (auto it = slval.begin(); it != slval.end(); it++) {
 
@@ -363,7 +391,7 @@ int main(int argc, char** argv)
 	}	
 
 	// outputdir
-	data.outputdir = lookup_string_parameter(params, tomldata, "outputdir", data.outputdir);
+	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", data.outputdir);
 
 	// End of parameters
 	cout << endl;
