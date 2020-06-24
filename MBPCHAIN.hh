@@ -15,9 +15,14 @@ class MBPCHAIN                                          // Stores all the things
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
+	double Levi;         																	// The latent process likelihood
+	
 	double invT;                                          // The inverse temperature 
 	vector <float> paramjump;                             // The size of jumps in parameter space
 	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
+	
+	float numaddrem;                                      // The size of adding and removing events
+	unsigned int ntr_addrem, nac_addrem;    
 	
 	vector <float> paramjumpxi;                           // The size of jumps in parameter space (fixed event sequence)
 	vector <unsigned int> ntrxi, nacxi;                   // The number of jumps tried and accepted
@@ -43,6 +48,8 @@ class MBPCHAIN                                          // Stores all the things
 	vector <double> lami;                                 // Total force of infecion for an area in the initial state
 	vector <double> lamp; 	 															// Total force of infecion for an area in the proposed state
 	
+	vector <double> lam, lamsum;                          // Used when adding and removing individuals
+	
 	vector < vector <unsigned int> > indbothlist;         // List of individuals in area/demo states which are both susceptible 
 	vector <unsigned int> nindbothlist;  
 	vector < vector <unsigned int> > indponlylist;        // List of individuals in area/demo states where proposed state is sus
@@ -54,9 +61,6 @@ class MBPCHAIN                                          // Stores all the things
 	
 	vector < vector <FEV> > indevi;                       // The individual event sequences for the initial state
 	vector < vector <FEV> > indevp;                       // The individual event sequences for the proposed state
-	
-	vector <unsigned int> indinfi;                        // All the infected individuals in the initial state
-	vector <unsigned int> indinfp;                        // All the infected individuals in the initial state
 	
 	vector <vector <double> > Rtot;                       // Tree giving rate of new infections
 	
@@ -78,8 +82,8 @@ class MBPCHAIN                                          // Stores all the things
 	public:
 		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &indev, unsigned int chstart);
 		void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
-		void betaphi_prop( unsigned int samp, unsigned int burnin);
-		void setQmapi();
+		void standard_prop(unsigned int samp, unsigned int burnin);
+		void setQmapi(unsigned int check);
 						
 	private:
 		unsigned int mbp();
@@ -87,11 +91,16 @@ class MBPCHAIN                                          // Stores all the things
 		unsigned int nextinfection();
 		void addinfc(unsigned int c, double t);
 		void check(unsigned int num, double t, unsigned int sett);
+		void check_addrem();
 		void updatedQmap(unsigned int sett);
 		void setuplists();
 		void resetlists();
-		void changestat(unsigned int i, unsigned int st);
+		void changestat(unsigned int i, unsigned int st, unsigned int updateR);
 		void constructRtot(unsigned int sett);
-		double likelihood();
-
+		double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev);
+		void infsampler(vector< vector<double> > &Qmap);
+		void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
+		void calcQmapp();
+		void betaphi_prop( unsigned int samp, unsigned int burnin);
+		void addrem_prop(unsigned int samp, unsigned int burnin);
 };

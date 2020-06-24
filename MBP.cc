@@ -31,11 +31,13 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	unsigned int p, pp, th, nchaintot = ncore*nchain, loop, loopmax=1000, co;
 	unsigned int samp, burnin = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
-	double invT, timeloop=0.1;
+	double invT, timeloop=0.1, invTmax = 1, invTmin = 0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	PART *part;
 	vector <SAMPLE> opsamp;
 
+	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
+	
 	srand(core);
 
 	part = new PART(data,model,poptree);                                          // Initialises chains
@@ -48,25 +50,25 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				model.priorsamp();                                                     // Randomly samples parameters from the prior	
 			}while(model.settransprob() == 0);
 
-			part->partinit(0);                                
+			part->partinit(0); 		
 			part->gillespie(0,data.period,0);                                        // Simulates from the model
 
 			pp = core*nchain+p;
-			if(nchaintot == 1) invT = 1;
-			else invT = pow(double(nchaintot-1-pp)/(nchaintot-1),5);
+			if(nchaintot == 1) invT = invTmax;
+			else invT = pow((K-pp)/K,5);
 
 			mbpchain[p]->init(data,model,poptree,invT,part->indev,pp);
 
 			loop++;
-		}while(loop < loopmax && mbpchain[p]->indinfi.size() >= INFMAX);           // Checks not too many infected (based on prior)
+		}while(loop < loopmax && mbpchain[p]->xi.size() >= INFMAX);           // Checks not too many infected (based on prior)
 		if(loop == loopmax) emsg("Cannot find initial state under INFMAX");
 	}
-	
+
 	if(core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
-			if(nchaintot == 1) invT = 1;
-			else invT = pow(double(nchaintot-1-pp)/(nchaintot-1),5);
+			if(nchaintot == 1) invT = invTmax;
+			else invT = pow((K-pp)/K,5);
 			invTstore[pp] = invT;
 		}
 	}
@@ -76,15 +78,12 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 
-		if(samp%10 == 0){
-			for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi();
-		}
-
 		time = clock();
 		short lo;
 		
-		for(lo = 0; lo < 10; lo++){
-		//do{                         // Does proposals for timeloop seconds (on average 10 proposals)
+		/*
+		//for(lo = 0; lo < 10; lo++){
+		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = (unsigned int)(ran()*model.param.size());
 			if(model.param[th].min != model.param[th].max){
@@ -93,12 +92,14 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				timeprop += clock();
 				ntimeprop++;
 			}
-		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-		}
+		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
+		//}
+		*/
 		
+		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
+				
+		if(samp%10 == 0){ for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi(1);}  // Recalcualtes Qmapi (numerical)
 		
-		//for(p = 0; p < nchain; p++) mbpchain[p]->betaphi_prop(samp,burnin);
-			
 		timers.timewait -= clock();
 		
 		MPI_Barrier(MPI_COMM_WORLD); 
@@ -117,7 +118,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		swap(model,core,ncore,nchain);
 		
-		MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%2 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
 		if(samp != 0 && (samp%100 == 0 || samp == nsamp-1)){
 			if(core == 0) outputresults(data,model,opsamp);
@@ -130,9 +131,13 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
 				cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
 				cout << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-				cout << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-				cout << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-				cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
+				cout << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
+				cout << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
+				cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
+				cout << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
+				cout << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
+				cout << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;			
+				cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
 			}
 		}
 	}

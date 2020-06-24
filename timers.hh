@@ -10,6 +10,10 @@ struct TIMERS {
 	long timembpprop;
 	long timembpinit;
 	long timembptemp;	long timembptemp2;	long timembptemp3;	long timembptemp4;
+	long timestandard;
+	long timeparam;
+	long timebetaphiloop;
+	long timeaddrem;
 };
 
 extern TIMERS timers;

@@ -32,7 +32,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		//double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};
 
 		//double R0sim[8] = {3.2,3.2,3.1,2.9,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
-		double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		//double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		double R0sim[5] = {3.5,3.5,1.8,0.7,0.9}; 		// Used to simulate Scotland
 		//double R0sim[8] = {4,4,4,4,4,0.7,0.8,0.9};      
 		const double dpw = 7;
 		
@@ -42,7 +43,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI);          // Calculates the average integral of infectivity after infected
 			
-		nspline = 8;                                              // 8 spline points represent time variarion in beta 
+		nspline = 5;                                              // 8 spline points represent time variarion in beta 
 		for(p = 0; p < nspline; p++){
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
@@ -55,7 +56,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		phitime.resize(nphitime);
 		phitime[0] = 3; phitime[1] = data.period;
 		
-		r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
+		//r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
+		r = 5*7.0/popsize; addparam("phi_seed",r,0,3*r);  
 		param[int(param.size())-1].timechange = 1;
 
 		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
@@ -394,7 +396,7 @@ unsigned int MODEL::settransprob()
 	int p;
 	double sum, sumi, sump, prob;
 	
-	if(checkon == 1){
+	if(checkon == 2){
 		for(c = 0; c <  comp.size(); c++){
 			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
 			for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";

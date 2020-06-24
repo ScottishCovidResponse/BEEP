@@ -252,6 +252,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
+	nsettardp = nsettime*nardp;
 
 	ntimeperiod = 2;
 	timeperiod.push_back(period/2); timeperiod.push_back(large);      // lockdown happens half way
