@@ -1,0 +1,11 @@
+
+# Input file for the CoronaPMCMC model
+
+mode      = "mbp"
+model     = "irish"
+simtype   = "smallsim"
+period    = 16
+transdata = ["I,H,reg,cases.txt",
+             "H,D,all,deaths.txt"]
+
+nsamp     = 3
