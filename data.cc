@@ -41,6 +41,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 	if(core == 0){
 		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
+		if (!demoin.is_open()) {
+			emsg("Failed to open file "+democatfile);
+		}
 		do{
 			getline(demoin,line); line = strip(line);
 			if(demoin.eof()) break;
