@@ -1,29 +1,47 @@
 MPICXX := mpicxx
 CXXFLAGS := -g -O3 -std=c++11
+BUILD_DIR := ./build
+MKDIR_P ?= mkdir -p
+SHELL = bash
 
 ifeq (${DEBUG},1)
 CXXFLAGS += -D_GLIBCXX_DEBUG # -D_LIBCPP_DEBUG (this is for libc++ / macOS, but fails to link)
 endif
 
 srcs := MBP.cc MBPCHAIN.cc PART.cc PMCMC.cc analysis.cc data.cc input.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
-hdrs := MBP.hh MBPCHAIN.hh PART.hh PMCMC.hh consts.hh data.hh input.hh inputvalues.hh model.hh obsmodel.hh output.hh pack.hh poptree.hh simulate.hh timers.hh utils.hh
 
-hdrs += gitversion.hh
+objs := $(srcs:%=$(BUILD_DIR)/%.o)
+deps := $(objs:.o=.d)
+
+CPPFLAGS += -MMD -MP -I$(BUILD_DIR)
+
+# The TOML parser causes very long compile times, so we compile
+# analysis.cc without optimisation
+CXXFLAGS_analysis.cc := -O0
 
 exe := run
 
-$(exe): $(srcs) $(hdrs) | gitversion
-	$(MPICXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(srcs) -o $(exe)
+$(exe): $(objs)
+	$(MPICXX)  $(objs) -o $@
+
+$(BUILD_DIR)/%.cc.o: %.cc | gitversion
+	@$(MKDIR_P) $(dir $@)
+	time $(MPICXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+
+# $(TARGET_ARCH)
 
 .PHONY : gitversion
 gitversion:
-	bash ./gitversion.sh gitversion.hh
+	@$(MKDIR_P) $(BUILD_DIR)
+	bash ./gitversion.sh $(BUILD_DIR)/gitversion.hh
 
-gitversion.hh : gitversion
+$(BUILD_DIR)/gitversion.hh : gitversion
 
 .PHONY : all
 all: $(exe)
 
 .PHONY : clean
 clean:
-	rm -f $(exe) gitversion.hh
+	rm -rf $(exe) $(BUILD_DIR)
+
+-include $(deps)
