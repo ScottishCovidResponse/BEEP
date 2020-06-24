@@ -457,6 +457,6 @@ static void ensuredirectory(const string &path)
 		// Directory not found
 		int ret = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 		if (ret == -1)
-			emsg("Error creating directory "+path);
+			emsg("Error creating directory '"+path+"'");
 	}
 }
