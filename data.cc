@@ -20,7 +20,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
 	int dc;
 	double v, sum;
-	string line, ele, name, regcode;
+	string line, ele, name, regcode, st;
 	REGION reg;
 	AREA are;
 	DEMOCAT dem;
@@ -41,6 +41,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 	if(core == 0){
 		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
+		if(!demoin) emsg("Cannot find the file '"+democatfile+"'");
 		do{
 			getline(demoin,line); line = strip(line);
 			if(demoin.eof()) break;
@@ -89,6 +90,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatposperage = ndemocatpos/nage;
  
 		ifstream regionin(regiondatafile.c_str());      	             // Loads information about data regions
+		if(!regionin) emsg("Cannot find the file '"+regiondatafile+"'");
+		getline(regionin,line); 
 		do{
 			getline(regionin,line); line = strip(line);
 			if(regionin.eof()) break;
@@ -105,7 +108,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}
 	
 		ifstream areain(areadatafile.c_str());                                        // Loads information about areas
-		
+		if(!areain) emsg("Cannot find the file '"+areadatafile+"'");
+			
 		getline(areain,line);
 		do{
 			getline(areain,line); line = strip(line);
@@ -124,8 +128,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				jmax = democat[d].value.size();
 				val[d].resize(jmax);
 				for(j = 0; j < jmax; j++){
-					ss >> val[d][j];
-					if(isnan(val[d][j])) emsg("Data: EC10");	
+					ss >> st;
+					val[d][j] = atof(st.c_str());
+					if(isnan(val[d][j])) emsg("In file '"+areadatafile+"' "+st+" is not a number");	
 				}
 			}
 			
@@ -159,6 +164,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}			
 		
 		ifstream Min(Mdatafile.c_str());                                // Loads information about mixing matrix
+		if(!Min) emsg("Cannot find the file '"+Mdatafile+"'");
+			
 		getline(Min,line);
 		
 		nM.resize(narea); Mto.resize(narea); Mval.resize(narea);
@@ -175,7 +182,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
 
 		ifstream Nin(Ndatafile.c_str());                                   // Loads information about age mixing
-
+		if(!Nin) emsg("Cannot find the file '"+Ndatafile+"'");
+	
 		N.resize(nage);
 		for(j = 0; j < nage; j++){
 			getline(Nin,line);
@@ -196,19 +204,15 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			
 			for(td = 0; td < transdata.size(); td++){
 				ifstream transin(transdata[td].file.c_str());                            // Loads the transition data
-			
-				if(transin.fail()){
-					stringstream ss; ss << "The file '" << transdata[td].file << "' does not exist";
-					emsg(ss.str());
-				}
-			
+				if(!transin) emsg("Cannot find the file '"+transdata[td].file+"'");
+				
 				nreg = 0;                                                                // Checks regions names match with area file
 				getline(transin,line);
 				stringstream ss(line);
 				getline(ss,ele,'\t');
 				while(!ss.eof()){
 					getline(ss,ele,'\t');
-					if(ele != region[nreg].name) emsg("Data: EC12");
+					if(ele != region[nreg].name) emsg("Region names in file '"+transdata[td].file+"' do not agree with '"+regiondatafile+"'");
 					nreg++;
 				}
 				

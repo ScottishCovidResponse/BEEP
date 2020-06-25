@@ -81,9 +81,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		time = clock();
 		short lo;
 		
-		/*
-		//for(lo = 0; lo < 10; lo++){
-		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
+		for(lo = 0; lo < 10; lo++){
+		//do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 			p = int(ran()*nchain);
 			th = (unsigned int)(ran()*model.param.size());
 			if(model.param[th].min != model.param[th].max){
@@ -92,9 +91,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				timeprop += clock();
 				ntimeprop++;
 			}
-		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-		//}
-		*/
+		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
+		}
 		
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
 				
