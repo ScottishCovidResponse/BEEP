@@ -1,0 +1,5 @@
+Name	Code
+Region0	R0
+Region1	R1
+Region2	R2
+Region3	R3
