@@ -68,10 +68,10 @@ jobs:
         required_files="
           MCMCdiagnostic.txt
           R0.txt
-          cases_R0.txt
-          cases_R1.txt
-          cases_R2.txt
-          cases_R3.txt
+          cases_Region0.txt
+          cases_Region1.txt
+          cases_Region2.txt
+          cases_Region3.txt
           deaths.txt
           parameters.txt
           trace.txt
