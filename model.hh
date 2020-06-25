@@ -69,6 +69,7 @@ public:
 	unsigned int phparam;           			   // Stores which parameters relate to phi and probA
 	unsigned int nphitime;                   // The number of time periods for changes in phi
 	vector <double> phitime;                 // The times of those changes
+	unsigned int infparamend;                // Stores the end of the infection rate parameters
 	
 	unsigned int nspline;                    // The spline points which are parameters in the model
 	vector <double> splinet;                 // The times for the spline points

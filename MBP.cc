@@ -40,24 +40,27 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	
 	srand(core);
 
-	part = new PART(data,model,poptree);                                          // Initialises chains
+	//part = new PART(data,model,poptree);                                          // Initialises chains
 	for(p = 0; p < nchain; p++){
 		mbpchain[p] = new MBPCHAIN(data,model,poptree);
 		
 		loop = 0;
 		do{
+			/*
 			do{
 				model.priorsamp();                                                     // Randomly samples parameters from the prior	
 			}while(model.settransprob() == 0);
 
 			part->partinit(0); 		
 			part->gillespie(0,data.period,0);                                        // Simulates from the model
+*/
 
 			pp = core*nchain+p;
 			if(nchaintot == 1) invT = invTmax;
 			else invT = pow((K-pp)/K,5);
 
-			mbpchain[p]->init(data,model,poptree,invT,part->indev,pp);
+			//mbpchain[p]->init(data,model,poptree,invT,part->indev,pp);
+mbpchain[p]->init(data,model,poptree,invT,pp);
 
 			loop++;
 		}while(loop < loopmax && mbpchain[p]->xi.size() >= INFMAX);           // Checks not too many infected (based on prior)

@@ -80,7 +80,7 @@ class MBPCHAIN                                          // Stores all the things
 	vector <LEVEL> &lev;
 	 
 	public:
-		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, vector < vector <FEV> > &indev, unsigned int chstart);
+		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
 		void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 		void standard_prop(unsigned int samp, unsigned int burnin);
 		void setQmapi(unsigned int check);

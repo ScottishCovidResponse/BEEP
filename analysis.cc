@@ -10,7 +10,7 @@ mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transda
 MBP Inference:    
 mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
-//mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=10001 period=16 transdata=I,H,reg,cases.txt 
+mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=10001 period=16 transdata=I,H,reg,cases.txt 
 
 mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 

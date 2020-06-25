@@ -132,7 +132,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				for(j = 0; j < jmax; j++){
 					ss >> st;
 					val[d][j] = atof(st.c_str());
-					if(isnan(val[d][j])) emsg("In file '"+areadatafile+"' "+st+" is not a number");	
+					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' "+st+" is not a number");	
 				}
 			}
 			

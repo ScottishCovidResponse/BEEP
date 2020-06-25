@@ -51,6 +51,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		}
 		
 		phparam = param.size();
+		
 		nphitime = 2;
 		phitime.resize(nphitime);
 		phitime[0] = 3; phitime[1] = data.period;
@@ -61,6 +62,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
 		addparam("phi_zero",tiny,tiny,tiny);  
 	
+		infparamend = param.size();
+		
 		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
 		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
 
