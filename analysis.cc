@@ -305,8 +305,6 @@ int main(int argc, char** argv)
 
 	model.checktransdata(data);
 
-	model.setsus(data);
-
 	if(core == 0) cout << "Running...." << endl;
 
 	timersinit();

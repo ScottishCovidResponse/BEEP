@@ -108,8 +108,8 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 		}
 	}
 
-	model.paramval = paramval; model.timevariation(data);
-
+	model.setup(data,paramval);
+	
 	switch(model.modelsel){
 	case MOD_IRISH:
 		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
@@ -167,7 +167,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 		}
 	}
 
-	model.paramval = paramval; model.timevariation(data);
+	model.setup(data,paramval);
 
 	switch(model.modelsel){
 	case MOD_IRISH:

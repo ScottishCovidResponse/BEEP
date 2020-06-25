@@ -25,8 +25,6 @@ struct PARAM{                              // Store information about a model pa
 	double sim;                              // The simulation value
 	double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
-	unsigned int timechange;              // Set to one if there is a change in the beta spline
-	unsigned int suschange;                  // Set to one if there us a change in a fixed effect for susceptibility
 	unsigned int ntr, nac;                   // Store the number of proposals tried and accepted	
 	double jump;
 };
@@ -96,14 +94,19 @@ public:
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod);
 	void addQ(DATA &data);
-	void timevariation(DATA &data);
+
 	void priorsamp();
 	unsigned int settransprob();
-	void setsus(DATA &data);           
+          
 	void checktransdata(DATA &data);
+	void setup(DATA &data, vector <double> &paramval);
+	void copyi();
+	void copyp();
 	
 private:
 	void addcomp(string name, double infectivity, unsigned int type, string param1, string param2);
 	void addparam(string name, double val, double min, double max);
 	void addtrans(string from, string to, string probparam);
+	void setsus(DATA &data); 
+	void timevariation(DATA &data);
 };

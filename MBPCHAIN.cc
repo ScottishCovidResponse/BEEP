@@ -232,10 +232,8 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	timeprop -= clock();
 	timers.timembpprop -= clock();
 	
-	model.paramval = paramval;
-	model.timevariation(data);
-	model.setsus(data);
-	model.parami = paramval; model.betai = model.beta; model.phii = model.phi; model.susi = model.sus;
+	model.setup(data,paramval);
+	model.copyi();
 			
 	valst = paramval[th];
 
@@ -243,11 +241,9 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 
 	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 	else{
-		model.paramval = paramval;
-		model.timevariation(data);
-		model.setsus(data);
-		model.paramp = paramval; model.betap = model.beta; model.phip = model.phi;  model.susp = model.sus;
-		
+		model.setup(data,paramval);
+		model.copyp();
+	
 		if(model.settransprob() == 0) al = 0;
 		else{
 			if(mbp() == 1) al = 0;
@@ -821,9 +817,7 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 {
 	timers.timestandard -= clock();
 	
-	model.paramval = paramval;
-	model.timevariation(data);
-	model.setsus(data);
+	model.setup(data,paramval);
 	
 	timers.timembptemp -= clock();
 	Levi = likelihood(Qmapi,xi,indevi);
@@ -931,10 +925,8 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 
 		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 		else{
-			model.paramval = paramval;
-			model.timevariation(data);
-			model.setsus(data);
-			
+			model.setup(data,paramval);
+
 			Levp = 0; 
 			for(sett = 0; sett < data.nsettime; sett++){
 				beta = model.beta[sett]; phi = model.phi[sett];
@@ -950,7 +942,6 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 			
 			al = exp(Levp-Levi);
 		}
-
 	
 		ntrxi[th]++;
 		if(ran() < al){
@@ -964,10 +955,6 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 		}
 	}
 	timers.timebetaphiloop += clock();
-	
-	model.paramval = paramval;
-	model.timevariation(data);
-	model.setsus(data);
 }
 
 /// Adds and removes infectious individuals
@@ -978,6 +965,8 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	vector <int> kst;
 	EVREF evref;
 	
+	model.setup(data,paramval);
+		
 	if(checkon == 1){ dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24");}
 
 	probif = 0; probfi = 0;
