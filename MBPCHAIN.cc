@@ -44,28 +44,14 @@ struct LCONT {
 /// Initialises an MCMC chain
 void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart)
 {
-	unsigned int th, nparam, i, v, q, d, j, sett;
+	unsigned int th, nparam, i, v, q, d, j, sett, loop, loopmax=1000;
 	int l;
 	EVREF evref;
 	vector <double> paramvalinit;
 	
 	invT = invTstart;
 	ch = chstart;
-	
-	do{
-		model.priorsamp();                                                  // Randomly samples parameters from the prior	
-	}while(model.settransprob() == 0);
-	
-	nparam = model.param.size();                   
-	paramval.resize(nparam); for(th = 0; th < nparam; th++) paramval[th] = model.paramval[th];
-	paramvalinit = paramval;
-	for(th = 0; th < model.infparamend; th++) paramvalinit[th] = 0;       // Sets initial state to zero force of infection
-	
-	model.setup(data,paramvalinit);                                       // To generate initial state mbp is used to simulate
-	model.copyi();
-	model.setup(data,paramval);
-	model.copyp();
-	
+
 	xi.clear();
 	trevi.clear(); trevi.resize(data.nsettime); 
 	indevi.clear(); indevi.resize(data.popsize);
@@ -73,7 +59,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	
 	setuplists();
 	
-	dQmap.resize(data.narage);                                                 // Initialises Qmapi and event buffer
+	dQmap.resize(data.narage);                                                 // Initialises vectors
 	
 	dQbuf.resize(data.narage);
 	for(v = 0; v < data.narage; v++){
@@ -90,7 +76,25 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	Rtot.resize(poptree.level); for(l = 0; l < poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
-	mbp();
+	loop = 0;
+	do{
+		do{	model.priorsamp(); }while(model.settransprob() == 0);             // Randomly samples parameters from the prior	
+	
+		model.setup(data,paramvalinit);                                       // To generate initial state mbp is used to simulate
+		model.copyi();
+		model.setup(data,paramval);
+		model.copyp();
+	
+		nparam = model.param.size();                   
+		paramval.resize(nparam); for(th = 0; th < nparam; th++) paramval[th] = model.paramval[th];
+		paramvalinit = paramval;
+		for(th = 0; th < model.infparamend; th++) paramvalinit[th] = 0;       // Sets initial state to zero force of infection
+	
+		mbp();
+
+		loop++;
+	}while(loop < loopmax && xp.size() >= INFMAX);                          // Checks not too many infected (based on prior)
+	if(loop == loopmax) emsg("Cannot find initial state with number of events under INFMAX");
 	
 	trevi = trevp;
 	Qmapi = Qmapp;	

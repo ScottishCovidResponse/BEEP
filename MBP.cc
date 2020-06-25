@@ -28,7 +28,7 @@ static vector <double> invTstore;
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
-	unsigned int p, pp, th, nchaintot = ncore*nchain, loop, loopmax=1000, co;
+	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
 	unsigned int samp, burnin = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1, invTmax = 1, invTmin = 0.1, K;
@@ -40,31 +40,14 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	
 	srand(core);
 
-	//part = new PART(data,model,poptree);                                          // Initialises chains
 	for(p = 0; p < nchain; p++){
 		mbpchain[p] = new MBPCHAIN(data,model,poptree);
 		
-		loop = 0;
-		do{
-			/*
-			do{
-				model.priorsamp();                                                     // Randomly samples parameters from the prior	
-			}while(model.settransprob() == 0);
+		pp = core*nchain+p;
+		if(nchaintot == 1) invT = invTmax;
+		else invT = pow((K-pp)/K,5);
 
-			part->partinit(0); 		
-			part->gillespie(0,data.period,0);                                        // Simulates from the model
-*/
-
-			pp = core*nchain+p;
-			if(nchaintot == 1) invT = invTmax;
-			else invT = pow((K-pp)/K,5);
-
-			//mbpchain[p]->init(data,model,poptree,invT,part->indev,pp);
-mbpchain[p]->init(data,model,poptree,invT,pp);
-
-			loop++;
-		}while(loop < loopmax && mbpchain[p]->xi.size() >= INFMAX);           // Checks not too many infected (based on prior)
-		if(loop == loopmax) emsg("Cannot find initial state under INFMAX");
+		mbpchain[p]->init(data,model,poptree,invT,pp);
 	}
 
 	if(core == 0){
