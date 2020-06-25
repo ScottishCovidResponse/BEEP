@@ -54,9 +54,9 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 	if(core == 0) outputinit(data,model);
 
 	MPI_Bcast(&model.paramval[0],model.paramval.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
-	model.timevariation(data);
-	model.setsus(data);
- 
+	
+	model.setup(data,model.paramval);
+
 	Li = -large; 
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
@@ -88,10 +88,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				
 				MPI_Bcast(&model.paramval[p],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-				if(param[p].timechange == 1) model.timevariation(data);
-				if(param[p].suschange == 1) model.setsus(data);
-
-				model.setsus(data);
+				model.setup(data,model.paramval);
 				 
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
@@ -119,8 +116,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				}
 				else{
 					model.paramval[p] = valst;
-					if(param[p].timechange == 1) model.timevariation(data);
-					if(param[p].suschange == 1) model.setsus(data);
+					model.setup(data,model.paramval);
 				
 					if(core == 0){
 						if(samp < burnin) param[p].jump *= 0.95;

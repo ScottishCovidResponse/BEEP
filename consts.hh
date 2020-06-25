@@ -13,6 +13,7 @@ const unsigned int NO_DIST=0, EXP_DIST=1, GAMMA_DIST=2;          // Denotes expo
 const unsigned int LOGNORM_DIST=3, INFECTION=4;
 
 const double tiny = 0.00000001;                                  // Used to represent a tiny number
+const double small = 0.00001;
 const double large = 1000000;                                    // Used to represent a big number
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 
@@ -24,7 +25,7 @@ const unsigned int chainmax = 10000;                             // The maximum 
 const unsigned int MAX_NUMBERS = 20000000;                       // The maximum buffer size for Send Recv MPI messages
 const unsigned int BUFMAX = 2000000;                             // The maximum buffer size for SendI RecvI MPI messages
 
-const double varfac = 10;                                         // A factor which relaxes the observation model
+const double varfac = 4;                                         // A factor which relaxes the observation model
 
 const unsigned int INFMAX = 200000;                              // The maximum number of infections allowed
 

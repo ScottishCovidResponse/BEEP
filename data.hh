@@ -131,6 +131,7 @@ class DATA
 	unsigned int narage;                     // #area * #age
 	unsigned int nardp;                      // #area * #ndemocatpos
 	unsigned int ndemocatposperage;          // Demographic states per age group
+	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
 
 	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
 	void sortY(vector <unsigned int> &vec);	

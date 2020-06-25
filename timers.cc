@@ -14,5 +14,9 @@ void timersinit()
 	timers.timembpQmap = 0;
 	timers.timembpprop = 0;
 	timers.timembptemp = 0;
-		timers.timembptemp2 = 0;	timers.timembptemp3 = 0;	timers.timembptemp4 = 0;
+	timers.timembptemp2 = 0;	timers.timembptemp3 = 0;	timers.timembptemp4 = 0;
+	timers.timestandard = 0;	
+	timers.timeparam = 0;	
+	timers.timebetaphiloop = 0;
+	timers.timeaddrem = 0;	
 }

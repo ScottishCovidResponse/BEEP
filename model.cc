@@ -32,7 +32,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		//double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};
 
 		//double R0sim[8] = {3.2,3.2,3.1,2.9,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
-		double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		//double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
+		double R0sim[5] = {3.5,3.5,1.8,0.7,0.9}; 		// Used to simulate Scotland
 		//double R0sim[8] = {4,4,4,4,4,0.7,0.8,0.9};      
 		const double dpw = 7;
 		
@@ -42,12 +43,11 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 
 		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI);          // Calculates the average integral of infectivity after infected
 			
-		nspline = 8;                                              // 8 spline points represent time variarion in beta 
+		nspline = 5;                                              // 8 spline points represent time variarion in beta 
 		for(p = 0; p < nspline; p++){
 			splinet.push_back(double(p*period)/(nspline-1));
 			stringstream ss; ss << "beta_" << p;
 			r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
-			param[int(param.size())-1].timechange = 1;
 		}
 		
 		phparam = param.size();
@@ -55,8 +55,8 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		phitime.resize(nphitime);
 		phitime[0] = 3; phitime[1] = data.period;
 		
-		r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
-		param[int(param.size())-1].timechange = 1;
+		//r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
+		r = 5*7.0/popsize; addparam("phi_seed",r,0,3*r);  
 
 		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
 		addparam("phi_zero",tiny,tiny,tiny);  
@@ -101,7 +101,6 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			for(fi = 0; fi < int(data.democat[c].value.size())-1; fi++){
 				stringstream sssus; sssus << "fix_" << data.democat[c].name << "_" << data.democat[c].value[fi];
 				val = 0.05; addparam(sssus.str(),val,val,val);
-				param[int(param.size())-1].suschange = 1;
 			}
 		}
 		break;
@@ -113,8 +112,9 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
  
 	beta.resize(data.nsettime);	phi.resize(data.nsettime);
-	timevariation(data);
-
+	
+	setup(data,paramval);
+	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
 		cout << "Parameters:" << endl;
@@ -133,14 +133,14 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 					break;
 					
 				case EXP_DIST:
-					cout << " Exponentially distributed with rate " << param[comp[c].param1].name << endl;
+					cout << " Exponential with rate " << param[comp[c].param1].name << endl;
 					break;
 				case GAMMA_DIST:
-					cout << " Gamma distributed with mean " << param[comp[c].param1].name 
+					cout << " Gamma with mean " << param[comp[c].param1].name 
 							 << " and standard deviation " << param[comp[c].param2].name  << endl; 
 					break;
 				case LOGNORM_DIST:
-					cout << " Lognormally distributed with mean " << param[comp[c].param1].name 
+					cout << " Lognormal with mean " << param[comp[c].param1].name 
 							 << " and standard deviation " << param[comp[c].param2].name  << endl; 
 					break;
 				default:
@@ -153,12 +153,32 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		
 		cout << "Transitions:" << endl; 
 		for(t = 0; t < trans.size(); t++){
-			cout << "  From: " << comp[trans[t].from].name << "  To: " << comp[trans[t].to].name;
+			cout << comp[trans[t].from].name << " → " << comp[trans[t].to].name;
 			if(trans[t].probparam != UNSET) cout << "  with probability " << param[trans[t].probparam].name;
 			cout << endl;
 		}
 		cout << endl;
 	}
+}
+
+/// Sets up the model with a set of parameters
+void MODEL::setup(DATA &data, vector <double> &paramv)
+{
+	paramval = paramv;
+	timevariation(data);
+	setsus(data);
+}
+
+/// Copies values used for the initial state (MBPs)
+void MODEL::copyi()
+{
+	parami = paramval; betai = beta; phii = phi; susi = sus;
+}
+	
+/// Copies values used for the proposed state (MBPs)
+void MODEL::copyp()
+{
+	paramp = paramval; betap = beta; phip = phi; susp = sus;
 }
 
 /// Adds in the tensor Q to the model
@@ -299,7 +319,6 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.valinit = val; par.sim = val; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = val/10;
-	par.timechange = 0;	par.suschange = 0;
 
 	param.push_back(par);
 }
@@ -394,7 +413,7 @@ unsigned int MODEL::settransprob()
 	int p;
 	double sum, sumi, sump, prob;
 	
-	if(checkon == 1){
+	if(checkon == 2){
 		for(c = 0; c <  comp.size(); c++){
 			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
 			for(k = 0; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";

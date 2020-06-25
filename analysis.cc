@@ -8,9 +8,11 @@ Simulation:
 mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 MBP Inference:    
-mpirun -n 20 ./run mode=mbp model=irish simtype=smallsim nchain=20 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
-mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=10001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+//mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=10001 period=16 transdata=I,H,reg,cases.txt 
+
+mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
 
 PMCMC Inference:  
 mpirun -n 20 ./run mode=pmcmc model=irish simtype=smallsim npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
@@ -292,18 +294,18 @@ int main(int argc, char** argv)
 	
 	DATA data;    // The following file names will need to be read in by the interface:
 	
-	data.democatfile = "Data_small/democat.txt";
-	data.regiondatafile = "Data_small/regiondata.txt";  
-	data.areadatafile = "Data_small/areadata.txt";  
-	data.Mdatafile = "Data_small/Mdata.txt";
-	data.Ndatafile = "Data_small/Ndata.txt";   
+	data.democatfile = "Data_example/democat.txt";
+	data.regiondatafile = "Data_example/regiondata.txt";  
+	data.areadatafile = "Data_example/areadata.txt";  
+	data.Mdatafile = "Data_example/Mdata.txt";
+	data.Ndatafile = "Data_example/Ndata.txt";   
 	
-/*
-	//data.democatfile = "Data_scotland/democat.txt";
-	data.democatfile = "Data_scotland/democat_noage.txt";
+	/*
+	data.democatfile = "Data_scotland/democat.txt";
+	//data.democatfile = "Data_scotland/democat_noage.txt";
 	data.regiondatafile = "Data_scotland/regiondata.txt";  
-	//data.areadatafile = "Data_scotland/areadata.txt";  
-	data.areadatafile = "Data_scotland/areadata_noage.txt";  
+	data.areadatafile = "Data_scotland/areadata.txt";  
+	//data.areadatafile = "Data_scotland/areadata_noage.txt";  
 	data.Mdatafile = "Data_scotland/Mdata.txt";
 	data.Ndatafile = "Data_scotland/Ndata.txt";   
 	*/
@@ -449,11 +451,10 @@ int main(int argc, char** argv)
 		
 	MODEL model;
 	model.definemodel(data,core,data.period,data.popsize,modelsel);
+
 	model.addQ(data);
-	
+
 	model.checktransdata(data);
-	
-	model.setsus(data);
 
 	if(core == 0) cout << "Running...." << endl;
 

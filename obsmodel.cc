@@ -83,7 +83,7 @@ vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, ve
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree,  vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	unsigned int r, td, sum, t;
 	double mean, var, L;
