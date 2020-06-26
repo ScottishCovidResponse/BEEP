@@ -1,0 +1,112 @@
+# Input file for the CoronaPMCMC model
+
+########### SIMULATION DETAILS #############
+
+# Perform a simulation.
+mode      = "sim"
+
+# The time period of simulation (in weeks).
+period    = 16
+
+# The random seed used to run the simulation.
+seed      = 0
+
+# The output directory
+outputdir	= "Output"
+
+########### THE MODEL #############
+
+# Defines the compartments in the model.
+# Format: 'inf' gives the relative infectivity, 'dist' gives the distribution for waiting time.
+# Here 'exp' stands for exponential and 'lognorm' stands for lognormal follow by any parameters which define this distribution.
+
+comps			= ["S: inf=0",
+						 "E: inf=0, dist=lognorm, mean=muE, sd=sdE",
+						 "A: inf=0.5, dist=exp, time=tA",
+						 "R: inf=0",
+						 "P: inf=0.5, dist=exp, time=tP",
+						 "I: inf=1, dist=exp, time=tI",
+						 "H: inf=0, dist=exp, time=tH",
+						 "D: inf=0"]
+
+# Defines transitions between compartments
+# Format: The initial and final conatment. A third parameter can define a branching probability.
+# Note when a compartmental model divides in two, only one branching probability needs to be defined.
+
+trans   	=	["S,E", "E,A,probA", "E,P", "A,R", "P,I", "I,H,probH", "I,R", "H,D,probD", "H,R"]
+  
+	
+# Defines the parameters in the model
+
+params		= ["beta0: value=0",     # The values for the spline
+						 "beta1: value=0",
+						 "beta2: value=0",
+						 "beta3: value=0",
+						 "beta4: value=0",
+						 "phi: value=5",
+						 "muE: value=1.63",
+						 "sdE: value=0.5",						 
+						 "tA: value=8",
+						 "tP: value=2",
+						 "tI: value=2",
+						 "tH: value=20",
+						 "probA: value=0.25",
+						 "probH: value=0.5",
+						 "probD: value=0.3"]
+
+						 
+# Defines the linear spline used to represent disease transmission parameter beta.
+# Format: The name of the parameter followed by the time of the spline point.
+
+betaspline= ["beta0:t=0", "beta1:t=4", "beta2:t=8", "beta3:t=12", "beta4:t=16"]
+
+
+# Defines the linear spline used to represent external force of infection phi.
+# Format: The name of the parameter followed by the time of the spline point.
+
+phispline = ["phi:t=0", "phi:t=4", "zero:t=8", "zero:t=12", "zero:t=16"]		
+
+
+# The age groups used in the analysis.
+
+ages			= ["0-18","19-64","65+"]
+
+
+# Other demographic categories
+# Format: The name of the category is given followed by a colon and then the potential values it can take.
+
+democats		= ["Sex:Male,Female"]
+
+
+########### THE DATA #############
+
+# A table giving data regions (e.g. "Lanarkshire	S08000032").
+# Format: Tab-separated with: region name then region code.
+
+regions		= "Data_ScotlandMSOA/regiondata.txt"
+
+
+# A table giving information about areas.
+# Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
+
+areas			= "Data_ScotlandMSOA/areadata.txt"
+
+
+# A table informing the matrix of contacts between different areas 
+# Note, this matrix is sparse hence only non-zero elelments are given.
+# Format tab-separated table with: area A, area B and the mixing between areas A and B. 
+# Note, the numbers for the areas correspond to where they appear in the 'areas' list above.  
+
+geocont	 	= "Data_ScotlandMSOA/Mdata.txt"
+
+
+# A matrix giving the contact rates between different age groups.
+
+agecont	 	= "Data_ScotlandMSOA/Ndata.txt"
+ 
+ 
+# The observed numbers of transitions between different compartments.
+# Format: 'From' comaprtment, 'To' compartment, detail of data (reg=on a regional level, all=across all regions) and the name of the file.
+
+transdata = ["I,H,reg,Data_ScotlandMSOA/cases.txt",
+             "H,D,all,Data_ScotlandMSOA/deaths.txt"]
