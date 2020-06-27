@@ -9,104 +9,208 @@
 #include "utils.hh"
 #include "model.hh"
 
+
 using namespace std;
 
 /// Defines the compartmental model
-void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, unsigned int mod)
+void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, t;
+	unsigned int p, c, t, j;
 	int fi;
-	//double facmin = 0.8, facmax = 1.2;
-	double facmin = 1, facmax = 1;
-	double r, tinfav, val;
-		
+	SPLINEP spl;
+	
 	ntimeperiod = data.ntimeperiod; // Copies from data
 	timeperiod = data.timeperiod;
-		
-	modelsel = mod;
-	
-	switch(modelsel){
-  case MOD_IRISH:  	// Irish model
-		// R0 determines how many individuals an infected individual on average infects
-		// These 8 values represent how R0 changes over time in the simulation (this captures the effect of lockdown) 
-		//double R0sim[8] = {3,3,3,2.9,1.8,0.7,0.8,0.9};
 
-		//double R0sim[8] = {3.2,3.2,3.1,2.9,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
-		//double R0sim[8] = {3,3,3,2.5,1.8,0.7,0.8,0.9}; 		// Used to simulate Scotland
-		double R0sim[5] = {3.5,3.5,1.8,0.7,0.9}; 		// Used to simulate Scotland
-		//double R0sim[8] = {4,4,4,4,4,0.7,0.8,0.9};      
-		const double dpw = 7;
-		
-		double probA=0.25, probH=0.5, probD=0.3, Ainf = 0.5, Pinf = 0.5;
-		double muE = 1.63/dpw, sdE = 0.5/dpw, tA = 8/dpw;    // Estimates of transition times from literature
-		double tP = 2/dpw, tI = 2/dpw, tH = 20/dpw;
-
-		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI);          // Calculates the average integral of infectivity after infected
+	if(data.mode == MODE_SIM){
+		if(tomldata.contains("params")){
+			string name;
+			double value;
 			
-		nspline = 5;                                              // 8 spline points represent time variarion in beta 
-		for(p = 0; p < nspline; p++){
-			splinet.push_back(double(p*period)/(nspline-1));
-			stringstream ss; ss << "beta_" << p;
-			r = R0sim[p]/tinfav; addparam(ss.str(),r,0,3*r);
-		}
-		
-		phparam = param.size();
-		
-		nphitime = 2;
-		phitime.resize(nphitime);
-		phitime[0] = 3; phitime[1] = data.period;
-		
-		//r = 7.0/popsize; addparam("phi_seed",r,0,3*r);  
-		r = 5*7.0/popsize; addparam("phi_seed",r,0,3*r);  
-
-		//r =1*7.0/popsize; addparam("phi",r,0,3*r);               // Adds a small external force of infection
-		addparam("phi_zero",tiny,tiny,tiny);  
-	
-		infparamend = param.size();
-		
-		addparam("muE",muE,facmin*muE,facmax*muE);              // Log-normal latent period
-		addparam("sdE",sdE,facmin*sdE,facmax*sdE);
-
-		r = 1.0/tA; addparam("rA",r,facmin*r,facmax*r);         // Recovery for asymptomatic
-		r = 1.0/tP; addparam("rP",r,facmin*r,facmax*r); 
-		r = 1.0/tI; addparam("rI",r,facmin*r,facmax*r);
-		r = 1.0/tH; addparam("rH",r,facmin*r,facmax*r);
-		
-		addparam("Ainf",Ainf,Ainf,Ainf);  	          // The infectivity of asymptomatic
-		addparam("Pinf",Pinf,Pinf,Pinf);  	          // The infectivity of presymptomatic
-
-		addparam("probA",probA,probA,probA);  		    // The probability of being asymptomatic
-		addparam("probH",probH,probH,probH);  		    // The probability of hospitalisation given I
-		//addparam("probD",probD,0,1);  	            	// The probability of death given H
-		addparam("probD",probD,probD,probD);  	            	// The probability of death given H
+			const auto paramsin = toml::find(tomldata,"params");
+			for(j = 0; j < paramsin.size(); j++){
+				const auto params = toml::find(paramsin,j);
+				if(!params.contains("name")) emsg("Parameter must contain a 'name' definition.");
+				name = toml::find<std::string>(params,"name");
 				
-		addcomp("S",0,NO_DIST,"","");                 // Different compartment in the model
-		addcomp("E",0,LOGNORM_DIST,"muE","sdE");           
-		addcomp("A",Ainf,EXP_DIST,"rA",""); 
-		addcomp("R",0,NO_DIST,"","");        
-  	addcomp("P",Pinf,EXP_DIST,"rP",""); 
-		addcomp("I",1,EXP_DIST,"rI",""); 
-		addcomp("H",0,EXP_DIST,"rH",""); 
-		addcomp("D",0,NO_DIST,"",""); 
-		
-		addtrans("S","E","");                         // All the transition in the model with branching probabilities
-		addtrans("E","A","probA");  
-		addtrans("E","P","");		
-		addtrans("A","R",""); 
-		addtrans("P","I","");    		
-		addtrans("I","H","probH");
-		addtrans("I","R","");
-		addtrans("H","D","probD");
-		addtrans("H","R","");
-
-		for(c = 0; c < data.ndemocat; c++){
-			fix_sus_param.push_back(param.size());
-			for(fi = 0; fi < int(data.democat[c].value.size())-1; fi++){
-				stringstream sssus; sssus << "fix_" << data.democat[c].name << "_" << data.democat[c].value[fi];
-				val = 0.05; addparam(sssus.str(),val,val,val);
+				if(!params.contains("value")) emsg("Parameter must contain a 'value' definition.");
+				value = toml::find<double>(params,"value");
+				
+				addparam(name,value,value,value);
 			}
 		}
-		break;
+		else{ emsg("The input file must contain parameter values through 'params'.");}
+	}
+	
+	if(data.mode != MODE_SIM){
+		if(tomldata.contains("priors")){
+			string name;
+			double value;
+			
+			const auto paramsin = toml::find(tomldata,"priors");
+			for(j = 0; j < paramsin.size(); j++){
+				const auto params = toml::find(paramsin,j);
+				if(!params.contains("name")) emsg("Parameter must contain a 'name' definition.");
+				name = toml::find<std::string>(params,"name");
+				
+				if(params.contains("value")){
+					value = toml::find<double>(params,"value");
+					addparam(name,value,value,value);
+				}
+				else{
+					if(!params.contains("type")) emsg("The prior must have a 'value' or a 'type'");
+					
+					string type = toml::find<std::string>(params,"type");
+					if(type == "uniform"){
+						if(!params.contains("min")) emsg("A uniform prior must contain a 'min' definition.");
+						double min = toml::find<double>(params,"min");
+				
+						if(!params.contains("max")) emsg("A uniform prior must contain a 'max' definition.");
+						double max = toml::find<double>(params,"max");
+				
+						addparam(name,0.5+(max-min),min,max);
+					}
+					else emsg("The prior type '"+type+"' is not recognised.");
+				}
+			}
+		}
+		else{ emsg("The input file must contain parameter values through 'params'.");}
+	}
+	
+	addparam("zero",tiny,tiny,tiny);
+	
+	if(tomldata.contains("comps")) {
+		string name, dist, mean="", sd="";
+		double inf;
+		unsigned int distval = NO_DIST;
+		
+		const auto compsin = toml::find(tomldata,"comps");
+		for(j = 0; j < compsin.size(); j++){
+			const auto comps = toml::find(compsin,j);
+			if(!comps.contains("name")) emsg("Compartment must contain a 'name' definition.");
+
+			name = toml::find<std::string>(comps,"name");
+			if(!comps.contains("inf")) emsg("Compartment must contain an 'inf' definition.");
+			inf = toml::find<double>(comps,"inf");
+
+			if(comps.contains("dist")){ 
+				dist = toml::find<std::string>(comps, "dist");
+				
+				int fl = 0;
+				
+				if(dist == "infection"){
+					distval = INFECTION;
+					fl = 1;
+				}
+				
+				if(dist == "exp"){
+					distval = EXP_DIST;
+					if(!comps.contains("mean")) emsg("Compartment distribution must contain a 'mean' definition.");
+					mean = toml::find<std::string>(comps, "mean");
+					fl = 1;
+				}
+				
+				if(dist == "lognorm"){
+					distval = LOGNORM_DIST;
+					if(!comps.contains("mean")) emsg("Compartment distribution must contain a 'mean' definition.");
+					mean = toml::find<std::string>(comps, "mean");
+					
+					if(!comps.contains("sd")) emsg("Compartment distribution must contain an 'sd' definition.");
+					sd = toml::find<std::string>(comps, "sd");
+					fl = 1;
+				}
+				
+				if(dist == "gamma"){
+					distval = GAMMA_DIST;
+					if(!comps.contains("mean")) emsg("Compartment distribution must contain a 'mean' definition.");
+					mean = toml::find<std::string>(comps, "mean");
+					
+					if(!comps.contains("sd")) emsg("Compartment distribution must contain an 'sd' definition.");
+					sd = toml::find<std::string>(comps, "sd");
+					fl = 1;
+				}
+				
+				if(fl == 0) emsg("Distribution '"+dist+"' not recognised.");
+			}
+
+			addcomp(name,inf,distval,mean,sd); 
+		}
+	}
+	else{ emsg("The input file must contain compartment definition through 'comps'");}
+	
+	if(tomldata.contains("trans")){
+		const auto transin = toml::find(tomldata,"trans");
+		for(j = 0; j < transin.size(); j++){
+			const auto trans = toml::find(transin,j);
+			
+			if(!trans.contains("from")) emsg("Transition must contain a 'from' definition.");
+			const auto from = toml::find<std::string>(trans, "from");
+			
+			if(!trans.contains("to")) emsg("Transition must contain a 'to' definition.");
+			const auto to = toml::find<std::string>(trans, "to");
+			
+			if(trans.contains("prob")) {
+				const auto prob = toml::find<std::string>(trans, "prob");
+				addtrans(from,to,prob);  
+			}
+			else{
+				addtrans(from,to,"");  
+			}
+		}
+	}
+	else{ emsg("The input file must contain transition definitions through 'trans'.");}
+	
+	if(tomldata.contains("betaspline")) {
+		const auto bespin = toml::find(tomldata,"betaspline");
+		for(j = 0; j < bespin.size(); j++){
+			const auto besp = toml::find(bespin,j);
+			
+			if(!besp.contains("param")) emsg("Beta spline definition must contain a 'param' definition.");
+			const auto name = toml::find<std::string>(besp,"param");
+			
+			if(!besp.contains("time")) emsg("Beta spline definition must contain a 'time' definition.");
+			const auto tim = toml::find<double>(besp,"time");
+			
+			spl.t = tim;
+			spl.param = findparam(name);
+			betaspline.push_back(spl);
+		}
+	}
+			
+	if(tomldata.contains("phispline")) {
+		const auto bespin = toml::find(tomldata,"phispline");
+		for(j = 0; j < bespin.size(); j++){
+			const auto besp = toml::find(bespin,j);
+			
+			if(!besp.contains("param")) emsg("Phi spline definition must contain a 'param' definition.");
+			const auto name = toml::find<std::string>(besp,"param");
+			
+			if(!besp.contains("time")) emsg("Phi spline definition must contain a 'time' definition.");
+			const auto tim = toml::find<double>(besp,"time");
+			
+			spl.t = tim;
+			spl.param = findparam(name);
+			phispline.push_back(spl);
+		}
+	}
+	
+	sus_param.resize(data.ndemocat);
+	for(c = 0; c < data.ndemocat; c++){
+		for(fi = 0; fi < data.democat[c].value.size(); fi++){
+			sus_param[c].push_back(findparam(data.democat[c].param[fi]));
+		}
+	}
+
+	for(c = 0; c < comp.size(); c++){                             // Check distributions are set
+		if(comp[c].trans.size() > 0 && comp[c].type == NO_DIST){
+			emsg("A distribution must be put on '"+comp[c].name+"' because transitions leave it.");
+		}
+	}
+
+	for(p = 0; p < param.size(); p++){
+		if(param[p].used == 0){
+			if(data.mode == MODE_SIM) emsg("Parameter '"+param[p].name+"' not in the model.");
+		}
 	}
 
 	ntr = 0; nac = 0;
@@ -121,7 +225,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
 		cout << "Parameters:" << endl;
-		for(p = 0; p < param.size(); p++){
+		for(p = 0; p < param.size()-1; p++){
 			cout << param[p].name << " " << param[p].valinit << " (" << param[p].min << " - " << param[p].max << ")" << endl;
 		}
 		cout << endl;
@@ -136,15 +240,15 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 					break;
 					
 				case EXP_DIST:
-					cout << " Exponential with rate " << param[comp[c].param1].name << endl;
+					cout << " Exponential  mean=" << param[comp[c].param1].name << endl;
 					break;
 				case GAMMA_DIST:
-					cout << " Gamma with mean " << param[comp[c].param1].name 
-							 << " and standard deviation " << param[comp[c].param2].name  << endl; 
+					cout << " Gamma mean=" << param[comp[c].param1].name 
+							 << " sd=" << param[comp[c].param2].name  << endl; 
 					break;
 				case LOGNORM_DIST:
-					cout << " Lognormal with mean " << param[comp[c].param1].name 
-							 << " and standard deviation " << param[comp[c].param2].name  << endl; 
+					cout << " Lognormal mean=" << param[comp[c].param1].name 
+							 << " sd=" << param[comp[c].param2].name  << endl; 
 					break;
 				default:
 					cout << endl;
@@ -285,12 +389,18 @@ void MODEL::priorsamp()
 
 /// Gets a parameter value
 double MODEL::getparam(string name)
+{	
+	return paramval[findparam(name)];
+}
+
+/// Gets the infectivity of a compartment
+double MODEL::getinfectivity(string name)
 {
-	unsigned int th;
-	
-	for(th = 0; th < param.size(); th++){ if(param[th].name == name) break;}
-	if(th == param.size()) emsg("Cannot get parameter");
-	return paramval[th];	
+	unsigned int c;
+
+	c = 0; while(c < comp.size() && comp[c].name != name) c++;
+	if(c ==  comp.size()) emsg("Cannot find compartment '"+name+"'");
+	return comp[c].infectivity;
 }
 
 /// Adds a compartment to the model
@@ -302,19 +412,22 @@ void MODEL::addcomp(string name, double infectivity, unsigned int type, string p
 	co.infectivity = infectivity;
 	co.type = type;
 	
-	if(param1 != ""){
-		p = 0; pmax = param.size(); while(p < pmax && param1 != param[p].name) p++;
-		if(p == pmax) emsg("Cannot find parameter");	
-		co.param1 = p;
-	}
-	
-	if(param2 != ""){
-		p = 0; pmax = param.size(); while(p < pmax && param2 != param[p].name) p++;
-		if(p == pmax) emsg("Cannot find parameter");	
-		co.param2 = p;
-	}
+	if(param1 != "") co.param1 = findparam(param1);	
+	if(param2 != "") co.param2 = findparam(param2);
 	
 	comp.push_back(co);	
+}
+
+/// Finds a parameter from a string
+unsigned int MODEL::findparam(string name)
+{
+	unsigned int p, pmax;
+	
+	p = 0; pmax = param.size(); while(p < pmax && name != param[p].name) p++;
+	if(p == pmax) emsg("Cannot find parameter '"+name+"'");	
+	param[p].used = 1;
+	
+	return p;
 }
 
 /// Adds a parameter to the model
@@ -322,6 +435,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.valinit = val; par.sim = val; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = val/10;
+	par.used = 0;
 
 	param.push_back(par);
 }
@@ -345,9 +459,7 @@ void MODEL::addtrans(string from, string to, string probparam)
 	
 	if(probparam == "") tr.probparam = UNSET;
 	else{
-		p = 0; pmax = param.size(); while(p < pmax && probparam != param[p].name) p++;
-		if(p == pmax) emsg("Cannot find parameter");	
-		tr.probparam = p;
+		tr.probparam = findparam(probparam);
 	}
 	
 	trans.push_back(tr);
@@ -357,10 +469,13 @@ void MODEL::addtrans(string from, string to, string probparam)
 void MODEL::timevariation(DATA &data)
 {
   unsigned int s, j;
-	int p, n = nspline-1;
+	int p;
+	double t, fac;
+	
+	/*  // This uses a cubic spline for beta
 	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
-	if(1 == 0){   // This uses a cubic spline for beta
+		int n = nspline-1;
 		for(p = 0; p <= n; p++) a[p] = log(paramval[p]);
 		for(p = 0; p < n; p++) h[p] = splinet[p+1]-splinet[p];
 		for(p = 1; p < n; p++) alpha[p] = (3/h[p])*(a[p+1]-a[p]) - (3/h[p-1])*(a[p]-a[p-1]);
@@ -386,27 +501,29 @@ void MODEL::timevariation(DATA &data)
 			dt = t-splinet[p];	
 			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
 		}
-	}
-	else{  // This uses a linear spline for beta
-		p = 0;
-		for(s = 0; s < data.nsettime; s++){	
-			t = double((s+0.5)*data.period)/data.nsettime;
-			
-			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
-			
-			fac = (t-splinet[p])/(splinet[p+1]-splinet[p]);
-			beta[s] = paramval[p]*(1-fac) + paramval[p+1]*fac;
-		}
+		*/
+	
+  // This uses a linear spline for beta
+	p = 0;
+	for(s = 0; s < data.nsettime; s++){	
+		t = double((s+0.5)*data.period)/data.nsettime;
+		
+		while(p < betaspline.size()-1 && t > betaspline[p+1].t) p++;
+		
+		fac = (t-betaspline[p].t)/(betaspline[p+1].t-betaspline[p].t);
+		beta[s] = (paramval[betaspline[p].param]*(1-fac) + paramval[betaspline[p+1].param]*fac)/units;
 	}
 	
-	s = 0;
-	for(j = 0; j < nphitime; j++){
-		while(s < data.nsettime && data.settime[s] < phitime[j]){
-			phi[s] = paramval[phparam+j];
-			s++;
-		}
+	// This uses a linear spline for phi
+	p = 0;
+	for(s = 0; s < data.nsettime; s++){	
+		t = double((s+0.5)*data.period)/data.nsettime;
+		
+		while(p < phispline.size()-1 && t > phispline[p+1].t) p++;
+		
+		fac = (t-phispline[p].t)/(phispline[p+1].t-phispline[p].t);
+		phi[s] = (paramval[phispline[p].param]*(1-fac) + paramval[phispline[p+1].param]*fac)/(units*data.popsize);
 	}
-	if(s != data.nsettime) emsg("Model: EC43");
 }
 
 /// Sets the transition probabilies based on the parameters
@@ -466,6 +583,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 {
 	unsigned int k, kmax, tra, timep;
 	double mean, sd, z;
+
 	FEV ev;
 	vector <double> probsum;
 	
@@ -488,17 +606,17 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		
 		switch(comp[c].type){
 		case EXP_DIST:
-			t += -log(ran())/paramval[comp[c].param1];
+			t += -units*log(ran())/paramval[comp[c].param1];
 			break;
 		
 		case GAMMA_DIST:
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-			t += gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
+			t += units*gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
 		case LOGNORM_DIST:
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-			t += exp(normal(mean,sd));
+			t += units*exp(normal(mean,sd));
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;
@@ -551,7 +669,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 		switch(comp[c].type){
 		case EXP_DIST:
 			p = comp[c].param1;
-			t += dt*parami[p]/paramp[p];
+			t += units*dt*parami[p]/paramp[p];
 			break;
 		
 		case GAMMA_DIST:
@@ -564,7 +682,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			meanp = paramp[p]; sdp = paramp[p2];
 			
 			if(meani == meanp && sdi == sdp) t += dt;
-			else t += exp(meanp + (log(dt) - meani)*sdp/sdi);
+			else t += units*exp(meanp + (log(dt) - meani)*sdp/sdi);
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;
@@ -607,7 +725,7 @@ void MODEL::setsus(DATA &data)
 		val = 1;
 		for(c = 0; c < data.ndemocat; c++){
 			j = data.democatpos[dp][c];
-			if(j < data.democat[c].value.size()-1) val *= exp(paramval[fix_sus_param[c]+j]);
+			val *= exp(paramval[sus_param[c][j]]);
 		}
 		sus[dp] = val;
 	}

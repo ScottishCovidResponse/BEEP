@@ -452,7 +452,7 @@ void PART::addfev(FEV fe, double period, double tnow)
 {
 	unsigned int d, j, jmax;
 	double t;
-	
+
 	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
 	if(t >= period) return;
 	

@@ -17,10 +17,10 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, c, imax, k, nreg, td, j, jst, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
+	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
 	int dc;
 	double v, sum;
-	string line, ele, name, regcode, st;
+	string line, ele, name, regcode, st, file;
 	REGION reg;
 	AREA are;
 	DEMOCAT dem;
@@ -40,42 +40,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	fediv = nsettime*fepertime;
 	
 	if(core == 0){
-		ifstream demoin(democatfile.c_str());                             	// Reads in demographic categories
-		if (!demoin.is_open()) {
-			emsg("Failed to open file '"+democatfile+"'");
-		}
-		do{
-			getline(demoin,line); line = strip(line);
-			if(demoin.eof()) break;
-			
-			j = 0; jmax = line.length(); while(j < jmax && line.substr(j,1) != ":") j++;
-			if(j == jmax) emsg("Problem loading: ",democatfile);
-			dem.name = line.substr(0,j);
-			j++;
-			
-			dem.value.clear();
-			while(j < jmax){	
-				while(j < jmax && line.substr(j,1) == " " ) j++;
-				jst = j;
-				while(j < jmax && line.substr(j,1) != "," ) j++;
-				dem.value.push_back(line.substr(jst,j-jst));
-				j++;
-			}
-			democat.push_back(dem);
-		}while(1 == 1);
-		ndemocat = democat.size();
-		nage = democat[0].value.size();
-		
-		cout << endl << "Demographic data loaded:" << endl;
-		for(d = 0; d < ndemocat; d++){
-			cout << democat[d].name << ": "; 
-			for(j = 0; j < democat[d].value.size(); j++){
-				if(j > 0) cout << ",";
-				cout << democat[d].value[j] << " ";
-			}
-			cout << endl;
-		}
-		
 		count.resize(ndemocat);                                     // Defines all the demographic states
 		for(dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
 		
@@ -91,8 +55,10 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
  
-		ifstream regionin(regiondatafile.c_str());      	             // Loads information about data regions
-		if(!regionin) emsg("Cannot find the file '"+regiondatafile+"'");
+		file = datadir+"/"+regiondatafile;
+		ifstream regionin(file.c_str());      	             // Loads information about data regions
+
+		if(!regionin) emsg("Cannot open the file '"+file+"'");
 		getline(regionin,line); 
 		do{
 			getline(regionin,line); line = strip(line);
@@ -109,8 +75,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
 		}
 	
-		ifstream areain(areadatafile.c_str());                                        // Loads information about areas
-		if(!areain) emsg("Cannot find the file '"+areadatafile+"'");
+		file = datadir+"/"+areadatafile;
+		ifstream areain(file.c_str());                             // Loads information about areas
+		if(!areain) emsg("Cannot open the file '"+file+"'");
 			
 		getline(areain,line);
 		do{
@@ -132,7 +99,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				for(j = 0; j < jmax; j++){
 					ss >> st;
 					val[d][j] = atof(st.c_str());
-					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' "+st+" is not a number");	
+					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
 				}
 			}
 			
@@ -158,15 +125,16 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		if(checkon == 1){
 			for(c = 0; c < narea; c++){
 				cout << nregion << " " << area[c].region << "region" << endl;
-				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " "<<  area[c].y << " " <<  area[c].density << "  ***";
+				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " " <<  area[c].y << " " <<  area[c].density << "  ***";
 			
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
 				cout << endl;	
 			}
 		}			
 		
-		ifstream Min(Mdatafile.c_str());                                // Loads information about mixing matrix
-		if(!Min) emsg("Cannot find the file '"+Mdatafile+"'");
+		file = datadir+"/"+Mdatafile;
+		ifstream Min(file.c_str());                           // Loads information about mixing matrix
+		if(!Min) emsg("Cannot open the file '"+file+"'");
 			
 		getline(Min,line);
 		
@@ -183,8 +151,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
 
-		ifstream Nin(Ndatafile.c_str());                                   // Loads information about age mixing
-		if(!Nin) emsg("Cannot find the file '"+Ndatafile+"'");
+		file = datadir+"/"+Ndatafile;
+		ifstream Nin(file.c_str());                            // Loads information about age mixing
+		if(!Nin) emsg("Cannot open the file '"+file+"'");
 	
 		N.resize(nage);
 		for(j = 0; j < nage; j++){
@@ -196,19 +165,22 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}		
 		
-		cout << endl << "Age contact structure data loaded:" << endl;
-		for(j = 0; j < nage; j++){
-			for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N" << endl;
+		cout << endl << "Age contact structure data loaded." << endl;
+		
+		if(checkon == 1){
+			for(j = 0; j < nage; j++){ for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N" << endl;}
 		}
 		
 		if(mode != MODE_SIM){        // Loads transition data for inference
 			if(transdata.size() == 0) emsg("Transition data must be loaded");
 			
 			for(td = 0; td < transdata.size(); td++){
-				ifstream transin(transdata[td].file.c_str());                            // Loads the transition data
-				if(!transin) emsg("Cannot find the file '"+transdata[td].file+"'");
+				file = datadir+"/"+transdata[td].file;
+				cout << file << " fil\n";
+				ifstream transin(file.c_str());            // Loads the transition data
+				if(!transin) emsg("Cannot open the file '"+file+"'");
 				
-				nreg = 0;                                                                // Checks regions names match with area file
+				nreg = 0;                                                            // Checks regions names match with area file
 				getline(transin,line);
 				stringstream ss(line);
 				getline(ss,ele,'\t');
@@ -316,8 +288,6 @@ void DATA::copydata(unsigned int core)
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
-		pack(ndemocat);
-		pack(democat);
 		pack(ndemocatpos);
 		pack(democatpos);
 		pack(nregion);
@@ -339,8 +309,6 @@ void DATA::copydata(unsigned int core)
 		
 	if(core != 0){
 		packinit();
-		unpack(ndemocat);
-		unpack(democat);
 		unpack(ndemocatpos);
 		unpack(democatpos);
 		unpack(nregion);
@@ -358,46 +326,22 @@ void DATA::copydata(unsigned int core)
 	}
 }
 
-/*
-/// Calculates density of houses for a given house
-void DATA::housedensity()
+/// Adds demographic categories
+void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
 {
-	int L, h, hh, i, j, imin, imax, jmin, jmax, num, c, k;
-	double x, y, xx, yy, dd, fac = 0.9999999, val;
-	vector< vector <int> > grid;
+	unsigned int j;
+	DEMOCAT dem;
 	
-	L = int(scale/(2*rden));
+	dem.name = name;	
+	dem.value = st;
+	dem.param = params;
+	
+	democat.push_back(dem);
 
-	grid.resize(L*L);
-	for(h = 0; h < nhouse; h++){
-		c = int(fac*house[h].y*L)*L + int(fac*house[h].x*L); if(c < 0 || c >= L*L) emsg("Data: EC11");
-		
-		grid[c].push_back(h);
-	}
-	
-	for(h = 0; h < nhouse; h++){
-		x = house[h].x; y = house[h].y;
-		imin = int(x*L+0.5)-1; imax = imin+1; if(imin < 0) imin = 0; if(imax >= L) imax = L-1;
-		jmin = int(y*L+0.5)-1; jmax = jmin+1; if(jmin < 0) jmin = 0; if(jmax >= L) jmax = L-1;
-		
-		num = 0;
-		for(i = imin; i < imax; i++){
-			for(j = jmin; j < jmax; j++){
-				c = j*L+i;
-				for(k = 0; k < grid[c].size(); k++){
-					hh = grid[c][k];
-					xx = house[hh].x; yy = house[hh].y;
-					dd = (xx-x)*(xx-x) + (yy-y)*(yy-y);
-					if(dd < rden*rden/(scale*scale)) num++;
-				}
-			}
-		}
-		val = num/(2*3.14159*rden*rden); if(val < 0.5) val = 0.5;
-		house[h].density = val;
-	}
+	ndemocat = democat.size();
+	if(ndemocat == 1) nage = st.size();
 }
-*/
-
+	
 string DATA::strip(string line)
 {
 	int len = line.length();

@@ -80,7 +80,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		//}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
 		}
 		
-		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
+		//for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
+		//for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi(1);
 				
 		if(samp%10 == 0){ for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi(1);}  // Recalcualtes Qmapi (numerical)
 		

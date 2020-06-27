@@ -4,8 +4,6 @@ using namespace std;
 
 const unsigned int MODE_SIM=0, MODE_PMCMC=1, MODE_MBP=2;         // Different modes of operation 
  
-const unsigned int MOD_IRISH = 0;                                // Different compartmental models
-
 const unsigned int FEV_EV=0, INF_EV=1;                           // Event types (future event/infection/settime/external)
 const unsigned int SET_EV=2, EXT_EV=3, XIFEV_EV=4, XPFEV_EV=5;
 
@@ -27,6 +25,8 @@ const unsigned int BUFMAX = 2000000;                             // The maximum 
 
 const double varfac = 4;                                         // A factor which relaxes the observation model
 
-const unsigned int INFMAX = 200000;                              // The maximum number of infections allowed
-
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs
+
+const double dpw = 7;                                            // The number of days per week
+const double units = 1.0/dpw;
+	

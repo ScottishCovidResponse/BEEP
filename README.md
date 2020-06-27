@@ -11,83 +11,94 @@ C. M. Pooley† [1] and Glenn Marion [1]
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-CoronaPMCMC is a code for analysing coronavirus regional level data. This divides the area under study (e.g. Scotland or the UK) into a large number of geographical groupings of houses (e.g. ~65k groups). The model captures short range and long range disease transmission (as well as household effects and the inclusion of schools / workplaces / care homes, which  will be added soon). The data to be analysed with be weekly case numbers at a Health board level along with national mortality data.
+CoronaPMCMC is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly case numbers at a healthboard level along with national mortality data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease susceptibility. 
 
-Parameter inference is performed using particle MCMC (PMCMC). This relies on being able to generate fast simulations from the model (of the order of seconds). For this purpose we have developed a fast Gillespie algorithm which relies on a multiscale approach. A parallelised version will be created soon to increase speed further.
+Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-PMCMC). This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
 ## Performing analysis
 
-To compile the code use:
-make
+Compilation: make
 
+Simulation:  ./run inputfile="sim.toml" 
 
-Simulation:  
-       
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+Inference:   mpirun -n 1 ./run inputfile="inf.toml"
+(Here the flag -n 1 sets the number of cores used)
 
-MBP Inference (expected to be best under most circumstances):   
+The input TOML file provides details of simulation or inference and contains all the information CoronaPMCMC needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the repository, along with an example dataset in the directory "Dataset_example".
  
-mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=100 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
+# INPUTS:
 
-PMCMC Inference (an alternative):  
+Here is a description of the various commands used in the TOML files:
 
-(TODO: update this)
-
-mpirun -n 20 ./run mode=pmcmc model=irish area=1024 npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
-
-The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
-
-INPUTS:
-
-(TODO: update this)
-
-Here is a description of the various inputs:
+DETAILS
 
 **mode** - Defines how the code operates:
 		"sim" generates simulated data.
-		"pmcmc" performs inference using particle MCMC.
-		"mbp" performs inference using multi-temperature MBP MCMC.
+		"inf" performs inference using multi-temperature MBP-MCMC.
 
-**model** - This defines the compartmental model being used:
-		"irish" defines a SEAPIRHD model for asymtopmatic / presymptomatic / symptomatic individuals.
-	
-**area** - Determines	the number of areas into which the houses are divided (should be a power of 4)
-
-**npart** - The total number of particles used when performing PMCMC (should be a multiple of the number of cores).
-
-**nchain** - The total number of chains used when performing multi-temperature MBP MCMC (should be a multiple of the number of cores).
-
-**nsamp** - The number of samples used for inference (note, burnin is assumed to be a quater this value).
+**period** - The time period of simulation / inference (in weeks).
 
 **seed** - Sets the random seed when performing inference (this is set to zero by default)
 
+**nchain** - The total number of chains used when performing MCMC (should be a multiple of the number of cores).
+
+**nsamp** - The number of samples used for inference (note, burnin is assumed to be a quarter this value).
+
 **outputdir** - Gives the name of the output directory (optional).
 
-**transdata** - Transition data. Gives the "from" then "to" compartments, the type ("reg" means regional data and "all" means global) and then the file name. More than one set of transition data can be added for an analysis.
+THE MODEL
 
-**housedata** - House data. Gives the file name for a file giving the positions of houses.
+Note, for examples of how these commands are used, see 'inf.toml'.
 
-**period** - The period of time over which simulation/inference is performed (e.g. measured in weeks).
+**comps** - Defines the compartments in the model.
 
-**simtype** - Determines the system on which simulation is performed (simulation mode only):
-		"smallsim" a small system with 1024 houses, 10000 individuals and a 2x2 grid of data regions (used for testing)
-		"scotsim" a Scotland-like system with 1.5 million houses, 5.5 million individuals and a 4x4 grid of data regions (used for testing)
-		"uksim" a UK-like system with 20 million houses, 68 million individuals and a 10x10 grid of data regions (used for testing)
+**trans** - Defines transitions between compartments.
+
+**params** - Defines parameters in the model (simulation only).
+
+**priors** - Defines priors in the model (inference only).
+
+**indmax** - The maximum number of infected individuals (placed as a prior).
+
+**betaspline** - Defines a linear spline used to capture time variation in transmission rate beta.
+
+**phispline** - Defines the linear spline used to represent external force of infection phi.
+
+**ages** - The age groups used in the analysis.
+
+**democats** - Used to define other demographic categories.
+
+THE DATA 
+
+**datadir** - The data directory.
+
+**regions** - Filename for a table giving data regions.
+
+**areas** - Filename for a table giving information about areas (e.g. MSOAs or OAs).
+
+**geocont** - Filename for a table informing the matrix of contacts between different areas.
+ 
+**agecont** - Filename for a matrix giving the contact rates between different age groups.
+
+**transdata** - Transition data. Gives the observed numbers of transitions between different compartments. More than one set of transition data can be used in an analysis.
+
+Note, all the single variable quantities in the TOML file can be overridden using equivalent comand line definitions.
+
+For example: mpirun -n 1 ./run inputfile="inf.toml" nsamp=10000 
+
+generate 10000 samples (irrespective of the definition given in "inf.toml").
 	
-	
-OUTPUTS:
+# OUTPUTS:
 
-(TODO: update this)
-
-Simulation - This creates the specified 'transdata' and 'housedata' files along with output directory containing:
+Simulation - This creates the specified 'transdata' files along with an output directory containing:
 1) Plots for the transitions corresponding to the 'transdata' files.
 2) "R0.txt", which gives time variation in R0.
 3) "parameter.txt", which gives the parameter values used in the simulation.
 
-Inference - The output directory contains postior information (with means and 90% credible intervals) for:
+Inference - The output directory contains posterior information (with means and 90% credible intervals) for:
 1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives posterior plotstime variation in R0.
+2) "R0.txt", which gives posterior plots time variation in R0.
 3) "parameter.txt", which gives information about parameters.
 4) "trace.txt", which gives trace plots for different models.
-5) "traceLi.txt", which gives trace plots for the likelihoods on different chains (MBPs only).
-6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorthm.
+5) "traceLi.txt", which gives trace plots for the likelihoods on different chains.
+6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.

@@ -88,12 +88,15 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 		nparam = model.param.size();                   
 		paramval.resize(nparam); for(th = 0; th < nparam; th++) paramval[th] = model.paramval[th];
 		paramvalinit = paramval;
-		for(th = 0; th < model.infparamend; th++) paramvalinit[th] = 0;       // Sets initial state to zero force of infection
-	
-		mbp();
+		
+		 // Sets the initial state to zero force of infection
+		for(j = 0; j < model.betaspline.size(); j++) paramvalinit[model.betaspline[j].param] = 0; 
+		for(j = 0; j < model.phispline.size(); j++) paramvalinit[model.betaspline[j].param] = 0;
+		
+		if(mbp() == 0) break;
 
 		loop++;
-	}while(loop < loopmax && xp.size() >= INFMAX);                          // Checks not too many infected (based on prior)
+	}while(loop < loopmax);                          // Checks not too many infected (based on prior)
 	if(loop == loopmax) emsg("Cannot find initial state with number of events under INFMAX");
 	
 	trevi = trevp;
@@ -154,7 +157,7 @@ unsigned int MBPCHAIN::mbp()
 
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -small) emsg("MBPchain: EC31");
+			//if(val < -small){ cout << val << " " << sett << " " << v << " " << Qmapi[sett][v] << " " << dQmap[v] << " ii\n"; emsg("MBPchain: EC31");}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -193,7 +196,7 @@ unsigned int MBPCHAIN::mbp()
 				n++;
 			}
 			
-			if(xp.size() >= INFMAX) return 1; 
+			if(xp.size() >= model.infmax){ timers.timembp += clock(); return 1;}
 		}while(1 == 1);
 		
 		updatedQmap(sett);
@@ -241,7 +244,7 @@ void MBPCHAIN::setQmapi(unsigned int check)
 			val = dQmap[v];
 			if(val < -small) emsg("MBPchain: EC17");
 			if(check == 1){
-				if(val < Qmapi[sett][v]-small || val > Qmapi[sett][v]+small) emsg("MBPchain: EC17b");
+				//if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsg("MBPchain: EC17b");
 			}
 			if(val < 0){ val = 0; dQmap[v] = 0;}	
 			
@@ -827,7 +830,7 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 	if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24b");}
 
 	timers.timeaddrem -= clock();
-	addrem_prop(samp,burnin);
+	//addrem_prop(samp,burnin);
 	timers.timeaddrem += clock();
 		
 	timers.timestandard += clock();
@@ -836,7 +839,7 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 /// Makes proposal to beta and phi
 void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 {	
-	unsigned int c, dp, w, v, d, i, j, jmax, n, sett, loop, loopmax=10, th;
+	unsigned int c, dp, w, v, d, i, j, jmax, n, sett, loop, loopmax=10, th, pos;
 	double L, t, tt, tmax, betasum, phisum, beta, phi, al, Levp, valst;
 	vector <unsigned int> map;
 	FEV ev;
@@ -844,7 +847,8 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 	LCONT lcont;
 	vector <LCONT> lcontlist;
 	vector<	vector <LCONT> > lc;
-		
+	vector <unsigned int> parampos;
+	
 	map.resize(data.nardp); for(w = 0; w < data.nardp; w++) map[w] = 0;
 	
 	for(c = 0; c < data.narea; c++){
@@ -914,41 +918,47 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 		t = tmax;
 	} 
 	
+	for(j = 0; j < model.betaspline.size(); j++) parampos.push_back(model.betaspline[j].param);
+	for(j = 0; j < model.phispline.size(); j++) parampos.push_back(model.phispline[j].param);
+		
 	timers.timebetaphiloop -= clock();
 	for(loop = 0; loop < loopmax; loop++){
-		th = (unsigned int)(ran()*(model.phparam + model.nphitime)); 
-		valst = paramval[th];	
-		paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
-
-		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
-		else{
-			model.setup(data,paramval);
-
-			Levp = 0; 
-			for(sett = 0; sett < data.nsettime; sett++){
-				beta = model.beta[sett]; phi = model.phi[sett];
-				Levp += betafac[sett]*beta + phifac[sett]*phi;
-				
-				jmax = lc[sett].size();
+		for(pos = 0; pos < parampos.size(); pos++){
+			th = parampos[pos];
 		
-				for(j = 0; j < jmax; j++){
-					Levp += lc[sett][j].num*log(lc[sett][j].betafac*beta + lc[sett][j].phifac*phi);
-				}
-				if(std::isnan(Levp)) emsg("MBPchain: EC77b");
-			}
+			valst = paramval[th];	
+			paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
+
+			if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+			else{
+				model.setup(data,paramval);
+
+				Levp = 0; 
+				for(sett = 0; sett < data.nsettime; sett++){
+					beta = model.beta[sett]; phi = model.phi[sett];
+					Levp += betafac[sett]*beta + phifac[sett]*phi;
+					
+					jmax = lc[sett].size();
 			
-			al = exp(Levp-Levi);
-		}
-	
-		ntrxi[th]++;
-		if(ran() < al){
-			Levi = Levp;
-			nacxi[th]++;
-			if(samp < burnin) paramjumpxi[th] *= 1.01;
-		}
-		else{
-			paramval[th] = valst;
-			if(samp < burnin) paramjumpxi[th] *= 0.995;
+					for(j = 0; j < jmax; j++){
+						Levp += lc[sett][j].num*log(lc[sett][j].betafac*beta + lc[sett][j].phifac*phi);
+					}
+					if(std::isnan(Levp)) emsg("MBPchain: EC77b");
+				}
+				
+				al = exp(Levp-Levi);
+			}
+		
+			ntrxi[th]++;
+			if(ran() < al){
+				Levi = Levp;
+				nacxi[th]++;
+				if(samp < burnin) paramjumpxi[th] *= 1.01;
+			}
+			else{
+				paramval[th] = valst;
+				if(samp < burnin) paramjumpxi[th] *= 0.995;
+			}
 		}
 	}
 	timers.timebetaphiloop += clock();

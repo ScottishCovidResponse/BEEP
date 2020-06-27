@@ -74,7 +74,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	SAMPLE sa;
 	unsigned int p, np, r, t, st, sum, td;
 	vector <unsigned int> num;
-	double tinfav=UNSET, probA, Ainf, Pinf, tA, tP, tI;
+	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
 	np = paramval.size();
 	
@@ -110,16 +110,14 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 
 	model.setup(data,paramval);
 	
-	switch(model.modelsel){
-	case MOD_IRISH:
-		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
-		tA = 1.0/model.getparam("rA"); tP = 1.0/model.getparam("rP"); tI = 1.0/model.getparam("rI");
+	// TO DO
+	probA = model.getparam("probA"); 
+	Ainf = model.getinfectivity("A");
+	Pinf = model.getinfectivity("P");
+	Iinf = model.getinfectivity("I");
+	tA = model.getparam("tA"); tP = model.getparam("tP"); tI = model.getparam("tI");
 
-		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
-		break;
-		
-	default: emsg("Output: EC10"); break;
-	}
+	tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+Iinf*tI); 
 
 	sa.R0.resize(data.nsettime);
 	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
@@ -133,7 +131,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 	SAMPLE sa;
 	unsigned int p, np, r, t, st, sum, td;
 	vector <unsigned int> num;
-	double tinfav=UNSET, probA, Ainf, Pinf, tA, tP, tI;
+	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
 	np = paramval.size();
 	
@@ -169,17 +167,15 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 
 	model.setup(data,paramval);
 
-	switch(model.modelsel){
-	case MOD_IRISH:
-		probA = model.getparam("probA"); Ainf = model.getparam("Ainf"); Pinf = model.getparam("Pinf");
-		tA = 1.0/model.getparam("rA"); tP = 1.0/model.getparam("rP"); tI = 1.0/model.getparam("rI");
+	// TO DO
+	probA = model.getparam("probA"); 
+	Ainf = model.getinfectivity("A");
+	Pinf = model.getinfectivity("P");
+	Iinf = model.getinfectivity("I");
+	tA = model.getparam("tA"); tP = model.getparam("tP"); tI = model.getparam("tI");
 
-		tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+tI); 
-		break;
-		
-	default: emsg("Output: EC10"); break;
-	}
-
+	tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+Iinf*tI); 
+	
 	sa.R0.resize(data.nsettime);
 	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
 	
@@ -212,7 +208,8 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 			for(r = 0; r < data.nregion; r++){
 				stringstream ss; ss << data.outputdir << "/" << name << "_" << data.region[r].name << ".txt";
 				ofstream dataout(ss.str().c_str());
-				
+				if(!dataout) emsg("Cannot output the file '"+ss.str()+"'");
+						
 				cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions for region '" << data.region[r].name << "'." << endl;
 		
 				for(t = 0; t < data.period; t++){
@@ -229,6 +226,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		if(data.transdata[td].type == "all"){
 			stringstream ss; ss << data.outputdir << "/" << name << ".txt";
 			ofstream dataout(ss.str().c_str());
+			if(!dataout) emsg("Cannot output the file '"+ss.str()+"'");
 			
 			cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions." << endl;
 	
@@ -245,6 +243,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 	stringstream sst; sst << data.outputdir << "/R0" << ".txt";
 	ofstream R0out(sst.str().c_str());
+	if(!R0out) emsg("Cannot output the file '"+sst.str()+"'");
 	
 	cout << "'" << sst.str() << "' gives the time variation in R0." << endl;
 	
@@ -258,6 +257,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 	stringstream ss; ss << data.outputdir << "/parameters" << ".txt";
 	ofstream paramout(ss.str().c_str());
+	if(!paramout) emsg("Cannot output the file '"+ss.str()+"'");
 	
 	cout << "'" << ss.str() << "' gives the model parameters." << endl;
 	
@@ -281,6 +281,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	if(data.mode != MODE_SIM){
 		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
 		ofstream diag(ss.str().c_str()); 
+		if(!diag) emsg("Cannot output the file '"+ss.str()+"'");
 	
 		cout << "'" << ss.str() << "' gives MCMC diagnostics." << endl;
 	
@@ -313,6 +314,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, P
 	ensuredirectory(data.outputdir);
 	stringstream sst; sst << data.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
+	if(!evsamp) emsg("Cannot output the file '"+sst.str()+"'");
 	
 	/*
 	for(i = 0; i < nind; i++){
@@ -344,6 +346,8 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 	td = 0; tdf = 0; while(td < data.fediv && xi[td].size()==0) td++;
 	
 	ofstream plot(file.c_str());
+	if(!plot) emsg("Cannot output the file '"+file+"'");
+	
 	for(t = tmin; t < period; t += (period-tmin)/100){
 		while(td < data.fediv && xi[td][tdf].t < t){
 			tra = xi[td][tdf].trans;
@@ -384,9 +388,11 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	
 	cout << "Simulated Data:" << endl;
 	for(td = 0; td < data.transdata.size(); td++){
-		ofstream transout(data.transdata[td].file.c_str());
+		stringstream ss; ss << data.datadir << "/" << data.transdata[td].file;
+		ofstream transout(ss.str().c_str());
+		if(!transout) emsg("Cannot output the file '"+ss.str()+"'");
 		
-		cout << "'" << data.transdata[td].file.c_str() << "' gives the observed weekly number of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions";
+		cout << "'" << ss.str() << "' gives the observed weekly number of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions";
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		

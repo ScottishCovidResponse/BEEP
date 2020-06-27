@@ -7,12 +7,14 @@ struct TRANSDATA{
  	string to;                               // The "to" compartment 
 	string type;                             // The type (either "reg" for regional or "all" for global)
  	string file;                             // The file name of the data 
+	string units;                            // The units used (e.g. weeks) 
 	vector <vector <unsigned int> > num;     // A table giving the number of that transition type
 };
 
 struct DEMOCAT {                           // Stores demographic categories
 	string name;                             // The name of the category
 	vector <string> value;                   // The postential values it can take
+	vector <string> param;                   // The parameters used for the susceptibility
 };
 
 struct REGION {                            // Provides information a data region
@@ -85,11 +87,10 @@ class DATA
 	vector <double> settime;                 // The timings at which beta changes
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
-	string simtype;                          // The system on which simulation is performed
 	
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
 	
-	string democatfile;                      // File giving demographic classifications
+	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas
 	string Mdatafile;                        // File giving the spatial mixing matrix
@@ -139,6 +140,7 @@ class DATA
 	AreaRefComparatorY compY;
 	
 	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
+	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	
 	private:
 	string strip(string line);
