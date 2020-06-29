@@ -5,7 +5,7 @@ Compile using: make
 Simulation:  
  ./run inputfile="sim.toml"        
 
-MBP Inference:    
+Inference:    
 mpirun -n 1 ./run inputfile="inf.toml"
 */
 
