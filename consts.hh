@@ -11,7 +11,6 @@ const unsigned int NO_DIST=0, EXP_DIST=1, GAMMA_DIST=2;          // Denotes expo
 const unsigned int LOGNORM_DIST=3, INFECTION=4;
 
 const double tiny = 0.00000001;                                  // Used to represent a tiny number
-const double small = 0.00001;
 const double large = 1000000;                                    // Used to represent a big number
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 
@@ -26,7 +25,3 @@ const unsigned int BUFMAX = 2000000;                             // The maximum 
 const double varfac = 4;                                         // A factor which relaxes the observation model
 
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs
-
-const double dpw = 7;                                            // The number of days per week
-const double units = 1.0/dpw;
-	

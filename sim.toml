@@ -5,8 +5,8 @@
 # Perform a simulation.
 mode      = "sim"
 
-# The time period of simulation (in weeks).
-period    = 16
+# The time period of simulation (in days).
+period    = 112
 
 # The random seed used to run the simulation.
 seed      = 0
@@ -71,20 +71,20 @@ params		= [{name="beta0", value=3.0},         # The values for the beta spline
 # Format: The name of the parameter followed by the time of the spline point.
 
 betaspline= [{param="beta0", time=0.0}, 
-						 {param="beta1", time=4.0},
-						 {param="beta2", time=8.0}, 
-						 {param="beta3", time=12.0},
-						 {param="beta4", time=16.0}]
+						 {param="beta1", time=28.0},
+						 {param="beta2", time=56.0}, 
+						 {param="beta3", time=84.0},
+						 {param="beta4", time=112.0}]
 						 
 
 # Defines the linear spline used to represent external force of infection phi.
 # Format: The name of the parameter followed by the time of the spline point. Note, The parameter 'zero' sets the value to zero.
 
 phispline= [{param="phi", time=0.0}, 
-						{param="phi", time=4.0},
-						{param="zero", time=8.0}, 
-						{param="zero", time=12.0},
-						{param="zero", time=16.0}]
+						{param="phi", time=28.0},
+						{param="zero", time=56.0}, 
+						{param="zero", time=84.0},
+						{param="zero", time=112.0}]
 	
 
 # The age groups used in the analysis.
@@ -133,7 +133,7 @@ agecont	 	= "Ndata.txt"
  
  
 # The observed numbers of transitions between different compartments.
-# Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file and the units used.
+# Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-transdata	= [{from="I", to="H", area="reg", file="cases.txt", units="weeks"},
-						 {from="H", to="D", area="all", file="deaths.txt", units="weeks"}]
+transdata	= [{from="I", to="H", area="reg", file="cases.txt", start=0, units="weeks"},
+						 {from="H", to="D", area="all", file="deaths.txt", start=0, units="weeks"}]

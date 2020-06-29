@@ -7,8 +7,10 @@ struct TRANSDATA{
  	string to;                               // The "to" compartment 
 	string type;                             // The type (either "reg" for regional or "all" for global)
  	string file;                             // The file name of the data 
-	string units;                            // The units used (e.g. weeks) 
+	unsigned int start;                      // The start time for the data
+	unsigned int units;                      // The units used (e.g. 1=days, 7=weeks) 
 	vector <vector <unsigned int> > num;     // A table giving the number of that transition type
+	unsigned int rows;                       // The number of rows of data
 };
 
 struct DEMOCAT {                           // Stores demographic categories

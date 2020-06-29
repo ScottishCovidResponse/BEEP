@@ -171,6 +171,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			if(!besp.contains("time")) emsg("Beta spline definition must contain a 'time' definition.");
 			const auto tim = toml::find<double>(besp,"time");
 			
+			if(j == 0 && tim != 0) emsg("The first beta spline point must be at t=0.");
+			if(j == bespin.size()-1 && tim != data.period) emsg("The last beta spline point must be at t=period.");
+			if(tim < 0 || tim > data.period) emsg("The beta spline points must be within the time period.");
+			
 			spl.t = tim;
 			spl.param = findparam(name);
 			betaspline.push_back(spl);
@@ -187,6 +191,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 			
 			if(!besp.contains("time")) emsg("Phi spline definition must contain a 'time' definition.");
 			const auto tim = toml::find<double>(besp,"time");
+			
+			if(j == 0 && tim != 0) emsg("The first phi spline point must be at t=0.");
+			if(j == bespin.size()-1 && tim != data.period) emsg("The last phi spline point must be at t=period.");
+			if(tim < 0 || tim > data.period) emsg("The phi spline points must be within the time period.");
 			
 			spl.t = tim;
 			spl.param = findparam(name);
@@ -359,7 +367,6 @@ void MODEL::addQ(DATA &data)
 							}
 						}
 					
-					
 						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = UNSET;
 					}
 					
@@ -511,7 +518,7 @@ void MODEL::timevariation(DATA &data)
 		while(p < betaspline.size()-1 && t > betaspline[p+1].t) p++;
 		
 		fac = (t-betaspline[p].t)/(betaspline[p+1].t-betaspline[p].t);
-		beta[s] = (paramval[betaspline[p].param]*(1-fac) + paramval[betaspline[p+1].param]*fac)/units;
+		beta[s] = (paramval[betaspline[p].param]*(1-fac) + paramval[betaspline[p+1].param]*fac);
 	}
 	
 	// This uses a linear spline for phi
@@ -522,7 +529,7 @@ void MODEL::timevariation(DATA &data)
 		while(p < phispline.size()-1 && t > phispline[p+1].t) p++;
 		
 		fac = (t-phispline[p].t)/(phispline[p+1].t-phispline[p].t);
-		phi[s] = (paramval[phispline[p].param]*(1-fac) + paramval[phispline[p+1].param]*fac)/(units*data.popsize);
+		phi[s] = (paramval[phispline[p].param]*(1-fac) + paramval[phispline[p+1].param]*fac)/data.popsize;
 	}
 }
 
@@ -606,17 +613,17 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		
 		switch(comp[c].type){
 		case EXP_DIST:
-			t += -units*log(ran())/paramval[comp[c].param1];
+			t += -log(ran())/paramval[comp[c].param1];
 			break;
 		
 		case GAMMA_DIST:
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-			t += units*gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
+			t += gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
 		case LOGNORM_DIST:
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-			t += units*exp(normal(mean,sd));
+			t += exp(normal(mean,sd));
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;
@@ -669,7 +676,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 		switch(comp[c].type){
 		case EXP_DIST:
 			p = comp[c].param1;
-			t += units*dt*parami[p]/paramp[p];
+			t += dt*parami[p]/paramp[p];
 			break;
 		
 		case GAMMA_DIST:
@@ -682,7 +689,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			meanp = paramp[p]; sdp = paramp[p2];
 			
 			if(meani == meanp && sdi == sdp) t += dt;
-			else t += units*exp(meanp + (log(dt) - meani)*sdp/sdi);
+			else t += exp(meanp + (log(dt) - meani)*sdp/sdi);
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;

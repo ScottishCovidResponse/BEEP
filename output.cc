@@ -72,7 +72,7 @@ void outputLi(unsigned int samp, unsigned int nparttot, double *Litot)
 SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
-	unsigned int p, np, r, t, st, sum, td;
+	unsigned int p, np, r, row, st, sum, td, ti, tf;
 	vector <unsigned int> num;
 	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
@@ -89,21 +89,33 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	sa.transnum.resize(data.transdata.size());
 	for(td = 0; td < data.transdata.size(); td++){
 		if(data.transdata[td].type == "reg"){
-			sa.transnum[td].resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.transnum[td][r].resize(data.period);
+			sa.transnum[td].resize(data.nregion);
+			for(r = 0; r < data.nregion; r++){ 
+				sa.transnum[td][r].resize(data.transdata[td].rows);
+			}
 			
-			for(t = 0; t < data.period; t++){
-				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
-				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][t] = num[r];
+			for(row = 0; row < data.transdata[td].rows; row++){
+				ti = data.transdata[td].start + row*data.transdata[td].units;
+				tf = ti + data.transdata[td].units;
+			
+				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,ti,tf);
+				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][row] = num[r];
 			}
 		}
 		
 		if(data.transdata[td].type == "all"){
-			sa.transnum[td].resize(1); for(r = 0; r < 1; r++) sa.transnum[td][r].resize(data.period);
+			sa.transnum[td].resize(1);
+			for(r = 0; r < 1; r++){
+				sa.transnum[td][r].resize(data.transdata[td].rows);
+			}
 			
-			for(t = 0; t < data.period; t++){
-				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+			for(row = 0; row < data.transdata[td].rows; row++){
+				ti = data.transdata[td].start + row*data.transdata[td].units;
+				tf = ti + data.transdata[td].units;
+			
+				num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,ti,tf);
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
-				sa.transnum[td][0][t] = sum;
+				sa.transnum[td][0][row] = sum;
 			}
 		}
 	}
@@ -129,12 +141,12 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
-	unsigned int p, np, r, t, st, sum, td;
+	unsigned int p, np, r, row, st, sum, td, ti, tf;
 	vector <unsigned int> num;
 	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
 	np = paramval.size();
-	
+
 	trace << samp; 
 	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
 	trace << "\t" << Li; 
@@ -146,21 +158,33 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 	sa.transnum.resize(data.transdata.size());
 	for(td = 0; td < data.transdata.size(); td++){
 		if(data.transdata[td].type == "reg"){
-			sa.transnum[td].resize(data.nregion); for(r = 0; r < data.nregion; r++) sa.transnum[td][r].resize(data.period);
+			sa.transnum[td].resize(data.nregion);
+			for(r = 0; r < data.nregion; r++){ 
+				sa.transnum[td][r].resize(data.transdata[td].rows);
+			}
 			
-			for(t = 0; t < data.period; t++){
-				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,t,t+1);
-				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][t] = num[r];
+			for(row = 0; row < data.transdata[td].rows; row++){
+				ti = data.transdata[td].start + row*data.transdata[td].units;
+				tf = ti + data.transdata[td].units;
+			
+				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,ti,tf);
+				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][row] = num[r];
 			}
 		}
 		
 		if(data.transdata[td].type == "all"){
-			sa.transnum[td].resize(1); for(r = 0; r < 1; r++) sa.transnum[td][r].resize(data.period);
+			sa.transnum[td].resize(1);
+			for(r = 0; r < 1; r++){
+				sa.transnum[td][r].resize(data.transdata[td].rows);
+			}
 			
-			for(t = 0; t < data.period; t++){
-				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+			for(row = 0; row < data.transdata[td].rows; row++){
+				ti = data.transdata[td].start + row*data.transdata[td].units;
+				tf = ti + data.transdata[td].units;
+			
+				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,ti,tf);
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
-				sa.transnum[td][0][t] = sum;
+				sa.transnum[td][0][row] = sum;
 			}
 		}
 	}
@@ -185,7 +209,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, t, td, j, jmax;
+	unsigned int p, r, s, st, nopsamp, row, td, j, jmax;
 	vector <double> vec;
 	STAT stat;
 	string name;
@@ -212,12 +236,12 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 						
 				cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions for region '" << data.region[r].name << "'." << endl;
 		
-				for(t = 0; t < data.period; t++){
-					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][r][t]);
+				for(row = 0; row < data.transdata[td].rows; row++){
+					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][r][row]);
 					stat = getstat(vec);
 					
-					dataout << t+0.5 << " ";
-					if(data.mode != MODE_SIM) dataout << data.transdata[td].num[r][t]; else dataout << stat.mean;
+					dataout << data.transdata[td].start + (row+0.5)*data.transdata[td].units << " ";
+					if(data.mode != MODE_SIM) dataout << data.transdata[td].num[r][row]; else dataout << stat.mean;
 					dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 				}
 			}
@@ -230,12 +254,12 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 			
 			cout << "'" << ss.str() << "' gives numbers of " << data.transdata[td].from << "→" << data.transdata[td].to << " transitions." << endl;
 	
-			for(t = 0; t < data.period; t++){
-				vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][0][t]);
+			for(row = 0; row < data.transdata[td].rows; row++){
+				vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].transnum[td][0][row]);
 				stat = getstat(vec);
 				
-				dataout << t+0.5 << " ";
-				if(data.mode != MODE_SIM) dataout << data.transdata[td].num[0][t]; else dataout << stat.mean;
+				dataout << data.transdata[td].start + (row+0.5)*data.transdata[td].units << " ";
+				if(data.mode != MODE_SIM) dataout << data.transdata[td].num[0][row]; else dataout << stat.mean;
 				dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 			}
 		}
@@ -370,7 +394,7 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 /// Generates case data based on a simulation
 void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
 {
-	unsigned int t, r, tot, td, sum;
+	unsigned int row, r, tot, td, sum, ti, tf;
 	vector <unsigned int> num;
 	
 	for(td = 0; td < data.transdata.size(); td++){
@@ -397,10 +421,20 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		else cout << "." << endl;
 		
 		transout << "Week"; 
-		for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].name;} transout << endl;
-		for(t = 0; t < data.period; t++){
-			transout << t;
-			num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+		if(data.transdata[td].type == "reg"){
+			for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].name;}
+		}
+		else{
+			transout << "\t" << "All regions";
+		}
+		transout << endl;
+		
+		for(row = 0; row < data.transdata[td].rows; row++){
+			ti = data.transdata[td].start + row*data.transdata[td].units;
+			tf = ti + data.transdata[td].units;
+			
+			transout << row;
+			num = getnumtrans(data,model,poptree,fev,data.transdata[td].from,data.transdata[td].to,ti,tf);
 			if(data.transdata[td].type == "reg"){				
 				for(r = 0; r < data.nregion; r++){ transout <<  "\t" << num[r];} transout << endl;
 			}

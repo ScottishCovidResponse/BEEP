@@ -17,7 +17,7 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s;
+	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s, row;
 	int dc;
 	double v, sum;
 	string line, ele, name, regcode, st, file;
@@ -30,9 +30,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 	mode = mod;
 	period = per;
-	fepertime = 100;
+	fepertime = 10;
 	
-	settpertime = 7;
+	settpertime = 1;
 	nsettime = settpertime*per;
 	settime.resize(nsettime+1);
 	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
@@ -176,21 +176,26 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			
 			for(td = 0; td < transdata.size(); td++){
 				file = datadir+"/"+transdata[td].file;
-				cout << file << " fil\n";
+
 				ifstream transin(file.c_str());            // Loads the transition data
 				if(!transin) emsg("Cannot open the file '"+file+"'");
 				
 				nreg = 0;                                                            // Checks regions names match with area file
 				getline(transin,line);
-				stringstream ss(line);
-				getline(ss,ele,'\t');
-				while(!ss.eof()){
+				
+				if(transdata[td].type == "reg"){
+					stringstream ss(line);
 					getline(ss,ele,'\t');
-					if(ele != region[nreg].name) emsg("Region names in file '"+transdata[td].file+"' do not agree with '"+regiondatafile+"'");
-					nreg++;
+					while(!ss.eof()){
+						getline(ss,ele,'\t');
+						if(ele != region[nreg].name){
+							emsg("Region names in file '"+transdata[td].file+"' do not agree with '"+regiondatafile+"'");
+						}
+						nreg++;
+					}
 				}
 				
-				t = 0;
+				row = 0;
 				transdata[td].num.resize(nregion);
 				do{
 					getline(transin,line);
@@ -201,11 +206,12 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 						getline(ss,ele,'\t');
 						transdata[td].num[r].push_back(atoi(ele.c_str()));
 					}
-					t++;
+					row++;
 				}while(1 == 1);
-				if(t != period){
-					stringstream ss; ss << "The file 'transdata[td].file' has " << t << "' instead of period='" << period << "' rows";
-					emsg(ss.str());
+				transdata[td].rows = row;
+				
+				if(transdata[td].start + row*transdata[td].units > period){
+					emsg("The file '"+file+"' has more data than will fit in the time period.");
 				}
 			}
 		}

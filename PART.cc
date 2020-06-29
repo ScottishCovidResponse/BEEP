@@ -103,6 +103,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		nev.push_back(n);
 		
 		n.t = t - log(ran())/(sussum[0][0]*model.phi[sett]);
+
 		n.type = EXT_EV;
 		nev.push_back(n);
 		
@@ -117,7 +118,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 
 		t = tf; for(j = 0; j < nev.size(); j++){ if(nev[j].t < t){ t = nev[j].t; jsel = j;}}
 		if(t == tf) break;
-		
+
 		switch(nev[jsel].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
 			sett++; if(sett >= data.nsettime) emsg("Part: EC5");
@@ -135,9 +136,9 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		default: emsg("Part: EC6"); break;
 		}		
-		// check(0,t);
+
 	}while(t < tf);
-	
+
 	if(checkon == 1) check(0,t);
 }
 
@@ -457,6 +458,7 @@ void PART::addfev(FEV fe, double period, double tnow)
 	if(t >= period) return;
 	
 	d = (unsigned int)((t/period)*fev.size());
+
 	j = 0; jmax = fev[d].size();
 	if(t != tnow){ while(j < jmax && t >= fev[d][j].t) j++;}
 	else{ while(j < jmax && t > fev[d][j].t) j++;}

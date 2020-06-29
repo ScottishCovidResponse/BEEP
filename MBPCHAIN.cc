@@ -127,6 +127,8 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
 }
 
+long lll = 0;
+
 /// Performs a MBP
 unsigned int MBPCHAIN::mbp()
 {
@@ -149,7 +151,7 @@ unsigned int MBPCHAIN::mbp()
 	timers.timembpinit += clock();
 	
 	timers.timembp -= clock();
-		
+			lll++;
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
 		phii = model.phii[sett]; phip = model.phip[sett];	
@@ -157,7 +159,7 @@ unsigned int MBPCHAIN::mbp()
 
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			//if(val < -small){ cout << val << " " << sett << " " << v << " " << Qmapi[sett][v] << " " << dQmap[v] << " ii\n"; emsg("MBPchain: EC31");}
+			if(val < -tiny) emsg("MBPchain: EC31");
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -170,7 +172,7 @@ unsigned int MBPCHAIN::mbp()
 			
 			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(ran())/Rtot[0][0];
 				
-			if(txi >= tmax && tinf >= tmax) break;
+			if(txi >= tmax && tinf >= tmax){ t = tmax; break;}
 			
 			if(tinf < txi){  // A new infection appears
 				t = tinf;
@@ -224,7 +226,7 @@ void MBPCHAIN::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, 
 	x.push_back(evref);
 	for(e = 0; e < indev.size(); e++){
 		evref.e = e;
-		se = (unsigned int)(data.nsettime*indev[e].t/data.period + tiny); 
+		se = (unsigned int)(data.nsettime*indev[e].t/data.period); 
 		if(se < data.nsettime) trev[se].push_back(evref);
 	}
 }
@@ -242,9 +244,9 @@ void MBPCHAIN::setQmapi(unsigned int check)
 	for(sett = 0; sett < data.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = dQmap[v];
-			if(val < -small) emsg("MBPchain: EC17");
+			if(val < -tiny) emsg("MBPchain: EC17");
 			if(check == 1){
-				//if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsg("MBPchain: EC17b");
+				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsg("MBPchain: EC17b");
 			}
 			if(val < 0){ val = 0; dQmap[v] = 0;}	
 			
@@ -535,6 +537,7 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 	jmax = trevp[sett].size();
 	for(j = 0; j < jmax; j++){ 
 		i = trevp[sett][j].ind; if(indevp[i].size() == 0) emsg("MBPchain: EC43");
+
 		fev = indevp[i][trevp[sett][j].e];
 		tr = trans[fev.trans];
 	
@@ -635,6 +638,7 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 	changestat(i,NOT,1);
 	
 	model.simmodel(indevp[i],i,0,t);
+
 	addindev(i,indevp[i],xp,trevp);
 }
 
@@ -663,7 +667,7 @@ void MBPCHAIN::check(unsigned int num, double t, unsigned int sett)
 				if(indponlylist[w][indlistref[i]] != i) emsg("MBPchain: EC25");
 			}
 			else{
-				if(stat[i] != NOT){ cout << i << "  i\n"; emsg("MBPchain: EC26");}
+				if(stat[i] != NOT) emsg("MBPchain: EC26");
 				if(indnotlist[w][indlistref[i]] != i) emsg("MBPchain: EC27");
 			}
 		}
@@ -717,7 +721,7 @@ void MBPCHAIN::check_addrem()
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
 			if(e < 0 || e >= indevi[i].size()) emsg("MBPchain: EC61");
-			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period + tiny); 
+			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period); 
 			if(se != sett) emsg("MBPchain: EC62");
 			if(done[i][e] != 0) emsg("MBPchain: EC62");
 			done[i][e] = 1;
@@ -804,7 +808,7 @@ void MBPCHAIN::calcQmapp()
 	for(sett = 0; sett < data.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -small){ emsg("MBPchain: EC31");}
+			if(val < -tiny){ emsg("MBPchain: EC31b");}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}

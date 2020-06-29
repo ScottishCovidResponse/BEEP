@@ -432,10 +432,23 @@ int main(int argc, char** argv)
 			const auto file = toml::find<std::string>(td,"file");
 			transdata.file = file;
 			
+			if(!td.contains("start")) emsg("A 'start' property must be specified in 'transdata'.");
+			const auto start = toml::find<unsigned int>(td,"start");
+			transdata.start = start;
+			
 			if(!td.contains("units")) emsg("A 'units' property must be specified in 'transdata'.");
 			const auto units = toml::find<std::string>(td,"units");
-			transdata.units = units;
-			if(transdata.units != "weeks") emsg("Units in 'transdata' not recognised");
+			if(units == "days") transdata.units = 1;
+			else{
+				if(units == "weeks") transdata.units = 7;
+				else emsg("Units in 'transdata' not recognised");
+			}
+			
+			if(mode == MODE_SIM){
+				transdata.rows = (unsigned int)((period - start)/transdata.units);
+				if(transdata.rows == 0) emsg("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+			}
+			
 			data.transdata.push_back(transdata);
 		}
 	}

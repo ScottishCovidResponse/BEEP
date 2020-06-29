@@ -85,18 +85,21 @@ vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, ve
 /// (e.g. weekly hospitalised case data)
 double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
-	unsigned int r, td, sum, t;
+	unsigned int r, td, sum, row, ti, tf;
 	double mean, var, L;
 	vector <unsigned int> num;
 	
 	L = 0;	
-	for(t = 0; t < data.period; t++){
-		for(td = 0; td < data.transdata.size(); td++){
-			num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,t,t+1);
+	for(td = 0; td < data.transdata.size(); td++){
+		for(row = 0; row < data.transdata[td].rows; row++){
+			ti = data.transdata[td].start + row*data.transdata[td].units;
+			tf = ti + data.transdata[td].units;
+
+			num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].from,data.transdata[td].to,ti,tf);
 			
 			if(data.transdata[td].type == "reg"){
 				for(r = 0; r < data.nregion; r++){
-					mean = data.transdata[td].num[r][t];
+					mean = data.transdata[td].num[r][row];
 					var = mean; if(var < 5) var = 5;
 					var *= varfac;
 					L += -0.5*log(2*M_PI*var) - (mean-num[r])*(mean-num[r])/(2*var);
@@ -106,7 +109,7 @@ double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVR
 			if(data.transdata[td].type == "all"){
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
 		
-				mean = data.transdata[td].num[0][t];
+				mean = data.transdata[td].num[0][row];
 				var = mean; if(var < 5) var = 5;
 				var *= varfac;
 				L += -0.5*log(2*M_PI*var) - (mean-sum)*(mean-sum)/(2*var);
