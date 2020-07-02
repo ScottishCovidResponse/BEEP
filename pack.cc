@@ -138,9 +138,9 @@ void pack(vector <AREA> &vec)
 		pack(vec[i].region);
 		pack(vec[i].x);
 		pack(vec[i].y);
-		pack(vec[i].density);
 		pack(vec[i].agepop);
 		pack(vec[i].pop);
+		pack(vec[i].covar);             
 	}
 }
 
@@ -286,9 +286,9 @@ void unpack(vector <AREA> &vec)
 		unpack(vec[i].region);
 		unpack(vec[i].x);
 		unpack(vec[i].y);
-		unpack(vec[i].density);
 		unpack(vec[i].agepop);
 		unpack(vec[i].pop);
+		unpack(vec[i].covar);  
 	}
 }
 

@@ -18,6 +18,7 @@ class MBPCHAIN                                          // Stores all the things
 	double Levi;         																	// The latent process likelihood
 	
 	double invT;                                          // The inverse temperature 
+	
 	vector <float> paramjump;                             // The size of jumps in parameter space
 	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
 	
@@ -43,7 +44,7 @@ class MBPCHAIN                                          // Stores all the things
 
 	vector <unsigned int> dQbuflistv;                     // Used to efficiently calculate dQmap
 	vector <unsigned int> dQbuflistq; 
-	vector< vector <int> > dQbuf;
+	vector< vector <double> > dQbuf;
 
 	vector <double> lami;                                 // Total force of infecion for an area in the initial state
 	vector <double> lamp; 	 															// Total force of infecion for an area in the proposed state

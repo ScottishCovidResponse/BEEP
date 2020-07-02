@@ -136,7 +136,6 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		default: emsg("Part: EC6"); break;
 		}		
-
 	}while(t < tf);
 
 	if(checkon == 1) check(0,t);
@@ -238,7 +237,7 @@ void PART::check(unsigned int num, double t)
 				for(k = 0; k < data.nQ[q][v]; k++){
 					cc = data.Qto[q][v][k];
 					for(aa = 0; aa < data.nage; aa++){
-						Qma[cc][aa] += inf*data.Qval[q][v][k][aa];
+						Qma[cc][aa] += model.areafac[cc]*inf*data.Qval[q][v][k][aa];
 					}
 				}
 			}
@@ -273,9 +272,9 @@ void PART::check(unsigned int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax;
+	unsigned int i, dq, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax, loop;
 	int l;
-	double sum, val, t;
+	double sum, val, t, fac, fac2;
 	TRANS tr;
 		 
 	i = fev[tdnext][tdfnext].ind; 
@@ -286,7 +285,7 @@ void PART::dofe()
 	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12");
 	N[tr.to]++;
 
-	q = tr.DQ[fev[tdnext][tdfnext].timep]; 
+	dq = tr.DQ[fev[tdnext][tdfnext].timep]; 
 		
 	tdfnext++;
 	if(tdfnext == fev[tdnext].size()){
@@ -294,7 +293,7 @@ void PART::dofe()
 		while(tdnext < fediv && fev[tdnext].size() == 0) tdnext++;
 	}
 		
-	if(q == UNSET) return;
+	if(dq == UNSET) return;
 	
 	dp = data.ind[i].dp;
 	v = c*data.nage+data.democatpos[dp][0];
@@ -302,21 +301,30 @@ void PART::dofe()
 	for(l = 0; l < int(poptree.level); l++) lev[l].donelist.clear();
 	
 	l = poptree.level-1;                                                             // Makes change to Rtot
-	kmax = model.nDQ[q][v];
-	for(k = 0; k < kmax; k++){
-		cc = model.DQto[q][v][k];
-		
-		sum = 0; 
-		for(a = 0; a < data.nage; a++){
-			val = model.DQval[q][v][k][a];
-			Qmap[cc][a] += val;
-			sum += val*susage[cc][a];
-		}
-		Rtot[l][cc] += sum;
-		
-		ccc = lev[l].node[cc].parent;
-		if(lev[l-1].add[ccc] == 0){ lev[l-1].donelist.push_back(ccc);}		
-		lev[l-1].add[ccc] += sum;
+	
+	for(loop = 0; loop < 2; loop++){
+		q = model.DQ[dq].q[loop];
+		if(q != UNSET){
+			fac = model.DQ[dq].fac[loop];
+			
+			kmax = data.nQ[q][v];
+			for(k = 0; k < kmax; k++){
+				cc = data.Qto[q][v][k];
+				fac2 = fac*model.areafac[cc];
+				
+				sum = 0;
+				for(a = 0; a < data.nage; a++){
+					val = fac2*data.Qval[q][v][k][a];
+					Qmap[cc][a] += val;
+					sum += val*susage[cc][a];
+				}
+				Rtot[l][cc] += sum;
+				
+				ccc = lev[l].node[cc].parent;
+				if(lev[l-1].add[ccc] == 0){ lev[l-1].donelist.push_back(ccc);}		
+				lev[l-1].add[ccc] += sum;
+			}
+		}			
 	}
 	
 	for(l = poptree.level-2; l >= 0; l--){                                        // Propages change up the tree

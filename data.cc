@@ -18,13 +18,15 @@ using namespace std;
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
 	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s, row;
+	unsigned int namecol, codecol, xcol, ycol, regcol;
 	int dc;
-	double v, sum;
+	double v, sum, sum2;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
 	AREA are;
 	DEMOCAT dem;
 	IND indi;
+	TABLE tab;
 	vector <unsigned int> count;
 	vector <vector <double> > val;
 	
@@ -55,19 +57,15 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
  
-		file = datadir+"/"+regiondatafile;
-		ifstream regionin(file.c_str());      	             // Loads information about data regions
-
-		if(!regionin) emsg("Cannot open the file '"+file+"'");
-		getline(regionin,line); 
-		do{
-			getline(regionin,line); line = strip(line);
-			if(regionin.eof()) break;
-			stringstream ss(line);
-			getline(ss,reg.name,'\t');
-			getline(ss,reg.code,'\t');
+		tab = loadtable(datadir+"/"+regiondatafile);
+		namecol = findcol(tab,"Name");
+		codecol = findcol(tab,"Code");
+		
+		for(row = 0; row < tab.nrow; row++){
+			reg.name = tab.ele[row][namecol];
+			reg.code = tab.ele[row][codecol];
 			region.push_back(reg);
-		}while(1 == 1);
+		}		
 		nregion = region.size();
 		
 		cout << endl << "Region data loaded." << endl;
@@ -76,28 +74,52 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}
 	
 		file = datadir+"/"+areadatafile;
-		ifstream areain(file.c_str());                             // Loads information about areas
-		if(!areain) emsg("Cannot open the file '"+file+"'");
-			
-		getline(areain,line);
-		do{
-			getline(areain,line); line = strip(line);
-			if(areain.eof()) break;
-			
-			stringstream ss(line);	
-			
-			ss >> are.code >> are.x >> are.y >> regcode >> are.density;
-			
+		tab = loadtable(file);
+
+		codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
+		xcol = findcol(tab,"x");
+		ycol = findcol(tab,"y");
+		regcol = findcol(tab,"region");
+		
+		for(j = 0; j < ncovar; j++) covar[j].col = findcol(tab,covar[j].name);
+
+		for(j = 0; j < ndemocat; j++){
+			democat[j].col.resize(democat[j].value.size());
+			for(k = 0; k < democat[j].col.size(); k++) democat[j].col[k] = findcol(tab,democat[j].value[k]);  
+		}
+
+		for(row = 0; row < tab.nrow; row++){
+			are.code = tab.ele[row][codecol];
+			are.x = atof(tab.ele[row][xcol].c_str());
+			are.y = atof(tab.ele[row][ycol].c_str());
+	
+			regcode = tab.ele[row][regcol];
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
 			if(r == nregion) emsg("Region code not recognised: ",regcode);
 			are.region = r;
+					
+			are.covar.resize(ncovar);
+			for(j = 0; j < ncovar; j++){
+				st = tab.ele[row][covar[j].col];
+				v = atof(st.c_str());
+				if(std::isnan(are.covar[j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
+			
+				if(covar[j].func == "log"){
+					if(v <= 0) emsg("Log transformed quantities must be positive.");
+					are.covar[j] = log(v);
+				}
+				else{
+					if(covar[j].func == "linear") are.covar[j] = v;
+					else emsg("The functional relationship '"+covar[j].func+"' is not recognised.");
+				}
+			}
 			
 			val.resize(democat.size());
 			for(d = 0; d < democat.size(); d++){
 				jmax = democat[d].value.size();
 				val[d].resize(jmax);
 				for(j = 0; j < jmax; j++){
-					ss >> st;
+					st = tab.ele[row][democat[d].col[j]];
 					val[d][j] = atof(st.c_str());
 					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
 				}
@@ -116,16 +138,16 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				}
 				are.pop[dp] = (unsigned int)(v+0.5);
 			}
-		
-			area.push_back(are);
-		}while(1 == 1);
+
+			area.push_back(are);			
+		}
 		narea = area.size();
 		
 		cout << endl << "Area data loaded." << endl;
 		if(checkon == 1){
 			for(c = 0; c < narea; c++){
 				cout << nregion << " " << area[c].region << "region" << endl;
-				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " " <<  area[c].y << " " <<  area[c].density << "  ***";
+				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " " <<  area[c].y << "  ***";
 			
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
 				cout << endl;	
@@ -273,19 +295,79 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		for(vi = 0; vi < narage; vi++) nQ[q][vi] = Qto[q][vi].size();
 	                                              
-		for(vi = 0; vi < narage; vi++){                                  // Normalisation
-			sum = 0; 
-			for(j = 0; j < nQ[q][vi]; j++){
-				c = Qto[q][vi][j];
-				for(a = 0; a < nage; a++) sum += Qval[q][vi][j][a]*area[c].agepop[a];
+		for(c = 0; c < narea; c++){                                       // Normalisation
+			sum = 0; sum2 = 0;
+			for(a = 0; a < nage; a++){
+				sum2 += area[c].agepop[a];
+				vi = c*nage + a;
+			
+				for(j = 0; j < nQ[q][vi]; j++){
+					cc = Qto[q][vi][j];
+					for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*Qval[q][vi][j][aa]*area[cc].agepop[aa];
+				}
 			}
-			for(j = 0; j < nQ[q][vi]; j++){
-				for(a = 0; a < nage; a++) Qval[q][vi][j][a] /= sum;
+			sum /= sum2;
+			
+			for(a = 0; a < nage; a++){
+				vi = c*nage + a;
+				for(j = 0; j < nQ[q][vi]; j++){
+					for(aa = 0; aa < nage; aa++) Qval[q][vi][j][aa] /= sum;
+				}
 			}
 		}
 	}
 }
 
+/// Loads a table from a file
+TABLE DATA::loadtable(string file)
+{
+	TABLE tab;
+	string line, st;
+	vector <string> vec;
+	
+	ifstream in(file.c_str());                             // Loads information about areas
+	if(!in) emsg("Cannot open the file '"+file+"'");
+		
+	getline(in,line);
+
+	stringstream ss(line);
+	do{
+		getline(ss,st,'\t'); st = strip(st);
+		tab.heading.push_back(st);
+		if(ss.eof()) break;
+	}while(1 == 1);
+	tab.ncol = tab.heading.size();
+	
+	do{
+		vec.clear();
+		getline(in,line);
+		if(in.eof()) break;
+				
+		stringstream ss(line);
+		do{
+			getline(ss,st,'\t'); st = strip(st);
+			vec.push_back(st);
+			if(ss.eof()) break;
+		}while(1 == 1);
+		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all have the same length.");
+		
+		tab.ele.push_back(vec);
+	}while(1 == 1);
+	tab.nrow = tab.ele.size();
+	
+	return tab;
+}
+		
+/// Finds a column in a table
+unsigned int DATA::findcol(TABLE &tab, string name)
+{
+	unsigned int c;
+	
+	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
+	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"'.");
+	return c;
+}		
+			
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
@@ -306,7 +388,11 @@ void DATA::copydata(unsigned int core)
 		pack(N);
 		pack(nage);
 		pack(ndemocatposperage);
-		for(td = 0; td < transdata.size(); td++) pack(transdata[td].num);
+		for(td = 0; td < transdata.size(); td++){
+			pack(transdata[td].num);
+			pack(transdata[td].units);
+			pack(transdata[td].rows);
+		}
 		si = packsize();
 	}
 	
@@ -327,7 +413,11 @@ void DATA::copydata(unsigned int core)
 		unpack(N);
 		unpack(nage);
 		unpack(ndemocatposperage);
-		for(td = 0; td < transdata.size(); td++) unpack(transdata[td].num);
+		for(td = 0; td < transdata.size(); td++){
+			unpack(transdata[td].num);
+			unpack(transdata[td].units);
+			unpack(transdata[td].rows);
+		}
 		if(si != packsize()) emsg("Data: EC9");
 	}
 }
@@ -346,6 +436,18 @@ void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
 
 	ndemocat = democat.size();
 	if(ndemocat == 1) nage = st.size();
+}
+	
+/// Add a covariate for the areas
+void DATA::addcovar(string name, string param, string func)
+{
+	COVAR cov;
+	cov.name = name;
+	cov.param = param;
+	cov.func = func;
+	
+	covar.push_back(cov);
+	ncovar = covar.size();
 }
 	
 string DATA::strip(string line)

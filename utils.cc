@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include "stdlib.h"
 #include "math.h"
@@ -65,6 +66,18 @@ double gammasamp(double a, double b)
     return d*v/b;
   }
 }
+
+
+/// Splits up a string
+vector<string> split(const string& s, char delimiter)                                                               
+{                                 
+   std::vector<std::string> splits;                       
+   std::string split;                                      
+   std::istringstream ss(s);                               
+   while (std::getline(ss, split, delimiter)) splits.push_back(split);                                                  
+   return splits;                                           
+}
+
 
 /// Displays an error message
 void emsg(string msg)

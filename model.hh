@@ -20,6 +20,11 @@ struct EVREF {                             // Used to reference an event
 	unsigned int e;	                         // The event number
 };
 
+struct DQINFO {                            // Stores information about a change in the Q matrix
+	vector <unsigned int> q;
+	vector <double> fac;
+};
+
 struct PARAM{                              // Store information about a model parameter
  	string name;                             // Its name
  	double valinit;                          // The simulation value or starting value for inference
@@ -42,15 +47,18 @@ struct COMP{                               // Stores information about a compart
 	vector <unsigned int> trans;             // The transitions leaving that compartment
 	unsigned int transtimep;                 // The time period transitions leaving that compartment
 
-	vector <double> prob, probsum;           // The probability of going down transition
-	vector <double> probi;                   // The probability of going down transition for initial state (MBP)
-	vector <double> probp;                   // The probability of going down transition for proposed state (MBP)
+	vector <vector <double> > prob, probsum; // The age-dependent probability of going down transition
+	vector <vector <double> > probi;         // The age-dependent probability of going down transition for initial state (MBP)
+	vector <vector <double> > probp;         // The age-dependent probability of going down transition for proposed state (MBP)
+	
+	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
+	vector <double> infint;                  // The integrated infectivity (used to calculate R0)
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
-	unsigned int probparam;                  // The parameter for the probability of going down transition
+	vector <unsigned int> probparam;         // The parameter for the probability of going down transition
 	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition
 };
 
@@ -62,6 +70,8 @@ struct SPLINEP{                            // Stores information about a spline 
 class MODEL                                // Stores all the information about the model
 {
 public:
+	MODEL(DATA &data);
+
 	vector <double> beta;                    // The value for beta at the various times
 	vector <SPLINEP> betaspline;             // The spline used to define beta
 	
@@ -69,11 +79,14 @@ public:
 	vector <SPLINEP> phispline;              // The spline used to define phi
 	
 	vector <double> sus;                     // The susceptibility for different demographic categories
+
+	vector <double> areafac;                 // The modification due to area effects
 	
 	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
 	vector <double> phii, phip;              // Under MBPs the values of phi for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
 	vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
+	vector <double> areafaci, areafacp;      // Under MBPs the area factor for the initial and proposed states
 				
 	vector <PARAM> param;                    // Information about parameters in the model
 	vector <double> paramval;                // The values of the parameters
@@ -85,35 +98,37 @@ public:
 	unsigned int ntr, nac;                   // Gets the base acceptance rate
 	
 	vector< vector <unsigned int> > sus_param;  // The parameters related to fixed effect for susceptibility
+	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
 	unsigned int ntimeperiod;                // The number of different time periods (2: before and after lockdown)
 	vector <double> timeperiod;              // The timings of changes to Q;
 	
-	vector <vector <unsigned int> > nDQ;     // Stores the changes in the mixing matrix between areas and ages 
-	vector <vector< vector <unsigned int> > > DQto;
-	vector <vector <vector< vector <double> > > > DQval;
-	unsigned int DQnum;
+	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
+	
+	DATA &data;
 	
 	double getparam(string name);
 	double getinfectivity(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
-	void definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
-	void addQ(DATA &data);
+	void definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
+	void addQ();
 
 	void priorsamp();
-	unsigned int settransprob();
-          
-	void checktransdata(DATA &data);
-	void setup(DATA &data, vector <double> &paramval);
+	        
+	void checktransdata();
+	unsigned int setup(vector <double> &paramval);
 	void copyi();
 	void copyp();
+	vector <double> R0calc();
 	
 private:
 	void addcomp(string name, double infectivity, unsigned int type, string param1, string param2);
 	void addparam(string name, double val, double min, double max);
-	void addtrans(string from, string to, string probparam);
-	void setsus(DATA &data); 
-	void timevariation(DATA &data);
+	void addtrans(string from, string to, string prpar);
+	void setsus(); 
+	void setarea();
+	void timevariation();
 	unsigned int findparam(string name);
+	unsigned int settransprob();
 };

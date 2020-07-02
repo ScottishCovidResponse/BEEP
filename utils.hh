@@ -7,6 +7,7 @@
 #endif
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -15,4 +16,4 @@ using namespace std;
 double ran();
 double normal(float mu, float sd);
 double gammasamp(double a, double b);
-
+vector<string> split(const string& s, char delimiter);

@@ -100,15 +100,6 @@ vector<string> string_split(const string &s)
 	return vstrings;
 }
 
-vector<string> split(const string& s, char delimiter)                                                               
-{                                 
-   std::vector<std::string> splits;                       
-   std::string split;                                      
-   std::istringstream ss(s);                               
-   while (std::getline(ss, split, delimiter)) splits.push_back(split);                                                  
-   return splits;                                           
-}
-
 vector<string> lookup_stringlist_parameter(
 	const map<string,string> &params,
 	const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
@@ -241,12 +232,12 @@ int main(int argc, char** argv)
 		cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 	
 	DATA data;    // The following file names will need to be read in by the interface:
-	MODEL model;
+	MODEL model(data);
 		
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"indmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "geocont", "agecont", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "geocont", "agecont", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -313,7 +304,10 @@ int main(int argc, char** argv)
 		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
 		
 		// infmax
-		model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
+		if(tomldata.contains("infmax")) {
+			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
+		}
+		else emsg("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}
 	
 	// period
@@ -347,13 +341,15 @@ int main(int argc, char** argv)
 		data.adddemocat("Age",pos,possus);
 	}
 	else emsg("The 'ages' parameter must be set.");
-		
-	cout << "Age categories: " << endl;
-	for(j = 0; j < data.democat[0].value.size(); j++){
-		if(j != 0) cout << ", ";
-		cout << data.democat[0].value[j] << " sus='" <<  data.democat[0].param[j] << "'";
+	
+	if(core == 0){	
+		cout << "Age categories: " << endl;
+		for(j = 0; j < data.democat[0].value.size(); j++){
+			if(j != 0) cout << ", ";
+			cout << data.democat[0].value[j] << " sus='" <<  data.democat[0].param[j] << "'";
+		}
+		cout << endl << endl;
 	}
-	cout << endl << endl;
 	
 	if(tomldata.contains("democats")) {
 		const auto democats = toml::find(tomldata,"democats");
@@ -380,16 +376,43 @@ int main(int argc, char** argv)
 		}
 	}
 
-	cout << "Demographic categories: " << endl;
-	for(k = 1; k < data.democat.size(); k++){
-		for(j = 0; j < data.democat[k].value.size(); j++){
-			if(j != 0) cout << ", ";
-			cout << data.democat[k].value[j] << " sus='" <<  data.democat[k].param[j] << "'";
-		}	
+	if(core == 0){
+		cout << "Demographic categories: " << endl;
+		for(k = 1; k < data.democat.size(); k++){
+			for(j = 0; j < data.democat[k].value.size(); j++){
+				if(j != 0) cout << ", ";
+				cout << data.democat[k].value[j] << " sus='" <<  data.democat[k].param[j] << "'";
+			}	
+			cout << endl;
+		}
 		cout << endl;
 	}
-	cout << endl;
 	
+	// area covariates
+	if(tomldata.contains("covars")) {
+		const auto covars = toml::find(tomldata,"covars");
+		for(j = 0; j < covars.size(); j++){
+			const auto covar = toml::find(covars,j);
+			
+			if(!covar.contains("name")) emsg("A 'name' must be specified in 'covars'.");
+			const auto name = toml::find<std::string>(covar,"name");
+	
+			if(!covar.contains("param")) emsg("A 'param' must be specified in 'covars'.");
+			const auto par = toml::find<std::string>(covar,"param");
+
+			if(!covar.contains("func")) emsg("A 'func' must be specified in 'covars'.");
+			const auto func = toml::find<std::string>(covar,"func");
+
+			data.addcovar(name,par,func);
+		}
+		
+		if(core == 0){
+			cout << "Area covariates: " << endl;
+			for(j = 0; j < data.covar.size(); j++) cout << data.covar[j].name << "   param='" << data.covar[j].param << "'" << endl; 
+		}
+		cout << endl;
+	}
+
 	// THE DATA
 	
 	// data directory
@@ -472,12 +495,12 @@ int main(int argc, char** argv)
 
 	POPTREE poptree;
 	poptree.init(data,core);	
-	
-	model.definemodel(data,core,data.period,data.popsize,tomldata);
 
-	model.addQ(data);
+	model.definemodel(core,data.period,data.popsize,tomldata);
 
-	model.checktransdata(data);
+	model.addQ();
+	//while(1 == 1);
+	model.checktransdata();
 
 	if(core == 0) cout << "Running...." << endl;
 

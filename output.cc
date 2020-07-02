@@ -41,6 +41,7 @@ void outputinit(DATA &data, MODEL &model)
 	for(p = 0; p < model.param.size(); p++) trace << "\t" << model.param[p].name; 
 	trace << "\tLi"; 
 	trace << "\tinvT"; 
+	trace << "\tninf";
 	trace << endl;
 }
 
@@ -74,7 +75,6 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	SAMPLE sa;
 	unsigned int p, np, r, row, st, sum, td, ti, tf;
 	vector <unsigned int> num;
-	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
 	np = paramval.size();
 	
@@ -82,6 +82,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
 	trace << "\t" << Li; 
 	trace << "\t" << invT; 
+	trace << "\t" << 0;
 	trace << endl;
 	
 	sa.paramval = paramval;
@@ -119,31 +120,18 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 			}
 		}
 	}
-
-	model.setup(data,paramval);
 	
-	// TO DO
-	probA = model.getparam("probA"); 
-	Ainf = model.getinfectivity("A");
-	Pinf = model.getinfectivity("P");
-	Iinf = model.getinfectivity("I");
-	tA = model.getparam("tA"); tP = model.getparam("tP"); tI = model.getparam("tI");
-
-	tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+Iinf*tI); 
-
-	sa.R0.resize(data.nsettime);
-	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
+	sa.R0 = model.R0calc();
 	
 	return sa;
 }
 
 /// Outputs trace plot for parameters and store state data for plotting later
-SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
 	unsigned int p, np, r, row, st, sum, td, ti, tf;
 	vector <unsigned int> num;
-	double tinfav=UNSET, probA, Ainf, Pinf, Iinf, tA, tP, tI;
 	
 	np = paramval.size();
 
@@ -151,6 +139,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
 	trace << "\t" << Li; 
 	trace << "\t" << invT; 
+	trace << "\t" << ninf; 
 	trace << endl;
 	
 	sa.paramval = paramval;
@@ -189,19 +178,7 @@ SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MOD
 		}
 	}
 
-	model.setup(data,paramval);
-
-	// TO DO
-	probA = model.getparam("probA"); 
-	Ainf = model.getinfectivity("A");
-	Pinf = model.getinfectivity("P");
-	Iinf = model.getinfectivity("I");
-	tA = model.getparam("tA"); tP = model.getparam("tP"); tI = model.getparam("tI");
-
-	tinfav = probA*Ainf*tA + (1-probA)*(Pinf*tP+Iinf*tI); 
-	
-	sa.R0.resize(data.nsettime);
-	for(st = 0; st < data.nsettime; st++) sa.R0[st] = model.beta[st]*tinfav;
+	sa.R0 = model.R0calc();
 	
 	return sa;
 }

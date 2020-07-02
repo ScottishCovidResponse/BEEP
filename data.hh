@@ -2,6 +2,13 @@
 
 //#include "model.hh"
 
+struct TABLE {                             // Loads a table
+	unsigned int ncol;                       // The number of columns
+	unsigned int nrow;                       // The number if rows
+	vector <string> heading;                 // The headings for the columns
+	vector <vector <string> > ele;        	 // The elements of the table
+};
+
 struct TRANSDATA{
 	string from;                             // The "from" compartment
  	string to;                               // The "to" compartment 
@@ -17,6 +24,14 @@ struct DEMOCAT {                           // Stores demographic categories
 	string name;                             // The name of the category
 	vector <string> value;                   // The postential values it can take
 	vector <string> param;                   // The parameters used for the susceptibility
+	vector <unsigned int> col;               // The columns in the table
+};
+
+struct COVAR {                             // Stores the  covariate for the area
+	string name;                             // The name of the covariate (i.e. the column in the area data file)
+	string param;                            // The parameters used
+	string func;                             // The functional transformation
+	unsigned int col;                        // The column in the table
 };
 
 struct REGION {                            // Provides information a data region
@@ -28,9 +43,10 @@ struct AREA {                              // Provides information about an area
 	string code;                             // The code for the area
 	unsigned int region;                     // The data region it belongs to
  	double x, y;                             // The geographic position
-	double density;                          // The density of population 
 	vector <unsigned int> agepop;            // The populations in different age groups
   vector <unsigned int> pop;               // The population in different demographic categories          
+	vector <double> covar;                   // The covariates for that area
+
 	vector <vector <unsigned int> > ind;     // The individuals in different demographic categories
 };
 
@@ -114,6 +130,9 @@ class DATA
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
 	
+	unsigned int ncovar;                     // The number of covariates for area  
+	vector <COVAR> covar;                    // Covariates for area
+	
 	vector <unsigned int> nM;                // Stores the mixing matrix between areas
 	vector< vector <unsigned int> > Mto;
 	vector< vector <double> > Mval;
@@ -129,7 +148,7 @@ class DATA
 	vector <vector <unsigned int> > nQ;      // Stores the mixing matrix between areas and ages at different times
 	vector <vector< vector <unsigned int> > > Qto;
 	vector <vector <vector< vector <double> > > > Qval;
-		
+	
 	unsigned int nage;                       // The number of age categories
 	unsigned int narage;                     // #area * #age
 	unsigned int nardp;                      // #area * #ndemocatpos
@@ -143,8 +162,11 @@ class DATA
 	
 	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
+	void addcovar(string name, string param, string func);
 	
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
+	TABLE loadtable(string file);
+	unsigned int findcol(TABLE &tab, string name);
 };

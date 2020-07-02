@@ -8,12 +8,16 @@
 #include "consts.hh"
 #include "utils.hh"
 #include "model.hh"
-
+#include "utils.hh"
 
 using namespace std;
 
+MODEL::MODEL(DATA &data) : data(data)
+{
+}
+
 /// Defines the compartmental model
-void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
+void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
 	unsigned int p, c, t, j;
 	int fi;
@@ -209,6 +213,10 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		}
 	}
 
+	for(c = 0; c < data.ncovar; c++){
+		covar_param.push_back(findparam(data.covar[c].param));
+	}
+		
 	for(c = 0; c < comp.size(); c++){                             // Check distributions are set
 		if(comp[c].trans.size() > 0 && comp[c].type == NO_DIST){
 			emsg("A distribution must be put on '"+comp[c].name+"' because transitions leave it.");
@@ -228,7 +236,7 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
  
 	beta.resize(data.nsettime);	phi.resize(data.nsettime);
 	
-	setup(data,paramval);
+	setup(paramval);
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
@@ -269,7 +277,13 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 		cout << "Transitions:" << endl; 
 		for(t = 0; t < trans.size(); t++){
 			cout << comp[trans[t].from].name << " → " << comp[trans[t].to].name;
-			if(trans[t].probparam != UNSET) cout << "  with probability " << param[trans[t].probparam].name;
+			if(trans[t].probparam.size() > 0){
+				cout << "  with probability ";
+				for(j = 0; j < trans[t].probparam.size(); j++){
+					if(j > 0) cout << ", ";
+					cout << param[trans[t].probparam[j]].name;
+				}
+			}
 			cout << endl;
 		}
 		cout << endl;
@@ -277,27 +291,37 @@ void MODEL::definemodel(DATA &data, unsigned int core, double period, unsigned i
 }
 
 /// Sets up the model with a set of parameters
-void MODEL::setup(DATA &data, vector <double> &paramv)
+unsigned int MODEL::setup(vector <double> &paramv)
 {
 	paramval = paramv;
-	timevariation(data);
-	setsus(data);
+	if(settransprob() == 1) return 1;
+	
+	timevariation();
+	setsus();
+	setarea();
+	return 0;
 }
 
 /// Copies values used for the initial state (MBPs)
 void MODEL::copyi()
 {
-	parami = paramval; betai = beta; phii = phi; susi = sus;
+	unsigned int c;
+	
+	parami = paramval; betai = beta; phii = phi; susi = sus; areafaci = areafac;
+	for(c = 0; c < comp.size(); c++) comp[c].probi = comp[c].prob;
 }
 	
 /// Copies values used for the proposed state (MBPs)
 void MODEL::copyp()
 {
-	paramp = paramval; betap = beta; phip = phi; susp = sus;
+	unsigned int c;
+		
+	paramp = paramval; betap = beta; phip = phi; susp = sus; areafacp = areafac;
+	for(c = 0; c < comp.size(); c++) comp[c].probp = comp[c].prob;
 }
 
 /// Adds in the tensor Q to the model
-void MODEL::addQ(DATA &data)
+void MODEL::addQ()
 {
 	unsigned int q, qi, qf, c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
 	string compi, compf;
@@ -306,18 +330,20 @@ void MODEL::addQ(DATA &data)
 	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
 	vector< vector <unsigned int> > DQtoadd;
 	vector <vector< vector <double> > > DQvaladd;
+	DQINFO dq;
 	
 	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"");  
 	
 	for(q = 0; q < data.Qnum; q++){
 		for(c = 0; c < comp.size(); c++) if(data.Qcomp[q] == comp[c].name) break;
-		if(c == comp.size()){ stringstream ss; ss << "Compartment " << data.Qcomp[q] << " not recognised."; emsg(ss.str());} 
+		if(c == comp.size()) emsg( "Compartment "+data.Qcomp[q]+" not recognised.");
 		
 		if(data.Qtimeperiod[q] < 0 || data.Qtimeperiod[q] >= ntimeperiod) emsg("The time period for Q is out of range.");
 	}
 	
 	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = UNSET;
 	
+	dq.q.resize(2); dq.fac.resize(2);
 	for(tra = 0; tra < trans.size(); tra++){
 		ci = trans[tra].from;
 		cf = trans[tra].to;
@@ -339,48 +365,14 @@ void MODEL::addQ(DATA &data)
 					trans[tra].DQ.push_back(UNSET);
 				}
 				else{
-					DQtoadd.clear(); DQvaladd.clear();
-					nDQadd.resize(data.narage); DQtoadd.resize(data.narage); DQvaladd.resize(data.narage); 
-					for(v = 0; v < data.narage; v++){
-						nDQadd[v] = 0;
-						
-						for(loop = 0; loop < 2; loop++){
-							switch(loop){
-							case 0: q = qi; fac = -comp[ci].infectivity; break;
-							case 1: q = qf; fac = comp[cf].infectivity; break;
-							}
-							if(q != UNSET){
-								jmax = data.nQ[q][v];
-								for(j = 0; j < jmax; j++){
-									cc = data.Qto[q][v][j];
-									if(map[cc] == UNSET){
-										map[cc] = nDQadd[v];
-										DQtoadd[v].push_back(cc);
-										DQvaladd[v].push_back(vector <double> ());
-										DQvaladd[v][nDQadd[v]].resize(data.nage);
-										for(a = 0; a < data.nage; a++) DQvaladd[v][nDQadd[v]][a] = 0;
-										nDQadd[v]++;
-									}
-									
-									for(a = 0; a < data.nage; a++) DQvaladd[v][map[cc]][a] += fac*data.Qval[q][v][j][a];
-								}
-							}
-						}
-					
-						for(j = 0; j < nDQadd[v]; j++) map[DQtoadd[v][j]] = UNSET;
-					}
-					
-					trans[tra].DQ.push_back(nDQ.size());
-					
-					nDQ.push_back(nDQadd);
-					DQto.push_back(DQtoadd);
-					DQval.push_back(DQvaladd);
+					trans[tra].DQ.push_back(DQ.size());
+					dq.q[0] = qi; dq.fac[0] = -comp[ci].infectivity;
+					dq.q[1] = qf; dq.fac[1] = comp[cf].infectivity; 
+					DQ.push_back(dq);
 				}
 			}
 		}
 	}
-	
-	DQnum = nDQ.size();
 }
 
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
@@ -389,8 +381,8 @@ void MODEL::priorsamp()
 	unsigned int th;
 	
 	for(th = 0; th < param.size(); th++){	
-		paramval[th] = param[th].sim;
-		//paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
+		//paramval[th] = param[th].sim;
+		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 }
 
@@ -448,9 +440,10 @@ void MODEL::addparam(string name, double val, double min, double max)
 }
 
 /// Adds a transition to the model
-void MODEL::addtrans(string from, string to, string probparam)
+void MODEL::addtrans(string from, string to, string prpar)
 {
-	unsigned int c, cmax, p, pmax;
+	unsigned int c, cmax, p, pmax, j;
+	
 	TRANS tr;
 	
 	c = 0; cmax = comp.size(); while(c < cmax && from != comp[c].name) c++;
@@ -464,16 +457,20 @@ void MODEL::addtrans(string from, string to, string probparam)
 	if(c == cmax) emsg("Cannot find compartment");	
 	tr.to = c;
 	
-	if(probparam == "") tr.probparam = UNSET;
-	else{
-		tr.probparam = findparam(probparam);
+	if(prpar != ""){
+		vector <string> probparam = split(prpar,',');
+	
+		if(probparam.size() != data.nage) emsg("Wrong number of parameters in expression '"+prpar+"'.");
+		for(j = 0; j < probparam.size(); j++){
+			tr.probparam.push_back(findparam(probparam[j]));
+		}
 	}
 	
 	trans.push_back(tr);
 }
 	
 /// Generates the time variation in beta and phi from the parameters
-void MODEL::timevariation(DATA &data)
+void MODEL::timevariation()
 {
   unsigned int s, j;
 	int p;
@@ -536,9 +533,9 @@ void MODEL::timevariation(DATA &data)
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob()
 {
-	unsigned int c, k, kmax, tra;
+	unsigned int c, k, kmax, tra, a;
 	int p;
-	double sum, sumi, sump, prob;
+	double sum, prob;
 	
 	if(checkon == 2){
 		for(c = 0; c <  comp.size(); c++){
@@ -557,46 +554,44 @@ unsigned int MODEL::settransprob()
 		kmax = comp[c].trans.size();
 		
 		if(kmax > 1){
-			comp[c].prob.resize(kmax);
-			comp[c].probsum.resize(kmax);
-			comp[c].probi.resize(kmax);
-			comp[c].probp.resize(kmax);
-			
-			sum = 0; sumi = 0; sump = 0; 
-			for(k = 0; k < kmax-1; k++){
-				p = trans[comp[c].trans[k]].probparam; if(p == UNSET) emsg("model: EC1a");
+			comp[c].prob.resize(data.nage);
+			comp[c].probsum.resize(data.nage);
+			for(a = 0; a < data.nage; a++){
+				comp[c].prob[a].resize(kmax);
+				comp[c].probsum[a].resize(kmax);
 				
-				prob = paramval[p]; comp[c].prob[k] = prob; sum += prob; if(prob < 0) return 0;
-				prob = parami[p]; comp[c].probi[k] = prob; sumi += prob; if(prob < 0) return 0;
-				prob = paramp[p]; comp[c].probp[k] = prob; sump += prob; if(prob < 0) return 0;
-			} 
-			prob = 1-sum; comp[c].prob[kmax-1] = prob; if(prob < 0) return 0;
-			prob = 1-sumi; comp[c].probi[kmax-1] = prob; if(prob < 0) return 0;
-			prob = 1-sump; comp[c].probp[kmax-1] = prob; if(prob < 0) return 0;
-			
-			sum = 0;
-			for(k = 0; k < kmax; k++){
-				sum += comp[c].prob[k];
-				comp[c].probsum[k] = sum;
+				sum = 0;
+				for(k = 0; k < kmax-1; k++){
+					p = trans[comp[c].trans[k]].probparam[a]; if(p == UNSET) emsg("model: EC1a");		
+					prob = paramval[p]; comp[c].prob[a][k] = prob; sum += prob; if(prob < 0) return 1;
+				} 
+				prob = 1-sum; comp[c].prob[a][kmax-1] = prob; if(prob < 0) return 1;
+				
+				sum = 0;
+				for(k = 0; k < kmax; k++){
+					sum += comp[c].prob[a][k];
+					comp[c].probsum[a][k] = sum;
+				}
 			}
 		}
 	}
 	
-	return 1;
+	return 0;
 }
 
 /// This simulates from the model and generates an event list
 void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t)
 {
-	unsigned int k, kmax, tra, timep;
-	double mean, sd, z;
-
+	unsigned int k, kmax, tra, timep, a;
+	double mean, sd, z, dt;
 	FEV ev;
 	vector <double> probsum;
 	
 	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
 
 	ev.ind = i; ev.timep = timep; 
+		
+	a = data.democatpos[data.ind[i].dp][0];
 		
 	if(c == 0){
 		evlist.clear();	
@@ -613,7 +608,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		
 		switch(comp[c].type){
 		case EXP_DIST:
-			t += -log(ran())/paramval[comp[c].param1];
+			t += -log(ran())*paramval[comp[c].param1];
 			break;
 		
 		case GAMMA_DIST:
@@ -623,7 +618,8 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 			
 		case LOGNORM_DIST:
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-			t += exp(normal(mean,sd));
+			dt = exp(normal(mean,sd));
+			t += dt;
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;
@@ -638,7 +634,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 	
 		if(kmax == 1) tra = comp[c].trans[0];
 		else{
-			z = ran(); k = 0; while(k < kmax && z > comp[c].probsum[k]) k++;
+			z = ran(); k = 0; while(k < kmax && z > comp[c].probsum[a][k]) k++;
 			if(k == kmax) emsg("Model: EC3");
 			tra = comp[c].trans[k];
 		}
@@ -653,7 +649,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 /// This does an equivelent MBP for the compartmental model
 void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 {
-	unsigned int c, k, kmax, kk, tra, e, emax, i, p, p2, timep;
+	unsigned int c, k, kmax, kk, tra, e, emax, i, p, p2, timep, a;
 	double meani, sdi, meanp, sdp, z, t, dt;
 	FEV ev;
 	vector <double> probsum;
@@ -664,6 +660,8 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 	tra = ev.trans; t = ev.t; i = ev.ind; timep = ev.timep;
 	evlistp.push_back(ev);
 	
+	a = data.democatpos[data.ind[i].dp][0];
+		
 	c = trans[tra].to;
 	
 	emax = evlisti.size();
@@ -676,7 +674,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 		switch(comp[c].type){
 		case EXP_DIST:
 			p = comp[c].param1;
-			t += dt*parami[p]/paramp[p];
+			t += dt*paramp[p]/parami[p];
 			break;
 		
 		case GAMMA_DIST:
@@ -702,9 +700,9 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			if(k == kmax) emsg("model: EC32");
 			
 			if(comp[c].probp[k] < comp[c].probi[k]){  // Looks at switching to another branch
-				if(ran() < 1 - comp[c].probp[k]/comp[c].probi[k]){
+				if(ran() < 1 - comp[c].probp[a][k]/comp[c].probi[a][k]){
 					do{
-						z = ran(); kk = 0; while(kk < kmax && z > comp[c].probsum[kk]) kk++;
+						z = ran(); kk = 0; while(kk < kmax && z > comp[c].probsum[a][kk]) kk++;
 					}while(kk == k);
 					tra = comp[c].trans[kk];
 				}
@@ -722,7 +720,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 }
   
 /// Defines the relative susceptibility of individuals
-void MODEL::setsus(DATA &data)     
+void MODEL::setsus()     
 {
 	unsigned int dp, c, j;
 	double val;
@@ -738,8 +736,21 @@ void MODEL::setsus(DATA &data)
 	}
 }
 
+/// Defines the relative transmission rate for different areas
+void MODEL::setarea() 
+{
+	unsigned int c, j;
+	double sum;
+	
+	areafac.resize(data.narea);
+	for(c = 0; c < data.narea; c++){
+		sum = 0; for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
+		areafac[c] = exp(sum);
+	}
+}
+
 /// Check that the transition data is correct
-void MODEL::checktransdata(DATA &data)
+void MODEL::checktransdata()
 {
 	unsigned int td, tra;
 	string from, to;
@@ -757,4 +768,96 @@ void MODEL::checktransdata(DATA &data)
 			emsg(ss.str());
 		}
 	}
+}
+
+/// Calculates R0
+vector <double> MODEL::R0calc()
+{
+	unsigned int c, cc, a, aa, flag, k, kmax, st, timep, q, co, vi, dp;
+	double t, dt, mean, sd, fac;
+	vector <double> R0;
+	vector <double> R0fac;
+
+	setup(paramval);
+	
+	for(c = 0; c < comp.size(); c++){
+		comp[c].probin.resize(data.nage);
+		comp[c].infint.resize(data.nage);
+		for(a = 0; a < data.nage; a++){
+			if(comp[c].name == "S") comp[c].probin[a] = 1;
+			else comp[c].probin[a] = -1;
+			comp[c].infint[a] = -1;
+		}
+	}
+	
+	do{
+		flag = 0;
+		for(c = 0; c < comp.size(); c++){
+			if(comp[c].probin[0] >= 0 && comp[c].infint[0] == -1){
+				switch(comp	[c].type){
+				case EXP_DIST: dt = paramval[comp[c].param1]; break;
+				case GAMMA_DIST: dt = paramval[comp[c].param1]; break;
+				case LOGNORM_DIST:
+					mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
+					dt = exp(mean + sd*sd/2);
+					break;
+				}
+				
+				for(a = 0; a < data.nage; a++){
+					comp[c].infint[a] = comp[c].probin[a]*comp[c].infectivity*dt;
+				}					
+			
+				kmax = comp[c].trans.size();
+				if(kmax == 1){
+					cc = trans[comp[c].trans[0]].to; 
+					for(a = 0; a < data.nage; a++) comp[cc].probin[a] = comp[c].probin[a];
+				}
+				else{
+					for(k = 0; k < kmax; k++){
+						cc = trans[comp[c].trans[k]].to; 
+						for(a = 0; a < data.nage; a++) comp[cc].probin[a] = comp[c].probin[a]*comp[c].prob[a][k];
+					}
+				}
+				flag = 1;
+			}
+		}
+	}while(flag == 1);
+	
+	R0fac.resize(data.ntimeperiod);
+	for(timep = 0; timep < data.ntimeperiod; timep++) R0fac[timep] = 0;
+		
+	for(q = 0; q < data.Qnum; q++){
+		timep = data.Qtimeperiod[q];
+		for(co = 0; co < comp.size(); co++) if(data.Qcomp[q] == comp[co].name) break;
+		if(co == comp.size()) emsg( "Compartment "+data.Qcomp[q]+" not recognised.");
+		
+		//R0fac[timep] += comp[co].infint[0];
+		
+		for(c = 0; c < data.narea; c++){
+			for(a = 0; a < data.nage; a++){
+				fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
+				if(fac != 0){
+					vi = c*data.nage + a;
+					for(k = 0; k < data.nQ[q][vi]; k++){
+						cc = data.Qto[q][vi][k];
+						for(dp = 0; dp < data.ndemocatpos; dp++){
+							aa = data.democatpos[dp][0];
+							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.Qval[q][vi][k][aa]*data.area[cc].pop[dp];
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	R0.resize(data.nsettime);
+	timep = 0; 
+	for(st = 0; st < data.nsettime; st++){
+		t = data.settime[st];
+		while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
+		
+		R0[st] = beta[st]*R0fac[timep];
+	}
+		
+	return R0;
 }
