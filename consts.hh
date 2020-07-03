@@ -20,8 +20,7 @@ const unsigned int checkon = 0;                                  // Set to one t
 const unsigned int partmax = 10000;                              // The maximum number of particles per core (arbitrarily set)
 const unsigned int chainmax = 10000;                             // The maximum number of chains per core (arbitrarily set)
 
-//const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
-const unsigned int MAX_NUMBERS = 80000000;                       // The maximum buffer size for Send Recv MPI messages
+const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
 const unsigned int BUFMAX = 20000;                             // The maximum buffer size for SendI RecvI MPI messages
 
 const double varfac = 4;                                         // A factor which relaxes the observation model

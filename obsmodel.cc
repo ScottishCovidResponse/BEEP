@@ -124,8 +124,7 @@ double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVR
 /// in different regions over the time range ti - tf
 vector <unsigned int> getnumtrans_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string from, string to, unsigned int ti, unsigned int tf)
 {
-	unsigned int d, dmax, k, r, tra, sett, i, j;
-	FEV fe;
+	unsigned int r, tra, sett, i, j;
 	vector <unsigned int> num;
 	
 	tra = 0; 

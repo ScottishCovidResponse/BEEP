@@ -44,9 +44,8 @@ struct LCONT {
 /// Initialises an MCMC chain
 void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart)
 {
-	unsigned int th, nparam, i, v, q, d, j, sett, loop, loopmax=1000;
+	unsigned int th, nparam, v, q, j, sett, loop, loopmax=1000;
 	int l;
-	EVREF evref;
 	vector <double> paramvalinit;
 	
 	invT = invTstart;
@@ -73,7 +72,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	}
 
 	lami.resize(data.nardp); lamp.resize(data.nardp);
-	Rtot.resize(poptree.level); for(l = 0; l < poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
+	Rtot.resize(poptree.level); for(l = 0; l < (int)poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
 	loop = 0;
@@ -129,7 +128,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 /// Performs a MBP
 unsigned int MBPCHAIN::mbp()
 {
-	unsigned int j, jmax, c, l, v, sett, n, i, w;
+	unsigned int j, jmax, c, v, sett, n, i, w;
 	double t, tmax, val, txi, tinf, al;
 	FEV ev;
 
@@ -165,7 +164,7 @@ unsigned int MBPCHAIN::mbp()
 		
 		tmax = data.settime[sett+1];
 		do{
-			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else txi = tmax;
+			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
 			
 			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(ran())/Rtot[0][0];
 				
@@ -232,7 +231,7 @@ void MBPCHAIN::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, 
 /// Based on the the event sequence in xi, this sets Qmapi
 void MBPCHAIN::setQmapi(unsigned int check)
 {
-	unsigned int v, dq, q, j, jmax, k, kmax, i, d, sett, a, nage, vv, loop;
+	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop;
 	double val, fac;
 	FEV fev;
 
@@ -400,9 +399,9 @@ void MBPCHAIN::setuplists()
 /// Makes a change in the status of an individual
 void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 {
-	unsigned int c, w, n;
-	int l;
-	double dlam, dval;
+	unsigned int c, w;
+	int l, n;
+	double dlam, dval=0;
 
 	c = data.ind[i].area;
 	w = c*data.ndemocatpos + data.ind[i].dp;
@@ -621,7 +620,7 @@ unsigned int MBPCHAIN::nextinfection()
 /// Adds an exposed indivdual in area
 void MBPCHAIN::addinfc(unsigned int c, double t)
 {
-	unsigned int dp, dpmax, w, i, j, jmax, n;
+	unsigned int dp, dpmax, w, i, n;
 	double sum, dlam, z;
 	vector <double> sumst;
 	
@@ -661,8 +660,8 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 /// Used for checking the code is running correctly
 void MBPCHAIN::check(unsigned int num, double t, unsigned int sett)
 {
-	unsigned int c, d, l, i, j, k, w, dp, a, wmin, wmax, v, e, se;
-	double dd, dlam, sui, sup, sum;
+	unsigned int c, l, i, w, dp, a, wmin, wmax, v;
+	double dd, dlam, sum;
 	vector <double> lai,lap;
 
 	
@@ -761,7 +760,7 @@ void MBPCHAIN::check_addrem()
 /// Calculates the likelihood in the initial state
 double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev)
 {	
-	unsigned int c, dp, w, v, d, i, j, n, sett;
+	unsigned int c, dp, w, v, i, n, sett;
 	double L, t, tt, tmax, beta, phi;
 	FEV ev;
 	
@@ -867,8 +866,8 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 /// Makes proposal to beta and phi
 void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 {	
-	unsigned int c, dp, w, v, d, i, j, jmax, n, sett, loop, loopmax=1, th, pos;
-	double L, t, tt, tmax, betasum, phisum, beta, phi, al, Levp, valst;
+	unsigned int c, dp, w, v, i, j, jmax, n, sett, loop, loopmax=1, th, pos;
+	double t, tt, tmax, betasum, phisum, beta, phi, al, Levp, valst;
 	vector <unsigned int> map;
 	FEV ev;
 	vector <double> betafac, phifac;
@@ -959,7 +958,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 				valst = paramval[th];	
 				paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
 
-				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Levp = -large;}
 				else{
 					model.setup(paramval);
 
@@ -1001,7 +1000,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 /// Time orders x
 void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 {
-	int i;
+	unsigned int i;
 	EVREFT evreft;         
 	vector <EVREFT> xt;
 
@@ -1022,10 +1021,9 @@ void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 /// Adds and removes infectious individuals
 void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 {
-	unsigned int j, jmax, k, dk, sett, w, c, dp, i, l;
+	unsigned int j, jmax, k, dk, sett, w, c, i, l;
 	double z, probif, probfi, Levp, Lp, t, dt, al, dd;
 	vector <int> kst;
-	EVREF evref;
 	
 	model.setup(paramval);
 		

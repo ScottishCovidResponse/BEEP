@@ -87,9 +87,12 @@ void emsg(string msg)
 	exit (EXIT_FAILURE);
 }
 
-void emsg(string msg, string msg2)
+/// Displays an error message on the root core
+void emsgroot(string msg)
 {
-	cout << msg << msg2 << endl;
+	int core;
+	MPI_Comm_rank(MPI_COMM_WORLD,&core);
+	if(core == 0) cout << msg << endl;
 	MPI_Finalize();
 	exit (EXIT_FAILURE);
 }

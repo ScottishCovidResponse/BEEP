@@ -33,7 +33,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	long time, timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1, invTmax = 1, invTmin = 0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
-	PART *part;
 	vector <SAMPLE> opsamp;
 
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;

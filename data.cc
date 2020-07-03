@@ -17,10 +17,10 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s, row;
+	unsigned int r, i, c, imax, k, nreg, td, j, jmax, cc, fl, d, dp, a, aa, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
 	int dc;
-	double v;
+	double v=0;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
 	AREA are;
@@ -96,7 +96,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 			regcode = tab.ele[row][regcol];
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
-			if(r == nregion) emsg("Region code not recognised: ",regcode);
+			if(r == nregion) emsg("Region code not recognised: "+regcode);
 			are.region = r;
 					
 			are.covar.resize(ncovar);
@@ -358,7 +358,7 @@ void DATA::copydata(unsigned int core)
 {
 	unsigned int td, q;
 	int si;
-	
+
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
 		pack(ndemocatpos);
@@ -377,7 +377,7 @@ void DATA::copydata(unsigned int core)
 		}
 		si = packsize();
 	}
-	
+
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
@@ -404,7 +404,6 @@ void DATA::copydata(unsigned int core)
 /// Adds demographic categories
 void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
 {
-	unsigned int j;
 	DEMOCAT dem;
 	
 	dem.name = name;	

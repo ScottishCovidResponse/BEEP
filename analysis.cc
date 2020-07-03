@@ -60,7 +60,7 @@ string lookup_string_parameter(const map<string,string> &params,
 			val = toml::find<string>(tomldata,key);
 		} else {
 			val = def;
-			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 	if (verbose)
@@ -82,7 +82,7 @@ int lookup_int_parameter(const map<string,string> &params,
 			val = toml::find<int>(tomldata,key);
 		} else {
 			val = def;
-			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 	if (verbose)
@@ -113,7 +113,7 @@ vector<string> lookup_stringlist_parameter(
 		if (tomldata.contains(key)) {
 			val = toml::find<vector<string>>(tomldata,key);
 		} else {
-			emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 
@@ -159,7 +159,7 @@ void check_for_undefined_parameters(vector<string> allowed, vector<string> given
 			ss << " " << k;
 		}
 		
-		emsg(ss.str());
+		emsgroot(ss.str());
 	}
 }
 
@@ -173,7 +173,7 @@ map<string,string> get_command_line_params(int argc, char *argv[])
 		int j = 0; int jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 
-			emsg(ss.str());
+			emsgroot(ss.str());
 		}
 		
 		string command = str.substr(0,j);
@@ -211,8 +211,8 @@ int main(int argc, char** argv)
 	
 	int seed=0;                               // Sets the random seed for simulation
 	
-	unsigned int j, jst, jmax, k, flag;
-	int op;
+	unsigned int j, k;
+
 	TRANSDATA transdata;
 	string str, command, value;
 
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
 	bool param_verbose = (core == 0);
 
 	if (param_verbose)
-		cout << endl << "Parameters:" << endl;
+		cout << endl << "Settings:" << endl;
 
 	string key,val;
 
@@ -278,14 +278,14 @@ int main(int argc, char** argv)
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
 	} else {
-		emsg("Unrecoginsed value " + val + " for mode parameter");
+		emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	}
 
 	if(mode == MODE_PMCMC){
 		// npart
 		int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", param_verbose, npart);
 		if (npart != UNSET) {
-			if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
+			if(nparttot%ncore != 0) emsgroot("The number of particles must be a multiple of the number of cores");
 			npart = nparttot/ncore;
 		}
 	}
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
 		// nchain
 		int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
 		if (nchaintot != UNSET) {
-			if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
+			if(nchaintot%ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
 			nchain = nchaintot/ncore;
 		}
 	}
@@ -307,20 +307,33 @@ int main(int argc, char** argv)
 		if(tomldata.contains("infmax")) {
 			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
 		}
-		else emsg("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
+		else emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}
 	
 	// period
 	period = lookup_int_parameter(cmdlineparams, tomldata, "period", param_verbose);
 
+	// seed
 	if(mode == MODE_SIM){
-		// seed
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
 		
 	// outputdir
 	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
 
+	// data directory
+	data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
+
+	// region data
+	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
+
+	// area data
+	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
+
+	// End of parameters
+	if (param_verbose)
+		cout << endl;
+	
 	// THE MODEL
 	
 	// age categories
@@ -330,17 +343,17 @@ int main(int argc, char** argv)
 		for(j = 0; j < ages.size(); j++){
 			const auto ag = toml::find(ages,j);
 			
-			if(!ag.contains("range")) emsg("A 'range' must be specified in 'ages'.");
+			if(!ag.contains("range")) emsgroot("A 'range' must be specified in 'ages'.");
 			const auto range = toml::find<std::string>(ag,"range");
 			pos.push_back(range);
 			
-			if(!ag.contains("sus")) emsg("A 'sus' must be specified in 'ages'.");
+			if(!ag.contains("sus")) emsgroot("A 'sus' must be specified in 'ages'.");
 			const auto sus = toml::find<std::string>(ag,"sus");
 			possus.push_back(sus);
 		}
 		data.adddemocat("Age",pos,possus);
 	}
-	else emsg("The 'ages' parameter must be set.");
+	else emsgroot("The 'ages' parameter must be set.");
 	
 	if(core == 0){	
 		cout << "Age categories: " << endl;
@@ -351,6 +364,7 @@ int main(int argc, char** argv)
 		cout << endl << endl;
 	}
 	
+	// democats
 	if(tomldata.contains("democats")) {
 		const auto democats = toml::find(tomldata,"democats");
 	
@@ -362,11 +376,11 @@ int main(int argc, char** argv)
 			for(j = 0; j < democat.size(); j++){
 				const auto demoval = toml::find(democat,j);
 				
-				if(!demoval.contains("value")) emsg("A 'value' must be specified in 'democats'.");
+				if(!demoval.contains("value")) emsgroot("A 'value' must be specified in 'democats'.");
 				const auto value = toml::find<std::string>(demoval,"value");
 				pos.push_back(value);
 				
-				if(!demoval.contains("sus")) emsg("The property 'sus' must be specified in 'democats'.");
+				if(!demoval.contains("sus")) emsgroot("The property 'sus' must be specified in 'democats'.");
 				const auto sus = toml::find<std::string>(demoval,"sus");
 				vector<string> pos;
 				possus.push_back(sus);
@@ -375,9 +389,8 @@ int main(int argc, char** argv)
 			data.adddemocat("",pos,possus);
 		}
 	}
-
 	
-	if(core == 0){
+	if(core == 0 && data.democat.size() > 1){
 		cout << "Demographic categories: " << endl;
 		for(k = 1; k < data.democat.size(); k++){
 			for(j = 0; j < data.democat[k].value.size(); j++){
@@ -395,13 +408,13 @@ int main(int argc, char** argv)
 		for(j = 0; j < covars.size(); j++){
 			const auto covar = toml::find(covars,j);
 			
-			if(!covar.contains("name")) emsg("A 'name' must be specified in 'covars'.");
+			if(!covar.contains("name")) emsgroot("A 'name' must be specified in 'covars'.");
 			const auto name = toml::find<std::string>(covar,"name");
 	
-			if(!covar.contains("param")) emsg("A 'param' must be specified in 'covars'.");
+			if(!covar.contains("param")) emsgroot("A 'param' must be specified in 'covars'.");
 			const auto par = toml::find<std::string>(covar,"param");
 
-			if(!covar.contains("func")) emsg("A 'func' must be specified in 'covars'.");
+			if(!covar.contains("func")) emsgroot("A 'func' must be specified in 'covars'.");
 			const auto func = toml::find<std::string>(covar,"func");
 
 			data.addcovar(name,par,func);
@@ -414,25 +427,25 @@ int main(int argc, char** argv)
 		cout << endl;
 	}
 
-	// Loads in time periods
+	// timep
 	if(tomldata.contains("timep")) {
 		const auto timep = toml::find(tomldata,"timep");
 		for(j = 0; j < timep.size(); j++){
 			const auto tim = toml::find(timep,j);
 			
-			if(!tim.contains("name")) emsg("A 'name' must be specified in 'timep'.");
+			if(!tim.contains("name")) emsgroot("A 'name' must be specified in 'timep'.");
 			const auto name = toml::find<std::string>(tim,"name");
 			
-			if(!tim.contains("tend")) emsg("'tend' must be specified in 'timep'.");
+			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
 			const auto tend = toml::find<double>(tim,"tend");
 			
 			data.addtimep(name,tend);
 		}
 	}
-	else emsg("Property 'timep' defining time periods must be set.");
+	else emsgroot("Property 'timep' defining time periods must be set.");
 
 	if(core == 0){
-		cout << "Time periods defines:" << endl;
+		cout << "Time periods defined:" << endl;
 		for(j = 0; j < data.timeperiod.size(); j++){
 			cout << data.timeperiod[j].name << ": ";
 			if(j == 0) cout << "0"; else cout << data.timeperiod[j-1].tend;
@@ -440,26 +453,26 @@ int main(int argc, char** argv)
 		}
 		cout << endl;
 	}
-	
-	// Loads in Q tensors
+
+	// Q
 	if(tomldata.contains("Q")) {
 		const auto Qlist = toml::find(tomldata,"Q");
 		for(j = 0; j < Qlist.size(); j++){
 			const auto Q = toml::find(Qlist,j);
 			
-			if(!Q.contains("timep")) emsg("A 'timep' must be specified in 'Q'.");
+			if(!Q.contains("timep")) emsgroot("A 'timep' must be specified in 'Q'.");
 			const auto timep = toml::find<std::string>(Q,"timep");
 			
-			if(!Q.contains("comp")) emsg("'comp' must be specified in 'Q'.");
+			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
 			const auto comp = toml::find<std::string>(Q,"comp");
 			
-			if(!Q.contains("file")) emsg("'file' must be specified in 'Q'.");
+			if(!Q.contains("file")) emsgroot("'file' must be specified in 'Q'.");
 			const auto file = toml::find<std::string>(Q,"file");
 			
 			data.addQtensor(timep,comp,file);
 		}
 	}
-	else emsg("Property 'timep' defining time periods must be set.");
+	else emsgroot("Property 'timep' defining time periods must be set.");
 	
 	if(core == 0){
 		cout << "Q tensors loaded:" << endl;
@@ -474,14 +487,6 @@ int main(int argc, char** argv)
 	
 	// THE DATA
 	
-	// data directory
-	data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
-
-	// region data
-	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
-
-	// area data
-	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
 
 	// transdata
 	
@@ -491,58 +496,52 @@ int main(int argc, char** argv)
 		for(j = 0; j < tdata.size(); j++){
 			const auto td = toml::find(tdata,j);
 			
-			if(!td.contains("from")) emsg("A 'from' property must be specified in 'transdata'.");
+			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
 			const auto from = toml::find<std::string>(td,"from");
 			transdata.from = from;
 		
-			if(!td.contains("to")) emsg("A 'to' property must be specified in 'transdata'.");
+			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
 			const auto to = toml::find<std::string>(td,"to");
 			transdata.to = to;
 			
-			if(!td.contains("area")) emsg("An 'area' property must be specified in 'transdata'.");
+			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
 			const auto area = toml::find<std::string>(td,"area");
 			transdata.type = area;
-			if(transdata.type != "reg" && transdata.type != "all") emsg("Transition data type not recognised"); 
+			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
 			
-			if(!td.contains("file")) emsg("A 'file' property must be specified in 'transdata'.");
+			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
 			const auto file = toml::find<std::string>(td,"file");
 			transdata.file = file;
 			
-			if(!td.contains("start")) emsg("A 'start' property must be specified in 'transdata'.");
+			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'transdata'.");
 			const auto start = toml::find<unsigned int>(td,"start");
 			transdata.start = start;
 			
-			if(!td.contains("units")) emsg("A 'units' property must be specified in 'transdata'.");
+			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
 			const auto units = toml::find<std::string>(td,"units");
 			if(units == "days") transdata.units = 1;
 			else{
 				if(units == "weeks") transdata.units = 7;
-				else emsg("Units in 'transdata' not recognised");
+				else emsgroot("Units in 'transdata' not recognised");
 			}
 			
 			if(mode == MODE_SIM){
 				transdata.rows = (unsigned int)((period - start)/transdata.units);
-				if(transdata.rows == 0) emsg("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
 			data.transdata.push_back(transdata);
 		}
 	}
-	else emsg("The 'transdata' parameter must be set.");
-		
-	// End of parameters
-	if (param_verbose)
-		cout << endl;
+	else emsgroot("The 'transdata' parameter must be set.");
+
+	if(mode == MODE_SIM && ncore != 1) emsgroot("Simulation only requires one core");
 	
-	if(mode == MODE_SIM && ncore != 1) emsg("Simulation only requires one core");
-	
-	if(core == 0) cout << "Initialising...." << endl;
- 
-	if(mode == UNSET) emsg("The property 'mode' must be set"); 
+	if(mode == UNSET) emsgroot("The property 'mode' must be set"); 
  
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(period == UNSET) emsg("The property 'period' must be set");
+	if(period == UNSET) emsgroot("The property 'period' must be set");
 	
 	data.readdata(core,ncore,mode,period);
 
@@ -550,9 +549,7 @@ int main(int argc, char** argv)
 	poptree.init(data,core);	
 
 	model.definemodel(core,data.period,data.popsize,tomldata);
-
 	model.addQ();
-	//while(1 == 1);
 	model.checktransdata();
 
 	if(core == 0) cout << "Running...." << endl;
@@ -569,19 +566,19 @@ int main(int argc, char** argv)
 		break;
 		
 	case MODE_PMCMC:
-		if(nsamp == UNSET) emsg("The number of samples must be set");
-		if(npart == UNSET) emsg("The number of particles must be set");
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+		if(npart == UNSET) emsgroot("The number of particles must be set");
 
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 
 	case MODE_MBP: 
-		if(nsamp == UNSET) emsg("The number of samples must be set");
-		if(nchain == UNSET) emsg("The number of chains must be set");
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+		if(nchain == UNSET) emsgroot("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
 		break;
 
-	default: emsg("Mode not recognised"); break;
+	default: emsgroot("Mode not recognised"); break;
  	}
 	
 	timers.timetot += clock();

@@ -19,10 +19,10 @@ struct QTENSOR {                           // Stores information about a Q tenso
 	unsigned int timep;                      // The time period over which the tensor acts
 	string file;  													 // The name of the file
 	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <double> > > val;	
+	vector <vector< vector <double> > > val; 	
 };
 
-struct TRANSDATA{
+struct TRANSDATA{                          // Stores data about transitions
 	string from;                             // The "from" compartment
  	string to;                               // The "to" compartment 
 	string type;                             // The type (either "reg" for regional or "all" for global)

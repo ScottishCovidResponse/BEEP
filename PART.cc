@@ -275,11 +275,10 @@ void PART::dofe()
 {
 	unsigned int i, dq, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax, loop;
 	int l;
-	double sum, val, t, fac, fac2;
+	double sum, val, fac, fac2;
 	TRANS tr;
 		 
 	i = fev[tdnext][tdfnext].ind; 
-	t = fev[tdnext][tdfnext].t; 
 	c = data.ind[i].area;
 		 
 	tr = trans[fev[tdnext][tdfnext].trans];

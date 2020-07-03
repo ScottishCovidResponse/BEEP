@@ -73,7 +73,7 @@ void outputLi(unsigned int samp, unsigned int nparttot, double *Litot)
 SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
 {
 	SAMPLE sa;
-	unsigned int p, np, r, row, st, sum, td, ti, tf;
+	unsigned int p, np, r, row, sum, td, ti, tf;
 	vector <unsigned int> num;
 	
 	np = paramval.size();
@@ -130,7 +130,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &
 SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
-	unsigned int p, np, r, row, st, sum, td, ti, tf;
+	unsigned int p, np, r, row, sum, td, ti, tf;
 	vector <unsigned int> num;
 	
 	np = paramval.size();

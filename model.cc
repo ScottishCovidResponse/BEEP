@@ -19,8 +19,7 @@ MODEL::MODEL(DATA &data) : data(data)
 /// Defines the compartmental model
 void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, t, j;
-	int fi;
+	unsigned int p, c, t, j, fi;
 	SPLINEP spl;
 	
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
@@ -239,9 +238,19 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
-		cout << "Parameters:" << endl;
-		for(p = 0; p < param.size()-1; p++){
-			cout << param[p].name << " " << param[p].valinit << " (" << param[p].min << " - " << param[p].max << ")" << endl;
+		if(data.mode == MODE_SIM){
+			cout << "Parameters:" << endl;
+			for(p = 0; p < param.size()-1; p++){
+				cout << param[p].name << " = " << param[p].valinit << endl;
+			}
+		}
+		else{
+			cout << "Priors:" << endl;
+			for(p = 0; p < param.size()-1; p++){
+				cout << param[p].name << " = ";
+				if(param[p].min ==  param[p].max) cout << param[p].min << endl;
+				else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
+			}
 		}
 		cout << endl;
 			
@@ -322,9 +331,8 @@ void MODEL::copyp()
 /// Adds in the tensor Q to the model
 void MODEL::addQ()
 {
-	unsigned int q, qi, qf, c, cc, ci, cf, tra, timep, timepi, timepf, loop, j, jmax, a, v;
+	unsigned int q, qi, qf, c, ci, cf, tra, timep, timepi, timepf;
 	string compi, compf;
-	double fac;
 	vector <unsigned int> map;
 	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
 	vector< vector <unsigned int> > DQtoadd;
@@ -404,7 +412,6 @@ double MODEL::getinfectivity(string name)
 /// Adds a compartment to the model
 void MODEL::addcomp(string name, double infectivity, unsigned int type, string param1, string param2)
 {
-	unsigned int p, pmax;
 	COMP co;
 	co.name = name;
 	co.infectivity = infectivity;
@@ -441,7 +448,7 @@ void MODEL::addparam(string name, double val, double min, double max)
 /// Adds a transition to the model
 void MODEL::addtrans(string from, string to, string prpar)
 {
-	unsigned int c, cmax, p, pmax, j;
+	unsigned int c, cmax, j;
 	
 	TRANS tr;
 	
@@ -471,7 +478,7 @@ void MODEL::addtrans(string from, string to, string prpar)
 /// Generates the time variation in beta and phi from the parameters
 void MODEL::timevariation()
 {
-  unsigned int s, j;
+  unsigned int s;
 	int p;
 	double t, fac;
 	
@@ -511,7 +518,7 @@ void MODEL::timevariation()
 	for(s = 0; s < data.nsettime; s++){	
 		t = double((s+0.5)*data.period)/data.nsettime;
 		
-		while(p < betaspline.size()-1 && t > betaspline[p+1].t) p++;
+		while(p < int(betaspline.size())-1 && t > betaspline[p+1].t) p++;
 		
 		fac = (t-betaspline[p].t)/(betaspline[p+1].t-betaspline[p].t);
 		beta[s] = (paramval[betaspline[p].param]*(1-fac) + paramval[betaspline[p+1].param]*fac);
@@ -522,7 +529,7 @@ void MODEL::timevariation()
 	for(s = 0; s < data.nsettime; s++){	
 		t = double((s+0.5)*data.period)/data.nsettime;
 		
-		while(p < phispline.size()-1 && t > phispline[p+1].t) p++;
+		while(p < int(phispline.size())-1 && t > phispline[p+1].t) p++;
 		
 		fac = (t-phispline[p].t)/(phispline[p+1].t-phispline[p].t);
 		phi[s] = (paramval[phispline[p].param]*(1-fac) + paramval[phispline[p+1].param]*fac)/data.popsize;
@@ -794,12 +801,14 @@ vector <double> MODEL::R0calc()
 		for(c = 0; c < comp.size(); c++){
 			if(comp[c].probin[0] >= 0 && comp[c].infint[0] == -1){
 				switch(comp	[c].type){
+				case NO_DIST: case INFECTION: dt = 0; break;
 				case EXP_DIST: dt = paramval[comp[c].param1]; break;
 				case GAMMA_DIST: dt = paramval[comp[c].param1]; break;
 				case LOGNORM_DIST:
 					mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
 					dt = exp(mean + sd*sd/2);
 					break;
+				default: dt = 0; emsg("MODEL: EC56"); break;
 				}
 				
 				for(a = 0; a < data.nage; a++){

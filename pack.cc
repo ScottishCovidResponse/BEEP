@@ -243,7 +243,7 @@ void unpack(vector< vector< vector <double> > > &vec)
 		jmax = buffer[k]; k++; vec[i].resize(jmax);
 		for(j = 0; j < jmax; j++){ 
 			nmax = buffer[k]; k++; vec[i][j].resize(nmax);
-			for(n = 0; n < nmax; j++){ vec[i][j][n] = buffer[k]; k++;}
+			for(n = 0; n < nmax; n++){ vec[i][j][n] = buffer[k]; k++;}
 		}
 	}
 }
