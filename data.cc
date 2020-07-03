@@ -20,7 +20,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	unsigned int t, r, i, c, imax, k, nreg, td, j, jmax, jj, cc, fl, d, dp, a1, a2, a, aa, vi, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
 	int dc;
-	double v, sum, sum2;
+	double v;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
 	AREA are;
@@ -29,6 +29,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	TABLE tab;
 	vector <unsigned int> count;
 	vector <vector <double> > val;
+	vector <double> vec;
 	
 	mode = mod;
 	period = per;
@@ -154,45 +155,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			}
 		}			
 		
-		file = datadir+"/"+Mdatafile;
-		ifstream Min(file.c_str());                           // Loads information about mixing matrix
-		if(!Min) emsg("Cannot open the file '"+file+"'");
-			
-		getline(Min,line);
-		
-		nM.resize(narea); Mto.resize(narea); Mval.resize(narea);
-		do{
-			getline(Min,line);
-			if(Min.eof()) break;
-			
-			stringstream ss(line);	
-			ss >> a1 >> a2 >> v;
-			Mto[a1].push_back(a2); Mval[a1].push_back(v);
-			if(a1 != a2){ Mto[a2].push_back(a1); Mval[a2].push_back(v);}
-		}while(1 == 1);
-		
-		for(c = 0; c < narea; c++) nM[c] = Mto[c].size();
-
-		file = datadir+"/"+Ndatafile;
-		ifstream Nin(file.c_str());                            // Loads information about age mixing
-		if(!Nin) emsg("Cannot open the file '"+file+"'");
-	
-		N.resize(nage);
-		for(j = 0; j < nage; j++){
-			getline(Nin,line);
-			stringstream ss(line);	
-			for(jj = 0; jj < nage; jj++){
-				ss >> v;
-				N[j].push_back(v);
-			}
-		}		
-		
-		cout << endl << "Age contact structure data loaded." << endl;
-		
-		if(checkon == 1){
-			for(j = 0; j < nage; j++){ for(jj = 0; jj < nage; jj++) cout << N[j][jj] << ","; cout << " N" << endl;}
-		}
-		
 		if(mode != MODE_SIM){        // Loads transition data for inference
 			if(transdata.size() == 0) emsg("Transition data must be loaded");
 			
@@ -237,6 +199,31 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				}
 			}
 		}
+		
+		vec.resize(nage);                                                 // Reads in Q tensors
+		for(q = 0; q < Q.size(); q++){
+			tab = loadtable(datadir+"/"+Q[q].file);
+			
+			Q[q].to.resize(narea*nage); Q[q].val.resize(narea*nage);
+			for(row = 0; row < tab.nrow; row++){
+				c = atoi(tab.ele[row][0].c_str()); cc = atoi(tab.ele[row][1].c_str());
+				
+				for(a = 0; a < nage; a++){
+					for(aa = 0; aa < nage; aa++) vec[aa] = atof(tab.ele[row][2+a*nage+aa].c_str()); 
+					
+					Q[q].to[c*nage+a].push_back(cc);
+					Q[q].val[c*nage+a].push_back(vec);
+					
+					
+					if(c < cc){
+						Q[q].to[cc*nage+a].push_back(c);
+						Q[q].val[cc*nage+a].push_back(vec);
+					}
+				}
+			}
+			
+			normaliseQ(q);
+		}
 	}
 
 	if(ncore > 1) copydata(core);
@@ -259,65 +246,63 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
+}
 
-	ntimeperiod = 2;
-	timeperiod.push_back(period/2); timeperiod.push_back(large);      // lockdown happens half way
-	Qnum = 6;
+/// Normalises the Q tensors
+void DATA::normaliseQ(unsigned int q)
+{
+	unsigned int c, a, cc, aa, vi, j, jmax;
+	double sum, sum2;
 	
-	Qcomp.resize(Qnum); Qtimeperiod.resize(Qnum); 
-	nQ.resize(Qnum); Qto.resize(Qnum); Qval.resize(Qnum);
-	for(q = 0; q < Qnum; q++){
-		switch(q){
-			case 0: Qcomp[q] = "I"; Qtimeperiod[q] = 0; break;
-			case 1: Qcomp[q] = "I"; Qtimeperiod[q] = 1; break;
-			case 2: Qcomp[q] = "P"; Qtimeperiod[q] = 0; break;
-			case 3: Qcomp[q] = "P"; Qtimeperiod[q] = 1; break;
-			case 4: Qcomp[q] = "A"; Qtimeperiod[q] = 0; break;
-			case 5: Qcomp[q] = "A"; Qtimeperiod[q] = 1; break;
-		}
+	for(c = 0; c < narea; c++){                                       // Normalisation
+		sum = 0; sum2 = 0;
+		for(a = 0; a < nage; a++){
+			sum2 += area[c].agepop[a];
+			vi = c*nage + a;
 		
-		nQ[q].resize(narage); Qto[q].resize(narage); Qval[q].resize(narage);
-		for(c = 0; c < narea; c++){
-			for(a = 0; a < nage; a++){
-				vi = c*nage + a;
-			
-				for(j = 0; j < nM[c]; j++){
-					cc = Mto[c][j]; v = Mval[c][j]; 
-					if(Qtimeperiod[q] == 1) v = sqrt(v);                       // Distribution changed after lockdown
-				
-					k = Qto[q][vi].size();
-					Qto[q][vi].push_back(cc);
-					Qval[q][vi].push_back(vector <double> ());
-					for(aa = 0; aa < nage; aa++) Qval[q][vi][k].push_back(N[a][aa]*v);
-				}
+			jmax = Q[q].to[vi].size();
+			for(j = 0; j < jmax; j++){
+				cc = Q[q].to[vi][j];
+				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*Q[q].val[vi][j][aa]*area[cc].agepop[aa];
 			}
 		}
-		
-		for(vi = 0; vi < narage; vi++) nQ[q][vi] = Qto[q][vi].size();
-	                                              
-		for(c = 0; c < narea; c++){                                       // Normalisation
-			sum = 0; sum2 = 0;
-			for(a = 0; a < nage; a++){
-				sum2 += area[c].agepop[a];
-				vi = c*nage + a;
-			
-				for(j = 0; j < nQ[q][vi]; j++){
-					cc = Qto[q][vi][j];
-					for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*Qval[q][vi][j][aa]*area[cc].agepop[aa];
-				}
-			}
-			sum /= sum2;
-			
-			for(a = 0; a < nage; a++){
-				vi = c*nage + a;
-				for(j = 0; j < nQ[q][vi]; j++){
-					for(aa = 0; aa < nage; aa++) Qval[q][vi][j][aa] /= sum;
-				}
+		sum /= sum2;
+
+		for(a = 0; a < nage; a++){
+			vi = c*nage + a;
+			jmax = Q[q].to[vi].size();
+			for(j = 0; j < jmax; j++){
+				for(aa = 0; aa < nage; aa++) Q[q].val[vi][j][aa] /= sum;
 			}
 		}
 	}
 }
 
+/// Adds a time period
+void DATA::addtimep(string name, double tend)
+{
+	TIMEP timep;
+	
+	timep.name = name;
+	timep.tend = tend;
+	timeperiod.push_back(timep);
+}
+	
+/// Adds a Q tensor
+void DATA::addQtensor(string timep, string comp, string file)
+{
+	unsigned int tp;
+	QTENSOR qten;
+	
+	tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
+	if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period");
+	
+	qten.timep = tp;
+	qten.comp = comp;
+	qten.file = file;
+	Q.push_back(qten);
+}
+	
 /// Loads a table from a file
 TABLE DATA::loadtable(string file)
 {
@@ -371,7 +356,7 @@ unsigned int DATA::findcol(TABLE &tab, string name)
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
-	unsigned int td;
+	unsigned int td, q;
 	int si;
 	
 	if(core == 0){                                  				   // Copies the above information to all the other cores
@@ -382,10 +367,7 @@ void DATA::copydata(unsigned int core)
 		pack(region);
 		pack(narea);
 		pack(area);
-		pack(nM);
-		pack(Mto);
-		pack(Mval);
-		pack(N);
+		for(q = 0; q < Q.size(); q++){ pack(Q[q].to); pack(Q[q].val);}
 		pack(nage);
 		pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
@@ -407,10 +389,7 @@ void DATA::copydata(unsigned int core)
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		unpack(nM);
-		unpack(Mto);
-		unpack(Mval);
-		unpack(N);
+		for(q = 0; q < Q.size(); q++){ unpack(Q[q].to); unpack(Q[q].val);}
 		unpack(nage);
 		unpack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){

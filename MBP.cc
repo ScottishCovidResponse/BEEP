@@ -310,7 +310,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			unpack(paramplot);
 			unpack(L);
 			unpack(ninfplot);
-			if(packsize() != siz) emsg("PMBP: EC10");
+			if(packsize() != siz) emsg("MBP: EC10");
 		}
 		
 		opsamp.push_back(outputsamp_mbp(calcME(),samp,L,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));

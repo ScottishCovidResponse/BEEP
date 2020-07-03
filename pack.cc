@@ -90,6 +90,19 @@ void pack(vector< vector <double> > &vec)
 	}
 }
 
+void pack(vector< vector< vector <double> > > &vec)
+{
+	unsigned int imax, i, jmax, j, nmax, n;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
+	for(i = 0; i < imax; i++){
+		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+		for(j = 0; j < jmax; j++){ 
+			nmax = vec[i][j].size(); buffer[k] = nmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+			for(n = 0; n < nmax; n++){ buffer[k] = vec[i][j][n]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
+		}
+	}
+}
+
 void pack(vector <string> &vec)
 {
 	unsigned int imax, i, jmax, j;
@@ -113,21 +126,6 @@ void pack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fediv
 		}
 	}
 }
-
-/*
-void pack(vector <HOUSE> &vec, int min, int max)
-{
-	int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
-	for(i = min; i < max; i++){
-		buffer[k] = vec[i].x; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
-		buffer[k] = vec[i].y; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
-		buffer[k] = vec[i].region; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
-		jmax = vec[i].ind.size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
-		for(j = 0; j < jmax; j++){ buffer[k] = vec[i].ind[j]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}  
-	}
-}
-*/
 
 void pack(vector <AREA> &vec)
 {
@@ -237,6 +235,19 @@ void unpack(vector< vector <double> > &vec)
 	}
 }
 
+void unpack(vector< vector< vector <double> > > &vec)
+{
+	unsigned int imax, i, jmax, j, nmax, n;
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){
+		jmax = buffer[k]; k++; vec[i].resize(jmax);
+		for(j = 0; j < jmax; j++){ 
+			nmax = buffer[k]; k++; vec[i][j].resize(nmax);
+			for(n = 0; n < nmax; j++){ vec[i][j][n] = buffer[k]; k++;}
+		}
+	}
+}
+
 void unpack(vector <string> &vec)
 {
 	unsigned int imax, i, jmax, j;
@@ -261,21 +272,6 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 		}
 	}
 }
-
-/*
-void unpack(vector <HOUSE> &vec, int min, int max)
-{
-	int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax); 
-	for(i = min; i < max; i++){
-		vec[i].x = buffer[k]; k++;  
-		vec[i].y = buffer[k]; k++; 
-		vec[i].region = buffer[k]; k++; 
-		jmax = buffer[k]; k++; vec[i].ind.resize(jmax);
-		for(j = 0; j < jmax; j++){ vec[i].ind[j] = buffer[k]; k++;}  
-	}
-}
-*/
 
 void unpack(vector <AREA> &vec)
 {

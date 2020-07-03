@@ -100,8 +100,8 @@ public:
 	vector< vector <unsigned int> > sus_param;  // The parameters related to fixed effect for susceptibility
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
-	unsigned int ntimeperiod;                // The number of different time periods (2: before and after lockdown)
-	vector <double> timeperiod;              // The timings of changes to Q;
+	vector <TIMEP> timeperiod;              // The timings of changes to Q;
+	unsigned int ntimeperiod;
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	

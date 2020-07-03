@@ -102,7 +102,6 @@ phispline= [{param="phi", time=0.0},
 
 ages			= [{range="0-18", sus="zero"},{range="19-64", sus="sus_adult"},{range="65+", sus="sus_elderly"}]
 
-
 # Other demographic categories
 # Format: The name of the category is given followed by the potential values it can take along with their relative susceptibilities.
 
@@ -112,6 +111,12 @@ ages			= [{range="0-18", sus="zero"},{range="19-64", sus="sus_adult"},{range="65
 # Covariates for area ('func' gives the fuctional transformation which can be 'linear' or 'log')
 
 covars		= [{name="density", param="den_slope", func="log"}]
+
+
+# Defines discrete time periods. This example is for before and after lockdown
+
+timep = [{name="beforeLD", tend=56.0}, {name="afterLD", tend=112.0}]
+
 
 ########### THE DATA #############
 
@@ -132,17 +137,16 @@ regions		= "regiondata.txt"
 areas			= "areadata.txt"
 
 
-# A table informing the matrix of contacts between different areas 
-# Note, this matrix is sparse hence only non-zero elelments are given.
-# Format tab-separated table with: area A, area B and the mixing between areas A and B. 
-# Note, the numbers for the areas correspond to where they appear in the 'areas' list above.  
+# A list of different Q tensors which act at different periods (timep is before and after lockdown)
+# and on different compartments (as defined by comp).
+# The files provide information on the actual Q tensor itself.
 
-geocont	 	= "Mdata.txt"
-
-
-# A matrix giving the contact rates between different age groups.
-
-agecont	 	= "Ndata.txt"
+Q					= [{ timep="beforeLD", comp="I", file="Q_local_home_data.txt"},
+						 { timep="afterLD", comp="I", file="Q_local_home_data.txt"},
+						 { timep="beforeLD", comp="P", file="Q_flow_all_data.txt"},
+						 { timep="afterLD", comp="P", file="Q_local_home_data.txt"},
+						 { timep="beforeLD", comp="A", file="Q_flow_all_data.txt"},
+						 { timep="afterLD", comp="A", file="Q_local_home_data.txt"}]
  
  
 # The observed numbers of transitions between different compartments.

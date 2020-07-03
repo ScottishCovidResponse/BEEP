@@ -23,8 +23,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	int fi;
 	SPLINEP spl;
 	
-	ntimeperiod = data.ntimeperiod; // Copies from data
-	timeperiod = data.timeperiod;
+	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
 	if(data.mode == MODE_SIM){
 		if(tomldata.contains("params")){
@@ -334,11 +333,11 @@ void MODEL::addQ()
 	
 	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"");  
 	
-	for(q = 0; q < data.Qnum; q++){
-		for(c = 0; c < comp.size(); c++) if(data.Qcomp[q] == comp[c].name) break;
-		if(c == comp.size()) emsg( "Compartment "+data.Qcomp[q]+" not recognised.");
+	for(q = 0; q < data.Q.size(); q++){
+		for(c = 0; c < comp.size(); c++) if(data.Q[q].comp == comp[c].name) break;
+		if(c == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
 		
-		if(data.Qtimeperiod[q] < 0 || data.Qtimeperiod[q] >= ntimeperiod) emsg("The time period for Q is out of range.");
+		if(data.Q[q].timep < 0 || data.Q[q].timep >= ntimeperiod) emsg("The time period for Q is out of range.");
 	}
 	
 	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = UNSET;
@@ -355,11 +354,11 @@ void MODEL::addQ()
 			if(compi == compf) timepf++;
 			
 			if(timepf < ntimeperiod){
-				qi = 0; while(qi < data.Qnum && !(data.Qcomp[qi] == compi && data.Qtimeperiod[qi] == timepi)) qi++;
-				if(qi == data.Qnum) qi = UNSET;
+				qi = 0; while(qi < data.Q.size() && !(data.Q[qi].comp == compi && data.Q[qi].timep == timepi)) qi++;
+				if(qi == data.Q.size()) qi = UNSET;
 				
-				qf = 0; while(qf < data.Qnum && !(data.Qcomp[qf] == compf && data.Qtimeperiod[qf] == timepf)) qf++;
-				if(qf == data.Qnum) qf = UNSET;
+				qf = 0; while(qf < data.Q.size() && !(data.Q[qf].comp == compf && data.Q[qf].timep == timepf)) qf++;
+				if(qf == data.Q.size()) qf = UNSET;
 				
 				if(qi == UNSET && qf == UNSET){
 					trans[tra].DQ.push_back(UNSET);
@@ -587,7 +586,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 	FEV ev;
 	vector <double> probsum;
 	
-	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
+	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 
 	ev.ind = i; ev.timep = timep; 
 		
@@ -625,8 +624,8 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		default: emsg("MODEL: EC2b"); break;
 		}
 
-		while(timeperiod[timep] < t){    // Adds in changes in time period
-			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep];
+		while(timep < ntimeperiod && timeperiod[timep].tend < t){    // Adds in changes in time period
+			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep].tend;
 			evlist.push_back(ev);
 			timep++;
 			ev.timep = timep; 
@@ -823,13 +822,13 @@ vector <double> MODEL::R0calc()
 		}
 	}while(flag == 1);
 	
-	R0fac.resize(data.ntimeperiod);
-	for(timep = 0; timep < data.ntimeperiod; timep++) R0fac[timep] = 0;
+	R0fac.resize(ntimeperiod);
+	for(timep = 0; timep < ntimeperiod; timep++) R0fac[timep] = 0;
 		
-	for(q = 0; q < data.Qnum; q++){
-		timep = data.Qtimeperiod[q];
-		for(co = 0; co < comp.size(); co++) if(data.Qcomp[q] == comp[co].name) break;
-		if(co == comp.size()) emsg( "Compartment "+data.Qcomp[q]+" not recognised.");
+	for(q = 0; q < data.Q.size(); q++){
+		timep = data.Q[q].timep;
+		for(co = 0; co < comp.size(); co++) if(data.Q[q].comp == comp[co].name) break;
+		if(co == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
 		
 		//R0fac[timep] += comp[co].infint[0];
 		
@@ -838,11 +837,12 @@ vector <double> MODEL::R0calc()
 				fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
 				if(fac != 0){
 					vi = c*data.nage + a;
-					for(k = 0; k < data.nQ[q][vi]; k++){
-						cc = data.Qto[q][vi][k];
+					kmax = data.Q[q].to[vi].size();
+					for(k = 0; k < kmax; k++){
+						cc = data.Q[q].to[vi][k];
 						for(dp = 0; dp < data.ndemocatpos; dp++){
 							aa = data.democatpos[dp][0];
-							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.Qval[q][vi][k][aa]*data.area[cc].pop[dp];
+							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.Q[q].val[vi][k][aa]*data.area[cc].pop[dp];
 						}
 					}
 				}
@@ -854,7 +854,7 @@ vector <double> MODEL::R0calc()
 	timep = 0; 
 	for(st = 0; st < data.nsettime; st++){
 		t = data.settime[st];
-		while(timep < ntimeperiod && t > timeperiod[timep]) timep++;
+		while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 		
 		R0[st] = beta[st]*R0fac[timep];
 	}

@@ -237,7 +237,7 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "geocont", "agecont", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -376,6 +376,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+	
 	if(core == 0){
 		cout << "Demographic categories: " << endl;
 		for(k = 1; k < data.democat.size(); k++){
@@ -413,6 +414,64 @@ int main(int argc, char** argv)
 		cout << endl;
 	}
 
+	// Loads in time periods
+	if(tomldata.contains("timep")) {
+		const auto timep = toml::find(tomldata,"timep");
+		for(j = 0; j < timep.size(); j++){
+			const auto tim = toml::find(timep,j);
+			
+			if(!tim.contains("name")) emsg("A 'name' must be specified in 'timep'.");
+			const auto name = toml::find<std::string>(tim,"name");
+			
+			if(!tim.contains("tend")) emsg("'tend' must be specified in 'timep'.");
+			const auto tend = toml::find<double>(tim,"tend");
+			
+			data.addtimep(name,tend);
+		}
+	}
+	else emsg("Property 'timep' defining time periods must be set.");
+
+	if(core == 0){
+		cout << "Time periods defines:" << endl;
+		for(j = 0; j < data.timeperiod.size(); j++){
+			cout << data.timeperiod[j].name << ": ";
+			if(j == 0) cout << "0"; else cout << data.timeperiod[j-1].tend;
+			cout << " - " <<  data.timeperiod[j].tend << endl;
+		}
+		cout << endl;
+	}
+	
+	// Loads in Q tensors
+	if(tomldata.contains("Q")) {
+		const auto Qlist = toml::find(tomldata,"Q");
+		for(j = 0; j < Qlist.size(); j++){
+			const auto Q = toml::find(Qlist,j);
+			
+			if(!Q.contains("timep")) emsg("A 'timep' must be specified in 'Q'.");
+			const auto timep = toml::find<std::string>(Q,"timep");
+			
+			if(!Q.contains("comp")) emsg("'comp' must be specified in 'Q'.");
+			const auto comp = toml::find<std::string>(Q,"comp");
+			
+			if(!Q.contains("file")) emsg("'file' must be specified in 'Q'.");
+			const auto file = toml::find<std::string>(Q,"file");
+			
+			data.addQtensor(timep,comp,file);
+		}
+	}
+	else emsg("Property 'timep' defining time periods must be set.");
+	
+	if(core == 0){
+		cout << "Q tensors loaded:" << endl;
+		for(j = 0; j < data.Q.size(); j++){
+			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
+			cout << "compartment: " << data.Q[j].comp << "  ";
+			cout << "file: " << data.Q[j].file << "  ";
+			cout << endl;
+		}
+		cout << endl;
+	}
+	
 	// THE DATA
 	
 	// data directory
@@ -424,12 +483,6 @@ int main(int argc, char** argv)
 	// area data
 	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
 
-	// contacts between areas data
-	data.Mdatafile = lookup_string_parameter(cmdlineparams, tomldata, "geocont", param_verbose, "UNSET");
-
-	// contacts between different age categories
-	data.Ndatafile = lookup_string_parameter(cmdlineparams, tomldata, "agecont", param_verbose, "UNSET");
-	
 	// transdata
 	
 	if(tomldata.contains("transdata")) {

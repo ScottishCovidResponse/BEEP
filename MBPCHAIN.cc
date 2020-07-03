@@ -63,7 +63,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	
 	dQbuf.resize(data.narage);
 	for(v = 0; v < data.narage; v++){
-		dQbuf[v].resize(data.Qnum); for(q = 0; q < data.Qnum; q++) dQbuf[v][q] = 0;
+		dQbuf[v].resize(data.Q.size()); for(q = 0; q < data.Q.size(); q++) dQbuf[v][q] = 0;
 	}
 	dQbuflistv.clear(); dQbuflistq.clear();
 	
@@ -264,11 +264,11 @@ void MBPCHAIN::setQmapi(unsigned int check)
 					if(q != UNSET){
 						fac = model.DQ[dq].fac[loop];
 						
-						kmax = data.Qto[q][v].size();
+						kmax = data.Q[q].to[v].size();
 						for(k = 0; k < kmax; k++){
-							vv = data.Qto[q][v][k]*nage;	
+							vv = data.Q[q].to[v][k]*nage;	
 							for(a = 0; a < nage; a++){
-								dQmap[vv] += fac*data.Qval[q][v][k][a];
+								dQmap[vv] += fac*data.Q[q].val[v][k][a];
 								vv++;
 							}
 						}
@@ -576,11 +576,11 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 		v = dQbuflistv[j]; q = dQbuflistq[j]; 
 		fac = dQbuf[v][q];
 		if(fac < -vtiny || fac > vtiny){
-			kmax = data.Qto[q][v].size();
+			kmax = data.Q[q].to[v].size();
 			for(k = 0; k < kmax; k++){
-				vv = data.Qto[q][v][k]*nage;	
+				vv = data.Q[q].to[v][k]*nage;	
 				for(a = 0; a < nage; a++){
-					dQmap[vv] += fac*data.Qval[q][v][k][a];
+					dQmap[vv] += fac*data.Q[q].val[v][k][a];
 					vv++;
 				}
 			}

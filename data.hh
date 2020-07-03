@@ -9,6 +9,19 @@ struct TABLE {                             // Loads a table
 	vector <vector <string> > ele;        	 // The elements of the table
 };
 
+struct TIMEP { 														 // Stores a time period
+	string name;														 // The name of the time period
+	double tend;														 // The end time
+};
+
+struct QTENSOR {                           // Stores information about a Q tensor
+	string comp;                             // The compartment on which the tensor acts
+	unsigned int timep;                      // The time period over which the tensor acts
+	string file;  													 // The name of the file
+	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
+	vector <vector< vector <double> > > val;	
+};
+
 struct TRANSDATA{
 	string from;                             // The "from" compartment
  	string to;                               // The "to" compartment 
@@ -111,8 +124,8 @@ class DATA
 	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas
-	string Mdatafile;                        // File giving the spatial mixing matrix
-	string Ndatafile;                        // File giving the mixing between age classes
+	//string Mdatafile;                        // File giving the spatial mixing matrix
+	//string Ndatafile;                        // File giving the mixing between age classes
 	
  	unsigned int popsize;                    // The total population size 
  
@@ -133,21 +146,9 @@ class DATA
 	unsigned int ncovar;                     // The number of covariates for area  
 	vector <COVAR> covar;                    // Covariates for area
 	
-	vector <unsigned int> nM;                // Stores the mixing matrix between areas
-	vector< vector <unsigned int> > Mto;
-	vector< vector <double> > Mval;
-
-	vector< vector <double> > N;             // The maxtrix giving mixing between age groups 
-
-	unsigned int ntimeperiod;                // The number of different time periods (2: before and after lockdown)
-	vector <double> timeperiod;              // The timings of changes to Q;
+	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 	
-	unsigned int Qnum;                       // The number of Q matrices (for different compartments and time variation)
-	vector <string> Qcomp;                   // The compartment when matrix acts
- 	vector <unsigned int> Qtimeperiod;       // The time period when matrix acts
-	vector <vector <unsigned int> > nQ;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <unsigned int> > > Qto;
-	vector <vector <vector< vector <double> > > > Qval;
+	vector <QTENSOR> Q;                      // Stores the list of Q tensors
 	
 	unsigned int nage;                       // The number of age categories
 	unsigned int narage;                     // #area * #age
@@ -163,10 +164,13 @@ class DATA
 	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	void addcovar(string name, string param, string func);
+	void addtimep(string name, double tend);
+	void addQtensor(string timep, string comp, string file);
 	
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file);
 	unsigned int findcol(TABLE &tab, string name);
+	void normaliseQ(unsigned int q);
 };

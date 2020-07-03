@@ -186,7 +186,7 @@ void PART::addinfc(unsigned int c, double t)
 /// Used to check that various quantities are being correctly updated
 void PART::check(unsigned int num, double t)
 {
-	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, q;
+	unsigned int l, c, cmax, cc, k, kmax, j, dp, i, a, aa, v, q;
 	double dd, sum, sum2, val, inf;
 	vector <double> susag;
 	vector <vector <double> > Qma;
@@ -227,17 +227,18 @@ void PART::check(unsigned int num, double t)
 			i = indinf[c][j];
 			k = 0; cc = 0; while(k < indev[i].size() && t >= indev[i][k].t){ cc = trans[indev[i][k].trans].to; k++;}
 			
-			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == indev[i][k].timep)) q++;
-			if(q < data.Qnum){ 			
+			q = 0; while(q < data.Q.size() && !(data.Q[q].comp == comp[cc].name && data.Q[q].timep == indev[i][k].timep)) q++;
+			if(q < data.Q.size()){ 			
 				inf = comp[cc].infectivity;
 				
 				dp = data.ind[i].dp;
 				a = data.democatpos[dp][0];
 				v = c*data.nage + a;
-				for(k = 0; k < data.nQ[q][v]; k++){
-					cc = data.Qto[q][v][k];
+				kmax = data.Q[q].to[v].size();
+				for(k = 0; k < kmax; k++){
+					cc = data.Q[q].to[v][k];
 					for(aa = 0; aa < data.nage; aa++){
-						Qma[cc][aa] += model.areafac[cc]*inf*data.Qval[q][v][k][aa];
+						Qma[cc][aa] += model.areafac[cc]*inf*data.Q[q].val[v][k][aa];
 					}
 				}
 			}
@@ -307,14 +308,14 @@ void PART::dofe()
 		if(q != UNSET){
 			fac = model.DQ[dq].fac[loop];
 			
-			kmax = data.nQ[q][v];
+			kmax = data.Q[q].to[v].size();
 			for(k = 0; k < kmax; k++){
-				cc = data.Qto[q][v][k];
+				cc = data.Q[q].to[v][k];
 				fac2 = fac*model.areafac[cc];
 				
 				sum = 0;
 				for(a = 0; a < data.nage; a++){
-					val = fac2*data.Qval[q][v][k][a];
+					val = fac2*data.Q[q].val[v][k][a];
 					Qmap[cc][a] += val;
 					sum += val*susage[cc][a];
 				}
@@ -462,7 +463,7 @@ void PART::addfev(FEV fe, double period, double tnow)
 	unsigned int d, j, jmax;
 	double t;
 
-	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
+	t = fe.t; if(t < tnow){ cout << t << " " << tnow << "\n"; emsg("PART: EC10");}
 	if(t >= period) return;
 	
 	d = (unsigned int)((t/period)*fev.size());
