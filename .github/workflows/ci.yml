@@ -21,7 +21,7 @@ jobs:
 
     - name: Compile
       run: |
-        make CXXFLAGS="-g -O3 -Wall"
+        make -j 2 CXXFLAGS="-g -O3 -Wall"
 
     - name: Run simulation
       run: |
@@ -29,7 +29,7 @@ jobs:
 
     - name: Run inference
       run: |
-        mpirun -n 2 ./run inputfile=inf.toml
+        mpirun -n 2 ./run inputfile=inf.toml nchain=2
 
   # upload:
   #   needs: build
