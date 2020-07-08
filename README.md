@@ -102,3 +102,9 @@ Inference - The output directory contains posterior information (with means and 
 4) "trace.txt", which gives trace plots for different models.
 5) "traceLi.txt", which gives trace plots for the likelihoods on different chains.
 6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
+
+# Development
+
+- [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
+  - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
+- Currently work on feature branches and then merge into master
