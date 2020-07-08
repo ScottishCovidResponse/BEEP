@@ -2,71 +2,11 @@
 Load mpi: module load mpi/openmpi-x86_64
 Compile using: make
 
-INPUTS:
+Simulation:  
+ ./run inputfile="sim.toml"        
 
-Simulation:         
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
-
-MBP Inference:    
-mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1001 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
-
-//mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=10001 period=16 transdata=I,H,reg,cases.txt 
-
-mpirun -n 16 ./run mode=mbp model=irish simtype=smallsim nchain=16 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
-
-PMCMC Inference:  
-mpirun -n 20 ./run mode=pmcmc model=irish simtype=smallsim npart=20 nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt
-
-The flag -n 1 sets the number of cores (set to 1 for simulation or more for inference)
-
-Here is a description of the various inputs:
-
-mode - Defines how the code operates:
-		"sim" generates simulated data.
-		"pmcmc" performs inference using particle MCMC.
-		"mbp" performs inference using multi-temperature MBP MCMC.
-
-model - This defines the compartmental model being used:
-		"irish" defines a SEAPIRHD model for asymtopmatic / presymptomatic / symptomatic individuals.
-	
-area - Determines	the number of areas into which the houses are divided (should be a power of 4)
-
-npart - The total number of particles used when performing PMCMC (should be a multiple of the number of cores).
-
-nchain - The total number of chains used when performing multi-temperature MBP MCMC (should be a multiple of the number of cores).
-
-nsamp - The number of samples used for inference (note, burnin is assumed to be a quater this value).
-
-seed - Sets the random seed when performing inference (this is set to zero by default)
-
-outputdir - Gives the name of the output directory (optional).
-
-transdata - Transition data. Gives the "from" then "to" compartments, the type ("reg" means regional data and "all" means global) and then the file name. More than one set of transition data can be added for an analysis.
-
-housedata - House data. Gives the file name for a file giving the positions of houses.
-
-period - The period of time over which simulation/inference is performed (e.g. measured in weeks).
-
-simtype - Determines the system on which simulation is performed (simulation mode only):
-		"smallsim" a small system with 1024 houses, 10000 individuals and a 2x2 grid of data regions (used for testing)
-		"scotsim" a Scotland-like system with 1.5 million houses, 5.5 million individuals and a 4x4 grid of data regions (used for testing)
-		"uksim" a UK-like system with 20 million houses, 68 million individuals and a 10x10 grid of data regions (used for testing)
-	
- 
-OUTPUTS:
-
-Simulation - This creates the specified 'transdata' and 'housedata' files along with output directory containing:
-1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives time variation in R0.
-3) "parameter.txt", which gives the parameter values used in the simulation.
-
-Inference - The output directory contains postior information (with means and 90% credible intervals) for:
-1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives posterior plotstime variation in R0.
-3) "parameter.txt", which gives information about parameters.
-4) "trace.txt", which gives trace plots for different models.
-5) "traceLi.txt", which gives trace plots for the likelihoods on different chains (MBPs only).
-6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorthm.
+Inference:    
+mpirun -n 1 ./run inputfile="inf.toml"
 */
 
 /*
@@ -120,7 +60,7 @@ string lookup_string_parameter(const map<string,string> &params,
 			val = toml::find<string>(tomldata,key);
 		} else {
 			val = def;
-			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 	if (verbose)
@@ -142,7 +82,7 @@ int lookup_int_parameter(const map<string,string> &params,
 			val = toml::find<int>(tomldata,key);
 		} else {
 			val = def;
-			// emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 	if (verbose)
@@ -173,7 +113,7 @@ vector<string> lookup_stringlist_parameter(
 		if (tomldata.contains(key)) {
 			val = toml::find<vector<string>>(tomldata,key);
 		} else {
-			emsg("ERROR: Parameter \'"+key+"\' must be supplied");
+			emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
 
@@ -219,7 +159,7 @@ void check_for_undefined_parameters(vector<string> allowed, vector<string> given
 			ss << " " << k;
 		}
 		
-		emsg(ss.str());
+		emsgroot(ss.str());
 	}
 }
 
@@ -233,7 +173,7 @@ map<string,string> get_command_line_params(int argc, char *argv[])
 		int j = 0; int jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 
-			emsg(ss.str());
+			emsgroot(ss.str());
 		}
 		
 		string command = str.substr(0,j);
@@ -267,13 +207,12 @@ int main(int argc, char** argv)
 	unsigned int npart=UNSET;                 // The number of particles per core (PMCMC only)
 	
 	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/PMCMC/MBP)
-  unsigned int modelsel=UNSET;              // Sets the model used
 	unsigned int period=UNSET;                // The period of time for simulation / inference
 	
 	int seed=0;                               // Sets the random seed for simulation
 	
-	unsigned int j, jst, jmax, flag;
-	int op;
+	unsigned int j, k;
+
 	TRANSDATA transdata;
 	string str, command, value;
 
@@ -293,28 +232,12 @@ int main(int argc, char** argv)
 		cout << "CoronaPMCMC version " << GIT_VERSION << endl;
 	
 	DATA data;    // The following file names will need to be read in by the interface:
-	
-	data.democatfile = "Data_example/democat.txt";
-	data.regiondatafile = "Data_example/regiondata.txt";  
-	data.areadatafile = "Data_example/areadata.txt";  
-	data.Mdatafile = "Data_example/Mdata.txt";
-	data.Ndatafile = "Data_example/Ndata.txt";   
-	
-	/*
-	data.democatfile = "Data_scotland/democat.txt";
-	//data.democatfile = "Data_scotland/democat_noage.txt";
-	data.regiondatafile = "Data_scotland/regiondata.txt";  
-	data.areadatafile = "Data_scotland/areadata.txt";  
-	//data.areadatafile = "Data_scotland/areadata_noage.txt";  
-	data.Mdatafile = "Data_scotland/Mdata.txt";
-	data.Ndatafile = "Data_scotland/Ndata.txt";   
-	*/
-	
+	MODEL model(data);
+		
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"mode", "model", "simtype", "npart", "nchain", "nsamp",
-																 "period", "seed", "transdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -343,118 +266,291 @@ int main(int argc, char** argv)
 	bool param_verbose = (core == 0);
 
 	if (param_verbose)
-		cout << endl << "Parameters:" << endl;
+		cout << endl << "Settings:" << endl;
 
 	string key,val;
 
+	// DETAILS
+	
 	// mode
 	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");
-	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"mbp", MODE_MBP}};
+	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"inf", MODE_MBP}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
 	} else {
-		emsg("Unrecoginsed value " + val + " for mode parameter");
+		emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	}
 
-	// model
-	val = lookup_string_parameter(cmdlineparams, tomldata, "model", param_verbose, "UNSET");
-	if (val == "irish") {
-		modelsel = MOD_IRISH;
-	} else {
-		emsg("Unrecognised value "+val+" for model parameter");
+	if(mode == MODE_PMCMC){
+		// npart
+		int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", param_verbose, npart);
+		if (npart != UNSET) {
+			if(nparttot%ncore != 0) emsgroot("The number of particles must be a multiple of the number of cores");
+			npart = nparttot/ncore;
+		}
 	}
 
-	// simtype
-	data.simtype = lookup_string_parameter(cmdlineparams, tomldata, "simtype", param_verbose, "UNSET");
-	if (!(data.simtype == "smallsim" || data.simtype == "scotsim" ||
-				data.simtype == "uksim" || data.simtype == "")) {
-		emsg("Unrecognised value \'"+data.simtype+"\' for simtype parameter");
+	if(mode != MODE_SIM){
+		// nchain
+		int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
+		if (nchaintot != UNSET) {
+			if(nchaintot%ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
+			nchain = nchaintot/ncore;
+		}
 	}
-
-	// npart
-	int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", param_verbose, npart);
-	if (npart != UNSET) {
-		if(nparttot%ncore != 0) emsg("The number of particles must be a multiple of the number of cores");
-		npart = nparttot/ncore;
+	
+	if(mode != MODE_SIM){
+		// nsamp
+		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
+		
+		// infmax
+		if(tomldata.contains("infmax")) {
+			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
+		}
+		else emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}
-
-	// nchain
-	int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
-	if (nchaintot != UNSET) {
-		if(nchaintot%ncore != 0) emsg("The number of chains must be a multiple of the number of cores");
-		nchain = nchaintot/ncore;
-	}
-
-	// nsamp
-	nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
-
+	
 	// period
 	period = lookup_int_parameter(cmdlineparams, tomldata, "period", param_verbose);
 
 	// seed
-	seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
-
-	// transdata
-	vector<string> slval = lookup_stringlist_parameter(cmdlineparams, tomldata, "transdata",
-																										 param_verbose);
-
-	for (auto it = slval.begin(); it != slval.end(); it++) {
-
-		string value = *it;
-
-		j = 0; jmax = value.length();
-		while(j < jmax && value.substr(j,1) != ",") j++;
-		if(j == jmax) emsg("Problem with transition data");
-		transdata.from = value.substr(0,j);
-		j++;
-			
-		jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
-		if(j == jmax) emsg("Problem with transition data");
-		transdata.to = value.substr(jst,j-jst);
-		j++;
-			
-		jst = j; while(j < jmax && value.substr(j,1) != ",") j++;
-		if(j == jmax) emsg("Problem with transition data");
-		transdata.type = value.substr(jst,j-jst);
-		if(transdata.type != "reg" && transdata.type != "all") emsg("Transition data type not recognised"); 
-		j++;
-			
-		transdata.file = value.substr(j,jmax-j);
-		data.transdata.push_back(transdata);
-	}	
-
+	if(mode == MODE_SIM){
+		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
+	}
+		
 	// outputdir
-	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose,
-																					 data.outputdir);
+	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
+
+	// data directory
+	data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
+
+	// region data
+	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
+
+	// area data
+	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
 
 	// End of parameters
 	if (param_verbose)
 		cout << endl;
 	
-	if(mode == MODE_SIM && ncore != 1) emsg("Simulation only requires one core");
+	// THE MODEL
 	
-	if(core == 0) cout << "Initialising...." << endl;
- 
-	if(mode == UNSET) emsg("The property 'mode' must be set"); 
+	// age categories
+	if(tomldata.contains("ages")) {
+		const auto ages = toml::find(tomldata,"ages");
+		vector<string> pos, possus;
+		for(j = 0; j < ages.size(); j++){
+			const auto ag = toml::find(ages,j);
+			
+			if(!ag.contains("range")) emsgroot("A 'range' must be specified in 'ages'.");
+			const auto range = toml::find<std::string>(ag,"range");
+			pos.push_back(range);
+			
+			if(!ag.contains("sus")) emsgroot("A 'sus' must be specified in 'ages'.");
+			const auto sus = toml::find<std::string>(ag,"sus");
+			possus.push_back(sus);
+		}
+		data.adddemocat("Age",pos,possus);
+	}
+	else emsgroot("The 'ages' parameter must be set.");
+	
+	if(core == 0){	
+		cout << "Age categories: " << endl;
+		for(j = 0; j < data.democat[0].value.size(); j++){
+			if(j != 0) cout << ", ";
+			cout << data.democat[0].value[j] << " sus='" <<  data.democat[0].param[j] << "'";
+		}
+		cout << endl << endl;
+	}
+	
+	// democats
+	if(tomldata.contains("democats")) {
+		const auto democats = toml::find(tomldata,"democats");
+	
+		for(k = 0; k < democats.size(); k++){
+			vector<string> pos, possus;
+			
+			const auto democat = toml::find(democats,k);
+			
+			for(j = 0; j < democat.size(); j++){
+				const auto demoval = toml::find(democat,j);
+				
+				if(!demoval.contains("value")) emsgroot("A 'value' must be specified in 'democats'.");
+				const auto value = toml::find<std::string>(demoval,"value");
+				pos.push_back(value);
+				
+				if(!demoval.contains("sus")) emsgroot("The property 'sus' must be specified in 'democats'.");
+				const auto sus = toml::find<std::string>(demoval,"sus");
+				vector<string> pos;
+				possus.push_back(sus);
+			}
+			
+			data.adddemocat("",pos,possus);
+		}
+	}
+	
+	if(core == 0 && data.democat.size() > 1){
+		cout << "Demographic categories: " << endl;
+		for(k = 1; k < data.democat.size(); k++){
+			for(j = 0; j < data.democat[k].value.size(); j++){
+				if(j != 0) cout << ", ";
+				cout << data.democat[k].value[j] << " sus='" <<  data.democat[k].param[j] << "'";
+			}	
+			cout << endl;
+		}
+		cout << endl;
+	}
+	
+	// area covariates
+	if(tomldata.contains("covars")) {
+		const auto covars = toml::find(tomldata,"covars");
+		for(j = 0; j < covars.size(); j++){
+			const auto covar = toml::find(covars,j);
+			
+			if(!covar.contains("name")) emsgroot("A 'name' must be specified in 'covars'.");
+			const auto name = toml::find<std::string>(covar,"name");
+	
+			if(!covar.contains("param")) emsgroot("A 'param' must be specified in 'covars'.");
+			const auto par = toml::find<std::string>(covar,"param");
+
+			if(!covar.contains("func")) emsgroot("A 'func' must be specified in 'covars'.");
+			const auto func = toml::find<std::string>(covar,"func");
+
+			data.addcovar(name,par,func);
+		}
+		
+		if(core == 0){
+			cout << "Area covariates: " << endl;
+			for(j = 0; j < data.covar.size(); j++) cout << data.covar[j].name << "   param='" << data.covar[j].param << "'" << endl; 
+		}
+		cout << endl;
+	}
+
+	// timep
+	if(tomldata.contains("timep")) {
+		const auto timep = toml::find(tomldata,"timep");
+		for(j = 0; j < timep.size(); j++){
+			const auto tim = toml::find(timep,j);
+			
+			if(!tim.contains("name")) emsgroot("A 'name' must be specified in 'timep'.");
+			const auto name = toml::find<std::string>(tim,"name");
+			
+			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
+			const auto tend = toml::find<double>(tim,"tend");
+			
+			data.addtimep(name,tend);
+		}
+	}
+	else emsgroot("Property 'timep' defining time periods must be set.");
+
+	if(core == 0){
+		cout << "Time periods defined:" << endl;
+		for(j = 0; j < data.timeperiod.size(); j++){
+			cout << data.timeperiod[j].name << ": ";
+			if(j == 0) cout << "0"; else cout << data.timeperiod[j-1].tend;
+			cout << " - " <<  data.timeperiod[j].tend << endl;
+		}
+		cout << endl;
+	}
+
+	// Q
+	if(tomldata.contains("Q")) {
+		const auto Qlist = toml::find(tomldata,"Q");
+		for(j = 0; j < Qlist.size(); j++){
+			const auto Q = toml::find(Qlist,j);
+			
+			if(!Q.contains("timep")) emsgroot("A 'timep' must be specified in 'Q'.");
+			const auto timep = toml::find<std::string>(Q,"timep");
+			
+			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
+			const auto comp = toml::find<std::string>(Q,"comp");
+			
+			if(!Q.contains("file")) emsgroot("'file' must be specified in 'Q'.");
+			const auto file = toml::find<std::string>(Q,"file");
+			
+			data.addQtensor(timep,comp,file);
+		}
+	}
+	else emsgroot("Property 'timep' defining time periods must be set.");
+	
+	if(core == 0){
+		cout << "Q tensors loaded:" << endl;
+		for(j = 0; j < data.Q.size(); j++){
+			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
+			cout << "compartment: " << data.Q[j].comp << "  ";
+			cout << "file: " << data.Q[j].file << "  ";
+			cout << endl;
+		}
+		cout << endl;
+	}
+	
+	// THE DATA
+	
+
+	// transdata
+	
+	if(tomldata.contains("transdata")) {
+		const auto tdata = toml::find(tomldata,"transdata");
+
+		for(j = 0; j < tdata.size(); j++){
+			const auto td = toml::find(tdata,j);
+			
+			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
+			const auto from = toml::find<std::string>(td,"from");
+			transdata.from = from;
+		
+			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
+			const auto to = toml::find<std::string>(td,"to");
+			transdata.to = to;
+			
+			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
+			const auto area = toml::find<std::string>(td,"area");
+			transdata.type = area;
+			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
+			
+			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
+			const auto file = toml::find<std::string>(td,"file");
+			transdata.file = file;
+			
+			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'transdata'.");
+			const auto start = toml::find<unsigned int>(td,"start");
+			transdata.start = start;
+			
+			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
+			const auto units = toml::find<std::string>(td,"units");
+			if(units == "days") transdata.units = 1;
+			else{
+				if(units == "weeks") transdata.units = 7;
+				else emsgroot("Units in 'transdata' not recognised");
+			}
+			
+			if(mode == MODE_SIM){
+				transdata.rows = (unsigned int)((period - start)/transdata.units);
+				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+			}
+			
+			data.transdata.push_back(transdata);
+		}
+	}
+	else emsgroot("The 'transdata' parameter must be set.");
+
+	if(mode == MODE_SIM && ncore != 1) emsgroot("Simulation only requires one core");
+	
+	if(mode == UNSET) emsgroot("The property 'mode' must be set"); 
  
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(period == UNSET) emsg("The property 'period' must be set");
-	//if(data.housefile=="") emsg("The property 'housedata' must be set");
-
+	if(period == UNSET) emsgroot("The property 'period' must be set");
+	
 	data.readdata(core,ncore,mode,period);
 
-	//if(narea==-1) emsg("The property 'narea' must be set"); 
-	
 	POPTREE poptree;
 	poptree.init(data,core);	
-		
-	MODEL model;
-	model.definemodel(data,core,data.period,data.popsize,modelsel);
 
-	model.addQ(data);
-
-	model.checktransdata(data);
+	model.definemodel(core,data.period,data.popsize,tomldata);
+	model.addQ();
+	model.checktransdata();
 
 	if(core == 0) cout << "Running...." << endl;
 
@@ -470,19 +566,19 @@ int main(int argc, char** argv)
 		break;
 		
 	case MODE_PMCMC:
-		if(nsamp == UNSET) emsg("The number of samples must be set");
-		if(npart == UNSET) emsg("The number of particles must be set");
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+		if(npart == UNSET) emsgroot("The number of particles must be set");
 
 		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
 		break;
 
 	case MODE_MBP: 
-		if(nsamp == UNSET) emsg("The number of samples must be set");
-		if(nchain == UNSET) emsg("The number of chains must be set");
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+		if(nchain == UNSET) emsgroot("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
 		break;
 
-	default: emsg("Mode not recognised"); break;
+	default: emsgroot("Mode not recognised"); break;
  	}
 	
 	timers.timetot += clock();

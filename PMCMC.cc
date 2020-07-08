@@ -55,15 +55,12 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 
 	MPI_Bcast(&model.paramval[0],model.paramval.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
 	
-	model.setup(data,model.paramval);
+	model.setup(model.paramval);
 
 	Li = -large; 
 	for(samp = 0; samp < nsamp; samp++){
 		if(core == 0 && samp%1 == 0) cout << "Sample: " << samp << " / " << nsamp << endl;
  
-		model.parami = model.paramval; model.paramp = model.paramval;
-		model.settransprob();
-		
 		Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
 
 		if(core == 0){ 
@@ -88,12 +85,9 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				
 				MPI_Bcast(&model.paramval[p],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-				model.setup(data,model.paramval);
-				 
 				if(model.paramval[p] < param[p].min || model.paramval[p] > param[p].max) al = 0;
 				else{
-					model.parami = model.paramval; model.paramp = model.paramval;
-					if(model.settransprob() == 0) al = 0;
+					if(model.setup(model.paramval) == 1) al = 0;
 					else{		
 						Lf = sample(data,model,poptree,core,ncore,npart,data.period,xp);
 						if(core == 0){ 
@@ -116,7 +110,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 				}
 				else{
 					model.paramval[p] = valst;
-					model.setup(data,model.paramval);
+					model.setup(model.paramval);
 				
 					if(core == 0){
 						if(samp < burnin) param[p].jump *= 0.95;

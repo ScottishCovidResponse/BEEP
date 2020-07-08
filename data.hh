@@ -2,17 +2,49 @@
 
 //#include "model.hh"
 
-struct TRANSDATA{
+struct TABLE {                             // Loads a table
+	unsigned int ncol;                       // The number of columns
+	unsigned int nrow;                       // The number if rows
+	vector <string> heading;                 // The headings for the columns
+	vector <vector <string> > ele;        	 // The elements of the table
+};
+
+struct TIMEP { 														 // Stores a time period
+	string name;														 // The name of the time period
+	double tend;														 // The end time
+};
+
+struct QTENSOR {                           // Stores information about a Q tensor
+	string comp;                             // The compartment on which the tensor acts
+	unsigned int timep;                      // The time period over which the tensor acts
+	string file;  													 // The name of the file
+	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
+	vector <vector< vector <double> > > val; 	
+};
+
+struct TRANSDATA{                          // Stores data about transitions
 	string from;                             // The "from" compartment
  	string to;                               // The "to" compartment 
 	string type;                             // The type (either "reg" for regional or "all" for global)
  	string file;                             // The file name of the data 
+	unsigned int start;                      // The start time for the data
+	unsigned int units;                      // The units used (e.g. 1=days, 7=weeks) 
 	vector <vector <unsigned int> > num;     // A table giving the number of that transition type
+	unsigned int rows;                       // The number of rows of data
 };
 
 struct DEMOCAT {                           // Stores demographic categories
 	string name;                             // The name of the category
 	vector <string> value;                   // The postential values it can take
+	vector <string> param;                   // The parameters used for the susceptibility
+	vector <unsigned int> col;               // The columns in the table
+};
+
+struct COVAR {                             // Stores the  covariate for the area
+	string name;                             // The name of the covariate (i.e. the column in the area data file)
+	string param;                            // The parameters used
+	string func;                             // The functional transformation
+	unsigned int col;                        // The column in the table
 };
 
 struct REGION {                            // Provides information a data region
@@ -24,9 +56,10 @@ struct AREA {                              // Provides information about an area
 	string code;                             // The code for the area
 	unsigned int region;                     // The data region it belongs to
  	double x, y;                             // The geographic position
-	double density;                          // The density of population 
 	vector <unsigned int> agepop;            // The populations in different age groups
   vector <unsigned int> pop;               // The population in different demographic categories          
+	vector <double> covar;                   // The covariates for that area
+
 	vector <vector <unsigned int> > ind;     // The individuals in different demographic categories
 };
 
@@ -85,15 +118,14 @@ class DATA
 	vector <double> settime;                 // The timings at which beta changes
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
-	string simtype;                          // The system on which simulation is performed
 	
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
 	
-	string democatfile;                      // File giving demographic classifications
+	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas
-	string Mdatafile;                        // File giving the spatial mixing matrix
-	string Ndatafile;                        // File giving the mixing between age classes
+	//string Mdatafile;                        // File giving the spatial mixing matrix
+	//string Ndatafile;                        // File giving the mixing between age classes
 	
  	unsigned int popsize;                    // The total population size 
  
@@ -111,22 +143,13 @@ class DATA
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
 	
-	vector <unsigned int> nM;                // Stores the mixing matrix between areas
-	vector< vector <unsigned int> > Mto;
-	vector< vector <double> > Mval;
-
-	vector< vector <double> > N;             // The maxtrix giving mixing between age groups 
-
-	unsigned int ntimeperiod;                // The number of different time periods (2: before and after lockdown)
-	vector <double> timeperiod;              // The timings of changes to Q;
+	unsigned int ncovar;                     // The number of covariates for area  
+	vector <COVAR> covar;                    // Covariates for area
 	
-	unsigned int Qnum;                       // The number of Q matrices (for different compartments and time variation)
-	vector <string> Qcomp;                   // The compartment when matrix acts
- 	vector <unsigned int> Qtimeperiod;       // The time period when matrix acts
-	vector <vector <unsigned int> > nQ;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <unsigned int> > > Qto;
-	vector <vector <vector< vector <double> > > > Qval;
-		
+	vector <TIMEP> timeperiod;               // The timings of changes to Q;
+	
+	vector <QTENSOR> Q;                      // Stores the list of Q tensors
+	
 	unsigned int nage;                       // The number of age categories
 	unsigned int narage;                     // #area * #age
 	unsigned int nardp;                      // #area * #ndemocatpos
@@ -139,8 +162,15 @@ class DATA
 	AreaRefComparatorY compY;
 	
 	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
+	void adddemocat(string name, vector <string> &st, vector <string> &params);
+	void addcovar(string name, string param, string func);
+	void addtimep(string name, double tend);
+	void addQtensor(string timep, string comp, string file);
 	
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
+	TABLE loadtable(string file);
+	unsigned int findcol(TABLE &tab, string name);
+	void normaliseQ(unsigned int q);
 };

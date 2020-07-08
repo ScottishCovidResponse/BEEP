@@ -21,204 +21,134 @@ jobs:
 
     - name: Compile
       run: |
-        make CXXFLAGS="-g -O3 -Wall -fdiagnostics-color" 2>&1 | tee compile-log.txt
-        aha < compile-log.txt > compile-log.html
-
-    - name: Upload compilation log
-      uses: actions/upload-artifact@v2
-      with:
-        name: compile-log
-        path: compile-log.*
+        make -j 2 CXXFLAGS="-g -O3 -Wall"
 
     - name: Run simulation
       run: |
-        mpirun -n 1 ./run mode=sim model=irish simtype=smallsim seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt | tee simulation-log.txt
-        mkdir Simulation
-        cp cases.txt deaths.txt simulation-log.txt Simulation
-        ls Simulation
-
-    - name: Upload simulation results
-      uses: actions/upload-artifact@v2
-      with:
-        name: Simulation
-        path: Simulation
+        ./run inputfile=sim.toml
 
     - name: Run inference
       run: |
-        mpirun -n 1 ./run mode=mbp model=irish simtype=smallsim nchain=1 nsamp=3 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt | tee inference-log.txt
-        echo "Exit code: $?"
-        cp inference-log.txt Output
+        mpirun -n 2 ./run inputfile=inf.toml nchain=2 nsamp=10
 
-    - name: Upload inference results
-      uses: actions/upload-artifact@v2
-      with:
-        name: Output
-        path: Output
+  # upload:
+  #   needs: build
+  #   if: ${{ always() }}
+  #   runs-on: ubuntu-18.04
 
-    - name: Check output files
-      run: |
-        failures=0
-        required_files="cases.txt deaths.txt"
+  #   steps:
+  #   - uses: actions/checkout@v2
 
-        for f in $required_files ; do
-          if [ ! -r "$f" ]; then
-            echo "Required output file $f not found" >&2
-            failures=$((failures+1))
-          fi
-        done
+  #   - name: Set up ssh agent
+  #     uses: webfactory/ssh-agent@v0.2.0
+  #     with:
+  #       ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-        required_files="
-          MCMCdiagnostic.txt
-          R0.txt
-          cases_Region0.txt
-          cases_Region1.txt
-          cases_Region2.txt
-          cases_Region3.txt
-          deaths.txt
-          parameters.txt
-          trace.txt
-          traceLi.txt"
+  #   - name: Add host public key
+  #     run: |
+  #       echo "projectdata.scrc.uk ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCedi8BdVnymEHtXQ6u7WBi0UAcQdsOEub25kzzCRDMmOOFsicdW30G+wePmw1DbV7HdHONqSo8S5+GmH0Et546TW/8HqaklnOe+1It18XIcvA58Bh8cPv/0r02OJAkmwk7Qja+dOg5iXZSWceTvW6dN/2TuJEXdYGBY1cI9847v8hGGbmH+SZ6wIWrDX/aMgND449ikstfguOckEuBAL1OdOyRm1Li8CtHtQNRefGPZpvtpeKzDB2rkFo+G/nBmBdPJ+kCXiblIMoKK2UhZbz5VYxBmbOUcG4Xq+9EnyxgUcX7VSKfuzIMhJK7OVFbpOs0JTawMhZQzExh9SCKFLavo2arL4WL1EvGKEbZFWedU+lW4vtsaUz2uTg5x6NV7aX+kbSo3Aq2cbxhbAhmt2aw/tFDNil+bUBb0NMWrYbzp5oFCBSw0KpBwGQx/Rc7H+gI0wVGFw24G4Dud1O3JAjv8bBRzihX/m10QsnRm56xVu/JTUuUasaG0Ocyv3uOqfM=" >> ~/.ssh/known_hosts
 
-        for f in $required_files ; do
-          if [ ! -r "Output/$f" ]; then
-            echo "Required output file Output/$f not found" >&2
-            failures=$((failures+1))
-          fi
-        done
+  #   - name: Download log
+  #     run: |
+  #       echo "Job info:"
+  #       echo "{{ needs.build }}"
 
-        if [ $failures -gt 0 ]; then
-          echo "::error ::Failed due to missing output files" >&2
-          exit 1
-        else
-          echo "All required output files found"
-        fi
+  #       echo "Jobs:"
+  #       curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
 
-  upload:
-    needs: build
-    if: ${{ always() }}
-    runs-on: ubuntu-18.04
+  #       cat jobs.json
 
-    steps:
-    - uses: actions/checkout@v2
+  #       build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
 
-    - name: Set up ssh agent
-      uses: webfactory/ssh-agent@v0.2.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #       echo "build_job_id = $build_job_id"
 
-    - name: Add host public key
-      run: |
-        echo "projectdata.scrc.uk ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCedi8BdVnymEHtXQ6u7WBi0UAcQdsOEub25kzzCRDMmOOFsicdW30G+wePmw1DbV7HdHONqSo8S5+GmH0Et546TW/8HqaklnOe+1It18XIcvA58Bh8cPv/0r02OJAkmwk7Qja+dOg5iXZSWceTvW6dN/2TuJEXdYGBY1cI9847v8hGGbmH+SZ6wIWrDX/aMgND449ikstfguOckEuBAL1OdOyRm1Li8CtHtQNRefGPZpvtpeKzDB2rkFo+G/nBmBdPJ+kCXiblIMoKK2UhZbz5VYxBmbOUcG4Xq+9EnyxgUcX7VSKfuzIMhJK7OVFbpOs0JTawMhZQzExh9SCKFLavo2arL4WL1EvGKEbZFWedU+lW4vtsaUz2uTg5x6NV7aX+kbSo3Aq2cbxhbAhmt2aw/tFDNil+bUBb0NMWrYbzp5oFCBSw0KpBwGQx/Rc7H+gI0wVGFw24G4Dud1O3JAjv8bBRzihX/m10QsnRm56xVu/JTUuUasaG0Ocyv3uOqfM=" >> ~/.ssh/known_hosts
+  #       function download()
+  #       {
+  #         curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${@}"
+  #       }
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v2
+  #       # TODO: add error checking
+  #       download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
+  #       download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
+  #       download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
 
-    - name: Display structure of downloaded files
-      run: ls -R
+  #   - name: Write summary page
+  #     run: |
+  #       conclusion="$(jq -r < log/build.json '.conclusion')"
 
-    - name: Download log
-      run: |
-        mkdir log
-        cd log
-        echo "Job info:"
-        echo "{{ needs.build }}"
+  #       function escape_html()
+  #       {
+  #         sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g'
+  #       }
 
-        echo "Jobs:"
-        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+  #       commit_id="$(jq -r < log/run.json '.head_commit.id')"
+  #       commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1|escape_html)"
+  #       commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
+  #       commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
+  #       commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
 
-        cat jobs.json
-
-        build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
-
-        echo "build_job_id = $build_job_id"
-
-        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
-        echo "Exit code: $?"
-        echo "Downloaded files:"
-        find
-        echo "Content of buildlog.txt:"
-        cat buildlog.txt
-
-        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o build.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
-        curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o run.json "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
-
-    - name: Write summary page
-      run: |
-        conclusion="$(jq -r < log/build.json '.conclusion')"
-
-        function escape_html()
-        {
-          sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g'
-        }
-
-        commit_id="$(jq -r < log/run.json '.head_commit.id')"
-        commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1|escape_html)"
-        commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
-        commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
-        commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
-
-        warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
-        title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
+  #       warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
+  #       title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
 
 
-        cat >summary.html <<EOF
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <meta charset="utf-8">
-        <title>$title</title>
-        <link rel="stylesheet" href="style.css">
-        <!-- <script src="script.js"></script> -->
-        </head>
-        <body>
-        <h1>$title</h1>
+  #       cat >summary.html <<EOF
+  #       <!DOCTYPE html>
+  #       <html lang="en">
+  #       <head>
+  #       <meta charset="utf-8">
+  #       <title>$title</title>
+  #       <link rel="stylesheet" href="style.css">
+  #       <!-- <script src="script.js"></script> -->
+  #       </head>
+  #       <body>
+  #       <h1>$title</h1>
 
-        <p>Run status: ${conclusion}</p>
-        <p>No. of compilation warnings: <a href="compile-log.html">${warnings}</a></p>
+  #       <p>Run status: ${conclusion}</p>
+  #       <p>No. of compilation warnings: <a href="compile-log.html">${warnings}</a></p>
 
-        <ul>
-          <li>Git commit -- the version tested in this run:
-            <ul>
-              <li><a href="${commit_url}">${commit_message}</a></li>
-              <li>$commit_author, $commit_timestamp</li>
-            </ul>
-          </li>
-          <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
-          <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
-          <li>Simulation:
-            <ul>
-              <li><a href="Simulation/simulation-log.txt">Simulation log</a> -- The log of the simulation run</li>
-              <li><a href="Simulation">Simulation output</a> -- The output data of the initial test simulation</li>
-            </ul>
-          </li>
-          <li>Inference:
-            <ul>
-              <li><a href="Output/inference-log.txt">Inference log</a> -- The log of the inference run</li>
-              <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
-            </ul>
-          </li>
-          <li><a href="https://github.com/ScottishCovidResponse/CoronaPMCMC/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
-        </ul>
-        </body>
-        </html>
-        EOF
+  #       <ul>
+  #         <li>Git commit -- the version tested in this run:
+  #           <ul>
+  #             <li><a href="${commit_url}">${commit_message}</a></li>
+  #             <li>$commit_author, $commit_timestamp</li>
+  #           </ul>
+  #         </li>
+  #         <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
+  #         <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
+  #         <li>Simulation:
+  #           <ul>
+  #             <li><a href="Simulation/simulation-log.txt">Simulation log</a> -- The log of the simulation run</li>
+  #             <li><a href="Simulation">Simulation output</a> -- The output data of the initial test simulation</li>
+  #           </ul>
+  #         </li>
+  #         <li>Inference:
+  #           <ul>
+  #             <li><a href="Output/inference-log.txt">Inference log</a> -- The log of the inference run</li>
+  #             <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
+  #           </ul>
+  #         </li>
+  #         <li><a href="https://github.com/ScottishCovidResponse/CoronaPMCMC/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
+  #       </ul>
+  #       </body>
+  #       </html>
+  #       EOF
 
-    - name: Upload results to website
-      run: |
-        path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
-        mkdir -p $path
-        # These must always be present, or there is a problem with the CI system
-        cp -a summary.html .github/workflows/style.css $path
-        # These might not be present if the code hasn't worked
-        cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* $path || true
-        echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
-        ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
-        echo "find:"
-        find branches
-        echo "ls -R"
-        ls -R
-        # rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
-        rsync -avz branches ian@projectdata.scrc.uk: # goes into ~/www/coronapmcmc on server
-        url=https://projectdata.scrc.uk/$path
-        echo "::warning ::Build output available at $url" >&2
+  #   - name: Upload results to website
+  #     run: |
+  #       path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
+  #       mkdir -p $path
+  #       # These must always be present, or there is a problem with the CI system
+  #       cp -a summary.html .github/workflows/style.css $path
+  #       # These might not be present if the code hasn't worked
+  #       cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* $path || true
+  #       echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
+  #       ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
+  #       echo "find:"
+  #       find branches
+  #       echo "ls -R"
+  #       ls -R
+  #       # rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
+  #       rsync -avz branches ian@projectdata.scrc.uk: # goes into ~/www/coronapmcmc on server
+  #       url=https://projectdata.scrc.uk/$path
+  #       echo "::warning ::Build output available at $url" >&2
 

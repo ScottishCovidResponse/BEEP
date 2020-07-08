@@ -1,5 +1,5 @@
 MPICXX := mpicxx
-CXXFLAGS := -g -O3 -std=c++11
+CXXFLAGS := -g -O3  -std=c++11
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p
 SHELL = bash

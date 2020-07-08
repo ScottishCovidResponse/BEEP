@@ -103,6 +103,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		nev.push_back(n);
 		
 		n.t = t - log(ran())/(sussum[0][0]*model.phi[sett]);
+
 		n.type = EXT_EV;
 		nev.push_back(n);
 		
@@ -117,7 +118,7 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 
 		t = tf; for(j = 0; j < nev.size(); j++){ if(nev[j].t < t){ t = nev[j].t; jsel = j;}}
 		if(t == tf) break;
-		
+
 		switch(nev[jsel].type){
 		case SET_EV:                 // These are "settime" events which allow the value of beta to change in time
 			sett++; if(sett >= data.nsettime) emsg("Part: EC5");
@@ -135,9 +136,8 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		default: emsg("Part: EC6"); break;
 		}		
-		// check(0,t);
 	}while(t < tf);
-	
+
 	if(checkon == 1) check(0,t);
 }
 
@@ -186,7 +186,7 @@ void PART::addinfc(unsigned int c, double t)
 /// Used to check that various quantities are being correctly updated
 void PART::check(unsigned int num, double t)
 {
-	unsigned int l, c, cmax, cc, k, j, dp, i, a, aa, v, q;
+	unsigned int l, c, cmax, cc, k, kmax, j, dp, i, a, aa, v, q;
 	double dd, sum, sum2, val, inf;
 	vector <double> susag;
 	vector <vector <double> > Qma;
@@ -227,17 +227,18 @@ void PART::check(unsigned int num, double t)
 			i = indinf[c][j];
 			k = 0; cc = 0; while(k < indev[i].size() && t >= indev[i][k].t){ cc = trans[indev[i][k].trans].to; k++;}
 			
-			q = 0; while(q < data.Qnum && !(data.Qcomp[q] == comp[cc].name && data.Qtimeperiod[q] == indev[i][k].timep)) q++;
-			if(q < data.Qnum){ 			
+			q = 0; while(q < data.Q.size() && !(data.Q[q].comp == comp[cc].name && data.Q[q].timep == indev[i][k].timep)) q++;
+			if(q < data.Q.size()){ 			
 				inf = comp[cc].infectivity;
 				
 				dp = data.ind[i].dp;
 				a = data.democatpos[dp][0];
 				v = c*data.nage + a;
-				for(k = 0; k < data.nQ[q][v]; k++){
-					cc = data.Qto[q][v][k];
+				kmax = data.Q[q].to[v].size();
+				for(k = 0; k < kmax; k++){
+					cc = data.Q[q].to[v][k];
 					for(aa = 0; aa < data.nage; aa++){
-						Qma[cc][aa] += inf*data.Qval[q][v][k][aa];
+						Qma[cc][aa] += model.areafac[cc]*inf*data.Q[q].val[v][k][aa];
 					}
 				}
 			}
@@ -272,20 +273,19 @@ void PART::check(unsigned int num, double t)
 /// Makes changes corresponding to a compartmental transition in one of the individuals
 void PART::dofe()
 {
-	unsigned int i, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax;
+	unsigned int i, dq, q, c, cc, ccc, dp, v, a, k, kmax, j, jmax, loop;
 	int l;
-	double sum, val, t;
+	double sum, val, fac, fac2;
 	TRANS tr;
 		 
 	i = fev[tdnext][tdfnext].ind; 
-	t = fev[tdnext][tdfnext].t; 
 	c = data.ind[i].area;
 		 
 	tr = trans[fev[tdnext][tdfnext].trans];
 	N[tr.from]--; if(N[tr.from] < 0) emsg("Part: EC12");
 	N[tr.to]++;
 
-	q = tr.DQ[fev[tdnext][tdfnext].timep]; 
+	dq = tr.DQ[fev[tdnext][tdfnext].timep]; 
 		
 	tdfnext++;
 	if(tdfnext == fev[tdnext].size()){
@@ -293,7 +293,7 @@ void PART::dofe()
 		while(tdnext < fediv && fev[tdnext].size() == 0) tdnext++;
 	}
 		
-	if(q == UNSET) return;
+	if(dq == UNSET) return;
 	
 	dp = data.ind[i].dp;
 	v = c*data.nage+data.democatpos[dp][0];
@@ -301,21 +301,30 @@ void PART::dofe()
 	for(l = 0; l < int(poptree.level); l++) lev[l].donelist.clear();
 	
 	l = poptree.level-1;                                                             // Makes change to Rtot
-	kmax = model.nDQ[q][v];
-	for(k = 0; k < kmax; k++){
-		cc = model.DQto[q][v][k];
-		
-		sum = 0; 
-		for(a = 0; a < data.nage; a++){
-			val = model.DQval[q][v][k][a];
-			Qmap[cc][a] += val;
-			sum += val*susage[cc][a];
-		}
-		Rtot[l][cc] += sum;
-		
-		ccc = lev[l].node[cc].parent;
-		if(lev[l-1].add[ccc] == 0){ lev[l-1].donelist.push_back(ccc);}		
-		lev[l-1].add[ccc] += sum;
+	
+	for(loop = 0; loop < 2; loop++){
+		q = model.DQ[dq].q[loop];
+		if(q != UNSET){
+			fac = model.DQ[dq].fac[loop];
+			
+			kmax = data.Q[q].to[v].size();
+			for(k = 0; k < kmax; k++){
+				cc = data.Q[q].to[v][k];
+				fac2 = fac*model.areafac[cc];
+				
+				sum = 0;
+				for(a = 0; a < data.nage; a++){
+					val = fac2*data.Q[q].val[v][k][a];
+					Qmap[cc][a] += val;
+					sum += val*susage[cc][a];
+				}
+				Rtot[l][cc] += sum;
+				
+				ccc = lev[l].node[cc].parent;
+				if(lev[l-1].add[ccc] == 0){ lev[l-1].donelist.push_back(ccc);}		
+				lev[l-1].add[ccc] += sum;
+			}
+		}			
 	}
 	
 	for(l = poptree.level-2; l >= 0; l--){                                        // Propages change up the tree
@@ -452,11 +461,12 @@ void PART::addfev(FEV fe, double period, double tnow)
 {
 	unsigned int d, j, jmax;
 	double t;
-	
-	t = fe.t; if(t < tnow) emsg("MBPCHAIN: EC10");
+
+	t = fe.t; if(t < tnow){ cout << t << " " << tnow << "\n"; emsg("PART: EC10");}
 	if(t >= period) return;
 	
 	d = (unsigned int)((t/period)*fev.size());
+
 	j = 0; jmax = fev[d].size();
 	if(t != tnow){ while(j < jmax && t >= fev[d][j].t) j++;}
 	else{ while(j < jmax && t > fev[d][j].t) j++;}

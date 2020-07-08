@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include "stdlib.h"
 #include "math.h"
@@ -66,6 +67,18 @@ double gammasamp(double a, double b)
   }
 }
 
+
+/// Splits up a string
+vector<string> split(const string& s, char delimiter)                                                               
+{                                 
+   std::vector<std::string> splits;                       
+   std::string split;                                      
+   std::istringstream ss(s);                               
+   while (std::getline(ss, split, delimiter)) splits.push_back(split);                                                  
+   return splits;                                           
+}
+
+
 /// Displays an error message
 void emsg(string msg)
 {
@@ -74,9 +87,12 @@ void emsg(string msg)
 	exit (EXIT_FAILURE);
 }
 
-void emsg(string msg, string msg2)
+/// Displays an error message on the root core
+void emsgroot(string msg)
 {
-	cout << msg << msg2 << endl;
+	int core;
+	MPI_Comm_rank(MPI_COMM_WORLD,&core);
+	if(core == 0) cout << msg << endl;
 	MPI_Finalize();
 	exit (EXIT_FAILURE);
 }

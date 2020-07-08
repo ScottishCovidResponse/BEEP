@@ -1,4 +1,4 @@
-area	x	y	region	density	0-18	19-65	65+	Male	Female
+area	x	y	region	density	0-18	19-64	65+	Male	Female
 A0	0	0	R0	1	100	300	200	50	50
 A1	1	0	R0	1	100	300	200	50	50
 A2	2	0	R0	1	100	300	200	50	50

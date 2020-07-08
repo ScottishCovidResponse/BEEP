@@ -1,2 +1,0 @@
-Age: 0-18,19-65,65+
-Sex: Male,Female

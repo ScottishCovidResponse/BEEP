@@ -20,16 +20,20 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
 	PART *part;
 	vector <SAMPLE> opsamp;  
+	unsigned int ninf, i;
 		
 	part = new PART(data,model,poptree);
 	
 	part->partinit(0);
 	
-	if(model.settransprob() == 0) emsg("Simulate: EC9");
+	if(model.setup(model.paramval) == 1) emsg("Simulate: EC9");
 		
 	timers.timesim -= clock();
 	part->gillespie(0,data.period, 1 /* simulating */);
 	timers.timesim += clock();
+	
+	ninf = 0; for(i = 0; i < part->indev.size(); i++) if(part->indev[i].size() > 0) ninf++;
+	cout << "# Infected individuals: "<< ninf << endl;
 	
 	outputsimulateddata(data,model,poptree,part->fev);
 	
