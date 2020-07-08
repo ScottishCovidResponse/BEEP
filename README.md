@@ -21,8 +21,8 @@ Compilation: make
 
 Simulation:  ./run inputfile="sim.toml" 
 
-Inference:   mpirun -n 1 ./run inputfile="inf.toml"
-(Here the flag -n 1 sets the number of cores used)
+Inference:   mpirun -n 2 ./run inputfile="inf.toml" nchain=2
+(nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
 
 The input TOML file provides details of simulation or inference and contains all the information CoronaPMCMC needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the repository, along with an example dataset in the directory "Dataset_example".
  
