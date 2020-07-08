@@ -252,7 +252,7 @@ int main(int argc, char** argv)
 	try {
 		tomldata = toml::parse(inputfilename);
 	} catch (...) {
-		std::cerr << "toml::parse returns exception\n";
+		emsg("toml::parse returns exception");
 #ifdef USE_MPI
 		MPI_Finalize();
 #endif
