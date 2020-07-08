@@ -248,7 +248,17 @@ int main(int argc, char** argv)
 	if (cmdlineparams.count("inputfile") == 1) {
 		inputfilename = cmdlineparams["inputfile"];
 	}
-  auto tomldata = toml::parse(inputfilename);
+	decltype(toml::parse(inputfilename)) tomldata;
+	try {
+		tomldata = toml::parse(inputfilename);
+	} catch (...) {
+		std::cerr << "toml::parse returns exception\n";
+#ifdef USE_MPI
+		MPI_Finalize();
+#endif
+		exit(EXIT_FAILURE);
+	}
+		
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
