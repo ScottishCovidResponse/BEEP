@@ -18,9 +18,9 @@ MODEL::MODEL(DATA &data) : data(data)
 }
 
 /// Defines the compartmental model
-void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
+void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* popsize*/, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, t, j, fi, tra, a, d;
+	unsigned int p, c, t, j, fi, tra, a;
 	SPLINEP spl;
 	PRIORCOMP pricomp;
 	
@@ -166,7 +166,6 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	if(data.mode != MODE_SIM){
 		if(tomldata.contains("priorcomps")){
 			string co;
-			double value;
 			
 			const auto prcomps = toml::find(tomldata,"priorcomps");
 			for(j = 0; j < prcomps.size(); j++){
@@ -589,7 +588,10 @@ unsigned int MODEL::settransprob()
 	
 		for(tra = 0; tra < trans.size(); tra++){
 			cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans" << endl;
-			for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ" << endl;
+			for(k = 0; k < trans[tra].DQ.size(); k++) {
+				cout <<  trans[tra].DQ[k] << ", ";
+			}
+			cout << "DQ" << endl;
 		}
 	}
 	
@@ -985,7 +987,7 @@ vector <double> MODEL::R0calc()
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
 {	
-	unsigned int c, a, i, j, jmax, dp, e, emax, k, kmax, tra, th, loop, loopmax = 1;
+	unsigned int c, a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1;
 	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
 	vector <double> paramst;
 	
@@ -1039,6 +1041,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				paramst = paramv;	
 				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
 
+				Lp_prob = Li_prob;
 				if(paramv[th] < param[th].min || paramv[th] > param[th].max){ al = 0; dL = -large;}
 				else{
 					if(param[th].type == 2){
@@ -1046,7 +1049,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 						if(settransprob() == 1) Lp_prob = -large;
 						else Lp_prob = likelihood_prob();
 					}
-					else Lp_prob = Li_prob;
 					
 					dL = dlikelihood_dt(paramst,paramv);
 					
