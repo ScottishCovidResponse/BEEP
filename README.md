@@ -112,5 +112,7 @@ Inference - The output directory contains posterior information (with means and 
   controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
   a branch is pushed to Github, the workflow is run on that
   branch. The workflow compiles and runs the code in both simulation
-  and inference mode.
-  
+  and inference mode. The results of the CI run should be emailed to
+  the committer.  They are also visible on the
+  [Actions](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions)
+  page.
