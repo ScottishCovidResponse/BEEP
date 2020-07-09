@@ -98,10 +98,6 @@ int lookup_int_parameter(const map<string,string> &params,
 				oss << what;
 			}
 			emsg(oss.str());
-#ifdef USE_MPI
-			MPI_Finalize();
-#endif
-			exit(EXIT_FAILURE);
 		}
 	} else {
 		if (tomldata.contains(key)) {
@@ -281,10 +277,6 @@ int main(int argc, char** argv)
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();
 		emsg(oss.str());
-#ifdef USE_MPI
-		MPI_Finalize();
-#endif
-		exit(EXIT_FAILURE);
 	}
 		
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
