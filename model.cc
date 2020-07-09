@@ -1041,6 +1041,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				paramst = paramv;	
 				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
 
+				Lp_prob = Li_prob;
 				if(paramv[th] < param[th].min || paramv[th] > param[th].max){ al = 0; dL = -large;}
 				else{
 					if(param[th].type == 2){
@@ -1048,7 +1049,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 						if(settransprob() == 1) Lp_prob = -large;
 						else Lp_prob = likelihood_prob();
 					}
-					else Lp_prob = Li_prob;
 					
 					dL = dlikelihood_dt(paramst,paramv);
 					
