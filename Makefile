@@ -13,7 +13,7 @@ srcs := MBP.cc MBPCHAIN.cc analysis.cc data.cc model.cc obsmodel.cc output.cc pa
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
 
-CPPFLAGS += -MMD -MP -I$(BUILD_DIR)
+CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
 # The TOML parser causes very long compile times, so we compile
 # analysis.cc without optimisation
