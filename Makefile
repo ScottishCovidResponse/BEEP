@@ -1,4 +1,4 @@
-MPICXX := mpicxx
+CXX := mpicxx
 CXXFLAGS := -g -O3 -W -Wall -std=c++11
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p
@@ -22,11 +22,11 @@ CXXFLAGS_analysis.cc := -O0
 exe := run
 
 $(exe): $(objs)
-	$(MPICXX)  $(objs) -o $@
+	$(CXX)  $(objs) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
-	$(MPICXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
 
 # $(TARGET_ARCH)
 
