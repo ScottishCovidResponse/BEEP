@@ -33,7 +33,7 @@ jobs:
 
     - name: Run scan-build
       run: |
-        CPPFLAGS="$(mpicxx --showme:compile)" scan-build --use-c++ mpicxx -o buildhtml make -B
+        scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
   # upload:
   #   needs: build
