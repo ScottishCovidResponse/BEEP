@@ -1,7 +1,11 @@
 
 # CoronaPMCMC
 
-[![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=master)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI)
+| Branch        | Test status   |
+| ------------- | ------------- |
+| master        | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=master)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |
+| dev           | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=dev)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |
+| chrispooley   | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=chrispooley)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |
 
 C. M. Pooley† [1] and Glenn Marion [1]
 
@@ -108,3 +112,11 @@ Inference - The output directory contains posterior information (with means and 
 - [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
   - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
 - Currently work on feature branches and then merge into master
+- Continuous integration is implemented using Github Actions,
+  controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
+  a branch is pushed to Github, the workflow is run on that
+  branch. The workflow compiles and runs the code in both simulation
+  and inference mode. The results of the CI run should be emailed to
+  the committer.  They are also visible on the
+  [Actions](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions)
+  page.
