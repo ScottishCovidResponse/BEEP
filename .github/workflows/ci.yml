@@ -21,7 +21,7 @@ jobs:
 
     - name: Compile
       run: |
-        make -j 4 --output-sync CXXFLAGS="-g -O3 -Wall"
+        make -j 4 --output-sync
 
     - name: Run simulation
       run: |
