@@ -31,9 +31,9 @@ jobs:
       run: |
         mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2 nsamp=10
 
-    # - name: Run scan-build
-    #   run: |
-    #     scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
+    - name: Run scan-build
+      run: |
+        scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
 
   analyse:
