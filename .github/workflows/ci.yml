@@ -68,21 +68,21 @@ jobs:
 
     - name: Report warnings
       run: |
-        grep ' warning: ' buildlog.txt >warnings.txt
+        if grep ' warning: ' buildlog.txt >warnings.txt; then
 
-        cat warnings.txt
+          cat warnings.txt
 
-        while read ts flc msg; do
-          if [[ $flc =~ (.*):(.*):(.*) ]]; then
-            f=${BASH_REMATCH[1]}
-            l=${BASH_REMATCH[2]}
-            c=${BASH_REMATCH[3]}
-            echo "::warning file=${f},line=${l},col=${c}::${msg}"
-          else
-            echo "Failed to match flc \"$flc\""
-          fi
-        done < warnings.txt
-        
+          while read ts flc msg; do
+            if [[ $flc =~ (.*):(.*):(.*) ]]; then
+              f=${BASH_REMATCH[1]}
+              l=${BASH_REMATCH[2]}
+              c=${BASH_REMATCH[3]}
+              echo "::warning file=${f},line=${l},col=${c}::${msg}"
+            else
+              echo "Failed to match flc \"$flc\""
+            fi
+          done < warnings.txt
+        fi
 
   # upload:
   #   needs: build
