@@ -95,7 +95,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		case 2:
 			do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 				p = int(ran()*nchain);
-				//thbeta = 3;
+				//unsigned int thbeta = 3;
 				//if(ran() < 0.7) th = (unsigned int)(ran()*thbeta);
 				//else th = thbeta + (unsigned int)(ran()*(model.param.size()-thbeta));
 				th = (unsigned int)(ran()*model.param.size());
@@ -127,10 +127,12 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
-		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
+		//if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
+		if(samp == nsamp-1){
 			if(core == 0) outputresults(data,model,opsamp);
 			MBPdiagnostic(data,model,core,ncore,nchain);
 			
+			/*
 			if(core == 0){
 				cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
 				cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
@@ -147,6 +149,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				cout << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
 				cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
 			}
+			*/
 		}
 	}
 }

@@ -105,7 +105,7 @@ vector<string> split(const string& s, char delimiter)
 void emsg(string msg)
 {
 	cout << msg << endl;
-	MPI_Finalize();
+	//MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
 
@@ -115,6 +115,6 @@ void emsgroot(string msg)
 	int core;
 	MPI_Comm_rank(MPI_COMM_WORLD,&core);
 	if(core == 0) cout << msg << endl;
-	MPI_Finalize();
+	//MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
