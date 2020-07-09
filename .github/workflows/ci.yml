@@ -35,6 +35,43 @@ jobs:
       run: |
         scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
+
+  analyse:
+    needs: build
+    if: ${{ always() }}
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download log
+      run: |
+        echo "Job info:"
+        echo "{{ needs.build }}"
+
+        echo "Jobs:"
+        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+
+        cat jobs.json
+
+        build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
+
+        echo "build_job_id = $build_job_id"
+
+        function download()
+        {
+          curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${@}"
+        }
+
+        # TODO: add error checking
+        download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
+        download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
+        download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
+
+    - name: Report warnings
+      run: |
+        grep ' warning: ' buildlog.txt # | while read line; do
+          # echo "::warning file=app.js,line=1,col=5::Missing semicolon"
+        
+
   # upload:
   #   needs: build
   #   if: ${{ always() }}
