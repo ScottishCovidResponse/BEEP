@@ -76,7 +76,32 @@ int lookup_int_parameter(const map<string,string> &params,
 	int val;
 	auto val_it = params.find(key);
 	if (val_it != params.end()) {
-		val = stoi(val_it->second);
+		const std::string& valstr = val_it->second;
+		try {
+			size_t idx;
+			val = stoi(valstr,&idx);
+			if (idx != valstr.length()) {
+				std::ostringstream oss;
+				oss << "Should be integer, found '"<< valstr;
+				throw std::invalid_argument(oss.str());
+			}
+		} catch (const std::exception& e) {
+			std::ostringstream oss;
+			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
+			// Add exception description if it's informative
+			std::string what = e.what();
+			if (what == "stoi") {
+				if (valstr == "")
+					oss << "Should be integer, found no value\n";
+			} else {
+				oss << what;
+			}
+			emsg(oss.str());
+#ifdef USE_MPI
+			MPI_Finalize();
+#endif
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		if (tomldata.contains(key)) {
 			val = toml::find<int>(tomldata,key);
