@@ -1,11 +1,11 @@
 // This describes the observation model. This prescribes how likely the data is given a true event state.
 
-using namespace std;
-
 #include "utils.hh"
 #include "model.hh"
 #include "poptree.hh"
 #include "obsmodel.hh"
+
+using namespace std;
 
 /// Gets all measured quantities
 MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
