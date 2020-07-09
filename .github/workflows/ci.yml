@@ -21,7 +21,7 @@ jobs:
 
     - name: Compile
       run: |
-        make -j 2 CXXFLAGS="-g -O3 -Wall"
+        make -j 4 --output-sync CXXFLAGS="-g -O3 -Wall"
 
     - name: Run simulation
       run: |
@@ -33,7 +33,7 @@ jobs:
 
     - name: Run scan-build
       run: |
-        scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
+        scan-build --use-c++ mpicxx -o buildhtml make -B -e -j 4 --output-sync CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
 
   analyse:
