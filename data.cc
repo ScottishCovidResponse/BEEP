@@ -59,7 +59,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
  
-		tab = loadtable(datadir+"/"+regiondatafile);
+		tab = loadtable(regiondatafile);
 		namecol = findcol(tab,"name");
 		codecol = findcol(tab,"code");
 		
@@ -75,7 +75,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
 		}
 	
-		file = datadir+"/"+areadatafile;
+		file = areadatafile;
 		tab = loadtable(file);
 
 		codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
@@ -165,7 +165,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		if(mode != MODE_SIM){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
-				file = datadir+"/"+transdata[td].file;
+				file = transdata[td].file;
 				tab = loadtable(file);
 	
 				rcol.clear();
@@ -189,7 +189,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		if(mode != MODE_SIM){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
-				file = datadir+"/"+popdata[pd].file;
+				file = popdata[pd].file;
 				tab = loadtable(file);
 	
 				rcol.clear();
@@ -213,7 +213,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		if(mode != MODE_SIM){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
-				file = datadir+"/"+margdata[md].file;
+				file = margdata[md].file;
 				tab = loadtable(file);
 	
 				rcol.clear();
@@ -232,7 +232,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		
 		vec.resize(nage);                                                 // Reads in Q tensors
 		for(q = 0; q < Q.size(); q++){
-			tab = loadtable(datadir+"/"+Q[q].file);
+			tab = loadtable(Q[q].file);
 			
 			Q[q].to.resize(narea*nage); Q[q].val.resize(narea*nage);
 			for(row = 0; row < tab.nrow; row++){
@@ -343,9 +343,13 @@ TABLE DATA::loadtable(string file)
 	TABLE tab;
 	string line, st;
 	vector <string> vec;
+	ifstream in;
 	
-	ifstream in(file.c_str());                             // Loads files
-	if(!in) emsg("Cannot open the file '"+file+"'");
+	in.open((datadir+"/"+file).c_str());
+	if(!in){
+		in.open((outputdir+"/"+file).c_str());
+		if(!in) emsg("Cannot open the file '"+file+"'");
+	}
 	
 	tab.file = file;
 	
