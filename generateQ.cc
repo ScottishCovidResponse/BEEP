@@ -17,10 +17,14 @@
 
 using namespace std;
 
-const short nage = 3;                      // The number of age categories used 
+#include "generateQ.hh"
+#include "utils.hh"
+
+unsigned int nage = 3;                            // The number of age categories used 
 const short normon = 0;                    // Determines if matrix normalised
 const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
-	
+
+/*
 struct AREA {                              // Stores information about areas
 	vector <unsigned int> agepop;            // The populations in different age groups
 };
@@ -31,6 +35,7 @@ struct TABLE {                             // Loads a table
 	vector <string> heading;                 // The headings for the columns
 	vector <vector <string> > ele;        	 // The elements of the table
 };
+*/
 
 struct MATRIX {                            // Loads a matrix
 	unsigned int N;													 // The size of the matrix
@@ -53,9 +58,9 @@ void outputQ(string file, TENSOR Q);
 void plotmat(MATRIX mat, string title);
 
 string strip(string line);
-void emsg(string msg);
+//void emsg(string msg);
 
-int main(int argc, char** argv)
+void generateQ(GENQ genQ)
 {
 	string datadir;
 	vector <AREA> area;
@@ -63,8 +68,34 @@ int main(int argc, char** argv)
 	MATRIX N_all, N_home, N_other, N_school, N_work, M, I;
 	TENSOR Q;
 	
-	if(argc != 2) emsg("Incorrect number of arguments");
+	cout << "Generating Q tensors." << endl;
 	
+	nage = genQ.nage;
+	datadir = genQ.datadir;
+	
+	tab = loadtable(datadir+"/"+genQ.Nall,"nohead");        // Loads age stratified mixing matrices for different activities
+	N_all = matfromtable(tab,nage);
+	
+	tab = loadtable(datadir+"/"+genQ.Nhome,"nohead");
+	N_home = matfromtable(tab,nage);
+	
+	tab = loadtable(datadir+"/"+genQ.Nother,"nohead");
+	N_other = matfromtable(tab,nage);
+	
+	tab = loadtable(datadir+"/"+genQ.Nschool,"nohead");
+	N_school = matfromtable(tab,nage);
+	
+	tab = loadtable(datadir+"/"+genQ.Nwork,"nohead");
+	N_work = matfromtable(tab,nage);
+
+	tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
+	area = loadarea(tab);
+	
+	tab = loadtable(datadir+"/"+genQ.M,"head");              // Loads the census flow data
+	M = matfromtable_sparse(tab,area.size());
+	
+	/*
+	if(argc != 2) emsg("Incorrect number of arguments");
 	datadir = argv[1];                                         // The data directory
 	
 	tab = loadtable(datadir+"/Ndata_all.txt","nohead");        // Loads age stratified mixing matrices for different activities
@@ -87,20 +118,25 @@ int main(int argc, char** argv)
 	
 	tab = loadtable(datadir+"/Mdata.txt","head");              // Loads the census flow data
 	M = matfromtable_sparse(tab,area.size());
-
+	*/
+	
 	I = identity(area.size());                                 // Generates the identity matrix
 	
-	plotmat(N_all,"'All' matrix");                             // Outputs matrices to the terminal
-	plotmat(N_home,"'Home' matrix");
+	//plotmat(N_all,"'All' matrix");                             // Outputs matrices to the terminal
+	//plotmat(N_home,"'Home' matrix");
 		
 	Q = generateQ(M,N_all);                                    // Outputs a Q matrix representative of 'normal' mixing
 	if(normon == 1) normalise(Q,area);
-	outputQ(datadir+"/Q_flow_all_data.txt",Q);
+	//outputQ(datadir+"/Q_flow_all_data.txt",Q);
+	outputQ(datadir+"/"+genQ.flowall,Q);
 
 	//Q = generateQ(I,N_home);                                   // Outputs a Q matrix representative of someone at home 
 	Q = generateQ(M,N_all);   
 	if(normon == 1) normalise(Q,area);
-	outputQ(datadir+"/Q_local_home_data.txt",Q);
+	//outputQ(datadir+"/Q_local_home_data.txt",Q);
+	outputQ(datadir+"/"+genQ.localhome,Q);
+	
+	cout << endl;
 }
 
 /// Outputs a matrix
@@ -124,7 +160,7 @@ void outputQ(string file, TENSOR Q)
 	ofstream op(file.c_str());
 	if(!op) emsg("Cannot write file");
 	
-	cout << "Outputing file '" << file << "'." << endl;
+	cout << "  Outputing file '" << file << "'." << endl;
 	
 	op << "area A\tarea B";
 	for(a = 0; a < nage; a++){
@@ -164,9 +200,9 @@ vector <AREA> loadarea(TABLE tab)
 	AREA are;
 	vector <AREA> area;
 		
-	agecol.push_back(findcol(tab,"0-18"));
-	agecol.push_back(findcol(tab,"19-64"));
-	agecol.push_back(findcol(tab,"65+"));
+	agecol.push_back(findcol(tab,"age0-19"));
+	agecol.push_back(findcol(tab,"age20-64"));
+	agecol.push_back(findcol(tab,"age65+"));
 
 	for(c = 0; c < tab.nrow; c++){
 		are.agepop.resize(nage);
@@ -272,7 +308,7 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 			for(jj = div[j]; jj < div[j+1]; jj++){
 				for(ii = div[i]; ii < div[i+1]; ii++){
 					val = atof(tab.ele[jj][ii].c_str());
-					if(isnan(val)) emsg("Not a number!");
+					if(std::isnan(val)) emsg("Not a number!");
 					sum += val;
 				}
 			}
@@ -371,9 +407,11 @@ string strip(string line)
 	return line;
 }	
 
+/*
 /// Displays an error message
 void emsg(string msg)
 {
 	cout << msg << endl;
 	exit (EXIT_FAILURE);
 }
+*/

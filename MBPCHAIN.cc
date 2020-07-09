@@ -156,7 +156,7 @@ unsigned int MBPCHAIN::mbp()
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
 		if(data.mode == MODE_SIM){
-			cout  << "Time: " << data.settime[t];
+			cout  << "  Time: " << data.settime[t];
 			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
 		}

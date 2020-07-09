@@ -2,6 +2,21 @@
 
 //#include "model.hh"
 
+struct GENQ{
+	string onoff;										       	 // set to "on" if the Q tensor needs to be calculated
+	string Nall;                             // The age matrix of all interations
+	string Nhome;                            // The age matrix of home interations
+	string Nother;                           // The age matrix of other interations
+	string Nschool;                          // The age matrix of school interations
+	string Nwork;                            // The age matrix of work interations
+	string M;                                // The geographic mixing matrix
+	string localhome;                        // The Q matrix for someone at home
+	string flowall;                          // The Q matrix for general daily life
+	unsigned int nage;			   							 // The number of age groups
+	string datadir;                          // The data directory
+	string areadata;                         // Data about the areas
+};
+
 struct TABLE {                             // Loads a table
 	string file; 														 // The file from which the tables was loaded
 	unsigned int ncol;                       // The number of columns
@@ -153,7 +168,9 @@ class DATA
 	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
 	
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
-	
+
+	GENQ genQ; 															 // Stores information about generating the Q matrix
+
 	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas

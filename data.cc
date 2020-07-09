@@ -70,7 +70,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}		
 		nregion = region.size();
 		
-		cout << endl << "Region data loaded." << endl;
+		cout << "Region data loaded." << endl;
 		if(checkon == 1){
 			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
 		}

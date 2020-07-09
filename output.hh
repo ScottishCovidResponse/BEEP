@@ -16,4 +16,4 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &d
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp);
 void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period);
 void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree);
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
+void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);

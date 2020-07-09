@@ -6,6 +6,7 @@ Simulation:
  ./run inputfile="examples/sim.toml"        
 
 Inference:    
+mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
 */
 
@@ -41,6 +42,7 @@ mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
 #include "poptree.hh"
 #include "model.hh"
 #include "data.hh"
+#include "generateQ.hh"
 
 #include "simulate.hh"
 #include "gitversion.hh"
@@ -238,7 +240,7 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -322,6 +324,8 @@ int main(int argc, char** argv)
 
 	// area data
 	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
+
+	data.genQ.onoff = lookup_string_parameter(cmdlineparams, tomldata, "genQ", param_verbose, "UNSET");
 
 	// End of parameters
 	if (param_verbose)
@@ -450,6 +454,61 @@ int main(int argc, char** argv)
 			cout << " - " <<  data.timeperiod[j].tend << endl;
 		}
 		cout << endl;
+	}
+
+	// genQ
+	if(data.genQ.onoff == "on"){
+		if(tomldata.contains("agemix")) {
+			const auto agemix = toml::find(tomldata,"agemix");
+			
+			if(!agemix.contains("Nall")) emsgroot("'Nall' must be specified in 'agemix'.");
+			const auto Nall = toml::find<std::string>(agemix,"Nall");
+			data.genQ.Nall = Nall;
+			
+			if(!agemix.contains("Nhome")) emsgroot("'Nhome' must be specified in 'agemix'.");
+			const auto Nhome = toml::find<std::string>(agemix,"Nhome");
+			data.genQ.Nhome = Nhome;
+			
+			if(!agemix.contains("Nother")) emsgroot("'Nother' must be specified in 'agemix'.");
+			const auto Nother = toml::find<std::string>(agemix,"Nother");
+			data.genQ.Nother = Nother;
+			
+			if(!agemix.contains("Nschool")) emsgroot("'Nschool' must be specified in 'agemix'.");
+			const auto Nschool = toml::find<std::string>(agemix,"Nschool");
+			data.genQ.Nschool = Nschool;
+			
+			if(!agemix.contains("Nwork")) emsgroot("'Nwork' must be specified in 'agemix'.");
+			const auto Nwork = toml::find<std::string>(agemix,"Nwork");
+			data.genQ.Nwork = Nwork;
+		}
+		else emsgroot("'agemix' must be specified.");
+	
+		if(tomldata.contains("geomix")) {
+			const auto geomix = toml::find(tomldata,"geomix");
+			
+			if(!geomix.contains("M")) emsgroot("'M' must be specified in 'geomix'.");
+			const auto M = toml::find<std::string>(geomix,"M");
+			data.genQ.M = M;
+		}
+		else emsgroot("'geomix' must be specified.");
+		
+		if(tomldata.contains("genQoutput")) {
+			const auto qout = toml::find(tomldata,"genQoutput");
+			
+			if(!qout.contains("localhome")) emsgroot("'localhome' must be specified in 'genQoutput'.");
+			const auto localhome = toml::find<std::string>(qout,"localhome");
+			data.genQ.localhome = localhome;
+	
+			if(!qout.contains("flowall")) emsgroot("'flowall' must be specified in 'genQoutput'.");
+			const auto flowall = toml::find<std::string>(qout,"flowall");
+			data.genQ.flowall = flowall;
+		}
+		else emsgroot("'genQoutput' must be specified.");
+		
+		data.genQ.nage = data.democat[0].value.size();
+		data.genQ.datadir = data.datadir;
+		data.genQ.areadata = data.areadatafile;
+		if(core == 0) generateQ(data.genQ); 
 	}
 
 	// Q

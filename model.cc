@@ -20,7 +20,7 @@ MODEL::MODEL(DATA &data) : data(data)
 /// Defines the compartmental model
 void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, t, j, fi, tra, a, d;
+	unsigned int p, c, t, j, fi, tra, a;
 	SPLINEP spl;
 	PRIORCOMP pricomp;
 	
@@ -166,8 +166,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	if(data.mode != MODE_SIM){
 		if(tomldata.contains("priorcomps")){
 			string co;
-			double value;
-			
+		
 			const auto prcomps = toml::find(tomldata,"priorcomps");
 			for(j = 0; j < prcomps.size(); j++){
 				const auto prcomp = toml::find(prcomps,j);
@@ -863,7 +862,7 @@ double MODEL::prior()
 }
 	
 /// Calculate compartmental probabilities
-double MODEL::calcprobin()
+void MODEL::calcprobin()
 {
 	unsigned int c, a, k, j;
 	double prob;
@@ -986,8 +985,8 @@ vector <double> MODEL::R0calc()
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
 {	
-	unsigned int c, a, i, j, jmax, dp, e, emax, k, kmax, tra, th, loop, loopmax = 1;
-	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
+	unsigned int c, a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1;
+	double t, dt, Li_dt, Li_prob, Lp_prob=-large, Prp, al, dL, dd;
 	vector <double> paramst;
 	
 	timers.timecompparam -= clock();

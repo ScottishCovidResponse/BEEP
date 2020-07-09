@@ -20,6 +20,7 @@ nsamp     = 1000
 # The output directory
 outputdir	= "Output"
 
+
 ########### THE MODEL #############
 
 # Defines the compartments in the model.
@@ -156,6 +157,13 @@ regions		= "regiondata.txt"
 # Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
 
 areas			= "areadata.txt"
+
+
+# Generates Q matrices from geographic and age mixing matrices
+genQ			= "on"
+agemix		= {Nall="Ndata_all.txt", Nhome="Ndata_home.txt", Nother="Ndata_other.txt", Nschool="Ndata_school.txt", Nwork="Ndata_work.txt"}
+geomix		= {M="Mdata.txt"}
+genQoutput= {localhome="Q_local_home_data.txt", flowall="Q_flow_all_data.txt"}
 
 
 # A list of different Q tensors which act at different periods (timep is before and after lockdown)
