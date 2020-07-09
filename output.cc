@@ -404,6 +404,8 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	double sum;
 	MEAS meas;
 	
+	ensuredirectory(dir);
+		
 	meas = getmeas(data,model,poptree,trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
