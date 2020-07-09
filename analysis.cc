@@ -20,6 +20,8 @@ mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
  scancel <jobid>
  mybalance
 */
+// sed -i 's/\r$//g' gitversion.sh    gets rid of \r
+
 
 #include <iostream>
 #include <sstream>
@@ -41,7 +43,6 @@ mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
 #include "data.hh"
 
 #include "simulate.hh"
-#include "PMCMC.hh"
 #include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
@@ -202,10 +203,9 @@ int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
 	unsigned int nsamp=UNSET;                 // The number of samples for inference
-	unsigned int nchain=UNSET;                // The number of chains per core (MBP only)
-	unsigned int npart=UNSET;                 // The number of particles per core (PMCMC only)
+	unsigned int nchain=UNSET;                // The number of chains per core
 	
-	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/PMCMC/MBP)
+	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
 	unsigned int period=UNSET;                // The period of time for simulation / inference
 	
 	int seed=0;                               // Sets the random seed for simulation
@@ -238,7 +238,7 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -276,20 +276,11 @@ int main(int argc, char** argv)
 	
 	// mode
 	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");
-	map<string,int>  modemap{{"sim", MODE_SIM}, {"pmcmc", MODE_PMCMC}, {"inf", MODE_MBP}};
+	map<string,int>  modemap{{"sim", MODE_SIM}, {"inf", MODE_INF}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
 	} else {
 		emsgroot("Unrecoginsed value " + val + " for mode parameter");
-	}
-
-	if(mode == MODE_PMCMC){
-		// npart
-		int nparttot = lookup_int_parameter(cmdlineparams, tomldata, "npart", param_verbose, npart);
-		if (npart != UNSET) {
-			if(nparttot%ncore != 0) emsgroot("The number of particles must be a multiple of the number of cores");
-			npart = nparttot/ncore;
-		}
 	}
 
 	if(mode != MODE_SIM){
@@ -646,18 +637,10 @@ int main(int argc, char** argv)
 	
 	switch(mode){
 	case MODE_SIM:
-		//simulatedata(data,model,poptree);
-		simulatedata_mbp(data,model,poptree);
-		break;
-		
-	case MODE_PMCMC:
-		if(nsamp == UNSET) emsgroot("The number of samples must be set");
-		if(npart == UNSET) emsgroot("The number of particles must be set");
-
-		PMCMC(data,model,poptree,nsamp,core,ncore,npart);
+		simulatedata(data,model,poptree);
 		break;
 
-	case MODE_MBP: 
+	case MODE_INF: 
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 		if(nchain == UNSET) emsgroot("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain);
@@ -670,13 +653,16 @@ int main(int argc, char** argv)
 	
 	if(core == 0){
 		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
-		if(mode != MODE_MBP) cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time (seconds)" << endl;
-		if(mode == MODE_PMCMC) cout << double(timers.timeboot)/CLOCKS_PER_SEC << " Bootstrap time (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-		if(mode == MODE_MBP) cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+		if(mode == MODE_SIM){
+			cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time (seconds)" << endl;
+		}
+		else{
+			cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
+			cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+			cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
+			cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+			cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+		}
 	}
 	
 	#ifdef USE_MPI

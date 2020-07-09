@@ -13,7 +13,6 @@ using namespace std;
 #include "timers.hh"
 #include "model.hh"
 #include "utils.hh"
-#include "PART.hh"
 #include "MBPCHAIN.hh"
 #include "output.hh"
 #include "pack.hh"
@@ -105,9 +104,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	
 	if(data.mode == MODE_SIM) return;
 	
-	//setdata(data,model,poptree,trevi,indevi);
-	
-	Li = Lobs_mbp(data,model,poptree,trevi,indevi);
+	Li = Lobs(data,model,poptree,trevi,indevi);
 	Pri = model.prior();
 
 	setQmapi(1);
@@ -354,7 +351,7 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 			model.copyp();
 			if(mbp() == 1) al = 0;
 			else{
-				Lp = Lobs_mbp(data,model,poptree,trevp,indevp);
+				Lp = Lobs(data,model,poptree,trevp,indevp);
 				Prp = model.prior();
 				
 				al = exp(Prp-Pri + invT*(Lp-Li));		
@@ -385,7 +382,7 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 
 	if(checkon == 1){
 		model.setup(paramval);
-		dd = Li - Lobs_mbp(data,model,poptree,trevi,indevi); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC34");
+		dd = Li - Lobs(data,model,poptree,trevi,indevi); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC34");
 		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC35");
 	}
 	
@@ -1195,7 +1192,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	timers.timembptemp4 -= clock();
 	Levp = likelihood(Qmapp,xp,indevp);
 	
-	Lp = Lobs_mbp(data,model,poptree,trevp,indevp);
+	Lp = Lobs(data,model,poptree,trevp,indevp);
 	timers.timembptemp4 += clock();
 		
 	al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);

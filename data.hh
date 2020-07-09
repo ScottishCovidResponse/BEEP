@@ -137,7 +137,7 @@ class DATA
 	{
 	}
 
-	unsigned int mode;                       // Stores if doing simulation/mbp/pmcmc
+	unsigned int mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
 	unsigned int fepertime;                  // # fediv per nsettime

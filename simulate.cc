@@ -9,7 +9,6 @@
 
 #include "utils.hh"
 #include "timers.hh"
-#include "PART.hh"
 #include "MBPCHAIN.hh"
 #include "data.hh"
 #include "output.hh"
@@ -18,34 +17,8 @@ using namespace std;
 
 void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
 
-/// Generates transition data (e.g. hostipalisation data similar to the actual data we currently have from Covid-19)
-void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
-{
-	PART *part;
-	vector <SAMPLE> opsamp;  
-	unsigned int ninf, i;
-		
-	part = new PART(data,model,poptree);
-	
-	part->partinit(0);
-	
-	if(model.setup(model.paramval) == 1) emsg("Simulate: EC9");
-		
-	timers.timesim -= clock();
-	part->gillespie(0,data.period, 1 /* simulating */);
-	timers.timesim += clock();
-	
-	proportions(data,model,part->indev);
-	
-	outputsimulateddata(data,model,poptree,part->fev);
-	
-	//opsamp.push_back(outputsamp(1,0,0,data,model,poptree,model.paramval,part->fev));	
-	outputresults(data,model,opsamp);
-	//outputeventsample(part->fev,data,model,poptree);
-}
-
 /// Simulates data using the MBP algorithm
-void simulatedata_mbp(DATA &data, MODEL &model, POPTREE &poptree)
+void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
 	
 	MBPCHAIN *mbpchain;
@@ -58,9 +31,9 @@ void simulatedata_mbp(DATA &data, MODEL &model, POPTREE &poptree)
 		
 	proportions(data,model,mbpchain->indevi);
 	
-	outputsimulateddata_mbp(data,model,poptree,mbpchain->trevi,mbpchain->indevi);
+	outputsimulateddata(data,model,poptree,mbpchain->trevi,mbpchain->indevi);
 	
-	opsamp.push_back(outputsamp_mbp(0,0,0,0,data,model,poptree,mbpchain->paramval,0,mbpchain->trevi,mbpchain->indevi));
+	opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain->paramval,0,mbpchain->trevi,mbpchain->indevi));
 	outputresults(data,model,opsamp);
 }
 

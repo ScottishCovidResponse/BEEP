@@ -12,7 +12,6 @@ using namespace std;
 
 #include "utils.hh"
 #include "model.hh"
-#include "PART.hh"
 #include "output.hh"
 #include "obsmodel.hh"
 #include "consts.hh"
@@ -62,77 +61,17 @@ void outputLiinit(DATA &data, unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void outputLi(unsigned int samp, unsigned int nparttot, double *Litot)
+void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 {
 	unsigned int p;
 	
 	traceLi << samp;
-	for(p = 0; p < nparttot; p++) traceLi << "\t" << Litot[p]; 
+	for(p = 0; p < nchaintot; p++) traceLi << "\t" << Litot[p]; 
 	traceLi << endl;
 }
 
 /// Outputs trace plot for parameters and store state data for plotting later
-/*
-SAMPLE outputsamp(double invT, unsigned int samp, double Li, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, vector < vector <FEV> > &fev)
-{
-	SAMPLE sa;
-	unsigned int p, np, r, row, sum, td, ti, tf;
-	vector <unsigned int> num;
-	
-	np = paramval.size();
-	
-	trace << samp; 
-	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
-	trace << "\t" << Li;
-	trace << "\t" << invT; 
-	trace << "\t" << 0;
-	trace << endl;
-	
-	sa.paramval = paramval;
-	
-	sa.meas = getmeas(data,model,poptree,trev,indev);
-	sa.transnum.resize(data.transdata.size());
-	for(td = 0; td < data.transdata.size(); td++){
-		if(data.transdata[td].type == "reg"){
-			sa.transnum[td].resize(data.nregion);
-			for(r = 0; r < data.nregion; r++){ 
-				sa.transnum[td][r].resize(data.transdata[td].rows);
-			}
-			
-			for(row = 0; row < data.transdata[td].rows; row++){
-				ti = data.transdata[td].start + row*data.transdata[td].units;
-				tf = ti + data.transdata[td].units;
-			
-				num = getnumtrans(data,model,poptree,fev,data.transdata[td].trans,ti,tf);
-				for(r = 0; r < data.nregion; r++) sa.transnum[td][r][row] = num[r];
-			}
-		}
-		
-		if(data.transdata[td].type == "all"){
-			sa.transnum[td].resize(1);
-			for(r = 0; r < 1; r++){
-				sa.transnum[td][r].resize(data.transdata[td].rows);
-			}
-			
-			for(row = 0; row < data.transdata[td].rows; row++){
-				ti = data.transdata[td].start + row*data.transdata[td].units;
-				tf = ti + data.transdata[td].units;
-			
-				num = getnumtrans(data,model,poptree,fev,data.transdata[td].trans,ti,tf);
-				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
-				sa.transnum[td][0][row] = sum;
-			}
-		}
-	}
-	
-	sa.R0 = model.R0calc();
-	
-	return sa;
-}
-*/
-
-/// Outputs trace plot for parameters and store state data for plotting later
-SAMPLE outputsamp_mbp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
 	unsigned int p, np, r, row, sum, sumtot, td, ti, tf, md, d, j, pc, c, a;
@@ -364,7 +303,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
-	if(data.mode == MODE_MBP){
+	if(data.mode == MODE_INF){
 		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 
@@ -379,8 +318,6 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 		diag << "MCMC diagnostics:" << endl;
 
-		if(data.mode == MODE_PMCMC) diag << "Base acceptance rate " << double(model.nac)/model.ntr << endl;
-		
 		for(p = 0; p < model.param.size(); p++){
 			diag << model.param[p].name << ": ";
 			if(model.param[p].ntr == 0) diag << "Fixed" << endl;
@@ -459,66 +396,8 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 	}
 }
 
-/// Generates case data based on a simulation
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev)
-{
-	unsigned int row, r, tot, td, sum, ti, tf;
-	vector <unsigned int> num;
-	
-	for(td = 0; td < data.transdata.size(); td++){
-		num = getnumtrans(data,model,poptree,fev,data.transdata[td].trans,0,data.period);
-		
-		tot = 0;
-		cout << endl << "The following number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions were observed:" << endl;
-		for(r = 0; r < data.nregion; r++){
-			cout <<	data.region[r].name << ": " << num[r] << endl;
-			tot += num[r];
-		}
-		cout << "Total: " << tot << endl; 
-		cout << endl;
-	}
-	
-	cout << "Simulated Data:" << endl;
-	for(td = 0; td < data.transdata.size(); td++){
-		stringstream ss; ss << data.datadir << "/" << data.transdata[td].file;
-		ofstream transout(ss.str().c_str());
-		if(!transout) emsg("Cannot output the file '"+ss.str()+"'");
-		
-		cout << "'" << ss.str() << "' gives the observed weekly number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
-		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
-		else cout << "." << endl;
-		
-		transout << "Week"; 
-		if(data.transdata[td].type == "reg"){
-			for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}
-		}
-		else{
-			transout << "\t" << "all";
-		}
-		transout << endl;
-		
-		for(row = 0; row < data.transdata[td].rows; row++){
-			ti = data.transdata[td].start + row*data.transdata[td].units;
-			tf = ti + data.transdata[td].units;
-			
-			transout << row;
-			num = getnumtrans(data,model,poptree,fev,data.transdata[td].trans,ti,tf);
-			if(data.transdata[td].type == "reg"){				
-				for(r = 0; r < data.nregion; r++){ transout <<  "\t" << num[r];} transout << endl;
-			}
-			
-			if(data.transdata[td].type == "all"){
-				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r]; 
-				transout <<  "\t" << sum << endl;
-			}
-		}
-	}
-	
-	cout << endl;
-}
-	
 /// Generates case data based on a simulation using the MBP algorithm
-void outputsimulateddata_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	unsigned int row, r, tot, td, pd, md, d, j, jj;
 	double sum, sumtot;

@@ -2,7 +2,7 @@
 
 using namespace std;
 
-#include "PART.hh"
+#include "model.hh"
 
 void packinit();
 int packsize();

@@ -2,77 +2,10 @@
 
 using namespace std;
 
-#include "obsmodel.hh"
 #include "utils.hh"
-
-/// The total observation probability for a complete set of events fev
-double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, double invT)
-{
-	unsigned int t;
-	double Ltot;
-	
-	Ltot = 0; for(t = 0; t < data.period; t++) Ltot += Lobs(data,model,poptree,t,fev,invT);
-	return Ltot;
-}
-
-/// Measures how well the particle agrees with the observations for a given time range t to t+1
-/// (e.g. weekly hospitalised case data)
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree, unsigned int t, vector < vector <FEV> > &fev, double invT)
-{
-	unsigned int r, td, sum;
-	double mean, var, L;
-	vector <unsigned int> num;
-	
-	L = 0;	
-	for(td = 0; td < data.transdata.size(); td++){
-		num = getnumtrans(data,model,poptree,fev,data.transdata[td].trans,t,t+1);
-		
-		if(data.transdata[td].type == "reg"){
-			for(r = 0; r < data.nregion; r++){
-				mean = data.transdata[td].num[r][t];
-				var = mean; if(var < 5) var = 5;
-				var *= varfac;
-				L += -0.5*log(2*M_PI*var) - (mean-num[r])*(mean-num[r])/(2*var);
-			}
-		}
-		
-		if(data.transdata[td].type == "all"){
-			sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
-	
-			mean = data.transdata[td].num[0][t];
-			var = mean; if(var < 5) var = 5;
-			var *= varfac;
-			L += -0.5*log(2*M_PI*var) - (mean-sum)*(mean-sum)/(2*var);
-		}
-	}
-		
-	return invT*L;
-}
-
-/// Returns the number of transitions for individuals going down a transition
-/// in different regions over the time range ti - tf
-vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, unsigned int tra, unsigned int ti, unsigned int tf)
-{
-	unsigned int d, dmax, k, r;
-	FEV fe;
-	vector <unsigned int> num;
-
-	for(r = 0; r < data.nregion; r++) num.push_back(0);
-
-	dmax = fev.size();
-	if(dmax != data.fediv) emsg("fevsize");
-	for(d = (unsigned int)(dmax*double(ti)/data.period); d <= (unsigned int)(dmax*double(tf)/data.period); d++){
-		if(d < dmax){
-			for(k = 0; k < fev[d].size(); k++){
-				fe = fev[d][k];
-				if(fe.t > tf) break;
-				if(fe.t > ti && fe.trans == tra) num[data.area[data.ind[fe.ind].area].region]++;
-			}
-		}
-	}
-	
-	return num;
-}
+#include "model.hh"
+#include "poptree.hh"
+#include "obsmodel.hh"
 
 /// Gets all measured quantities
 MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
@@ -89,7 +22,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 			ti = data.transdata[td].start + row*data.transdata[td].units;
 			tf = ti + data.transdata[td].units;
 
-			num = getnumtrans_mbp(data,model,poptree,trev,indev,data.transdata[td].trans,ti,tf,UNSET,UNSET);
+			num = getnumtrans(data,model,poptree,trev,indev,data.transdata[td].trans,ti,tf,UNSET,UNSET);
 			
 			if(data.transdata[td].type == "reg"){
 				meas.transnum[td][row].resize(data.nregion);
@@ -146,7 +79,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 	
 		if(data.margdata[md].type == "reg"){
 			for(j = 0; j < data.democat[d].value.size(); j++){
-				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
+				num = getnumtrans(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
 				
 				meas.margnum[md][j].resize(data.nregion);
 				for(r = 0; r < data.nregion; r++) meas.margnum[md][j][r] = num[r];
@@ -155,7 +88,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 		
 		if(data.margdata[md].type == "all"){
 			for(j = 0; j < data.democat[d].value.size(); j++){
-				num = getnumtrans_mbp(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
+				num = getnumtrans(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
 				
 				meas.margnum[md][j].resize(1);
@@ -169,7 +102,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	unsigned int td, pd, md, row, r, j;
 	double mean, val, var, L, sum;
@@ -222,7 +155,7 @@ double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVR
 /// Returns the number of transitions for individuals going down a transition
 /// in different regions over the time range ti - tf
 /// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> getnumtrans_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
+vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
 {
 	unsigned int r, sett, i, j;
 	vector <unsigned int> num;

@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const unsigned int MODE_SIM=0, MODE_PMCMC=1, MODE_MBP=2;         // Different modes of operation 
+const unsigned int MODE_SIM=0, MODE_INF=1;                        // Different modes of operation 
  
 const unsigned int FEV_EV=0, INF_EV=1;                           // Event types (future event/infection/settime/external)
 const unsigned int SET_EV=2, EXT_EV=3, XIFEV_EV=4, XPFEV_EV=5;

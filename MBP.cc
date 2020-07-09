@@ -9,7 +9,6 @@
 using namespace std;
 
 #include "model.hh"
-#include "PART.hh"
 #include "MBPCHAIN.hh"
 #include "output.hh"
 #include "pack.hh"
@@ -338,7 +337,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			if(packsize() != siz) emsg("MBP: EC10");
 		}
 		
-		opsamp.push_back(outputsamp_mbp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
+		opsamp.push_back(outputsamp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
 	}
 	else{
 		if(core == ppost/nchain){
