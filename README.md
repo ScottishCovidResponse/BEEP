@@ -108,3 +108,9 @@ Inference - The output directory contains posterior information (with means and 
 - [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
   - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
 - Currently work on feature branches and then merge into master
+- Continuous integration is implemented using Github Actions,
+  controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
+  a branch is pushed to Github, the workflow is run on that
+  branch. The workflow compiles and runs the code in both simulation
+  and inference mode.
+  
