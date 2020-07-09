@@ -126,8 +126,8 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		case INF_EV:                 // These are infection events within the system
  		case EXT_EV:                 // These are external infection event
-	  	c = nextinfection(nev[0].type);
-			addinfc(c,t);	
+	  	c = nextinfection(nev[jsel].type);
+			addinfc(c,t,nev[jsel].type);	
 			break;
 			
 		case FEV_EV:                 // These correspond to other compartmental transitions (e.g. E->A, E->I etc...)
@@ -136,13 +136,14 @@ void PART::gillespie(double ti, double tf, unsigned int outp)
 		
 		default: emsg("Part: EC6"); break;
 		}		
+		//if(t > 111 && checkon == 1) check(0,t);
 	}while(t < tf);
 
-	if(checkon == 1) check(0,t);
+	//if(checkon == 1) check(0,t);
 }
 
 /// Adds an exposed indivdual in area c
-void PART::addinfc(unsigned int c, double t)
+void PART::addinfc(unsigned int c, double t, unsigned int type)
 {
 	unsigned int i, dp, j, jmax, k, kmax, a;
 	int l;
@@ -152,7 +153,13 @@ void PART::addinfc(unsigned int c, double t)
 	
 	sum = 0; sumst.resize(data.ndemocatpos);
 	for(dp = 0; dp < data.ndemocatpos; dp++){ 
-		sum += data.area[c].pop[dp]*model.sus[dp];
+		if(type == INF_EV){
+			a = data.democatpos[dp][0];
+			sum += data.area[c].pop[dp]*model.sus[dp]*Qmap[c][a];
+		}
+		else{
+			sum += data.area[c].pop[dp]*model.sus[dp];
+		}
 		sumst[dp] = sum;
 	}
 	
@@ -247,7 +254,7 @@ void PART::check(unsigned int num, double t)
 		
 	for(c = 0; c < data.narea; c++){
 		for(a = 0; a < data.nage; a++){
-			dd = Qma[c][a] - Qmap[c][a]; if(dd*dd > tiny) emsg("Part: EC22");
+			dd = Qma[c][a] - Qmap[c][a]; if(sqrt(dd*dd) > tiny){ cout <<t << " " << Qma[c][a] << " " << Qmap[c][a] << "  \n"; emsg("Part: EC22");}
 		}
 	}
 	

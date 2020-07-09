@@ -46,8 +46,6 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 		sendbuffer[p].resize(BUFMAX);
 		recibuffer[p].resize(BUFMAX);
 	}
-
-	srand(core);
 	
 	for(p = 0; p < npart; p++){ part[p] = new PART(data,model,poptree);}
 
@@ -119,7 +117,7 @@ void PMCMC(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsig
 			}
 		}
 	
-		if(core == 0) opsamp.push_back(outputsamp(invT,samp,Li,data,model,poptree,model.paramval,xi));	
+		//if(core == 0) opsamp.push_back(outputsamp(invT,samp,Li,data,model,poptree,model.paramval,xi));	
 	}
 	
 	if(core == 0) outputresults(data,model,opsamp);

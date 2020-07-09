@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 
+#include "timers.hh"
 #include "math.h"
 #include "consts.hh"
 #include "utils.hh"
@@ -19,8 +20,9 @@ MODEL::MODEL(DATA &data) : data(data)
 /// Defines the compartmental model
 void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, t, j, fi;
+	unsigned int p, c, t, j, fi, tra, a, d;
 	SPLINEP spl;
+	PRIORCOMP pricomp;
 	
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
@@ -38,7 +40,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 				if(!params.contains("value")) emsg("Parameter must contain a 'value' definition.");
 				value = toml::find<double>(params,"value");
 				
-				addparam(name,value,value,value);
+				addparam(name,value,value);
 			}
 		}
 		else{ emsg("The input file must contain parameter values through 'params'.");}
@@ -57,7 +59,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 				
 				if(params.contains("value")){
 					value = toml::find<double>(params,"value");
-					addparam(name,value,value,value);
+					addparam(name,value,value);
 				}
 				else{
 					if(!params.contains("type")) emsg("The prior must have a 'value' or a 'type'");
@@ -70,7 +72,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 						if(!params.contains("max")) emsg("A uniform prior must contain a 'max' definition.");
 						double max = toml::find<double>(params,"max");
 				
-						addparam(name,0.5+(max-min),min,max);
+						addparam(name,min,max);
 					}
 					else emsg("The prior type '"+type+"' is not recognised.");
 				}
@@ -78,8 +80,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 		}
 		else{ emsg("The input file must contain parameter values through 'params'.");}
 	}
-	
-	addparam("zero",tiny,tiny,tiny);
+	addparam("zero",tiny,tiny);
 	
 	if(tomldata.contains("comps")) {
 		string name, dist, mean="", sd="";
@@ -162,6 +163,34 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	}
 	else{ emsg("The input file must contain transition definitions through 'trans'.");}
 	
+	if(data.mode != MODE_SIM){
+		if(tomldata.contains("priorcomps")){
+			string co;
+			double value;
+			
+			const auto prcomps = toml::find(tomldata,"priorcomps");
+			for(j = 0; j < prcomps.size(); j++){
+				const auto prcomp = toml::find(prcomps,j);
+				
+				if(!prcomp.contains("comp")) emsg("'priorcomps' must contain a 'comp' definition.");
+				co = toml::find<std::string>(prcomp,"comp");
+				c = 0; while(c < comp.size() && comp[c].name != co) c++;
+				if(c == comp.size()) emsg("Cannot find '"+co+"' in 'priorcomps'");
+				pricomp.comp = c;
+				
+				if(!prcomp.contains("value")) emsg("'priorcomps' must contain a 'value' definition.");
+				double val = toml::find<double>(prcomp,"value");
+				pricomp.value = val;
+				
+				if(!prcomp.contains("sd")) emsg("'priorcomps' must contain a 'sd' definition.");
+				double sd = toml::find<double>(prcomp,"sd");
+				pricomp.sd = sd;
+		
+				priorcomps.push_back(pricomp);
+			}
+		}
+	}
+	
 	if(tomldata.contains("betaspline")) {
 		const auto bespin = toml::find(tomldata,"betaspline");
 		for(j = 0; j < bespin.size(); j++){
@@ -230,24 +259,40 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 	ntr = 0; nac = 0;
 	parami.resize(param.size()); paramp.resize(param.size());
 
-	paramval.resize(param.size()); for(p = 0; p < param.size(); p++) paramval[p] = param[p].valinit;
+	paramval.resize(param.size());
+	priorsamp();
  
 	beta.resize(data.nsettime);	phi.resize(data.nsettime);
 	
 	setup(paramval);
+	
+	for(c = 0; c < comp.size(); c++){                                                 // Sets the type of parameters
+		switch(comp[c].type){
+		case EXP_DIST: param[comp[c].param1].type = 1; break;
+		case GAMMA_DIST: case LOGNORM_DIST: param[comp[c].param1].type = 1; param[comp[c].param2].type = 1; break;
+		}
+	}
+	
+	for(tra = 0; tra < trans.size(); tra++){
+		if(trans[tra].istimep == 0){
+			if(trans[tra].probparam.size() > 0){
+				for(a = 0; a < data.nage; a++) param[trans[tra].probparam[a]].type = 2; 
+			}
+		}
+	}
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
 		if(data.mode == MODE_SIM){
 			cout << "Parameters:" << endl;
 			for(p = 0; p < param.size()-1; p++){
-				cout << param[p].name << " = " << param[p].valinit << endl;
+				cout << "  " << param[p].name << " = " << param[p].min << endl;
 			}
 		}
 		else{
 			cout << "Priors:" << endl;
 			for(p = 0; p < param.size()-1; p++){
-				cout << param[p].name << " = ";
+				cout << "  " << param[p].name << " = ";
 				if(param[p].min ==  param[p].max) cout << param[p].min << endl;
 				else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
 			}
@@ -256,7 +301,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 			
 		cout << "Compartments:" << endl; 
 		for(c = 0; c < comp.size(); c++){
-			cout << comp[c].name << "  Infectivity: " << comp[c].infectivity << "  "; 
+			cout << "  " << comp[c].name << "  Infectivity: " << comp[c].infectivity << "  "; 
 			
 			switch(comp[c].type){
 				case INFECTION: 
@@ -284,7 +329,7 @@ void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, 
 		
 		cout << "Transitions:" << endl; 
 		for(t = 0; t < trans.size(); t++){
-			cout << comp[trans[t].from].name << " → " << comp[trans[t].to].name;
+			cout << "  " << comp[trans[t].from].name << " → " << comp[trans[t].to].name;
 			if(trans[t].probparam.size() > 0){
 				cout << "  with probability ";
 				for(j = 0; j < trans[t].probparam.size(); j++){
@@ -333,10 +378,6 @@ void MODEL::addQ()
 {
 	unsigned int q, qi, qf, c, ci, cf, tra, timep, timepi, timepf;
 	string compi, compf;
-	vector <unsigned int> map;
-	vector <unsigned int> nDQadd;               // Stores the mixing matrix between areas and ages 
-	vector< vector <unsigned int> > DQtoadd;
-	vector <vector< vector <double> > > DQvaladd;
 	DQINFO dq;
 	
 	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"");  
@@ -344,11 +385,7 @@ void MODEL::addQ()
 	for(q = 0; q < data.Q.size(); q++){
 		for(c = 0; c < comp.size(); c++) if(data.Q[q].comp == comp[c].name) break;
 		if(c == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
-		
-		if(data.Q[q].timep < 0 || data.Q[q].timep >= ntimeperiod) emsg("The time period for Q is out of range.");
 	}
-	
-	map.resize(data.narea); for(c = 0; c < data.narea; c++) map[c] = UNSET;
 	
 	dq.q.resize(2); dq.fac.resize(2);
 	for(tra = 0; tra < trans.size(); tra++){
@@ -386,11 +423,11 @@ void MODEL::addQ()
 void MODEL::priorsamp()
 {
 	unsigned int th;
-	
+
 	for(th = 0; th < param.size(); th++){	
-		//paramval[th] = param[th].sim;
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
+	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";\n";
 }
 
 /// Gets a parameter value
@@ -405,7 +442,7 @@ double MODEL::getinfectivity(string name)
 	unsigned int c;
 
 	c = 0; while(c < comp.size() && comp[c].name != name) c++;
-	if(c ==  comp.size()) emsg("Cannot find compartment '"+name+"'");
+	if(c == comp.size()) emsg("Cannot find compartment '"+name+"'");
 	return comp[c].infectivity;
 }
 
@@ -436,11 +473,11 @@ unsigned int MODEL::findparam(string name)
 }
 
 /// Adds a parameter to the model
-void MODEL::addparam(string name, double val, double min, double max)
+void MODEL::addparam(string name, double min, double max)
 {
 	PARAM par;
-	par.name = name; par.valinit = val; par.sim = val; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = val/10;
-	par.used = 0;
+	par.name = name; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = 0.5*(min+max)/10; if(par.jump == 0) par.jump = 0.1;
+	par.used = 0; par.type = 0;
 
 	param.push_back(par);
 }
@@ -456,8 +493,8 @@ void MODEL::addtrans(string from, string to, string prpar)
 	if(c == cmax) emsg("Cannot find compartment");
 	tr.from = c;	
 	
-	if(from != to) comp[c].trans.push_back(trans.size());
-	else comp[c].transtimep = trans.size();
+	if(from != to){ tr.istimep = 0; comp[c].trans.push_back(trans.size());}
+	else{ tr.istimep = 1; comp[c].transtimep = trans.size();}
 		
 	c = 0; cmax = comp.size(); while(c < cmax && to != comp[c].name) c++;
 	if(c == cmax) emsg("Cannot find compartment");	
@@ -542,7 +579,7 @@ unsigned int MODEL::settransprob()
 	unsigned int c, k, kmax, tra, a;
 	int p;
 	double sum, prob;
-	
+
 	if(checkon == 2){
 		for(c = 0; c <  comp.size(); c++){
 			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
@@ -592,7 +629,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 	double mean, sd, z, dt;
 	FEV ev;
 	vector <double> probsum;
-	
+
 	timep = 0; while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 
 	ev.ind = i; ev.timep = timep; 
@@ -631,7 +668,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		default: emsg("MODEL: EC2b"); break;
 		}
 
-		while(timep < ntimeperiod && timeperiod[timep].tend < t){    // Adds in changes in time period
+		while(timep < ntimeperiod-1 && timeperiod[timep].tend < t){    // Adds in changes in time period
 			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep].tend;
 			evlist.push_back(ev);
 			timep++;
@@ -655,74 +692,90 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 /// This does an equivelent MBP for the compartmental model
 void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 {
-	unsigned int c, k, kmax, kk, tra, e, emax, i, p, p2, timep, a;
-	double meani, sdi, meanp, sdp, z, t, dt;
+	unsigned int c, k, kmax, tra, e, emax, i, p, p2, timep, a;
+	double meani, sdi, meanp, sdp, z, ti, tp, dt, sum, dif;
 	FEV ev;
-	vector <double> probsum;
+	vector <double> sumst;
 
 	evlistp.clear();
 	
 	ev = evlisti[0];
-	tra = ev.trans; t = ev.t; i = ev.ind; timep = ev.timep;
+	tra = ev.trans; ti = ev.t; i = ev.ind; timep = ev.timep;
 	evlistp.push_back(ev);
 	
 	a = data.democatpos[data.ind[i].dp][0];
 		
 	c = trans[tra].to;
 	
+	tp = ti;
 	emax = evlisti.size();
 	for(e = 1; e < emax; e++){
-		dt = evlisti[e].t-evlisti[e-1].t;
-		
-		kmax = comp[c].trans.size();
-		if(kmax == 0) break;
-		
-		switch(comp[c].type){
-		case EXP_DIST:
-			p = comp[c].param1;
-			t += dt*paramp[p]/parami[p];
-			break;
-		
-		case GAMMA_DIST:
-			emsg("model: EC9");
-			break;
-			
-		case LOGNORM_DIST:
-			p = comp[c].param1; p2 = comp[c].param2;
-			meani = parami[p]; sdi = parami[p2];
-			meanp = paramp[p]; sdp = paramp[p2];
-			
-			if(meani == meanp && sdi == sdp) t += dt;
-			else t += exp(meanp + (log(dt) - meani)*sdp/sdi);
-			break;
-			
-		default: emsg("MODEL: EC2b"); break;
-		}
-	
 		tra = evlisti[e].trans;
-		
-		if(kmax > 1){
-			k = 0; while(k < kmax && tra != comp[c].trans[k]) k++;
-			if(k == kmax) emsg("model: EC32");
+		if(trans[tra].istimep == 0){		
+			dt = evlisti[e].t - ti;
+			ti = evlisti[e].t;
 			
-			if(comp[c].probp[k] < comp[c].probi[k]){  // Looks at switching to another branch
-				if(ran() < 1 - comp[c].probp[a][k]/comp[c].probi[a][k]){
-					do{
-						z = ran(); kk = 0; while(kk < kmax && z > comp[c].probsum[a][kk]) kk++;
-					}while(kk == k);
-					tra = comp[c].trans[kk];
-				}
-			}			
-		}
+			kmax = comp[c].trans.size();
+			if(kmax == 0) break;
+			
+			switch(comp[c].type){
+			case EXP_DIST:
+				p = comp[c].param1;
+				tp += dt*paramp[p]/parami[p];
+				break;
+			
+			case GAMMA_DIST:
+				emsg("model: EC9");
+				break;
+				
+			case LOGNORM_DIST:
+				p = comp[c].param1; p2 = comp[c].param2;
+				meani = parami[p]; sdi = parami[p2];
+				meanp = paramp[p]; sdp = paramp[p2];
+				
+				if(meani == meanp && sdi == sdp) tp += dt;
+				else tp += exp(meanp + (log(dt) - meani)*sdp/sdi);
+				break;
+				
+			default: emsg("MODEL: EC2b"); break;
+			}
+	
+			while(timep < ntimeperiod-1 && timeperiod[timep].tend < tp){    // Adds in changes in time period
+				ev.trans = comp[c].transtimep; ev.t = timeperiod[timep].tend;
+				evlistp.push_back(ev);
+				timep++;
+				ev.timep = timep; 
+			}
 		
-		ev.trans = tra; ev.t = t;
-		evlistp.push_back(ev);
-
-		c = trans[tra].to; 
-		if(evlisti[e].trans != tra) break;
+			if(kmax > 1){
+				k = 0; while(k < kmax && tra != comp[c].trans[k]) k++;
+				if(k == kmax) emsg("model: EC32");
+				
+				if(comp[c].probp[a][k] < comp[c].probi[a][k]){  // Looks at switching to another branch
+					if(ran() < 1 - comp[c].probp[a][k]/comp[c].probi[a][k]){
+						sum = 0; sumst.clear();
+						for(k = 0; k < kmax; k++){
+							dif = comp[c].probp[a][k] - comp[c].probi[a][k];
+							if(dif > 0) sum += dif;
+							sumst.push_back(sum);
+						}
+						
+						z = ran()*sum; k = 0; while(k < kmax && z > sumst[k]) k++;
+						if(k == kmax) emsg("Model: EC12");
+						tra = comp[c].trans[k];
+					}
+				}	
+			}
+			
+			ev.trans = tra; ev.t = tp;
+			evlistp.push_back(ev);
+			
+			c = trans[tra].to; 
+			if(evlisti[e].trans != tra) break;
+		}
 	}
-
-	if(comp[c].trans.size() != 0) simmodel(evlistp,i,c,t);
+	
+	if(comp[c].trans.size() != 0)	simmodel(evlistp,i,c,tp);
 }
   
 /// Defines the relative susceptibility of individuals
@@ -752,84 +805,142 @@ void MODEL::setarea()
 	for(c = 0; c < data.narea; c++){
 		sum = 0; for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
 		areafac[c] = exp(sum);
+		//for(j = 0; j < data.ncovar; j++){
+			//cout << j << " " << paramval[covar_param[j]] << " " << data.area[c].covar[j] << " cc\n";
+		//}
+		//cout << c << " " << areafac[c] << " area fac\n";
 	}
 }
 
-/// Check that the transition data is correct
-void MODEL::checktransdata()
+/// Checks that the transition and population data is correct
+void MODEL::checkdata()
 {
-	unsigned int td, tra;
-	string from, to;
+	unsigned int td, pd, md, c, tra;
+	string from, to, compstr;
 	TRANS tr;
 	
 	for(td = 0; td < data.transdata.size(); td++){
-		from = data.transdata[td].from; to = data.transdata[td].to; 
-		for(tra = 0; tra < trans.size(); tra++){
-			tr = trans[tra];
-			if(comp[tr.from].name == from && comp[tr.to].name == to) break;
-		}
+		from = data.transdata[td].fromstr; to = data.transdata[td].tostr; 
+		for(tra = 0; tra < trans.size(); tra++){ if(comp[trans[tra].from].name == from && comp[trans[tra].to].name == to) break;}
 		
-		if(tra == trans.size()){
-			stringstream ss; ss << "Cannot find the transition " << from << "→" << to << ".";
-			emsg(ss.str());
+		if(tra == trans.size()) emsg("Cannot find the transition "+from+"→"+to+" in file '"+data.transdata[td].file+"'.");
+		data.transdata[td].trans = tra;
+	}
+	
+	for(pd = 0; pd < data.popdata.size(); pd++){
+		compstr = data.popdata[pd].compstr;
+		for(c = 0; c < comp.size(); c++){ if(comp[c].name == compstr) break;}
+		if(c == comp.size()) emsg("Cannot find the compartment '"+compstr+"' in file '"+data.popdata[pd].file+"'.");
+		data.popdata[pd].comp = c;
+	}
+	
+	for(md = 0; md < data.margdata.size(); md++){
+		from = data.margdata[md].fromstr; to = data.margdata[md].tostr; 
+		for(tra = 0; tra < trans.size(); tra++){ if(comp[trans[tra].from].name == from && comp[trans[tra].to].name == to) break;}
+		
+		if(tra == trans.size()) emsg("Cannot find the transition "+from+"→"+to+" in file '"+data.margdata[md].file+"'.");
+		data.margdata[md].trans = tra;
+	}
+}
+
+/// Calculates the prior probability
+double MODEL::prior()
+{
+	unsigned int pc, a, c;
+	double Pr, prob;
+	
+	Pr = 0;
+	if(priorcomps.size() > 0){
+		calcprobin();
+		for(pc = 0; pc < priorcomps.size(); pc++){
+			c = priorcomps[pc].comp;
+			prob = 0; for(a = 0; a < data.nage; a++) prob += data.agedist[a]*comp[c].probin[a];
+			Pr += normalprob(prob,priorcomps[pc].value,priorcomps[pc].sd*priorcomps[pc].sd);
 		}
+	}
+	
+	return Pr;
+}
+	
+/// Calculate compartmental probabilities
+double MODEL::calcprobin()
+{
+	unsigned int c, a, k, j;
+	double prob;
+	vector <unsigned int> cst, kst;
+	vector <double> probst;
+	
+	for(c = 0; c < comp.size(); c++){
+		comp[c].probin.resize(data.nage);
+		for(a = 0; a < data.nage; a++) comp[c].probin[a] = 0;
+	}
+	
+	for(a = 0; a < data.nage; a++){
+		prob = 1;
+		c = 0;
+		do{
+			comp[c].probin[a] += prob;
+			
+			if(comp[c].trans.size() == 0){
+				if(cst.size() == 0) break;
+				
+				while(cst.size() > 0){
+					j = cst.size()-1;
+					c = cst[j];
+					prob = probst[j]; 
+					kst[j]++;
+					k = kst[j];
+					if(k < comp[c].trans.size()) break;
+					
+					cst.pop_back();
+					probst.pop_back();
+					kst.pop_back();
+				}
+				if(k == comp[c].trans.size()) break;
+			}
+			else{
+				k = 0;
+				if(comp[c].trans.size() > 1){
+					cst.push_back(c);
+					probst.push_back(prob);
+					kst.push_back(0);
+				}
+			}
+				
+			if(comp[c].trans.size() > 1) prob *= comp[c].prob[a][k];
+			c = trans[comp[c].trans[k]].to;		
+		}while(1 == 1);
+		
+		if(cst.size() > 0 || kst.size() > 0 || probst.size() > 0) emsg("Model: EC54");
 	}
 }
 
 /// Calculates R0
 vector <double> MODEL::R0calc()
 {
-	unsigned int c, cc, a, aa, flag, k, kmax, st, timep, q, co, vi, dp;
+	unsigned int c, cc, a, aa, k, kmax, st, timep, q, co, vi, dp;
 	double t, dt, mean, sd, fac;
 	vector <double> R0;
 	vector <double> R0fac;
 
 	setup(paramval);
+	calcprobin();
 	
 	for(c = 0; c < comp.size(); c++){
-		comp[c].probin.resize(data.nage);
-		comp[c].infint.resize(data.nage);
-		for(a = 0; a < data.nage; a++){
-			if(comp[c].name == "S") comp[c].probin[a] = 1;
-			else comp[c].probin[a] = -1;
-			comp[c].infint[a] = -1;
+		switch(comp[c].type){
+		case NO_DIST: case INFECTION: dt = 0; break;
+		case EXP_DIST: dt = paramval[comp[c].param1]; break;
+		case GAMMA_DIST: dt = paramval[comp[c].param1]; break;
+		case LOGNORM_DIST:
+			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
+			dt = exp(mean + sd*sd/2);
+			break;
+		default: dt = 0; emsg("MODEL: EC56"); break;
 		}
-	}
-	
-	do{
-		flag = 0;
-		for(c = 0; c < comp.size(); c++){
-			if(comp[c].probin[0] >= 0 && comp[c].infint[0] == -1){
-				switch(comp	[c].type){
-				case NO_DIST: case INFECTION: dt = 0; break;
-				case EXP_DIST: dt = paramval[comp[c].param1]; break;
-				case GAMMA_DIST: dt = paramval[comp[c].param1]; break;
-				case LOGNORM_DIST:
-					mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
-					dt = exp(mean + sd*sd/2);
-					break;
-				default: dt = 0; emsg("MODEL: EC56"); break;
-				}
 				
-				for(a = 0; a < data.nage; a++){
-					comp[c].infint[a] = comp[c].probin[a]*comp[c].infectivity*dt;
-				}					
-			
-				kmax = comp[c].trans.size();
-				if(kmax == 1){
-					cc = trans[comp[c].trans[0]].to; 
-					for(a = 0; a < data.nage; a++) comp[cc].probin[a] = comp[c].probin[a];
-				}
-				else{
-					for(k = 0; k < kmax; k++){
-						cc = trans[comp[c].trans[k]].to; 
-						for(a = 0; a < data.nage; a++) comp[cc].probin[a] = comp[c].probin[a]*comp[c].prob[a][k];
-					}
-				}
-				flag = 1;
-			}
-		}
-	}while(flag == 1);
+		comp[c].infint.resize(data.nage);
+		for(a = 0; a < data.nage; a++) comp[c].infint[a] = comp[c].probin[a]*comp[c].infectivity*dt;
+	}
 	
 	R0fac.resize(ntimeperiod);
 	for(timep = 0; timep < ntimeperiod; timep++) R0fac[timep] = 0;
@@ -870,3 +981,227 @@ vector <double> MODEL::R0calc()
 		
 	return R0;
 }
+
+/// Makes proposal to compartmental paramters
+void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
+												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
+{	
+	unsigned int c, a, i, j, jmax, dp, e, emax, k, kmax, tra, th, loop, loopmax = 1;
+	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
+	vector <double> paramst;
+	
+	timers.timecompparam -= clock();
+
+	
+	for(tra = 0; tra < trans.size(); tra++){
+		if(trans[tra].istimep == 0){
+			trans[tra].num.resize(data.nage); for(a = 0; a < data.nage; a++) trans[tra].num[a] = 0;
+		}
+	}
+		
+	for(c = 0; c < comp.size(); c++){ 
+		comp[c].numvisittot = 0; comp[c].dtsum = 0; comp[c].dtlist.clear();
+  }
+	
+	jmax = x.size();                                                                  // Extracts values based on the event sequence
+	for(j = 0; j < jmax; j++){
+		i = x[j].ind;
+		dp = data.ind[i].dp;
+		a = data.democatpos[dp][0];
+				
+		c = 0; t = 0;
+		emax = indev[i].size();
+		for(e = 0; e < emax; e++){
+			tra = indev[i][e].trans;
+			if(trans[tra].istimep == 0){
+				trans[tra].num[a]++;
+	
+				dt = indev[i][e].t-t;
+				t += dt;
+				
+				comp[c].numvisittot++;
+				switch(comp[c].type){
+				case EXP_DIST: comp[c].dtsum += dt; break;
+				case GAMMA_DIST: case LOGNORM_DIST: comp[c].dtlist.push_back(dt); break;
+				}
+			}
+			
+			c = trans[tra].to;
+		}
+	}
+	
+	Li_dt = likelihood_dt(paramv);
+	Li_prob = likelihood_prob();
+	paramval = paramv; if(settransprob() == 1) emsg("Model: EC32");
+		
+	for(loop = 0; loop < loopmax; loop++){
+		for(th = 0; th < param.size(); th++){
+			if(param[th].type > 0 && param[th].min != param[th].max){
+				paramst = paramv;	
+				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
+
+				if(paramv[th] < param[th].min || paramv[th] > param[th].max){ al = 0; dL = -large;}
+				else{
+					if(param[th].type == 2){
+						paramval = paramv;
+						if(settransprob() == 1) Lp_prob = -large;
+						else Lp_prob = likelihood_prob();
+					}
+					else Lp_prob = Li_prob;
+					
+					dL = dlikelihood_dt(paramst,paramv);
+					
+					Prp = prior();
+					
+					al = exp(dL+ Lp_prob - Li_prob + Prp-Pri);
+				}
+				
+				ntrxi[th]++;
+				if(ran() < al){
+					Li_dt += dL;
+					Li_prob = Lp_prob;
+					Pri = prior();
+					
+					nacxi[th]++;
+					if(samp < burnin) paramjumpxi[th] *= 1.01;
+				}
+				else{
+					paramv = paramst;
+					if(samp < burnin) paramjumpxi[th] *= 0.995;
+				}
+			}
+		}
+	}
+	
+	paramval = paramv; if(settransprob() == 1) emsg("Model: EC32");
+		
+	if(checkon == 1){
+		dd = likelihood_dt(paramv)-Li_dt; if(dd*dd > tiny) emsg("Model: EC45");
+		dd = likelihood_prob()-Li_prob; if(dd*dd > tiny) emsg("Model: EC46");
+	}
+	
+	timers.timecompparam += clock();
+}
+
+/// Calculates the likelihood relating to branching probabilities
+double MODEL::likelihood_prob()
+{
+	unsigned int c, k, kmax, a;
+	double L;
+	
+	L = 0;
+	for(c = 0; c < comp.size(); c++){	
+		kmax = comp[c].trans.size();
+		if(kmax > 1){
+			for(k = 0; k < kmax; k++){
+				for(a = 0; a < data.nage; a++){
+					L += trans[comp[c].trans[k]].num[a]*log(comp[c].prob[a][k]);
+				}
+			}
+		}
+	}
+	
+	return L;
+}
+			
+/// Calculates the likelihood for the timings of the transitions
+double MODEL::likelihood_dt(vector <double> &paramv)
+{
+	unsigned int c, j, jmax;
+	double L, r, mean, sd;
+	
+	L = 0;
+	for(c = 0; c < comp.size(); c++){
+		switch(comp[c].type){
+		case EXP_DIST:
+			r = 1.0/paramv[comp[c].param1];
+			L += comp[c].numvisittot*log(r) - r*comp[c].dtsum;
+			break;
+		
+		case GAMMA_DIST:
+			mean = paramv[comp[c].param1]; sd = paramv[comp[c].param2];
+			jmax = comp[c].dtlist.size();
+			for(j = 0; j < jmax; j++) L += gammaprob(comp[c].dtlist[j],mean*mean/(sd*sd),mean/(sd*sd));
+			break;
+			
+		case LOGNORM_DIST:
+			mean = paramv[comp[c].param1]; sd = paramv[comp[c].param2];
+			jmax = comp[c].dtlist.size();
+			for(j = 0; j < jmax; j++) L += lognormprob(comp[c].dtlist[j],mean,sd*sd);
+			break;
+		}
+	}
+	
+	return L;
+}
+
+/// Calculates the change in likelihood for a given change in parameters
+double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
+{
+	unsigned int c, j, jmax;
+	double L, ri, meani, sdi, rf, meanf, sdf;
+	
+	L = 0;
+	for(c = 0; c < comp.size(); c++){
+		switch(comp[c].type){
+		case EXP_DIST:
+			ri = 1.0/paramvi[comp[c].param1]; rf = 1.0/paramvf[comp[c].param1];
+			if(ri != rf){
+				L += comp[c].numvisittot*log(rf) - rf*comp[c].dtsum;
+				L -= comp[c].numvisittot*log(ri) - ri*comp[c].dtsum;
+			}
+			break;
+		
+		case GAMMA_DIST:
+			meani = paramvi[comp[c].param1]; sdi = paramvi[comp[c].param2];
+			meanf = paramvf[comp[c].param1]; sdf = paramvf[comp[c].param2];
+			
+			if(meani != meanf || sdi != sdf){
+				jmax = comp[c].dtlist.size();
+				for(j = 0; j < jmax; j++){
+					L += gammaprob(comp[c].dtlist[j],meanf*meanf/(sdf*sdf),meanf/(sdf*sdf));
+					L -= gammaprob(comp[c].dtlist[j],meani*meani/(sdi*sdi),meani/(sdi*sdi));
+				}
+			}				
+			break;
+			
+		case LOGNORM_DIST:
+			meani = paramvi[comp[c].param1]; sdi = paramvi[comp[c].param2];
+			meanf = paramvf[comp[c].param1]; sdf = paramvf[comp[c].param2];
+		
+			if(meani != meanf || sdi != sdf){
+				jmax = comp[c].dtlist.size();
+				for(j = 0; j < jmax; j++){
+					L += lognormprob(comp[c].dtlist[j],meanf,sdf*sdf);
+					L -= lognormprob(comp[c].dtlist[j],meani,sdi*sdi);
+				}
+			}
+			break;
+		}
+	}
+	
+	return L;
+}
+
+/// Outputs an event sequence (used for debugging)
+void MODEL::oe(string name, vector <FEV> &ev)
+{
+	unsigned int e, tra;
+	
+	cout << name << ":" << endl;
+	for(e = 0; e < ev.size(); e++){
+		tra = ev[e].trans;
+		cout << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << "  " << ev[e].t << endl;
+	}
+}
+
+/// Determines if it is necessary to do mbp for the exisiting event sequence
+unsigned int MODEL::dombpevents()
+{
+	unsigned int th;
+	for(th = 0; th < param.size(); th++){
+		if(parami[th] != paramp[th] && param[th].type > 0) return 1;
+	}
+	return 0;
+}
+	

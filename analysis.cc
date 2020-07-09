@@ -6,9 +6,12 @@ Simulation:
  ./run inputfile="sim.toml"        
 
 Inference:    
-mpirun -n 1 ./run inputfile="inf.toml"
+mpirun -n 20 ./run inputfile="inf.toml" nchain=20
 */
 
+// mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile=inf2.toml nchain=20
+
+// make -j 10
 /*
  Commands for running on DiRAC:
  ./submit-csd3 --groups 65536 --seed 1 --samples 10 --nprocs 32 --nnode 1  --walltime 1:00:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test
@@ -44,8 +47,6 @@ mpirun -n 1 ./run inputfile="inf.toml"
 #include "consts.hh"
 
 using namespace std;
- 
-
 
 string lookup_string_parameter(const map<string,string> &params,
 															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
@@ -67,7 +68,6 @@ string lookup_string_parameter(const map<string,string> &params,
 		cout << "  " << key << " = " << val << endl;
 	return val;
 }
-
 
 int lookup_int_parameter(const map<string,string> &params,
 												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
@@ -198,7 +198,6 @@ vector<string> keys_of_map(map<string,string> m)
 	return keys;
 }
 
-
 int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
@@ -211,9 +210,11 @@ int main(int argc, char** argv)
 	
 	int seed=0;                               // Sets the random seed for simulation
 	
-	unsigned int j, k;
+	unsigned int j, k, d;
 
 	TRANSDATA transdata;
+	POPDATA popdata;
+	MARGDATA margdata;
 	string str, command, value;
 
 	#ifdef USE_MPI
@@ -237,7 +238,7 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "transdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "Q", "timep", "mode", "model", "npart", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -249,6 +250,7 @@ int main(int argc, char** argv)
 		inputfilename = cmdlineparams["inputfile"];
 	}
   auto tomldata = toml::parse(inputfilename);
+
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
@@ -351,12 +353,12 @@ int main(int argc, char** argv)
 			const auto sus = toml::find<std::string>(ag,"sus");
 			possus.push_back(sus);
 		}
-		data.adddemocat("Age",pos,possus);
+		data.adddemocat("age",pos,possus);
 	}
 	else emsgroot("The 'ages' parameter must be set.");
 	
 	if(core == 0){	
-		cout << "Age categories: " << endl;
+		cout << "Age categories: " << endl << "  ";
 		for(j = 0; j < data.democat[0].value.size(); j++){
 			if(j != 0) cout << ", ";
 			cout << data.democat[0].value[j] << " sus='" <<  data.democat[0].param[j] << "'";
@@ -393,6 +395,7 @@ int main(int argc, char** argv)
 	if(core == 0 && data.democat.size() > 1){
 		cout << "Demographic categories: " << endl;
 		for(k = 1; k < data.democat.size(); k++){
+			cout << "  ";
 			for(j = 0; j < data.democat[k].value.size(); j++){
 				if(j != 0) cout << ", ";
 				cout << data.democat[k].value[j] << " sus='" <<  data.democat[k].param[j] << "'";
@@ -422,9 +425,10 @@ int main(int argc, char** argv)
 		
 		if(core == 0){
 			cout << "Area covariates: " << endl;
+			cout << "  ";
 			for(j = 0; j < data.covar.size(); j++) cout << data.covar[j].name << "   param='" << data.covar[j].param << "'" << endl; 
+			cout << endl;
 		}
-		cout << endl;
 	}
 
 	// timep
@@ -437,8 +441,10 @@ int main(int argc, char** argv)
 			const auto name = toml::find<std::string>(tim,"name");
 			
 			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
-			const auto tend = toml::find<double>(tim,"tend");
-			
+			auto tend = toml::find<double>(tim,"tend");
+			if(j == timep.size()-1){
+				if(tend != period) emsg("'tend' in 'timep' must end with the time period");
+			}
 			data.addtimep(name,tend);
 		}
 	}
@@ -447,6 +453,7 @@ int main(int argc, char** argv)
 	if(core == 0){
 		cout << "Time periods defined:" << endl;
 		for(j = 0; j < data.timeperiod.size(); j++){
+			cout << "  ";
 			cout << data.timeperiod[j].name << ": ";
 			if(j == 0) cout << "0"; else cout << data.timeperiod[j-1].tend;
 			cout << " - " <<  data.timeperiod[j].tend << endl;
@@ -477,6 +484,7 @@ int main(int argc, char** argv)
 	if(core == 0){
 		cout << "Q tensors loaded:" << endl;
 		for(j = 0; j < data.Q.size(); j++){
+			cout << "  ";
 			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
 			cout << "compartment: " << data.Q[j].comp << "  ";
 			cout << "file: " << data.Q[j].file << "  ";
@@ -487,9 +495,7 @@ int main(int argc, char** argv)
 	
 	// THE DATA
 	
-
 	// transdata
-	
 	if(tomldata.contains("transdata")) {
 		const auto tdata = toml::find(tomldata,"transdata");
 
@@ -498,11 +504,11 @@ int main(int argc, char** argv)
 			
 			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
 			const auto from = toml::find<std::string>(td,"from");
-			transdata.from = from;
+			transdata.fromstr = from;
 		
 			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
 			const auto to = toml::find<std::string>(td,"to");
-			transdata.to = to;
+			transdata.tostr = to;
 			
 			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
 			const auto area = toml::find<std::string>(td,"area");
@@ -512,7 +518,7 @@ int main(int argc, char** argv)
 			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
 			const auto file = toml::find<std::string>(td,"file");
 			transdata.file = file;
-			
+
 			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'transdata'.");
 			const auto start = toml::find<unsigned int>(td,"start");
 			transdata.start = start;
@@ -533,7 +539,84 @@ int main(int argc, char** argv)
 			data.transdata.push_back(transdata);
 		}
 	}
-	else emsgroot("The 'transdata' parameter must be set.");
+
+	// popdata
+	if(tomldata.contains("popdata")) {
+		const auto pdata = toml::find(tomldata,"popdata");
+
+		for(j = 0; j < pdata.size(); j++){
+			const auto pd = toml::find(pdata,j);
+			
+			if(!pd.contains("comp")) emsgroot("A 'comp' property must be specified in 'popdata'.");
+			const auto comp = toml::find<std::string>(pd,"comp");
+			popdata.compstr = comp;
+			
+			if(!pd.contains("area")) emsgroot("An 'area' property must be specified in 'popdata'.");
+			const auto area = toml::find<std::string>(pd,"area");
+			popdata.type = area;
+			if(popdata.type != "reg" && popdata.type != "all") emsgroot("popition data type not recognised"); 
+			
+			if(!pd.contains("file")) emsgroot("A 'file' property must be specified in 'popdata'.");
+			const auto file = toml::find<std::string>(pd,"file");
+			popdata.file = file;
+
+			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
+			const auto start = toml::find<unsigned int>(pd,"start");
+			popdata.start = start;
+			
+			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
+			const auto units = toml::find<std::string>(pd,"units");
+			if(units == "days") popdata.units = 1;
+			else{
+				if(units == "weeks") popdata.units = 7;
+				else emsgroot("Units in 'popdata' not recognised");
+			}
+			
+			if(mode == MODE_SIM){
+				popdata.rows = (unsigned int)((period - start)/popdata.units);
+				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+			}
+			
+			data.popdata.push_back(popdata);
+		}
+	}
+
+	if(!tomldata.contains("transdata") && !tomldata.contains("popdata"))  emsgroot("'transdata' and/or 'popdata' must be set.");
+			
+	// margdata
+	
+	if(tomldata.contains("margdata")) {
+		const auto mdata = toml::find(tomldata,"margdata");
+
+		for(j = 0; j < mdata.size(); j++){
+			const auto md = toml::find(mdata,j);
+			
+			if(!md.contains("from")) emsgroot("A 'from' property must be specified in 'margdata'.");
+			const auto from = toml::find<std::string>(md,"from");
+			margdata.fromstr = from;
+		
+			if(!md.contains("to")) emsgroot("A 'to' property must be specified in 'margdata'.");
+			const auto to = toml::find<std::string>(md,"to");
+			margdata.tostr = to;
+			
+			if(!md.contains("area")) emsgroot("An 'area' property must be specified in 'margdata'.");
+			const auto area = toml::find<std::string>(md,"area");
+			margdata.type = area;
+			if(margdata.type != "reg" && margdata.type != "all") emsgroot("Marginal data type not recognised"); 
+			
+			if(!md.contains("type")) emsgroot("An 'type' property must be specified in 'margdata'.");
+			const auto type = toml::find<std::string>(md,"type");
+			for(d = 0; d < data.ndemocat; d++) if(type == data.democat[d].name) break;
+			if(d == data.ndemocat) emsg("The 'type' property must be 'age' or a demographic property.");
+			margdata.democat = d;
+				
+			if(!md.contains("file")) emsgroot("A 'file' property must be specified in 'margdata'.");
+			const auto file = toml::find<std::string>(md,"file");
+			margdata.file = file;
+			
+			data.margdata.push_back(margdata);
+		}
+	}
 
 	if(mode == MODE_SIM && ncore != 1) emsgroot("Simulation only requires one core");
 	
@@ -550,7 +633,7 @@ int main(int argc, char** argv)
 
 	model.definemodel(core,data.period,data.popsize,tomldata);
 	model.addQ();
-	model.checktransdata();
+	model.checkdata();
 
 	if(core == 0) cout << "Running...." << endl;
 
@@ -559,10 +642,12 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
+	srand(core*10000+seed);
+	
 	switch(mode){
 	case MODE_SIM:
-		srand(seed); 
-		simulatedata(data,model,poptree);
+		//simulatedata(data,model,poptree);
+		simulatedata_mbp(data,model,poptree);
 		break;
 		
 	case MODE_PMCMC:

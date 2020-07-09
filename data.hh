@@ -3,6 +3,7 @@
 //#include "model.hh"
 
 struct TABLE {                             // Loads a table
+	string file; 														 // The file from which the tables was loaded
 	unsigned int ncol;                       // The number of columns
 	unsigned int nrow;                       // The number if rows
 	vector <string> heading;                 // The headings for the columns
@@ -23,14 +24,42 @@ struct QTENSOR {                           // Stores information about a Q tenso
 };
 
 struct TRANSDATA{                          // Stores data about transitions
-	string from;                             // The "from" compartment
- 	string to;                               // The "to" compartment 
+	string fromstr;                          // The "from" compartment
+ 	string tostr;                            // The "to" compartment 
+	unsigned int trans;                      // The transition number
 	string type;                             // The type (either "reg" for regional or "all" for global)
  	string file;                             // The file name of the data 
 	unsigned int start;                      // The start time for the data
 	unsigned int units;                      // The units used (e.g. 1=days, 7=weeks) 
 	vector <vector <unsigned int> > num;     // A table giving the number of that transition type
 	unsigned int rows;                       // The number of rows of data
+};
+
+struct POPDATA{                            // Stores population data
+	string compstr;                          // The compartment string
+ 	unsigned int comp;                       // The comparmtent number
+	string type;                             // The type (either "reg" for regional or "all" for global)
+ 	string file;                             // The file name of the data 
+	unsigned int start;                      // The start time for the data
+	unsigned int units;                      // The units used (e.g. 1=days, 7=weeks) 
+	vector <vector <unsigned int> > num;     // A table giving population numbers 
+	unsigned int rows;                       // The number of rows of data
+};
+
+struct MARGDATA{                           // Stores data about marginal distributions
+	string fromstr;                          // The "from" compartment
+ 	string tostr;                            // The "to" compartment 
+	unsigned int trans;                      // The transition number
+	string type;                             // The type (either "reg" for regional or "all" for global)
+	unsigned int democat;                    // The demographic category
+ 	string file;                             // The file name of the data 
+	vector < vector <double> > percent;      // A table giving the percentage of transition in different demographic values / regions
+};
+
+struct MEAS{                               // Stores values for all the measurements made on 
+	vector < vector <vector <unsigned int> > > transnum;
+	vector < vector <vector <unsigned int> > > popnum;
+	vector < vector <vector <unsigned int> > > margnum;	
 };
 
 struct DEMOCAT {                           // Stores demographic categories
@@ -65,7 +94,7 @@ struct AREA {                              // Provides information about an area
 
 struct IND {                               // Provides information about an individual
 	unsigned int area;                       // The area
-	unsigned int dp;                         // The demographic category
+	unsigned int dp;                         // The demographic category possibility
 };
 
 struct AreaRefComparatorX
@@ -119,13 +148,15 @@ class DATA
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
+	vector <POPDATA> popdata;                // Store information about population data
+	
+	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
+	
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
 	
 	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas
-	//string Mdatafile;                        // File giving the spatial mixing matrix
-	//string Ndatafile;                        // File giving the mixing between age classes
 	
  	unsigned int popsize;                    // The total population size 
  
@@ -149,6 +180,8 @@ class DATA
 	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 	
 	vector <QTENSOR> Q;                      // Stores the list of Q tensors
+	
+	vector <double> agedist; 								 // Gives the overall age distribution
 	
 	unsigned int nage;                       // The number of age categories
 	unsigned int narage;                     // #area * #age

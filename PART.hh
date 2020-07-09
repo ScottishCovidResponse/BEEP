@@ -57,7 +57,7 @@ class PART                                 // Stores all the things related to a
 		void partinit(unsigned int p);
 		void dofe();
 		unsigned int nextinfection(unsigned int type);
-		void addinfc(unsigned int c, double t);
+		void addinfc(unsigned int c, double t, unsigned int type);
 		void addfev(FEV fe, double period, double tnow);
 		void copy(const PART &other, unsigned int fedivmin);
 		void check(unsigned int num, double t);
