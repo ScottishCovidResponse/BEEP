@@ -15,7 +15,7 @@ seed      = 0
 nchain    = 1
 
 # The number of MCMC samples.
-nsamp     = 1000
+nsamp     = 100
 
 # The output directory
 outputdir	= "Output"
