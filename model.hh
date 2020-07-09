@@ -137,7 +137,7 @@ public:
 	vector <double> R0calc();
 	unsigned int dombpevents();
 	void oe(string name, vector <FEV> &ev);
-	double calcprobin();
+	void calcprobin();
 	double prior();
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);

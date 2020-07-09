@@ -863,7 +863,7 @@ double MODEL::prior()
 }
 	
 /// Calculate compartmental probabilities
-double MODEL::calcprobin()
+void MODEL::calcprobin()
 {
 	unsigned int c, a, k, j;
 	double prob;
@@ -906,7 +906,6 @@ double MODEL::calcprobin()
 					kst.push_back(0);
 				}
 			}
-				
 			if(comp[c].trans.size() > 1) prob *= comp[c].prob[a][k];
 			c = trans[comp[c].trans[k]].to;		
 		}while(1 == 1);
@@ -1204,4 +1203,3 @@ unsigned int MODEL::dombpevents()
 	}
 	return 0;
 }
-	
