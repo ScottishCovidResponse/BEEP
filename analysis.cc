@@ -3,13 +3,13 @@ Load mpi: module load mpi/openmpi-x86_64
 Compile using: make
 
 Simulation:  
- ./run inputfile="sim.toml"        
+ ./run inputfile="examples/sim.toml"        
 
 Inference:    
-mpirun -n 20 ./run inputfile="inf.toml" nchain=20
+mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
 */
 
-// mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile=inf2.toml nchain=20
+// mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/inf2.toml" nchain=20
 
 // make -j 10
 /*

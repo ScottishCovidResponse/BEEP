@@ -60,8 +60,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatposperage = ndemocatpos/nage;
  
 		tab = loadtable(datadir+"/"+regiondatafile);
-		namecol = findcol(tab,"Name");
-		codecol = findcol(tab,"Code");
+		namecol = findcol(tab,"name");
+		codecol = findcol(tab,"code");
 		
 		for(row = 0; row < tab.nrow; row++){
 			reg.name = tab.ele[row][namecol];
@@ -79,8 +79,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		tab = loadtable(file);
 
 		codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
-		xcol = findcol(tab,"x");
-		ycol = findcol(tab,"y");
+		xcol = findcol(tab,"easting");
+		ycol = findcol(tab,"northing");
 		regcol = findcol(tab,"region");
 		
 		for(j = 0; j < ncovar; j++) covar[j].col = findcol(tab,covar[j].name);
