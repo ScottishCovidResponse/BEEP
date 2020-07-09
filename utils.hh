@@ -3,6 +3,8 @@
 #define USE_MPI 1
 
 #ifdef USE_MPI
+// See https://github.com/open-mpi/ompi/issues/5157
+#define OMPI_SKIP_MPICXX 1
 #include <mpi.h>
 #endif
 

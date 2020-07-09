@@ -74,7 +74,7 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
-	unsigned int p, np, r, row, sum, sumtot, td, ti, tf, md, d, j, pc, c, a;
+	unsigned int p, np, pc, c, a;
 	double pr;
 	vector <unsigned int> num, numtot;
 	
@@ -328,7 +328,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 }
 	
 /// Outputs an event sample fev
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree)
+void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model*/, POPTREE & /*poptree*/)
 {
 	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
@@ -399,8 +399,8 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 /// Generates case data based on a simulation using the MBP algorithm
 void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
-	unsigned int row, r, tot, td, pd, md, d, j, jj;
-	double sum, sumtot;
+	unsigned int row, r, td, pd, md, d, j, jj;
+	double sum;
 	MEAS meas;
 
 	meas = getmeas(data,model,poptree,trev,indev);
@@ -524,7 +524,7 @@ STAT getstat(vector <double> &vec)
 /// Create a directory if it doesn't already exist
 static void ensuredirectory(const string &path) 
 {
-	struct stat st = {0};
+	struct stat st;
 	if (stat(path.c_str(), &st) == -1)
 	{
 		// Directory not found

@@ -29,7 +29,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 {
 	const double invTmax = 1, invTmin = 0.1;
 
-	unsigned int p, pp, th, nchaintot = ncore*nchain, co, thbeta;
+	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
 	unsigned int samp, burnin = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1, K;
