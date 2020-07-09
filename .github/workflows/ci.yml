@@ -31,9 +31,9 @@ jobs:
       run: |
         mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2 nsamp=10
 
-    - name: Run scan-build
-      run: |
-        scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
+    # - name: Run scan-build
+    #   run: |
+    #     scan-build --use-c++ mpicxx -o buildhtml make -B -e CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
 
   analyse:
@@ -77,7 +77,10 @@ jobs:
             f=${BASH_REMATCH[1]}
             l=${BASH_REMATCH[2]}
             c=${BASH_REMATCH[3]}
-          echo "::warning file=${f},line=${l},col=${c}::${msg}"
+            echo "::warning file=${f},line=${l},col=${c}::${msg}"
+          else
+            echo "Failed to match flc \"$flc\""
+          fi
         done < warnings.txt
         
 
