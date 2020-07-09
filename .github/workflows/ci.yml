@@ -17,7 +17,7 @@ jobs:
         submodules: true
     
     - name: Install packages
-      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha
+      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha clang-tools
 
     - name: Compile
       run: |
@@ -30,6 +30,10 @@ jobs:
     - name: Run inference
       run: |
         mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2 nsamp=10
+
+    - name: Run scan-build
+      run: |
+        CPPFLAGS="$(mpicxx --showme:compile)" scan-build --use-c++ mpicxx -o buildhtml make -B
 
   # upload:
   #   needs: build
