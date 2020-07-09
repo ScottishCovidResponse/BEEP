@@ -25,11 +25,11 @@ jobs:
 
     - name: Run simulation
       run: |
-        ./run inputfile=sim.toml
+        ./run inputfile="examples/sim.toml" 
 
     - name: Run inference
       run: |
-        mpirun -n 2 ./run inputfile=inf.toml nchain=2 nsamp=10
+        mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2 nsamp=10
 
   # upload:
   #   needs: build

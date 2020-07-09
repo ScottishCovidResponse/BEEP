@@ -9,7 +9,6 @@
 using namespace std;
 
 #include "model.hh"
-#include "PART.hh"
 #include "MBPCHAIN.hh"
 #include "output.hh"
 #include "pack.hh"
@@ -28,16 +27,16 @@ static vector <double> invTstore;
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
-	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
+	const double invTmax = 1, invTmin = 0.1;
+
+	unsigned int p, pp, th, nchaintot = ncore*nchain, co, thbeta;
 	unsigned int samp, burnin = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
-	double invT, timeloop=0.1, invTmax = 1, invTmin = 0.1, K;
+	double invT, timeloop=0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
-
-	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 	
-	srand(core+1000);
+	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 
 	for(p = 0; p < nchain; p++){
 		mbpchain[p] = new MBPCHAIN(data,model,poptree);
@@ -59,28 +58,52 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 	}
 
+	if(checkon == 1){
+		for(th = 0; th < mbpchain[0]->paramval.size(); th++){
+			cout << th << " " << model.param[th].name << " " << mbpchain[0]->paramval[th] <<  "param" << endl;		
+		}
+	}
+	
 	if(core == 0){ outputinit(data,model); outputLiinit(data,ncore*nchain);}
-			
+
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 
 		time = clock();
-		
+
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
-		
-		//short lo; for(lo = 0; lo < 10; lo++){
-		do{                         // Does proposals for timeloop seconds (on average 10 proposals)
-		
-			p = int(ran()*nchain);
-			th = (unsigned int)(ran()*model.param.size());
-			if(model.param[th].min != model.param[th].max){
-				timeprop -= clock();
-				mbpchain[p]->proposal(th,samp,burnin);
-				timeprop += clock();
-				ntimeprop++;
+	
+		timeprop -= clock();
+		switch(2){
+		case 0:
+			for(p = 0; p < nchain; p++){
+				for(th = 0; th < model.param.size(); th++){
+					if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
+				}
 			}
-		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
-		//}
+			break;
+			
+		case 1:
+			short lo; 
+			for(lo = 0; lo < 10; lo++){
+				p = int(ran()*nchain);
+				th = (unsigned int)(ran()*model.param.size());
+				if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
+			}
+			break;
+			
+		case 2:
+			do{                         // Does proposals for timeloop seconds (on average 10 proposals)
+				p = int(ran()*nchain);
+				//thbeta = 3;
+				//if(ran() < 0.7) th = (unsigned int)(ran()*thbeta);
+				//else th = thbeta + (unsigned int)(ran()*(model.param.size()-thbeta));
+				th = (unsigned int)(ran()*model.param.size());
+				if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
+			}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
+			break;
+		}
+		timeprop += clock();
 
 		if(samp%10 == 0){ for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi(1);}  // Recalcualtes Qmapi (numerical)
 		
@@ -102,9 +125,9 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		swap(model,core,ncore,nchain);
 		
-		if(samp%2 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
-		if(samp != 0 && (samp%100 == 0 || samp == nsamp-1)){
+		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
 			if(core == 0) outputresults(data,model,opsamp);
 			MBPdiagnostic(data,model,core,ncore,nchain);
 			
@@ -120,7 +143,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
 				cout << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
 				cout << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
-				cout << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;			
+				cout << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
+				cout << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
 				cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
 			}
 		}
@@ -287,7 +311,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	
 	if(core == 0){
-		double L;
+		double L, Pr;
 		vector < vector <EVREF> > trevplot;
 		vector < vector <FEV> > indevplot;
 		vector <double> paramplot;
@@ -295,7 +319,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 
 		if(ppost < nchain){
 			trevplot = mbpchain[ppost]->trevi; indevplot = mbpchain[ppost]->indevi; 
-			paramplot = mbpchain[ppost]->paramval; L = mbpchain[ppost]->Li;
+			paramplot = mbpchain[ppost]->paramval; L = mbpchain[ppost]->Li; Pr = mbpchain[ppost]->Pri;
 			ninfplot =  mbpchain[ppost]->xi.size();
 		}
 		else{
@@ -308,11 +332,12 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			unpack(indevplot,0,data.popsize);
 			unpack(paramplot);
 			unpack(L);
+			unpack(Pr);
 			unpack(ninfplot);
 			if(packsize() != siz) emsg("MBP: EC10");
 		}
 		
-		opsamp.push_back(outputsamp_mbp(calcME(),samp,L,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
+		opsamp.push_back(outputsamp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
 	}
 	else{
 		if(core == ppost/nchain){
@@ -322,6 +347,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			pack(mbpchain[p]->indevi,0,data.popsize);
 			pack(mbpchain[p]->paramval);
 			pack(mbpchain[p]->Li);
+			pack(mbpchain[p]->Pri);
 			pack((unsigned int)mbpchain[p]->xi.size());
 			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}

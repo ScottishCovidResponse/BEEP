@@ -13,6 +13,7 @@ struct TIMERS {
 	long timestandard;
 	long timeparam;
 	long timebetaphiloop;
+	long timecompparam;
 	long timeaddrem;
 };
 

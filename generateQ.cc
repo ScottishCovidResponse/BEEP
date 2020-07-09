@@ -97,7 +97,8 @@ int main(int argc, char** argv)
 	if(normon == 1) normalise(Q,area);
 	outputQ(datadir+"/Q_flow_all_data.txt",Q);
 
-	Q = generateQ(I,N_home);                                   // Outputs a Q matrix representative of someone at home 
+	//Q = generateQ(I,N_home);                                   // Outputs a Q matrix representative of someone at home 
+	Q = generateQ(M,N_all);   
 	if(normon == 1) normalise(Q,area);
 	outputQ(datadir+"/Q_local_home_data.txt",Q);
 }

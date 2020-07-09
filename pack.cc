@@ -8,10 +8,10 @@
 
 using namespace std;
 
-#include "PART.hh"
 #include "consts.hh"
 #include "utils.hh"
 #include "data.hh"
+#include "model.hh"
 
 static unsigned int k;
 

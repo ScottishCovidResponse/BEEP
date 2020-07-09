@@ -17,10 +17,10 @@ using namespace std;
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
 {
-	unsigned int r, i, c, imax, k, nreg, td, j, jmax, cc, fl, d, dp, a, aa, q, s, row;
+	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, cc, fl, d, dp, a, aa, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
 	int dc;
-	double v=0;
+	double v=0, sum;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
 	AREA are;
@@ -30,6 +30,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	vector <unsigned int> count;
 	vector <vector <double> > val;
 	vector <double> vec;
+	vector <unsigned int> rcol;
 	
 	mode = mod;
 	period = per;
@@ -59,8 +60,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		ndemocatposperage = ndemocatpos/nage;
  
 		tab = loadtable(datadir+"/"+regiondatafile);
-		namecol = findcol(tab,"Name");
-		codecol = findcol(tab,"Code");
+		namecol = findcol(tab,"name");
+		codecol = findcol(tab,"code");
 		
 		for(row = 0; row < tab.nrow; row++){
 			reg.name = tab.ele[row][namecol];
@@ -78,8 +79,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		tab = loadtable(file);
 
 		codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
-		xcol = findcol(tab,"x");
-		ycol = findcol(tab,"y");
+		xcol = findcol(tab,"easting");
+		ycol = findcol(tab,"northing");
 		regcol = findcol(tab,"region");
 		
 		for(j = 0; j < ncovar; j++) covar[j].col = findcol(tab,covar[j].name);
@@ -144,6 +145,13 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 		}
 		narea = area.size();
 		
+		for(j = 0; j < ncovar; j++){            // Shifts covariates so average is zero
+			sum = 0; for(c = 0; c < narea; c++) sum += area[c].covar[j];
+			sum /= narea;
+			
+			for(c = 0; c < narea; c++) area[c].covar[j] -= sum;
+		}		
+		
 		cout << endl << "Area data loaded." << endl;
 		if(checkon == 1){
 			for(c = 0; c < narea; c++){
@@ -153,49 +161,71 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				for(j = 0; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
 				cout << endl;	
 			}
-		}			
+		}
 		
-		if(mode != MODE_SIM){        // Loads transition data for inference
-			if(transdata.size() == 0) emsg("Transition data must be loaded");
-			
+		if(mode != MODE_SIM){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = datadir+"/"+transdata[td].file;
-
-				ifstream transin(file.c_str());            // Loads the transition data
-				if(!transin) emsg("Cannot open the file '"+file+"'");
+				tab = loadtable(file);
+	
+				rcol.clear();
+				if(transdata[td].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				else{ rcol.push_back(findcol(tab,"all"));}
 				
-				nreg = 0;                                                            // Checks regions names match with area file
-				getline(transin,line);
-				
-				if(transdata[td].type == "reg"){
-					stringstream ss(line);
-					getline(ss,ele,'\t');
-					while(!ss.eof()){
-						getline(ss,ele,'\t');
-						if(ele != region[nreg].name){
-							emsg("Region names in file '"+transdata[td].file+"' do not agree with '"+regiondatafile+"'");
-						}
-						nreg++;
+				transdata[td].num.resize(rcol.size());
+				for(r = 0; r < rcol.size(); r++){
+					transdata[td].num[r].resize(tab.nrow);
+					for(row = 0; row < tab.nrow; row++){	
+						transdata[td].num[r][row] = atoi(tab.ele[row][rcol[r]].c_str());
 					}
 				}
+				transdata[td].rows = tab.nrow;
 				
-				row = 0;
-				transdata[td].num.resize(nregion);
-				do{
-					getline(transin,line);
-					if(transin.eof()) break;
-					stringstream ss(line);
-					getline(ss,ele,'\t');
-					for(r = 0; r < nregion; r++){
-						getline(ss,ele,'\t');
-						transdata[td].num[r].push_back(atoi(ele.c_str()));
-					}
-					row++;
-				}while(1 == 1);
-				transdata[td].rows = row;
-				
-				if(transdata[td].start + row*transdata[td].units > period){
+				if(transdata[td].start + tab.nrow*transdata[td].units > period){
 					emsg("The file '"+file+"' has more data than will fit in the time period.");
+				}
+			}
+		}
+		
+		if(mode != MODE_SIM){                                                    // Loads population data for inference
+			for(pd = 0; pd < popdata.size(); pd++){
+				file = datadir+"/"+popdata[pd].file;
+				tab = loadtable(file);
+	
+				rcol.clear();
+				if(popdata[pd].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				else{ rcol.push_back(findcol(tab,"all"));}
+				
+				popdata[pd].num.resize(rcol.size());
+				for(r = 0; r < rcol.size(); r++){
+					popdata[pd].num[r].resize(tab.nrow);
+					for(row = 0; row < tab.nrow; row++){	
+						popdata[pd].num[r][row] = atoi(tab.ele[row][rcol[r]].c_str());
+					}
+				}
+				popdata[pd].rows = tab.nrow;
+				
+				if(popdata[pd].start + tab.nrow*popdata[pd].units > period){
+					emsg("The file '"+file+"' has more data than will fit in the time period.");
+				}
+			}
+		}
+		
+		if(mode != MODE_SIM){                                                    // Loads marginal data for inference
+			for(md = 0; md < margdata.size(); md++){
+				file = datadir+"/"+margdata[md].file;
+				tab = loadtable(file);
+	
+				rcol.clear();
+				if(margdata[md].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				else{ rcol.push_back(findcol(tab,"all"));}
+				
+				margdata[md].percent.resize(rcol.size());
+				for(r = 0; r < rcol.size(); r++){
+					margdata[md].percent[r].resize(tab.nrow);
+					for(row = 0; row < tab.nrow; row++){	
+						margdata[md].percent[r][row] = atof(tab.ele[row][rcol[r]].c_str());
+					}
 				}
 			}
 		}
@@ -214,7 +244,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 					Q[q].to[c*nage+a].push_back(cc);
 					Q[q].val[c*nage+a].push_back(vec);
 					
-					
 					if(c < cc){
 						Q[q].to[cc*nage+a].push_back(c);
 						Q[q].val[cc*nage+a].push_back(vec);
@@ -228,10 +257,12 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 
 	if(ncore > 1) copydata(core);
 
+	agedist.resize(nage); for(a = 0; a < nage; a++) agedist[a] = 0;
+	
 	for(c = 0; c < narea; c++){                                              // Adds individuals to the system
 		area[c].ind.resize(ndemocatpos);
 		for(dp = 0; dp < ndemocatpos; dp++){
-			imax = area[c].pop[dp];	
+			imax = area[c].pop[dp];
 			for(i = 0; i < imax; i++){
 				area[c].ind[dp].push_back(ind.size());
 				
@@ -239,10 +270,13 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				indi.dp = dp;
 				ind.push_back(indi);
 			}
+			a = democatpos[dp][0];
+			agedist[a] += imax;
 		}
 	}
 	popsize = ind.size();
-
+	for(a = 0; a < nage; a++) agedist[a] /= popsize;
+	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
@@ -254,7 +288,7 @@ void DATA::normaliseQ(unsigned int q)
 	unsigned int c, a, cc, aa, vi, j, jmax;
 	double sum, sum2;
 	
-	for(c = 0; c < narea; c++){                                       // Normalisation
+	for(c = 0; c < narea; c++){
 		sum = 0; sum2 = 0;
 		for(a = 0; a < nage; a++){
 			sum2 += area[c].agepop[a];
@@ -310,9 +344,11 @@ TABLE DATA::loadtable(string file)
 	string line, st;
 	vector <string> vec;
 	
-	ifstream in(file.c_str());                             // Loads information about areas
+	ifstream in(file.c_str());                             // Loads files
 	if(!in) emsg("Cannot open the file '"+file+"'");
-		
+	
+	tab.file = file;
+	
 	getline(in,line);
 
 	stringstream ss(line);
@@ -349,14 +385,14 @@ unsigned int DATA::findcol(TABLE &tab, string name)
 	unsigned int c;
 	
 	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
-	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"'.");
+	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"' in file '"+tab.file+"'.");
 	return c;
 }		
 			
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
-	unsigned int td, q;
+	unsigned int td, pd, md, q, v, vmin, vmax, num;
 	int si;
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
@@ -367,13 +403,18 @@ void DATA::copydata(unsigned int core)
 		pack(region);
 		pack(narea);
 		pack(area);
-		for(q = 0; q < Q.size(); q++){ pack(Q[q].to); pack(Q[q].val);}
 		pack(nage);
 		pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			pack(transdata[td].num);
-			pack(transdata[td].units);
 			pack(transdata[td].rows);
+		}
+		for(pd = 0; pd < popdata.size(); pd++){
+			pack(popdata[pd].num);
+			pack(popdata[pd].rows);
+		}
+		for(md = 0; md < margdata.size(); md++){
+			pack(margdata[md].percent);
 		}
 		si = packsize();
 	}
@@ -389,16 +430,55 @@ void DATA::copydata(unsigned int core)
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		for(q = 0; q < Q.size(); q++){ unpack(Q[q].to); unpack(Q[q].val);}
 		unpack(nage);
 		unpack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			unpack(transdata[td].num);
-			unpack(transdata[td].units);
 			unpack(transdata[td].rows);
+		}
+		for(pd = 0; pd < popdata.size(); pd++){
+			unpack(popdata[pd].num);
+			unpack(popdata[pd].rows);
+		}
+		for(md = 0; md < margdata.size(); md++){
+			unpack(margdata[md].percent);
 		}
 		if(si != packsize()) emsg("Data: EC9");
 	}
+	
+	for(q = 0; q < Q.size(); q++){                                                   // Copies the Q matrices
+		num = Q[q].to.size();
+		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+		if(core != 0){ Q[q].to.resize(num); Q[q].val.resize(num);}
+		 
+		vmin = 0;
+		do{
+			vmax = vmin+1000; if(vmax > num) vmax = num;
+			
+			if(core == 0){
+				packinit();
+				for(v = vmin; v < vmax; v++){
+					pack(Q[q].to[v]);
+					pack(Q[q].val[v]);
+				}
+				si = packsize();
+			}
+				
+			MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+			MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	
+			if(core != 0){
+				packinit();	
+				for(v = vmin; v < vmax; v++){
+					unpack(Q[q].to[v]);
+					unpack(Q[q].val[v]);
+				}
+				if(si != packsize()) emsg("Data: EC9");
+			}
+		
+			vmin = vmax;
+		}while(vmin < num);
+	}		
 }
 
 /// Adds demographic categories

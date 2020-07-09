@@ -67,15 +67,37 @@ double gammasamp(double a, double b)
   }
 }
 
+double normalprob(double x, double mean, double var)
+{
+  if(var < 0) emsg("Variance must be positive.");
+  return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
+}
+
+double gammaprob(double x, double a, double b)                                      // The log of the probability from the gamma distribution
+{
+  if(x < 0 || a < 0 || b < 0) emsg("Gamma function cannot be negative");
+  return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
+}
+
+
+/// Calculates the log of the lognormal probability distribution
+double lognormprob(double x, double mean, double var)
+{
+	double val;
+	if(x <= 0) emsg("Log normal must be positive.");
+	if(var < 0) emsg("Variance must be positive."); 
+	val = log(x);
+	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
+}
 
 /// Splits up a string
 vector<string> split(const string& s, char delimiter)                                                               
 {                                 
-   std::vector<std::string> splits;                       
-   std::string split;                                      
-   std::istringstream ss(s);                               
-   while (std::getline(ss, split, delimiter)) splits.push_back(split);                                                  
-   return splits;                                           
+  std::vector<std::string> splits;                       
+  std::string split;                                      
+  std::istringstream ss(s);                               
+  while (std::getline(ss, split, delimiter)) splits.push_back(split);                                                  
+  return splits;                                           
 }
 
 

@@ -16,6 +16,7 @@ class MBPCHAIN                                          // Stores all the things
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
 	double Levi;         																	// The latent process likelihood
+	double Pri; 																				  // The prior probability
 	
 	double invT;                                          // The inverse temperature 
 	

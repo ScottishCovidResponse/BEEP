@@ -25,15 +25,20 @@ struct DQINFO {                            // Stores information about a change 
 	vector <double> fac;
 };
 
+struct PRIORCOMP {											   // Stores information about priors on compartmental probabilities
+	unsigned int comp;											 // The compartment
+	double value;														 // The value of the comparmental probability
+	double sd;															 // The standard deviation in the value
+};
+
 struct PARAM{                              // Store information about a model parameter
  	string name;                             // Its name
- 	double valinit;                          // The simulation value or starting value for inference
-	double sim;                              // The simulation value
-	double min;                              // The minimum value (assuming a uniform prior) 
+  double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
 	unsigned int used;                       // Determins if the parameter is used in the model.
-	unsigned int ntr, nac;                   // Store the number of proposals tried and accepted	
-	double jump;
+	unsigned int ntr, nac;                   // Stores the number of proposals tried and accepted	
+	double jump;                             // Stores the size of jumps in parameter space
+	unsigned int type;                       // Set to one if parameter used for transition times and 2 for branching probabilities
 };
 
 struct COMP{                               // Stores information about a compartment in the model
@@ -45,7 +50,7 @@ struct COMP{                               // Stores information about a compart
 	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
 
 	vector <unsigned int> trans;             // The transitions leaving that compartment
-	unsigned int transtimep;                 // The time period transitions leaving that compartment
+	unsigned int transtimep;                 // The transition used to represent a change in timep in that compartment
 
 	vector <vector <double> > prob, probsum; // The age-dependent probability of going down transition
 	vector <vector <double> > probi;         // The age-dependent probability of going down transition for initial state (MBP)
@@ -53,13 +58,21 @@ struct COMP{                               // Stores information about a compart
 	
 	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
 	vector <double> infint;                  // The integrated infectivity (used to calculate R0)
+
+                                           // The following are used for making changes to the parameters
+	vector< vector <unsigned int> > transnum;// The number of times going down a transition (age dependent)
+	unsigned int numvisittot;                // The number of times the compartment is visited
+	double dtsum;                            // Sums up the total time spent
+	vector <double> dtlist;                  // Keeps a list of waiting time
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
-	vector <unsigned int> probparam;         // The parameter for the probability of going down transition
-	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition
+	unsigned int istimep;                    // Set to one if the transition is in time period
+	vector <unsigned int> num;               // The number of times down transition 
+	vector <unsigned int> probparam;         // The parameter for the probability of going down transition (age dependant)
+	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition (age dependant)
 };
 
 struct SPLINEP{                            // Stores information about a spline point
@@ -89,6 +102,7 @@ public:
 	vector <double> areafaci, areafacp;      // Under MBPs the area factor for the initial and proposed states
 				
 	vector <PARAM> param;                    // Information about parameters in the model
+	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
 	vector <double> paramval;                // The values of the parameters
 	vector <TRANS> trans;                    // Stores model transitions
 	vector <COMP> comp;	                     // Stores model compartments
@@ -116,19 +130,28 @@ public:
 
 	void priorsamp();
 	        
-	void checktransdata();
+	void checkdata();
 	unsigned int setup(vector <double> &paramval);
 	void copyi();
 	void copyp();
 	vector <double> R0calc();
-	
+	unsigned int dombpevents();
+	void oe(string name, vector <FEV> &ev);
+	double calcprobin();
+	double prior();
+	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
+												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
+													 
 private:
 	void addcomp(string name, double infectivity, unsigned int type, string param1, string param2);
-	void addparam(string name, double val, double min, double max);
+	void addparam(string name, double min, double max);
 	void addtrans(string from, string to, string prpar);
 	void setsus(); 
 	void setarea();
 	void timevariation();
 	unsigned int findparam(string name);
 	unsigned int settransprob();
+	double likelihood_prob();
+	double likelihood_dt(vector <double> &paramv);
+	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
 };

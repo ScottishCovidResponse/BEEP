@@ -19,4 +19,5 @@ void timersinit()
 	timers.timeparam = 0;	
 	timers.timebetaphiloop = 0;
 	timers.timeaddrem = 0;	
+	timers.timecompparam = 0;
 }
