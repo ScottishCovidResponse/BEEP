@@ -166,7 +166,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	if(data.mode != MODE_SIM){
 		if(tomldata.contains("priorcomps")){
 			string co;
-			
+		
 			const auto prcomps = toml::find(tomldata,"priorcomps");
 			for(j = 0; j < prcomps.size(); j++){
 				const auto prcomp = toml::find(prcomps,j);
@@ -988,7 +988,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
 {	
 	unsigned int c, a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1;
-	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
+	double t, dt, Li_dt, Li_prob, Lp_prob=-large, Prp, al, dL, dd;
 	vector <double> paramst;
 	
 	timers.timecompparam -= clock();

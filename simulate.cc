@@ -20,8 +20,6 @@ void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
 /// Simulates data using the MBP algorithm
 void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
-	vector <SAMPLE> opsamp; 
-		
 	model.infmax = large;
 		
 	MBPCHAIN mbpchain{data,model,poptree};
@@ -29,10 +27,11 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 		
 	proportions(data,model,mbpchain.indevi);
 	
-	outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
+	outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
 	
-	opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain.paramval,0,mbpchain.trevi,mbpchain.indevi));
-	outputresults(data,model,opsamp);
+	//vector <SAMPLE> opsamp; 
+	//opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain.paramval,0,mbpchain.trevi,mbpchain.indevi));
+	//outputresults(data,model,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments
@@ -63,12 +62,12 @@ void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev)
 		}
 	}
 	
-	cout << "# Infected individuals: "<< ninf << endl << endl;
+	cout << endl << "# Infected individuals: "<< ninf << endl << endl;
 	
-	cout << "Proportion of individuals visiting different compartments:" << endl;
+	cout << "Proportion of infected individuals visiting different compartments:" << endl;
 	
 	for(c = 0; c < model.comp.size(); c++){
-		cout << model.comp[c].name << ": " << double(100*visit[c])/ninf << "%" << endl;
+		cout << "  " << model.comp[c].name << ": " << double(100*visit[c])/ninf << "%" << endl;
 	}
 	cout << endl;
 }

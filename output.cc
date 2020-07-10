@@ -397,21 +397,25 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 }
 
 /// Generates case data based on a simulation using the MBP algorithm
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir)
 {
 	unsigned int row, r, td, pd, md, d, j, jj;
+	string file, filefull;
 	double sum;
 	MEAS meas;
-
+	
+	ensuredirectory(dir);
+		
 	meas = getmeas(data,model,poptree,trev,indev);
 	
-	cout << "Simulated Data:" << endl;
+	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(td = 0; td < data.transdata.size(); td++){
-		stringstream ss; ss << data.datadir << "/" << data.transdata[td].file;
-		ofstream transout(ss.str().c_str());
-		if(!transout) emsg("Cannot output the file '"+ss.str()+"'");
+		file = data.transdata[td].file;
+		filefull =  dir+"/"+file;
+		ofstream transout(filefull);
+		if(!transout) emsg("Cannot output the file '"+filefull+"'");
 		
-		cout << "'" << ss.str() << "' gives the observed weekly number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
+		cout << "  '" << file << "' gives the observed weekly number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
@@ -427,11 +431,12 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	}
 	
 	for(pd = 0; pd < data.popdata.size(); pd++){
-		stringstream ss; ss << data.datadir << "/" << data.popdata[pd].file;
-		ofstream popout(ss.str().c_str());
-		if(!popout) emsg("Cannot output the file '"+ss.str()+"'");
+		file = data.popdata[pd].file;
+		filefull = dir+"/"+file;
+		ofstream popout(filefull);
+		if(!popout) emsg("Cannot output the file '"+filefull+"'");
 		
-		cout << "'" << ss.str() << "' gives the numbers in population '" << data.popdata[pd].compstr << "'";
+		cout << "  '" << file << "' gives the numbers in population '" << data.popdata[pd].compstr << "'";
 		if(data.popdata[pd].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
@@ -449,11 +454,12 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	for(md = 0; md < data.margdata.size(); md++){
 		d = data.margdata[md].democat;
 			
-		stringstream ss; ss << data.datadir << "/" << data.margdata[md].file;
-		ofstream margout(ss.str().c_str());
-		if(!margout) emsg("Cannot output the file '"+ss.str()+"'");
+		file = data.margdata[md].file;
+		filefull = dir+"/"+file;
+		ofstream margout(filefull);
+		if(!margout) emsg("Cannot output the file '"+filefull+"'");
 
-		cout << "'" << ss.str() << "' gives the '" << data.democat[d].name << "' stratified number of " << data.margdata[md].fromstr << "→" << data.margdata[md].tostr << " transitions";
+		cout << "  '" << file << "' gives the '" << data.democat[d].name << "' stratified number of " << data.margdata[md].fromstr << "→" << data.margdata[md].tostr << " transitions";
 		if(data.margdata[md].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
