@@ -6,6 +6,7 @@
 #include <vector>
 #include "stdlib.h"
 #include "math.h"
+#include <sys/stat.h>
 
 #include "utils.hh"
 #include "consts.hh"
@@ -117,4 +118,17 @@ void emsgroot(string msg)
 	if(core == 0) cout << msg << endl;
 	//MPI_Finalize();
 	exit (EXIT_FAILURE);
+}
+
+/// Create a directory if it doesn't already exist
+void ensuredirectory(const string &path) 
+{
+	struct stat st;
+	if (stat(path.c_str(), &st) == -1)
+	{
+		// Directory not found
+		int ret = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+		if (ret == -1)
+			emsg("Error creating directory '"+path+"'");
+	}
 }
