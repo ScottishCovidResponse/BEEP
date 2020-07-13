@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__DATA_HH
+#define BEEPMBP__DATA_HH
 
 //#include "model.hh"
 
@@ -224,3 +225,4 @@ class DATA
 	unsigned int findcol(TABLE &tab, string name);
 	void normaliseQ(unsigned int q);
 };
+#endif

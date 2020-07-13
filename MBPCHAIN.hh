@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__MBPCHAIN_HH
+#define BEEPMBP__MBPCHAIN_HH
 
 #include <vector>
 
@@ -106,3 +107,4 @@ class MBPCHAIN                                          // Stores all the things
 		void betaphi_prop( unsigned int samp, unsigned int burnin);
 		void addrem_prop(unsigned int samp, unsigned int burnin);
 };
+#endif

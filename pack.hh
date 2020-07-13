@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__PACK_HH
+#define BEEPMBP__PACK_HH
 
 using namespace std;
 
@@ -40,5 +41,4 @@ void unpack(vector <REGION> &vec);
 void unpack(vector <DEMOCAT> &vec);
 void unpack(vector <vector <EVREF> > &vec);
 
-	
-	
+#endif

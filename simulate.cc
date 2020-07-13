@@ -4,8 +4,10 @@
 #include <fstream>
 #include <algorithm>
 
-#include "assert.h"
-#include "math.h"
+#include <assert.h>
+#include <math.h>
+
+#include "simulate.hh"
 
 #include "utils.hh"
 #include "timers.hh"

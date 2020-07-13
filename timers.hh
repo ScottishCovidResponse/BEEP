@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__TIMERS_HH
+#define BEEPMBP__TIMERS_HH
 
 struct TIMERS {
 	long timetot;
@@ -20,3 +21,4 @@ struct TIMERS {
 extern TIMERS timers;
 
 void timersinit();
+#endif
