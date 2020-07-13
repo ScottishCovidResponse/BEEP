@@ -44,3 +44,7 @@ clean:
 	rm -rf $(exe) $(BUILD_DIR)
 
 -include $(deps)
+
+.PHONY : test
+test: $(exe)
+	external/regtests/bin/run-all-regression-tests
