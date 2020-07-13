@@ -48,7 +48,7 @@ jobs:
         echo "{{ needs.build }}"
 
         echo "Jobs:"
-        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}/jobs
 
         cat jobs.json
 
@@ -62,9 +62,9 @@ jobs:
         }
 
         # TODO: add error checking
-        download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
-        download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
-        download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
+        download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}/logs"
+        download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}"
+        download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}"
 
     - name: Report warnings
       run: |
@@ -107,7 +107,7 @@ jobs:
   #       echo "{{ needs.build }}"
 
   #       echo "Jobs:"
-  #       curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}/jobs
+  #       curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}/jobs
 
   #       cat jobs.json
 
@@ -121,9 +121,9 @@ jobs:
   #       }
 
   #       # TODO: add error checking
-  #       download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}/logs"
-  #       download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/jobs/${build_job_id}"
-  #       download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/CoronaPMCMC/actions/runs/${GITHUB_RUN_ID}"
+  #       download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}/logs"
+  #       download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}"
+  #       download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}"
 
   #   - name: Write summary page
   #     run: |
@@ -138,10 +138,10 @@ jobs:
   #       commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1|escape_html)"
   #       commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
   #       commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
-  #       commit_url="https://github.com/ScottishCovidResponse/CoronaPMCMC/commit/${commit_id}"
+  #       commit_url="https://github.com/ScottishCovidResponse/BEEPmbp/commit/${commit_id}"
 
   #       warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
-  #       title="CoronaPMCMC build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
+  #       title="BEEPmbp build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
 
 
   #       cat >summary.html <<EOF
@@ -180,7 +180,7 @@ jobs:
   #             <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
   #           </ul>
   #         </li>
-  #         <li><a href="https://github.com/ScottishCovidResponse/CoronaPMCMC/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
+  #         <li><a href="https://github.com/ScottishCovidResponse/BEEPmbp/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
   #       </ul>
   #       </body>
   #       </html>
