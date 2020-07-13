@@ -15,6 +15,7 @@ struct GENQ{
 	string flowall;                          // The Q matrix for general daily life
 	unsigned int nage;			   							 // The number of age groups
 	string datadir;                          // The data directory
+	string outputdir;                        // The output directory
 	string areadata;                         // Data about the areas
 };
 
