@@ -410,7 +410,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			diag << "Liav: " << av/jmax << "  ";
 			
 			ntrsum = 0; for(th = 0; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
-			diag << "Time: " << int(1000*timeproptot[cc]/(ntrsum*CLOCKS_PER_SEC));
+//			diag << "Time: " << int(1000*timeproptot[cc]/(ntrsum*CLOCKS_PER_SEC));
 			diag << endl;
 			
 			diag << "MBP Accept: " << endl;
