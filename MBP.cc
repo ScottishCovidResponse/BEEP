@@ -15,6 +15,7 @@ using namespace std;
 #include "utils.hh"
 #include "consts.hh"
 #include "timers.hh"
+#include "MBP.hh"
 
 static void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
@@ -25,7 +26,7 @@ static vector <vector <double> > Listore;
 static vector <double> invTstore;
 	
 /// Performs the multi-temperature MBP algorithm	
-void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
+void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain, enum proposalsmethod propmethod)
 {
 	const double invTmax = 1, invTmin = 0.1;
 
@@ -74,8 +75,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
 	
 		timeprop -= clock();
-		switch(2){
-		case 0:
+		switch(propmethod){
+		case proposalsmethod::allchainsallparams:
 			for(p = 0; p < nchain; p++){
 				for(th = 0; th < model.param.size(); th++){
 					if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
@@ -83,7 +84,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 			}
 			break;
 			
-		case 1:
+		case proposalsmethod::fixednum:
 			short lo; 
 			for(lo = 0; lo < 10; lo++){
 				p = int(ran()*nchain);
@@ -92,7 +93,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 			}
 			break;
 			
-		case 2:
+		case proposalsmethod::fixedtime:
 			do{                         // Does proposals for timeloop seconds (on average 10 proposals)
 				p = int(ran()*nchain);
 				//unsigned int thbeta = 3;

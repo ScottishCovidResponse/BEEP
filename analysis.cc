@@ -261,7 +261,7 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 		
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile", "propsmethod"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -341,6 +341,21 @@ int main(int argc, char** argv)
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
 		
+	// proposals method
+	string propsmethod_str = lookup_string_parameter(cmdlineparams, tomldata, "propsmethod", param_verbose, "fixedtime");
+
+	enum proposalsmethod propsmethod;
+
+	if (propsmethod_str == "allchainsallparams") {
+		propsmethod = proposalsmethod::allchainsallparams;
+	} else if (propsmethod_str == "fixednum") {
+		propsmethod = proposalsmethod::fixednum;
+	} else if (propsmethod_str == "fixedtime") {
+		propsmethod = proposalsmethod::fixedtime;
+	} else {
+		emsg("Parameter propsmethod set to an unrecognised value \""+propsmethod_str+"\"");
+	}
+
 	// outputdir
 	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
 
@@ -730,7 +745,7 @@ int main(int argc, char** argv)
 	case MODE_INF: 
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 		if(nchain == UNSET) emsgroot("The number of chains must be set");
-		MBP(data,model,poptree,nsamp,core,ncore,nchain);
+		MBP(data,model,poptree,nsamp,core,ncore,nchain,propsmethod);
 		break;
 
 	default: emsgroot("Mode not recognised"); break;

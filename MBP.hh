@@ -3,5 +3,12 @@
 
 using namespace std;
 
-void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int npart);
+enum class proposalsmethod
+{
+	allchainsallparams,
+	fixednum,
+	fixedtime
+};
+
+void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int npart, enum proposalsmethod propmethod);
 #endif
