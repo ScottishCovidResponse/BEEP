@@ -36,8 +36,6 @@ gitversion:
 	@$(MKDIR_P) $(BUILD_DIR)
 	bash ./gitversion.sh $(BUILD_DIR)/gitversion.hh
 
-$(BUILD_DIR)/gitversion.hh : gitversion
-
 .PHONY : all
 all: $(exe)
 
