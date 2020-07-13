@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+set -u
+#set -x
+set -o pipefail
+shopt -s nullglob
+
+args=()
+
+timer=""
+
+source $(dirname ${BASH_SOURCE})/read-test-config
+
+script_dir=$(dirname $BASH_SOURCE)
+
+if [ -r tests ]; then
+   tests_path=tests
+elif [ -r Tests ]; then
+    tests_path=Tests;
+fi
+
+out_dir=regression_test_results
+rm -rf $out_dir
+mkdir -p $out_dir
+
+failures=0
+
+for test_file in ${tests_path}/*; do
+    if [ ! -d $test_file ]; then
+        continue
+    fi
+    echo
+    echo "Running ${test_file}"
+    test_basename=$(basename $test_file)
+    test_name=${test_basename##*.}
+
+    if ! ${script_dir}/run-regression-test ${test_file} $out_dir/${test_name}; then
+        failures=$((failures+1))
+    fi
+done
+
+if [ "$failures" -eq 0 ]; then
+    echo "All tests passed"
+else
+    echo "$failures test(s) failed"
+fi
+
+exit $failures

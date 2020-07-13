@@ -1,0 +1,166 @@
+#!/bin/bash
+
+set -e
+set -u
+#set -x
+shopt -s nullglob
+set -o pipefail
+
+export PATH=$(dirname ${BASH_SOURCE}):$PATH
+
+base=$(dirname $(dirname ${BASH_SOURCE}))
+
+if [ -r tests ]; then
+   tests_dir=tests
+elif [ -r Tests ]; then
+    tests_dir=Tests;
+fi
+
+source $(dirname ${BASH_SOURCE})/read-test-config
+
+args=()
+
+while [ $# -gt 0 ]; do
+    if [[ $1 =~ --.* ]]; then
+        case $1 in
+            # Dummy, in case we want args in future
+            --arg)
+                ARGVAL==$2
+                shift 2;
+                ;;
+            --*)
+                echo "Unrecognized option $1" >&2
+                exit 1
+                ;;
+        esac
+        echo >/dev/null
+    else
+        args+=($1)
+        shift
+    fi
+done
+
+if [ ${#args[@]} != 2 ]; then
+    echo "Usage: $0 [opts] <testfile> <outputdir>" >&2
+    exit 1
+fi
+
+testfile=${args[0]}
+output_dir=${args[1]}
+
+if [ ! -r $(dirname $output_dir) ]; then
+    mkdir -p $(dirname $output_dir)
+fi
+
+testname=$(basename $testfile)
+
+refdir=${testfile}/refdata
+
+#output_dir_abs=$(python -c 'import os; import sys; print(os.path.abspath(sys.argv[1]))' $output_dir)
+
+if [ -n "${TEST_RUN_PREFIX+1}" ]; then
+    run_prefix=${TEST_RUN_PREFIX}
+else
+    run_prefix=""
+fi
+
+temp_output_file=$(mktemp)
+
+if ! $run_prefix $TEST_RUN_CMD ${testfile} ${output_dir} > $temp_output_file 2>&1; then
+    exec_failed=1
+else
+    exec_failed=0
+fi
+
+if [ ! -r $output_dir ]; then
+    echo "ERROR: Test ${testname} didn't create output directory $output_dir"
+    echo "Output:"
+    cat $temp_output_file
+    exit 1
+fi
+
+mv $temp_output_file ${output_dir}/testlog.txt
+
+if [ $exec_failed -eq 1 ]; then
+    echo "Output:"
+    cat $output_dir/testlog.txt
+    echo "Execution failed. Output is in $output_dir/testlog.txt" >&2
+    exit 1
+fi
+
+failures=0
+
+normal=""
+red=""
+green=""
+# check if stdout is a terminal...
+if test -t 1; then
+    # see if it supports colors...
+    ncolors=$(tput colors)
+    if test -n "$ncolors" && test $ncolors -ge 8; then
+        normal="$(tput sgr0)"
+        red="$(tput setaf 1)"
+        green="$(tput setaf 2)"
+        magenta="$(tput setaf 5)"
+    fi
+fi
+
+if [ ! -r "${refdir}" ]; then
+    echo "${red}WARNING:${normal} No reference data available for test ${testname}"
+fi
+
+# Check all output files against reference data
+for ref_path in $refdir/*; do
+    name=${ref_path##*/}
+    produced_path=$output_dir/${TEST_OUTPUT_SUBDIR}/$name
+    if [ ${name##*.} = "log" ]; then
+        continue
+    fi
+    if [[ ${name} =~ $TEST_FILE_EXCLUDE_PATTERN ]]; then
+        continue
+    fi
+
+    if [ -r $produced_path ]; then
+        if [ ${name##*.} = "h5" ]; then
+            datatype=$(h5dump -a "Dx" $ref_path | awk '$1 == "DATATYPE" {print $2}')
+            if [ "$datatype" = H5T_IEEE_F32LE ]; then
+                tol=1e-5
+            elif [ "$datatype" = H5T_IEEE_F64LE ]; then
+                tol=1e-13
+            else
+                echo "ERROR: unrecognised datatype in $ref_path" >&2
+                exit 1
+            fi
+            diff_cmd="h5diff -r -d $tol"
+        else
+            diff_cmd="diff"
+        fi
+        diffs_file=$output_dir/${name}.diffs
+        rm -f ${diffs_file}
+        if ${diff_cmd} $ref_path $produced_path > ${diffs_file} 2>&1; then
+            echo -e "${green}PASS${normal}: ${testname}/$name"
+            # Useful while we test the tolerance system; probably want
+            # to remove eventually
+            if [ -r ${diffs_file} ]; then
+                cat ${diffs_file}
+            fi
+        else
+            failures=$((failures+1))
+            echo "${red}FAIL${normal}: ${testname}/$name"
+            cat ${diffs_file}
+        fi
+    else
+        echo "${magenta}MISSING${normal}: Reference data file $name not produced by run" >&2
+        failures=$((failures+1))
+    fi
+done
+
+# TODO: report new files created which are not in the reference directory
+
+# echo "Files failing: ${failures}"
+
+if [ ${failures} -gt 0 ]; then
+    exit 1
+else
+    exit 0
+fi
