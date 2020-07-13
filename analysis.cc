@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 	#endif
 
 	if (core == 0)
-		cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+		cout << "BEEPmbp version " << GIT_VERSION << endl;
 	
 	DATA data;    // The following file names will need to be read in by the interface:
 	MODEL model(data);
