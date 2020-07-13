@@ -20,19 +20,17 @@ void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
 /// Simulates data using the MBP algorithm
 void simulatedata(DATA &data, MODEL &model, POPTREE &poptree)
 {
-	MBPCHAIN *mbpchain;
-	
 	model.infmax = large;
 		
-	mbpchain = new MBPCHAIN(data,model,poptree);
-	mbpchain->init(data,model,poptree,1,0);
+	MBPCHAIN mbpchain{data,model,poptree};
+	mbpchain.init(data,model,poptree,1,0);
 		
-	proportions(data,model,mbpchain->indevi);
+	proportions(data,model,mbpchain.indevi);
 	
-	outputsimulateddata(data,model,poptree,mbpchain->trevi,mbpchain->indevi,data.outputdir);
+	outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
 	
 	//vector <SAMPLE> opsamp; 
-	//opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain->paramval,0,mbpchain->trevi,mbpchain->indevi));
+	//opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain.paramval,0,mbpchain.trevi,mbpchain.indevi));
 	//outputresults(data,model,opsamp);
 }
 
