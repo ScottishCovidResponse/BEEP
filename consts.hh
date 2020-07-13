@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__CONSTS_HH
+#define BEEPMBP__CONSTS_HH
 
 using namespace std;
 
@@ -26,3 +27,4 @@ const unsigned int BUFMAX = 20000;                             // The maximum bu
 const double varfac = 4;                                         // A factor which relaxes the observation model
 
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs
+#endif

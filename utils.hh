@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__UTILS_HH
+#define BEEPMBP__UTILS_HH
 
 #define USE_MPI 1
 
@@ -24,3 +25,4 @@ double gammasamp(double a, double b);
 double gammaprob(double x, double a, double b);
 
 vector<string> split(const string& s, char delimiter);
+#endif

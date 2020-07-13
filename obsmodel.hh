@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__OBSMODEL_HH
+#define BEEPMBP__OBSMODEL_HH
 
 #include <iostream>
 #include <vector>
@@ -18,3 +19,4 @@ vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, ve
 double Lobs(DATA &data, MODEL &model, POPTREE &poptree,  vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
 
 MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__OUTPUT_HH
+#define BEEPMBP__OUTPUT_HH
 
 #include "poptree.hh"
 
@@ -17,3 +18,4 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp);
 void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period);
 void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree);
 void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
+#endif
