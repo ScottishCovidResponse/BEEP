@@ -886,7 +886,7 @@ void MODEL::calcprobin()
 			if(comp[c].trans.size() == 0){
 				if(cst.size() == 0) break;
 				
-				while(cst.size() > 0){
+				do{
 					j = cst.size()-1;
 					c = cst[j];
 					prob = probst[j]; 
@@ -897,7 +897,7 @@ void MODEL::calcprobin()
 					cst.pop_back();
 					probst.pop_back();
 					kst.pop_back();
-				}
+				}while(cst.size() > 0);
 				if(k == comp[c].trans.size()) break;
 			}
 			else{
@@ -936,7 +936,9 @@ vector <double> MODEL::R0calc()
 			mean = paramval[comp[c].param1]; sd = paramval[comp[c].param2];
 			dt = exp(mean + sd*sd/2);
 			break;
-		default: dt = 0; emsg("MODEL: EC56"); break;
+		default:
+			//dt = 0;
+			emsg("MODEL: EC56"); break;
 		}
 				
 		comp[c].infint.resize(data.nage);

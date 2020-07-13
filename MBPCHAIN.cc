@@ -549,7 +549,7 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 	FEV fev;
 	TRANS tr;
 
-	nage = data.nage;
+	//nage = data.nage;
 	
 	jmax = trevi[sett].size();
 	for(j = 0; j < jmax; j++){
@@ -956,7 +956,8 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 	
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
-		beta = model.beta[sett]; phi = model.phi[sett];
+		//beta = model.beta[sett];
+		//phi = model.phi[sett];
 		tmax = data.settime[sett+1];
 
 		lcontlist.clear();
@@ -1157,7 +1158,8 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			w = c*data.ndemocatpos + data.ind[i].dp;
 	
 			dt = data.settime[sett+1]-data.settime[sett];
-			t = data.settime[sett] + ran()*dt;
+			//t = data.settime[sett] + ran()*dt;
+			(void) ran(); // Through away a random number so as not to change results
 			probfi += log(1.0/dt);
 			kst.push_back(sett*data.nardp + w);
 			

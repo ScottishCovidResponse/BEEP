@@ -1,5 +1,5 @@
 CXX := mpicxx
-CXXFLAGS := -g -O3 -W -Wall -std=c++11
+CXXFLAGS := -g -O3 -W -Wall -std=c++11 -Werror=vla
 # -B flag forces compilation of all files
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p
@@ -23,7 +23,7 @@ CXXFLAGS_analysis.cc := -O0
 exe := run
 
 $(exe): $(objs)
-	$(CXX)  $(objs) -o $@
+	$(CXX) $(CXXFLAGS) $(objs) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)

@@ -3,8 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include "stdlib.h"
-#include "math.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <math.h>
 
 using namespace std;
 
@@ -34,7 +35,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	unsigned int samp, burnin = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
 	double invT, timeloop=0.1, K;
-	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
+	std::vector<long> timeproptot(ncore), ntimeproptot(ncore);
+	long timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
 	
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
@@ -42,7 +44,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	for(p = 0; p < nchain; p++){
 		mbpchain[p] = new MBPCHAIN(data,model,poptree);
 		
-		pp = core*nchain+p;
 		pp = core*nchain+p;
 		if(nchaintot == 1) invT = invTmax;
 		else invT = pow((K-pp)/K,5);
@@ -115,8 +116,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		timers.timewait += clock();
 
 		// This part dynamically adjusts timeloop so that approximately 10 proposals are performed per swap
-		MPI_Gather(&timeprop,1,MPI_LONG,timeproptot,1,MPI_LONG,0,MPI_COMM_WORLD); 
-		MPI_Gather(&ntimeprop,1,MPI_LONG,ntimeproptot,1,MPI_LONG,0,MPI_COMM_WORLD);
+		MPI_Gather(&timeprop,1,MPI_LONG,&timeproptot[0],1,MPI_LONG,0,MPI_COMM_WORLD); 
+		MPI_Gather(&ntimeprop,1,MPI_LONG,&ntimeproptot[0],1,MPI_LONG,0,MPI_COMM_WORLD);
 		if(core == 0){
 			timeproptotsum = 0; ntimeproptotsum = 0; 
 			for(co = 0; co < ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
@@ -163,19 +164,19 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	double temp, al;
 	float tempf;
 	long templ, loop, loopmax = nchaintot*nchaintot;
-	double Li[nchain], Litot[nchaintot];
-	double invT[nchain], invTtot[nchaintot];
-	unsigned int ch[nchain], chtot[nchaintot];
-	long timeprop[nchain], timeproptot[nchaintot];
-	unsigned int ntr[nchainparam], ntrtot[nparamtot];
-	unsigned int nac[nchainparam], nactot[nparamtot];
-	float paramjump[nchainparam], paramjumptot[nparamtot];
-	unsigned int ntrxi[nchainparam], ntrxitot[nparamtot];
-	unsigned int nacxi[nchainparam], nacxitot[nparamtot];
-	float paramjumpxi[nchainparam], paramjumpxitot[nparamtot];
-	float numaddrem[nchain], numaddremtot[nchaintot];
-	unsigned int ntr_addrem[nchain], ntr_addremtot[nchaintot];
-	unsigned int nac_addrem[nchain], nac_addremtot[nchaintot];
+	std::vector<double> Li(nchain), Litot(nchaintot);
+	std::vector<double> invT(nchain), invTtot(nchaintot);
+	std::vector<unsigned int> ch(nchain), chtot(nchaintot);
+	std::vector<long> timeprop(nchain), timeproptot(nchaintot);
+	std::vector<unsigned int> ntr(nchainparam), ntrtot(nparamtot);
+	std::vector<unsigned int> nac(nchainparam), nactot(nparamtot);
+	std::vector<float> paramjump(nchainparam), paramjumptot(nparamtot);
+	std::vector<unsigned int> ntrxi(nchainparam), ntrxitot(nparamtot);
+	std::vector<unsigned int> nacxi(nchainparam), nacxitot(nparamtot);
+	std::vector<float> paramjumpxi(nchainparam), paramjumpxitot(nparamtot);
+	std::vector<float> numaddrem(nchain), numaddremtot(nchaintot);
+	std::vector<unsigned int> ntr_addrem(nchain), ntr_addremtot(nchaintot);
+	std::vector<unsigned int> nac_addrem(nchain), nac_addremtot(nchaintot);
 
 	for(p = 0; p < nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
@@ -196,19 +197,19 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 		nac_addrem[p] = mbpchain[p]->nac_addrem;
 	}
 		
-	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(invT,nchain,MPI_DOUBLE,invTtot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(timeprop,nchain,MPI_LONG,timeproptot,nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Gather(ntr,nchainparam,MPI_UNSIGNED,ntrtot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nac,nchainparam,MPI_UNSIGNED,nactot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(paramjump,nchainparam,MPI_FLOAT,paramjumptot,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(ntrxi,nchainparam,MPI_UNSIGNED,ntrxitot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nacxi,nchainparam,MPI_UNSIGNED,nacxitot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(paramjumpxi,nchainparam,MPI_FLOAT,paramjumpxitot,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(numaddrem,nchain,MPI_FLOAT,numaddremtot,nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(ntr_addrem,nchain,MPI_UNSIGNED,ntr_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nac_addrem,nchain,MPI_UNSIGNED,nac_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&Li[0],nchain,MPI_DOUBLE,&Litot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&invT[0],nchain,MPI_DOUBLE,&invTtot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&timeprop[0],nchain,MPI_LONG,&timeproptot[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntr[0],nchainparam,MPI_UNSIGNED,&ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nac[0],nchainparam,MPI_UNSIGNED,&nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&paramjump[0],nchainparam,MPI_FLOAT,&paramjumptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntrxi[0],nchainparam,MPI_UNSIGNED,&ntrxitot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nacxi[0],nchainparam,MPI_UNSIGNED,&nacxitot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&paramjumpxi[0],nchainparam,MPI_FLOAT,&paramjumpxitot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&numaddrem[0],nchain,MPI_FLOAT,&numaddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntr_addrem[0],nchain,MPI_UNSIGNED,&ntr_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nac_addrem[0],nchain,MPI_UNSIGNED,&nac_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(core == 0){   // Swaps different chains
 		for(loop = 0; loop < loopmax; loop++){
@@ -239,18 +240,18 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 		}
 	}
 	
-	MPI_Scatter(invTtot,nchain,MPI_DOUBLE,invT,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Scatter(chtot,nchain,MPI_UNSIGNED,ch,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(timeproptot,nchain,MPI_LONG,timeprop,nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Scatter(ntrtot,nchainparam,MPI_UNSIGNED,ntr,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(nactot,nchainparam,MPI_UNSIGNED,nac,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(paramjumptot,nchainparam,MPI_FLOAT,paramjump,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(ntrxitot,nchainparam,MPI_UNSIGNED,ntrxi,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(nacxitot,nchainparam,MPI_UNSIGNED,nacxi,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(paramjumpxitot,nchainparam,MPI_FLOAT,paramjumpxi,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(numaddremtot,nchain,MPI_FLOAT,numaddrem,nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(ntr_addremtot,nchain,MPI_UNSIGNED,ntr_addrem,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(nac_addremtot,nchain,MPI_UNSIGNED,nac_addrem,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&invTtot[0],nchain,MPI_DOUBLE,&invT[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Scatter(&chtot[0],nchain,MPI_UNSIGNED,&ch[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&timeproptot[0],nchain,MPI_LONG,&timeprop[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Scatter(&ntrtot[0],nchainparam,MPI_UNSIGNED,&ntr[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&nactot[0],nchainparam,MPI_UNSIGNED,&nac[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&paramjumptot[0],nchainparam,MPI_FLOAT,&paramjump[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&ntrxitot[0],nchainparam,MPI_UNSIGNED,&ntrxi[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&nacxitot[0],nchainparam,MPI_UNSIGNED,&nacxi[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&paramjumpxitot[0],nchainparam,MPI_FLOAT,&paramjumpxi[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&numaddremtot[0],nchain,MPI_FLOAT,&numaddrem[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&ntr_addremtot[0],nchain,MPI_UNSIGNED,&ntr_addrem[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&nac_addremtot[0],nchain,MPI_UNSIGNED,&nac_addrem[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	for(p = 0; p < nchain; p++){ 
 		mbpchain[p]->invT = invT[p]; 
@@ -293,15 +294,16 @@ double calcME()
 /// Ouputs a sample from the MBP algorithm
 void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
+	assert(nchain > 0); // Precondition; assert quiets clang-analyzer divide-by-zero warning
 	unsigned int p, ppost, nchaintot = ncore*nchain, samp = long(opsamp.size());
 	int siz;
-	double Li[nchain], Litot[nchaintot], Liord[nchaintot];
-	unsigned int ch[nchain], chtot[nchaintot];
+	std::vector<double> Li(nchain), Litot(nchaintot), Liord(nchaintot);
+	std::vector<unsigned int> ch(nchain), chtot(nchaintot);
 
 	for(p = 0; p < nchain; p++){ Li[p] = mbpchain[p]->Li; ch[p] = mbpchain[p]->ch;}
 		
-	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&Li[0],nchain,MPI_DOUBLE,&Litot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(core == 0){
 		for(p = 0; p < nchaintot; p++){
@@ -309,7 +311,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			Listore[chtot[p]].push_back(Litot[p]);
 			Liord[chtot[p]] = Litot[p];
 		}
-		outputLi(samp,nchaintot,Liord);
+		outputLi(samp,nchaintot,&Liord[0]);
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -364,18 +366,18 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 	unsigned int p, c, cc, th, j, jmax;
 	unsigned int nparam = model.param.size(), nchaintot = ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
 	double av, ntrsum;
-	double Li[nchain], Litot[nchaintot];
-	unsigned int ch[nchain], chtot[nchaintot];
-	long timeprop[nchain], timeproptot[nchaintot];
-	unsigned int ntr[nchainparam], ntrtot[nparamtot];
-	unsigned int nac[nchainparam], nactot[nparamtot];
-	float paramjump[nchainparam], paramjumptot[nparamtot];
-	unsigned int ntrxi[nchainparam], ntrxitot[nparamtot];
-	unsigned int nacxi[nchainparam], nacxitot[nparamtot];
-	float paramjumpxi[nchainparam], paramjumpxitot[nparamtot];
-	float numaddrem[nchain], numaddremtot[nchaintot];
-	unsigned int ntr_addrem[nchain], ntr_addremtot[nchaintot];
-	unsigned int nac_addrem[nchain], nac_addremtot[nchaintot];
+	std::vector<double> Li(nchain), Litot(nchaintot);
+	std::vector<unsigned int> ch(nchain), chtot(nchaintot);
+	std::vector<long> timeprop(nchain), timeproptot(nchaintot);
+	std::vector<unsigned int> ntr(nchainparam), ntrtot(nparamtot);
+	std::vector<unsigned int> nac(nchainparam), nactot(nparamtot);
+	std::vector<float> paramjump(nchainparam), paramjumptot(nparamtot);
+	std::vector<unsigned int> ntrxi(nchainparam), ntrxitot(nparamtot);
+	std::vector<unsigned int> nacxi(nchainparam), nacxitot(nparamtot);
+	std::vector<float> paramjumpxi(nchainparam), paramjumpxitot(nparamtot);
+	std::vector<float> numaddrem(nchain), numaddremtot(nchaintot);
+	std::vector<unsigned int> ntr_addrem(nchain), ntr_addremtot(nchaintot);
+	std::vector<unsigned int> nac_addrem(nchain), nac_addremtot(nchaintot);
 
 	for(p = 0; p < nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
@@ -395,18 +397,18 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		nac_addrem[p] = mbpchain[p]->nac_addrem;
 	}
 		
-	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(timeprop,nchain,MPI_LONG,timeproptot,nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Gather(ntr,nchainparam,MPI_UNSIGNED,ntrtot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nac,nchainparam,MPI_UNSIGNED,nactot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(paramjump,nchainparam,MPI_FLOAT,paramjumptot,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(ntrxi,nchainparam,MPI_UNSIGNED,ntrxitot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nacxi,nchainparam,MPI_UNSIGNED,nacxitot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(paramjumpxi,nchainparam,MPI_FLOAT,paramjumpxitot,nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(numaddrem,nchain,MPI_FLOAT,numaddremtot,nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(ntr_addrem,nchain,MPI_UNSIGNED,ntr_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(nac_addrem,nchain,MPI_UNSIGNED,nac_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&Li[0],nchain,MPI_DOUBLE,&Litot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&timeprop[0],nchain,MPI_LONG,&timeproptot[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntr[0],nchainparam,MPI_UNSIGNED,&ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nac[0],nchainparam,MPI_UNSIGNED,&nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&paramjump[0],nchainparam,MPI_FLOAT,&paramjumptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntrxi[0],nchainparam,MPI_UNSIGNED,&ntrxitot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nacxi[0],nchainparam,MPI_UNSIGNED,&nacxitot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&paramjumpxi[0],nchainparam,MPI_FLOAT,&paramjumpxitot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&numaddrem[0],nchain,MPI_FLOAT,&numaddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&ntr_addrem[0],nchain,MPI_UNSIGNED,&ntr_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&nac_addrem[0],nchain,MPI_UNSIGNED,&nac_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(core == 0){
 		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
