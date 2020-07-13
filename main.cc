@@ -808,7 +808,7 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	srand(core*10000+seed);
+	sran(core*10000+seed);
 	
 	switch(mode){
 	case MODE_SIM:

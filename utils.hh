@@ -20,6 +20,7 @@ using namespace std;
 /// @endcond
 
 double ran();
+void sran(int seed);
 double normal(float mu, float sd);
 double normalprob(double x, double mean, double var);
 double lognormprob(double x, double mean, double var);
