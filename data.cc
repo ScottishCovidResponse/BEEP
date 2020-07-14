@@ -15,7 +15,7 @@ using namespace std;
 #include "pack.hh"
 
 /// Reads in transition and area data
-void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per)
+void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 {
 	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, cc, fl, d, dp, a, aa, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
@@ -33,11 +33,10 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	vector <unsigned int> rcol;
 	
 	mode = mod;
-	period = per;
 	fepertime = 10;
 	
 	settpertime = 1;
-	nsettime = settpertime*per;
+	nsettime = settpertime*period;
 	settime.resize(nsettime+1);
 	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
 			
@@ -77,7 +76,17 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	
 		file = areadatafile;
 		tab = loadtable(file);
-
+		
+		for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == "age0-14") break;
+		if(c < tab.ncol){
+			vector <unsigned int> agecols;
+			agecols.push_back(findcol(tab,"age0-14"));
+			agecols.push_back(findcol(tab,"age15-44"));
+			agecols.push_back(findcol(tab,"age45-64"));
+			agecols.push_back(findcol(tab,"age65+"));	
+			table_createcol("all",agecols,tab);
+		}
+		
 		codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
 		xcol = findcol(tab,"easting");
 		ycol = findcol(tab,"northing");
@@ -167,7 +176,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
 				tab = loadtable(file);
-	
+				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
+				
 				rcol.clear();
 				if(transdata[td].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
@@ -176,12 +186,12 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				for(r = 0; r < rcol.size(); r++){
 					transdata[td].num[r].resize(tab.nrow);
 					for(row = 0; row < tab.nrow; row++){	
-						transdata[td].num[r][row] = atoi(tab.ele[row][rcol[r]].c_str());
+						transdata[td].num[r][row] = getint(tab.ele[row][rcol[r]],file);
 					}
 				}
 				transdata[td].rows = tab.nrow;
 				
-				if(transdata[td].start + tab.nrow*transdata[td].units > period){
+				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > period){
 					emsg("The file '"+file+"' has more data than will fit in the time period.");
 				}
 			}
@@ -191,7 +201,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
 				tab = loadtable(file);
-	
+				table_selectdates(popdata[pd].start,popdata[pd].units,tab,"pop");
+			
 				rcol.clear();
 				if(popdata[pd].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
@@ -199,13 +210,11 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				popdata[pd].num.resize(rcol.size());
 				for(r = 0; r < rcol.size(); r++){
 					popdata[pd].num[r].resize(tab.nrow);
-					for(row = 0; row < tab.nrow; row++){	
-						popdata[pd].num[r][row] = atoi(tab.ele[row][rcol[r]].c_str());
-					}
+					for(row = 0; row < tab.nrow; row++) popdata[pd].num[r][row] = getint(tab.ele[row][rcol[r]],file);
 				}
 				popdata[pd].rows = tab.nrow;
 				
-				if(popdata[pd].start + tab.nrow*popdata[pd].units > period){
+				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > period){
 					emsg("The file '"+file+"' has more data than will fit in the time period.");
 				}
 			}
@@ -229,7 +238,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 				}
 			}
 		}
-		
+
 		vec.resize(nage);                                                 // Reads in Q tensors
 		for(q = 0; q < Q.size(); q++){
 			tab = loadtable(Q[q].file);
@@ -280,6 +289,33 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod, uns
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
+	
+	//plotrawdata(); emsg("done");
+	//generatedeathdata(); emsg("done");
+}
+
+
+/// Gets a positive integer from a string
+unsigned int DATA::getint(string st, string file)
+{
+	unsigned int i, j;
+	int n = st.length();  
+  char str[n + 1]; 
+	strcpy(str, st.c_str()); 
+		
+	for(j = 0; j < st.size(); j++) if(!isdigit(str[j])) break;
+	if(j < st.size()){
+		if(st == "NA") i = UNKNOWN;
+		else{
+			if(st == "*"){
+				i = THRESH;
+				if(threshold == UNSET) emsg("If 'NA' is used, there must be a threshold set with the 'threshold' command.");
+			}
+			else emsg("In file '"+file+"' the quantity '"+st+"' is not a number");
+		}
+	}
+  else i = atoi(str);
+	return i;
 }
 
 /// Normalises the Q tensors
@@ -336,7 +372,7 @@ void DATA::addQtensor(string timep, string comp, string file)
 	qten.file = file;
 	Q.push_back(qten);
 }
-	
+
 /// Loads a table from a file
 TABLE DATA::loadtable(string file)
 {
@@ -382,7 +418,64 @@ TABLE DATA::loadtable(string file)
 	
 	return tab;
 }
-		
+
+/// Creates a new column by adding together existing columns		
+void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab)
+{
+	unsigned int row, i, sum;
+	
+	tab.heading.push_back(head);
+	for(row = 0; row < tab.nrow; row++){
+		sum = 0; for(i = 0; i < cols.size(); i++) sum += atoi(tab.ele[row][cols[i]].c_str());
+		stringstream ss; ss << sum;
+		tab.ele[row].push_back(ss.str());
+	}
+	tab.ncol++;
+}
+
+/// Selects dates as specified in the TOLM file
+void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type)
+{
+	unsigned int row, tt, num1, num2, i;
+	
+	row = 0;
+	while(row < tab.nrow){
+		tt = gettime(tab.ele[row][0]) - start;
+		if(tt < t){
+			if(type == "trans" && row > 0){ // In the case of transitions adds up the contributions from other days to make a week 
+				for(i = 1; i < tab.ncol; i++){
+					num1 = getint(tab.ele[row-1][i],tab.file);
+					num2 = getint(tab.ele[row][i],tab.file);
+					if(num1 == THRESH || num2 == THRESH || num1 == UNKNOWN || num2 == UNKNOWN) emsg("not done yet");
+					tab.ele[row-1][i] = to_string(num1+num2);
+				}				
+			}
+			tab.ele.erase(tab.ele.begin()+row);
+			tab.nrow--;
+		}
+		else{
+			if(tt > t) emsg("In file '"+tab.file+"' there is no observed data at time '"+getdate(t)+"'."); 
+			t += units;
+			row++;
+		}
+	}
+	if(tab.nrow == 0) emsg("The file '"+tab.file+"' does not contain any informations.");
+	
+	if(type=="trans"){                         // Removes the last line if incomplete
+		if(gettime(tab.ele[tab.nrow-1][0]) > end-units){
+			tab.ele.erase(tab.ele.begin()+tab.nrow-1);
+			tab.nrow--;
+		}
+	}	
+	
+	if(checkon == 1){
+		for(row = 0; row < tab.nrow; row++){
+			for(i = 0; i < tab.ncol; i++) cout << tab.ele[row][i] << " ";
+			cout << endl;
+		}
+	}
+}				
+
 /// Finds a column in a table
 unsigned int DATA::findcol(TABLE &tab, string name)
 {
@@ -514,12 +607,255 @@ void DATA::addcovar(string name, string param, string func)
 	
 string DATA::strip(string line)
 {
-	int len = line.length();
-	if(len > 0){
-		if(line.substr(len-1,1) == "\r") line = line.substr(0,len-1);
-	}
+	unsigned int len;
+	
+	len = line.length();
+	if(len > 0 && line.substr(len-1,1) == "\r") line = line.substr(0,len-1);
+	len = line.length();
+	if(len > 0 && line.substr(0,1) == "\"") line = line.substr(1,len-1);
+	len = line.length();
+	if(len > 0 && line.substr(len-1,1) == "\"") line = line.substr(0,len-1);
+	
 	return line;
 }	
 
+/// Gets the time from a string
+unsigned int DATA::gettime(string st)
+{
+	unsigned int t;
+	const char *buf = st.c_str();
+	struct tm result;
+			
+	if(st == "start") return start;
+	if(st == "end") return end;
+			
+	switch(tform){
+	case TFORM_NUM:
+		t = atoi(buf);
+		if(std::isnan(t)) emsg("Time '"+st+"' is not a number");
+		break;
+
+	case TFORM_YMD:
+		memset(&result, 0, sizeof(result));
+		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
+			time_t tt = mktime(&result);
+			t = tt/(60*60*24);
+		}
+		else{ 
+			emsg("'"+st+"' not regonised as Year-Month-Day format.");
+			t = 0;
+		}
+		break;
+		
+	default:
+		emsg("Do not recognise time format");
+		t = 0;
+		break;
+	}
+
+	return t;	
+}
+
+/// Returns a date from a time
+string DATA::getdate(unsigned int t)
+{
+	time_t tt;
+	string st;
+	stringstream ss; 
+	char buffer[80];
+  struct tm *timeinfo;
+	
+	t += start;
+
+	switch(tform){
+	case TFORM_NUM:
+		ss << t;
+		break;
+		
+	case TFORM_YMD:
+		tt = (t + 0.5)*(60*60*24);	
+		timeinfo = localtime(&tt);
+		strftime(buffer,80,"%Y-%m-%d",timeinfo);
+		ss << buffer;
+		break;
+	}
+	
+	return ss.str();
+	
+}
+
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
+
+
+/************ Code below this is used for diagnostic purposes and will not be in the final version ***********/
+
+/// This is used to plot raw data files (this is used for diagnoistic purposed, and not in the analysis)
+void DATA::plotrawdata()
+{
+	unsigned int row, tt, num, sum;
+	TABLE tab;
+	
+	tab = loadtable("DailyDeathsConfirmedCovid.txt");
+	ofstream dout(outputdir+"/deathraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout << tt << " " << num << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << " Deaths" << endl;
+	
+	tab = loadtable("hospital_admissions_number_per_day.txt");
+	ofstream dout2(outputdir+"/hospadminraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout2 << tt << " " << num << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << " Admissions" << endl;
+		
+	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt");
+	ofstream dout3(outputdir+"/nhsothercasesraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout3 << tt << " " << num << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << " NHS+other cases" << endl;
+	
+	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt");
+	ofstream dout4(outputdir+"/nhsonlycasesraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout4 << tt << " " << num << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << " NHS cases" << endl;
+	
+	// estimate distribution
+	
+	vector <unsigned int> numst, numst2;
+	int t, tmax = 140, j;
+	double dt, mean_ns, sd_ns, sd, mean;
+	numst.resize(tmax); numst2.resize(tmax);
+	for(t = 0; t < tmax; t++){ numst[t] = 0, numst[t] = 0;}
+	
+	tab = loadtable("hospital_admissions_number_per_day.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		t = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN){
+			for(j = 0; j < num; j++){
+				mean_ns = 20; sd_ns = 20;
+				sd = sqrt(log((1+sd_ns*sd_ns/(mean_ns*mean_ns)))); mean = log(mean_ns) - sd*sd/2;
+				dt = exp(normal(mean,sd));
+				tt = int(t + dt+ran());
+				if(tt < tmax) numst[tt]++;
+				tt = int(dt+ran());
+				if(tt < tmax) numst2[tt]++;
+			}
+		}
+	}
+	
+	ofstream deathpred(outputdir+"/deathpred.txt");
+	for(t = 0; t < tmax; t++){
+		deathpred << t << " " << numst[t] <<  " " << numst2[t] << endl;
+	}
+}
+	
+/// This is used to plot raw data files (this is used for diagnoistic purposed, and not in the analysis)
+void DATA::generatedeathdata()
+{
+	unsigned int row, t, nweek = 40, w, ww, r, n, sum, sumH, sumI;
+	vector< vector <unsigned int> > num;
+	vector <unsigned int> HDnum;
+	vector <unsigned int> IDnum;
+	vector <string> linedate;
+	TABLE tab;
+	string reg, date, file, sex, age, cause, loc;
+	
+	tab = loadtable("deathdata.txt");
+	
+	num.resize(nweek); linedate.resize(nweek); HDnum.resize(nweek); IDnum.resize(nweek);
+	for(w = 0; w < nweek; w++){
+		HDnum[w] = 0; IDnum[w] = 0;
+				 
+		num[w].resize(region.size());
+		for(r = 0; r < region.size(); r++) num[w][r] = 0;
+	}
+
+	sum = 0; sumI = 0; sumH = 0;
+	for(row = 0; row < tab.nrow; row++){
+		reg = tab.ele[row][0];
+		date = tab.ele[row][1];
+		n = getint(tab.ele[row][4],"");
+		sex = tab.ele[row][5];
+		age = tab.ele[row][6];
+		cause = tab.ele[row][7];
+		loc = tab.ele[row][8];
+		
+		if(date.substr(0,4) == "w/c "){
+			date = date.substr(4,date.length()-4);
+			t = gettime(date);
+			if(t >=start){
+				w = (t-start)/7; if(w > nweek) emsg("out");
+						
+				if(sex == "All" && age == "All" && cause == "COVID-19 related"){
+					r = 0; while(r < region.size() && region[r].code != reg) r++;
+					if(r < region.size()){
+						if(loc == "All"){				
+							linedate[w] = date;
+							num[w][r] += n;
+							sum += n;
+						}
+					}
+					else{
+						if(reg == "S92000003" && loc != "All"){
+							if(loc == "Hospital"){ HDnum[w] += n; sumH += n;}
+							else{ IDnum[w] += n; sumI += n;}
+						}
+					}
+				}
+			}
+		}
+	}
+	cout << "Total in regions: " << sum << endl;
+	cout << "Total from hospitals: " << sumH << endl;
+	cout << "Total from community: " << sumI << endl;
+
+	file = outputdir+"/D_NRS_reg.txt";
+	ofstream deathout(file.c_str());
+	deathout << "date"; for(r = 0; r < region.size(); r++) deathout << "\t" << region[r].code;
+	deathout << endl;
+	for(w = 0; w < nweek; w++){
+		deathout << linedate[w];
+		for(r = 0; r < region.size(); r++){
+			sum = 0; for(ww = 0; ww < w; ww++) sum += num[ww][r];
+			deathout  << "\t" << sum;
+		}
+		deathout << endl;
+	}
+	
+	file = outputdir+"/HD_NRS.txt";
+	ofstream HDout(file.c_str());
+	HDout << "date\tall" << endl;
+	for(w = 0; w < nweek; w++){
+		HDout << linedate[w] << "\t" << HDnum[w] << endl;
+	}
+
+	file = outputdir+"/ID_NRS.txt";
+	ofstream IDout(file.c_str());
+	IDout << "date\tall" << endl;
+	for(w = 0; w < nweek; w++){
+		IDout << linedate[w] << "\t" << IDnum[w] << endl;
+	}
+}

@@ -17,9 +17,9 @@ using namespace std;
 #include "consts.hh"
 
 struct STAT{                                           // Stores statistical information
-	double mean;                                         // The mean
-	double CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
-	double ESS;                                          // The estimated sample size
+	string mean;                                         // The mean
+	string CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
+	string ESS;                                          // The estimated sample size
 };
 
 static void ensuredirectory(const string &path);
@@ -107,10 +107,130 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &d
 	return sa;
 }
 
+/// Outputs a posterior graph
+void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
+{
+	unsigned int j, jmax, row, s, t, nopsamp, opsampmin, rr, rrmin, rrmax, nrow, dc, jj;
+	double sum, valsum;
+	string name, file, filefull;
+	vector <double> vec;
+	STAT stat;
+	
+	nopsamp = opsamp.size();
+	opsampmin = nopsamp/4;
+	
+	switch(type){
+	case POP_DATA: name = data.popdata[d].file; break;
+	case TRANS_DATA: name = data.transdata[d].file; break;
+	case MARG_DATA: name = data.margdata[d].file; break;
+	}
+	
+	j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
+	name = name.substr(0,j);
+	
+	switch(r){
+	case UNSET:	file = "Posterior_"+name+".txt"; break;
+	case ADD:	file = "Posterior_"+name+"_sum.txt"; break;
+	default: file = "Posterior_"+name+"_"+data.region[r].code+".txt"; break;
+	}
+	
+	filefull = data.outputdir+"/"+file;
+	ofstream dataout(filefull.c_str());
+	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
+						
+	switch(type){
+	case POP_DATA: 
+		cout << "'" << file << "' gives the population in '" << data.popdata[d].compstr << "'";
+		dataout << "# The population in '" << data.popdata[d].compstr << "'"; 
+		nrow = data.popdata[d].rows;
+		break;
+		
+	case TRANS_DATA:
+		cout << "'" << file << "' gives numbers of " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
+		dataout << "# Population in " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
+		nrow = data.transdata[d].rows;
+		break;
+	
+	case MARG_DATA:
+		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
+		dataout << "# The " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
+		dc = data.margdata[d].democat;
+		nrow = data.democat[dc].value.size();
+		break;
+	}	
+	
+	if(r != UNSET && r != ADD){
+		cout << " for region '" << data.region[r].name << "'." << endl;
+		dataout << " for region '" << data.region[r].name << "'." << endl;
+	}
+	else{
+		cout << "." << endl;
+		dataout << "." << endl;
+	}
+		
+	switch(r){
+	case UNSET: rrmin = 0; rrmax = 1; break;
+	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsg("Output: EC64"); break;
+	default: rrmin = r; rrmax = r+1; break;
+	}
+
+	switch(type){
+	case TRANS_DATA: case POP_DATA: dataout << "# Time from start, " << data.tformat; break;
+	case MARG_DATA: dataout << "category"; break;
+	}	
+	dataout << ", data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
+	for(row = 0; row < nrow; row++){
+		vec.clear(); 
+		for(s = opsampmin; s < nopsamp; s++){
+			valsum = 0;
+			for(rr = rrmin; rr < rrmax; rr++){
+				switch(type){
+				case POP_DATA: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
+				case TRANS_DATA: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
+				case MARG_DATA:
+					sum = 0; for(jj = 0; jj < data.democat[dc].value.size(); jj++) sum += opsamp[s].meas.margnum[d][jj][rr];
+					valsum += 100.0*opsamp[s].meas.margnum[d][row][rr]/sum;
+					break;
+				}	
+			}
+			vec.push_back(valsum);
+		}
+		
+		stat = getstat(vec);
+		switch(type){
+		case POP_DATA: t = data.popdata[d].start+row*data.popdata[d].units; break;
+		case TRANS_DATA: t = data.transdata[d].start+row*data.transdata[d].units; break;
+		}
+		if(type == MARG_DATA) dataout << data.democat[dc].value[row] << " ";
+		else dataout << t << " " << data.getdate(t) << " ";
+		
+		if(data.mode != MODE_SIM){
+			valsum = 0;
+			for(rr = rrmin; rr < rrmax; rr++){
+				if(type == MARG_DATA) valsum += data.margdata[d].percent[rr][row]; 
+				else{
+					switch(type){
+					case POP_DATA: jj = data.popdata[d].num[rr][row]; break;
+					case TRANS_DATA: jj = data.transdata[d].num[rr][row]; break;
+					}
+					switch(jj){
+					case UNKNOWN: break;
+					case THRESH: valsum += data.threshold; break;
+					default: valsum += jj; break;
+					}
+				}
+			}
+			dataout << valsum;
+		}
+		else dataout << stat.mean;
+		dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+	}
+}
+
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, row, td, pd, md, j, jj, jmax, d;
+	unsigned int p, r, s, st, nopsamp, opsampmin, row, j, jj, jmax, d;
 	double sum;
 	string file, filefull;
 	vector <double> vec;
@@ -120,169 +240,47 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	ensuredirectory(data.outputdir);
 		
 	nopsamp = opsamp.size();
+	opsampmin = nopsamp/4;
 	
 	cout << endl;
 	if(data.mode == MODE_SIM) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
 	else cout << "Posterior outputs in directory '" << data.outputdir << "':" << endl;
 	
-	for(td = 0; td < data.transdata.size(); td++){
-		name = data.transdata[td].file;
-	
-		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
-		name = name.substr(0,j);
-	
-		if(data.transdata[td].type == "reg"){
-			for(r = 0; r < data.nregion; r++){
-				file = "Posterior_"+name+"_"+data.region[r].code+".txt";
-				filefull = data.outputdir+"/"+file;
-				ofstream dataout(filefull.c_str());
-				if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-						
-				cout << "'" << file << "' gives numbers of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions for region '" << data.region[r].name << "'." << endl;
-		
-				for(row = 0; row < data.transdata[td].rows; row++){
-					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].meas.transnum[td][row][r]);
-					stat = getstat(vec);
-					
-					dataout << data.transdata[td].start + (row+0.5)*data.transdata[td].units << " ";
-					if(data.mode != MODE_SIM) dataout << data.transdata[td].num[r][row]; else dataout << stat.mean;
-					dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-				}
-			}
+	for(d = 0; d < data.transdata.size(); d++){
+		if(data.transdata[d].type == "reg"){
+			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,TRANS_DATA);
+			outputplot(data,opsamp,d,ADD,TRANS_DATA);
 		}
-		
-		if(data.transdata[td].type == "all"){
-			file = "Posterior_"+name+".txt";
-			filefull = data.outputdir+"/"+file;
-			ofstream dataout(filefull.c_str());
-			if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-			
-			cout << "'" << file << "' gives numbers of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions." << endl;
-	
-			for(row = 0; row < data.transdata[td].rows; row++){
-				vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].meas.transnum[td][row][0]);
-				stat = getstat(vec);
-				
-				dataout << data.transdata[td].start + (row+0.5)*data.transdata[td].units << " ";
-				if(data.mode != MODE_SIM) dataout << data.transdata[td].num[0][row]; else dataout << stat.mean;
-				dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-			}
-		}
+		if(data.transdata[d].type == "all") outputplot(data,opsamp,d,UNSET,TRANS_DATA);
 	}
 	
-	for(pd = 0; pd < data.popdata.size(); pd++){
-		name = data.popdata[pd].file;
-	
-		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
-		name = name.substr(0,j);
-	
-		if(data.popdata[pd].type == "reg"){
-			for(r = 0; r < data.nregion; r++){
-				file = "Posterior_"+name+"_"+data.region[r].code+".txt";
-				filefull = data.outputdir+"/"+file;
-				ofstream dataout(filefull.c_str());
-				if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-						
-				cout << "'" << file << "' gives the population in '" << data.popdata[pd].compstr << "' for region '" << data.region[r].name << "'." << endl;
-		
-				for(row = 0; row < data.popdata[pd].rows; row++){
-					vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].meas.popnum[pd][row][r]);
-					stat = getstat(vec);
-					
-					dataout << data.popdata[pd].start << " ";
-					if(data.mode != MODE_SIM) dataout << data.popdata[pd].num[r][row]; else dataout << stat.mean;
-					dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-				}
-			}
+	for(d = 0; d < data.popdata.size(); d++){
+		if(data.popdata[d].type == "reg"){
+			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,POP_DATA);
+			outputplot(data,opsamp,d,ADD,POP_DATA);
 		}
-		
-		if(data.popdata[pd].type == "all"){
-			file = "Posterior_"+name+".txt";
-			filefull = data.outputdir+"/"+file;
-			ofstream dataout(filefull.c_str());
-			if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-			
-			cout << "'" << file << "' gives the population in '" << data.popdata[pd].compstr << "'." << endl;
-	
-			for(row = 0; row < data.popdata[pd].rows; row++){
-				vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].meas.popnum[pd][row][0]);
-				stat = getstat(vec);
-				
-				dataout << data.popdata[pd].start << " ";
-				if(data.mode != MODE_SIM) dataout << data.popdata[pd].num[0][row]; else dataout << stat.mean;
-				dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-			}
-		}
+		if(data.popdata[d].type == "all") outputplot(data,opsamp,d,UNSET,POP_DATA);
 	}
 	
-	for(md = 0; md < data.margdata.size(); md++){
-		d = data.margdata[md].democat;
-			
-		name = data.margdata[md].file;
-
-		j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
-		name = name.substr(0,j);
-	
-		if(data.margdata[md].type == "reg"){
-			for(r = 0; r < data.nregion; r++){
-				file = "Posterior_"+name+"_"+data.region[r].code+".txt";
-				filefull = data.outputdir+"/"+file;
-				ofstream dataout(filefull.c_str());
-				if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-						
-				cout << "'" << file << "' gives " << data.margdata[md].fromstr << "→" << data.margdata[md].tostr << " transitions stratified by '" << data.democat[d].name << "' for region '" << data.region[r].name << "'." << endl;
-		
-				for(j = 0; j < data.democat[d].value.size(); j++){
-					vec.clear();
-					for(s = 0; s < nopsamp; s++){
-						sum = 0; for(jj = 0; jj < data.democat[d].value.size(); jj++) sum += opsamp[s].meas.margnum[md][jj][r];
-						vec.push_back(opsamp[s].meas.margnum[md][j][r]/sum);
-					}
-					stat = getstat(vec);
-					
-					dataout << data.democat[d].value[j] << " ";
-					if(data.mode != MODE_SIM) dataout << data.margdata[md].percent[r][j]; else dataout << stat.mean;
-					dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-				}
-			}
-		}
-		
-		if(data.margdata[md].type == "all"){
-			file = "Posterior_"+name+".txt";
-			filefull = data.outputdir+"/"+file;
-			ofstream dataout(filefull.c_str());
-			if(!dataout) emsg("Cannot output the file '"+filefull+"'");
-			
-			cout << "'" << file << "' gives the percentages in the " << data.margdata[md].fromstr << "→" << data.margdata[md].tostr << " transition stratified by '" << data.democat[d].name << "'." << endl;
-		
-			for(j = 0; j < data.democat[d].value.size(); j++){
-				vec.clear(); 
-				for(s = 0; s < nopsamp; s++){
-					sum = 0; for(jj = 0; jj < data.democat[d].value.size(); jj++) sum += opsamp[s].meas.margnum[md][jj][0];
-					vec.push_back(opsamp[s].meas.margnum[md][j][0]/sum);
-				}
-				stat = getstat(vec);
-				
-				dataout << data.democat[d].value[j] << " ";
-				if(data.mode != MODE_SIM) dataout << data.margdata[md].percent[0][j]; else dataout << stat.mean;
-				dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
-			}
-		}
+	for(d = 0; d < data.margdata.size(); d++){
+		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,MARG_DATA);}
+		if(data.margdata[d].type == "all") outputplot(data,opsamp,d,UNSET,MARG_DATA);
 	}
-	
+		
 	file = "Posterior_R0.txt";
 	filefull = data.outputdir+"/"+file;
 	ofstream R0out(filefull.c_str());
 	if(!R0out) emsg("Cannot output the file '"+filefull+"'");
 	
 	cout << "'" << file << "' gives the time variation in R0." << endl;
-	
+	R0out << "# Gives the time variation in R0." << endl;	
+	R0out << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
+
 	for(st = 0; st < data.nsettime; st++){
-		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
+		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
 		
-		R0out << (st+0.5)*data.period/data.nsettime << " " 
-		      << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
 	file = "Posterior_parameters.txt";
@@ -291,9 +289,11 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	if(!paramout) emsg("Cannot output the file '"+filefull+"'");
 	
 	cout << "'" << file << "' gives the model parameters." << endl;
-	
+	paramout << "# Posterior distributions for model parameters." << endl;
+	paramout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
+
 	for(p = 0; p < model.param.size(); p++){
-		vec.clear(); for(s = 0; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
+		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
 		stat = getstat(vec);
 			
 		paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
@@ -306,25 +306,6 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	if(data.mode == MODE_INF){
 		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
-
-	// This gives the acceptance rates for different MCMC proposals on different parameters
-	
-	if(data.mode != MODE_SIM){
-		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
-		ofstream diag(ss.str().c_str()); 
-		if(!diag) emsg("Cannot output the file '"+ss.str()+"'");
-	
-		cout << "'" << ss.str() << "' gives MCMC diagnostics." << endl;
-	
-		diag << "MCMC diagnostics:" << endl;
-
-		for(p = 0; p < model.param.size(); p++){
-			diag << model.param[p].name << ": ";
-			if(model.param[p].ntr == 0) diag << "Fixed" << endl;
-			else diag << "Acceptance rate " << double(model.param[p].nac)/model.param[p].ntr << endl;
-		}
-	}
-	cout << endl;
 }
 	
 /// Outputs an event sample fev
@@ -419,13 +400,17 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		transout << "Week"; 
+		switch(data.tform){
+		case TFORM_NUM: transout << "time"; break;
+		case TFORM_YMD: transout << "date"; break;
+		}
+
 		if(data.transdata[td].type == "reg"){ for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
 		else transout << "\t" << "all";
 		transout << endl;
 		
 		for(row = 0; row < data.transdata[td].rows; row++){
-			transout << row;
+			transout << data.getdate(data.transdata[td].start + row*data.transdata[td].units);
 			for(r = 0; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
 		}
 	}
@@ -440,13 +425,17 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		if(data.popdata[pd].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		popout << "Week"; 
+		switch(data.tform){
+		case TFORM_NUM: popout << "time"; break;
+		case TFORM_YMD: popout << "date"; break;
+		}
+		
 		if(data.popdata[pd].type == "reg"){ for(r = 0; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
 		else popout << "\t" << "all";
 		popout << endl;
 		
 		for(row = 0; row < data.popdata[pd].rows; row++){
-			popout << row;
+			popout << data.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
 			for(r = 0; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
 		}
 	}
@@ -484,46 +473,49 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 STAT getstat(vector <double> &vec)                           
 {
 	unsigned int n, i, d;
-	double sum, sum2, sd, a, cor, f;
+	double sum, sum2, var, sd, a, cor, f;
 	STAT stat;
 	
 	n = vec.size();
-	
-	sum = 0; sum2 = 0; for(i = 0; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
-	sum /= n; sum2 /= n;
-	stat.mean = sum; 
-	
-	sort(vec.begin(),vec.end());
-	
-	if (n >= 2)
-	{
-		i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
-		stat.CImin = vec[i]*(1-f) + vec[i+1]*f;
-			
-		i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
-		stat.CImax = vec[i]*(1-f) + vec[i+1]*f;
+	if(n == 0){
+		stat.mean = "---"; stat.CImin = "---"; stat.CImax = "---"; stat.ESS = "---"; 
 	}
-	else
-	{
-		stat.CImin = vec[0];
-		stat.CImax = vec[0];
-	}
-
-	sd = sqrt(sum2 - sum*sum);
-	if(sd == 0) stat.ESS = 0;
 	else{
-		for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
-			
-		sum = 1;
-		for(d = 0; d < n/2; d++){             // calculates the effective sample size
-			a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
-			cor = a/(n-d);
-			if(cor < 0) break;
-			sum += 0.5*cor;			
+		sum = 0; sum2 = 0; for(i = 0; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
+		sum /= n; sum2 /= n;
+		stat.mean = to_string(sum); 
+	
+		sort(vec.begin(),vec.end());
+	
+		if(n >= 2){
+			i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
+			stat.CImin = to_string(vec[i]*(1-f) + vec[i+1]*f);
+				
+			i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
+			stat.CImax = to_string(vec[i]*(1-f) + vec[i+1]*f);
 		}
-		stat.ESS = n/sum;
+		else{
+			stat.CImin = to_string(vec[0]);
+			stat.CImax = to_string(vec[0]);
+		}
+
+		var = sum2 - sum*sum;
+		if(var <= tiny || n <= 2)  stat.ESS = "---";
+		else{
+			sd = sqrt(sum2 - sum*sum);
+			for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
+				
+			sum = 1;
+			for(d = 0; d < n/2; d++){             // calculates the effective sample size
+				a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
+				cor = a/(n-d);
+				if(cor < 0) break;
+				sum += 0.5*cor;			
+			}
+			stat.ESS = to_string(int(n/sum));
+		}
 	}
-		
+	
 	return stat;
 }
 

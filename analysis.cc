@@ -4,14 +4,20 @@ Compile using: make
 
 Simulation:  
  ./run inputfile="examples/sim.toml"        
-
+ ./run inputfile="examples/simMSOA_noage.toml" mode="sim"
+  mode="inf"  nsamp=10000
 Inference:    
 mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
+
+mpirun -n 20 ./run inputfile="examples/simMSOA_noage.toml" mode="inf" nchain=20 nsamp=10000
 */
 
-// mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/inf2.toml" nchain=20
+// nohup mpirun -n 20 ./run inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
 
+// nohup mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
+
+// mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/simMSOA.toml" nchain=2  mode="inf"  nsamp=10000 
 // make -j 10
 /*
  Commands for running on DiRAC:
@@ -22,6 +28,7 @@ mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
  mybalance
 */
 // sed -i 's/\r$//g' gitversion.sh    gets rid of \r
+// sed -i 's/\r$//g' convert_sim.sh    gets rid of \r
 
 
 #include <iostream>
@@ -229,16 +236,14 @@ int main(int argc, char** argv)
 	unsigned int nchain=UNSET;                // The number of chains per core
 	
 	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
-	unsigned int period=UNSET;                // The period of time for simulation / inference
 	
 	int seed=0;                               // Sets the random seed for simulation
 	
 	unsigned int j, k, d;
-
 	TRANSDATA transdata;
 	POPDATA popdata;
 	MARGDATA margdata;
-	string str, command, value;
+	string str, command, value, tformat, startstr, endstr;
 
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
@@ -259,9 +264,10 @@ int main(int argc, char** argv)
 	MODEL model(data);
 		
 	data.outputdir="Output";                // The default output directory
-		
+	data.threshold=UNSET;
+
 	// A list of all supported parameters
-	vector<string>  definedparams {"covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "period", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile", "propsmethod"};
+	vector<string>  definedparams {"threshold", "covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "timeformat", "start", "end", "timeunits", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile", "propsmethod"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -333,8 +339,24 @@ int main(int argc, char** argv)
 		else emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}
 	
-	// period
-	period = lookup_int_parameter(cmdlineparams, tomldata, "period", param_verbose);
+	tformat = lookup_string_parameter(cmdlineparams, tomldata, "timeformat", param_verbose);
+	if(tformat == "number"){ data.tform = TFORM_NUM; data.tformat = "time";}
+	else{ 
+		data.tformat = "date";
+		if(tformat == "year-month-day") data.tform = TFORM_YMD; 
+		else emsgroot("Do not recognise time format '"+tformat+"'.");
+	}
+	
+	// start
+	startstr = lookup_string_parameter(cmdlineparams, tomldata, "start", param_verbose);
+	data.start = data.gettime(startstr);
+
+	// end
+	endstr = lookup_string_parameter(cmdlineparams, tomldata, "end", param_verbose);
+	data.end = data.gettime(endstr);
+	
+	// sets the period
+	data.period = data.end - data.start;
 
 	// seed
 	if(mode == MODE_SIM){
@@ -361,7 +383,7 @@ int main(int argc, char** argv)
 
 	// data directory
 	data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
-
+	
 	// region data
 	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
 
@@ -369,6 +391,12 @@ int main(int argc, char** argv)
 	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
 
 	data.genQ.onoff = lookup_string_parameter(cmdlineparams, tomldata, "genQ", param_verbose, "UNSET");
+
+	// threshold
+	if(tomldata.contains("threshold")){
+		data.threshold = lookup_int_parameter(cmdlineparams, tomldata, "threshold", param_verbose);
+		data.thres_h = log(1.0/(data.threshold + 0.5*sqrt(2*M_PI*minvar*varfac)));
+	}
 
 	// End of parameters
 	if (param_verbose)
@@ -479,9 +507,16 @@ int main(int argc, char** argv)
 			const auto name = toml::find<std::string>(tim,"name");
 			
 			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
-			auto tend = toml::find<double>(tim,"tend");
+			auto tendstr = toml::find<string>(tim,"tend");
+			int tend = data.gettime(tendstr) - data.start;
+			
+			if(tend < 0 || tend > (int)data.period) emsg("Time '"+tendstr+"' is out of range."); 
+			if(j > 0){
+				if(tend < data.timeperiod[j-1].tend) emsg("'timep' is not time ordered.");
+			}
+			
 			if(j == timep.size()-1){
-				if(tend != period) emsg("'tend' in 'timep' must end with the time period");
+				if(tend != (int)data.period) emsg("'tend' in 'timep' must finish with the end time.");
 			}
 			data.addtimep(name,tend);
 		}
@@ -585,7 +620,7 @@ int main(int argc, char** argv)
 		}
 		cout << endl;
 	}
-	
+
 	// THE DATA
 	
 	// transdata
@@ -612,9 +647,9 @@ int main(int argc, char** argv)
 			const auto file = toml::find<std::string>(td,"file");
 			transdata.file = file;
 
-			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'transdata'.");
-			const auto start = toml::find<unsigned int>(td,"start");
-			transdata.start = start;
+			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
+			const auto startdata = toml::find<string>(td,"start");
+			transdata.start = data.gettime(startdata)-data.start;
 			
 			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
 			const auto units = toml::find<std::string>(td,"units");
@@ -625,7 +660,7 @@ int main(int argc, char** argv)
 			}
 			
 			if(mode == MODE_SIM){
-				transdata.rows = (unsigned int)((period - start)/transdata.units);
+				transdata.rows = (unsigned int)((data.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
@@ -654,11 +689,12 @@ int main(int argc, char** argv)
 			popdata.file = file;
 
 			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
-			const auto start = toml::find<unsigned int>(pd,"start");
-			popdata.start = start;
+			const auto startdata = toml::find<string>(pd,"start");
+			popdata.start = data.gettime(startdata)-data.start;
 			
 			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
 			const auto units = toml::find<std::string>(pd,"units");
+			
 			if(units == "days") popdata.units = 1;
 			else{
 				if(units == "weeks") popdata.units = 7;
@@ -666,7 +702,7 @@ int main(int argc, char** argv)
 			}
 			
 			if(mode == MODE_SIM){
-				popdata.rows = (unsigned int)((period - start)/popdata.units);
+				popdata.rows = (unsigned int)((data.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
@@ -717,9 +753,7 @@ int main(int argc, char** argv)
  
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(period == UNSET) emsgroot("The property 'period' must be set");
-	
-	data.readdata(core,ncore,mode,period);
+	data.readdata(core,ncore,mode);
 
 	POPTREE poptree;
 	poptree.init(data,core);	

@@ -21,7 +21,7 @@ using namespace std;
 #include "generateQ.hh"
 #include "utils.hh"
 
-unsigned int nage = 3;                            // The number of age categories used 
+unsigned int nage;                         // The number of age categories used 
 const short normon = 0;                    // Determines if matrix normalised
 const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
 
@@ -200,11 +200,28 @@ vector <AREA> loadarea(TABLE tab)
 	vector <int> agecol;
 	AREA are;
 	vector <AREA> area;
+	
+	switch(nage){
+	case 1:
+		agecol.push_back(findcol(tab,"age0-14"));
+		break;
 		
-	agecol.push_back(findcol(tab,"age0-19"));
-	agecol.push_back(findcol(tab,"age20-64"));
-	agecol.push_back(findcol(tab,"age65+"));
-
+	case 3:		
+		agecol.push_back(findcol(tab,"age0-19"));
+		agecol.push_back(findcol(tab,"age20-64"));
+		agecol.push_back(findcol(tab,"age65+"));
+		break;
+		
+	case 4:	
+		agecol.push_back(findcol(tab,"age0-14"));
+		agecol.push_back(findcol(tab,"age15-44"));
+		agecol.push_back(findcol(tab,"age45-64"));
+		agecol.push_back(findcol(tab,"age65+"));
+		break;
+	
+	default: emsg("nage not recognised"); break;	
+	}
+	
 	for(c = 0; c < tab.nrow; c++){
 		are.agepop.resize(nage);
 		for(a = 0; a < nage; a++) are.agepop[a] = atoi(tab.ele[c][agecol[a]].c_str());
@@ -293,10 +310,21 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 	MATRIX mat;
 	vector <unsigned int> div;
 	
-	if(N == 3){
+	switch(N){
+	case 1:
+		div.push_back(0); div.push_back(16);
+		break;
+		
+	case 3:
 	  div.push_back(0); div.push_back(4); div.push_back(13); div.push_back(16);
+		break;
+		
+	case 4:
+	  div.push_back(0); div.push_back(3); div.push_back(9); div.push_back(13); div.push_back(16);
+		break;
+		
+	default: emsg("nage not recognised"); break;
 	}
-	else emsg("N not recognised");
 
 	if(tab.nrow != 16 || tab.ncol != 16) emsg("Table size not right");
 	

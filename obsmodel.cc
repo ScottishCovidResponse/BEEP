@@ -100,6 +100,27 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 	return meas;
 }
 
+/// The contribution from a single measurement 
+double singobs(DATA &data, unsigned int mean, unsigned int val)
+{
+	double var;
+	
+	switch(mean){
+	case UNKNOWN: return 0;     // The data value is unknown
+	case THRESH:                // The case in which there is a threshold applied to the observation
+		if(val <= data.threshold) return data.thres_h;
+		else{
+			var = minvar*varfac;
+			return data.thres_h - double((val-data.threshold)*(val-data.threshold))/(2*var);
+		}
+	default:                    // A measurement is made
+		if(mean < 0) emsg("Cannot have a negative value in the observation model.");
+		var = mean; if(var < minvar) var = minvar;
+		var *= varfac;
+		return normalprob(val,mean,var);
+	}
+}
+
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
 double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
@@ -114,23 +135,15 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 	for(td = 0; td < meas.transnum.size(); td++){                                   // Incorporates transition observations
 		for(row = 0; row < meas.transnum[td].size(); row++){
 			for(r = 0; r < meas.transnum[td][row].size(); r++){
-				val = meas.transnum[td][row][r];
-				mean = data.transdata[td].num[r][row];
-				var = mean; if(var < 5) var = 5;
-				var *= varfac;
-				L += normalprob(val,mean,var);
+				L += singobs(data,data.transdata[td].num[r][row],meas.transnum[td][row][r]);
 			}
 		}
 	}
-	
+
 	for(pd = 0; pd < meas.popnum.size(); pd++){                                   // Incorporates population observations
 		for(row = 0; row < meas.popnum[pd].size(); row++){
 			for(r = 0; r < meas.popnum[pd][row].size(); r++){
-				val = meas.popnum[pd][row][r];
-				mean = data.popdata[pd].num[r][row];
-				var = mean; if(var < 5) var = 5;
-				var *= varfac;
-				L += normalprob(val,mean,var);
+				L += singobs(data,data.popdata[pd].num[r][row],meas.popnum[pd][row][r]);
 			}
 		}
 	}
@@ -142,7 +155,7 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 				
 				val = meas.margnum[md][row][r];
 				mean = data.margdata[md].percent[r][row]*sum/100.0;
-				var = mean; if(var < 5) var = 5;
+				var = mean; if(var < minvar) var = minvar;
 				var *= varfac;
 				L += normalprob(val,mean,var);
 			}
