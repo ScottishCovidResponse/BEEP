@@ -119,7 +119,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		if(core == 0){
 			timeproptotsum = 0; ntimeproptotsum = 0; 
 			for(co = 0; co < ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
-			timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
+			if(timeproptotsum == 0) timeloop = 1;
+			else timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
