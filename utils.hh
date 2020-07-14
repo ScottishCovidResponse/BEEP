@@ -25,4 +25,5 @@ double gammasamp(double a, double b);
 double gammaprob(double x, double a, double b);
 
 vector<string> split(const string& s, char delimiter);
+void ensuredirectory(const string &path);
 #endif
