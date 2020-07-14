@@ -431,6 +431,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			diag << endl << endl;
 		}
 		
+		/*
 		diag << endl << "Timings for different parts of the algorithm:" << endl;
 		diag << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
 		diag << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
@@ -445,6 +446,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		diag << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
 		diag << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
 		diag << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
+		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
+		*/		
 	}
 }
