@@ -399,6 +399,8 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 	if(core == 0){
 		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
 		ofstream diag(ss.str().c_str()); 
+		ofstream timings(data.outputdir+"/MCMCdiagnostic_timings.txt"); 
+
 		for(c = 0; c < nchaintot; c++){
 			cc = 0; while(cc < nchaintot && c != chtot[cc]) cc++;
 			if(cc == nchaintot) emsg("MBP: EC9");			
@@ -437,22 +439,20 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			diag << endl << endl;
 		}
 		
-		/*
-		diag << endl << "Timings for different parts of the algorithm:" << endl;
-		diag << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-		diag << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-		diag << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-		diag << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-		diag << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
-		diag << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-		diag << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
-		diag << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
-		diag << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
-		diag << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
-		diag << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
-		diag << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
-		diag << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
-		*/		
+		timings << endl << "Timings for different parts of the algorithm:" << endl;
+		timings << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
+		timings << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+		timings << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
+		timings << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+		timings << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+		timings << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
+		timings << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
+		timings << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
+		timings << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
+		timings << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
+		timings << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
+		timings << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
+		timings << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
+		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
 	}
 }
