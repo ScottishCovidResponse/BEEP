@@ -5,8 +5,7 @@ Compile using: make
 Simulation:  
  ./run inputfile="examples/sim.toml"        
  ./run inputfile="examples/simMSOA_noage.toml" mode="sim"
-  ./run inputfile="examples/infMSOA_noage.toml"
-
+  mode="inf"  nsamp=10000
 Inference:    
 mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
@@ -586,7 +585,6 @@ int main(int argc, char** argv)
 		
 		data.genQ.nage = data.democat[0].value.size();
 		data.genQ.datadir = data.datadir;
-		data.genQ.outputdir = data.outputdir;
 		data.genQ.areadata = data.areadatafile;
 		if(core == 0) generateQ(data.genQ); 
 	}
