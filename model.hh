@@ -45,10 +45,6 @@ struct COMP{                               // Stores information about a compart
 	string name;                             // Its name
 	double infectivity;                      // How infectious that compartment is
 
-	unsigned int type;                       // The type of distribution for waiting in compartment (exponential or gamma)
-	int param1;                              // First characteristic parameter (e.g. mean)
-	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
-
 	vector <unsigned int> trans;             // The transitions leaving that compartment
 	unsigned int transtimep;                 // The transition used to represent a change in timep in that compartment
 
@@ -58,21 +54,25 @@ struct COMP{                               // Stores information about a compart
 	
 	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
 	vector <double> infint;                  // The integrated infectivity (used to calculate R0)
-
-                                           // The following are used for making changes to the parameters
-	vector< vector <unsigned int> > transnum;// The number of times going down a transition (age dependent)
-	unsigned int numvisittot;                // The number of times the compartment is visited
-	double dtsum;                            // Sums up the total time spent
-	vector <double> dtlist;                  // Keeps a list of waiting time
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
+	
+	unsigned int type;                       // The type of distribution (exponential or gamma)
+	int param1;                              // First characteristic parameter (e.g. mean)
+	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
+	
 	unsigned int istimep;                    // Set to one if the transition is in time period
 	vector <unsigned int> num;               // The number of times down transition 
 	vector <unsigned int> probparam;         // The parameter for the probability of going down transition (age dependant)
 	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition (age dependant)
+	
+	                                          // The following are used for making changes to the parameters
+	unsigned int numvisittot;                // The number of times the compartment is visited
+	double dtsum;                            // Sums up the total time spent
+	vector <double> dtlist;                  // Keeps a list of waiting time
 };
 
 struct SPLINEP{                            // Stores information about a spline point
@@ -143,9 +143,9 @@ public:
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
 													 
 private:
-	void addcomp(string name, double infectivity, unsigned int type, string param1, string param2);
+	void addcomp(string name, double infectivity);
 	void addparam(string name, double min, double max);
-	void addtrans(string from, string to, string prpar);
+	void addtrans(string from, string to, string prpar, unsigned int type, string param1, string param2);
 	void setsus(); 
 	void setarea();
 	void timevariation();

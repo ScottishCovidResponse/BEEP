@@ -1,12 +1,16 @@
-# Input file for the CoronaPMCMC model
+# Input file for the BEEPmbp model
 
 ########### INFERENCE DETAILS #############
 
-# Perform inference.
+# Perform a simulation.
 mode      = "inf"
 
-# The time period of simulation (in days).
-period    = 112
+# The format used for representing times
+timeformat = "number"
+
+# The starting and ending times (in days or dates).
+start = "0"
+end = "112"
 
 # The random seed used to run the simulation.
 seed      = 0
@@ -27,13 +31,13 @@ outputdir	= "Output"
 # Format: 'inf' gives the relative infectivity, 'dist' gives the distribution for waiting time.
 # Here 'exp' stands for exponential and 'lognorm' stands for lognormal follow by any parameters which define these distributions.
 
-comps			= [{name = "S", inf=0.0, dist="infection"},
-						 {name = "E", inf=0.0, dist="lognorm", mean="muE", sd="sdE"},
-						 {name = "A", inf=1.0, dist="exp", mean="tA"},
+comps			= [{name = "S", inf=0.0},
+						 {name = "E", inf=0.0},
+						 {name = "A", inf=1.0},
 						 {name = "R", inf=0.0},
-						 {name = "P", inf=1.0, dist="exp", mean="tP"},
-						 {name = "I", inf=1.0, dist="exp", mean="tI"},
-						 {name = "H", inf=0.0, dist="exp", mean="tH"},
+						 {name = "P", inf=1.0},
+						 {name = "I", inf=1.0},
+						 {name = "H", inf=0.0},
 						 {name = "D", inf=0.0}]
 
 						 
@@ -41,17 +45,16 @@ comps			= [{name = "S", inf=0.0, dist="infection"},
 # Format: 'from' gives the initial compartment, 'to' gives the final compartment and 'prob' defines a branching probability.
 # Note when a compartmental model has transitions to two others, only the probability down one branch needs to be defined.
 
-trans   	=	[{from="S", to="E"},
-						 {from="E", to="P", prob="probEP,probEP,probEP"},
-						 {from="E", to="A"},
-						 {from="A", to="R"},
-						 {from="P", to="I"},
-						 {from="I", to="H", prob="probIH_C,probIH_A,probIH_E"},
-						 {from="I", to="D", prob="probID_C,probID_A,probID_E"},
-						 {from="I", to="R"},
-						 {from="H", to="D", prob="probHD_C,probHD_A,probHD_E"},
-						 {from="H", to="R"}]
-	
+trans   	=	[{from="S", to="E", dist="infection"},
+						 {from="E", to="P", dist="lognorm", mean="muE", sd="sdE", prob="probEP,probEP,probEP"},
+						 {from="E", to="A", dist="lognorm", mean="muE", sd="sdE"},
+						 {from="A", to="R", dist="exp", mean="tA"},
+						 {from="P", to="I", dist="exp", mean="tP"},
+						 {from="I", to="H", dist="exp", mean="tI", prob="probIH_C,probIH_A,probIH_E"},
+						 {from="I", to="D", dist="exp", mean="tI", prob="probID_C,probID_A,probID_E"},
+						 {from="I", to="R", dist="exp", mean="tI"},
+						 {from="H", to="D", dist="exp", mean="tH", prob="probHD_C,probHD_A,probHD_E"},
+						 {from="H", to="R", dist="exp", mean="tH"}]
 	
 # Defines the parameters in the model
 
@@ -65,64 +68,44 @@ priors		= [{name="beta0", type="uniform", min=0.05, max=0.5},      # The values 
 						 {name="tI", value=5.0},            # Mean time spend in infectious state
 						 {name="tH", value=10.0},           # Mean time spend in hospital
 						 {name="probEP", value=0.75},       # Probability of being symptomatic
-						 {name="probIH_C", type="uniform", min=0.0, max=0.2},     # Probability of hospitalised given a case (for child)
-						 {name="probIH_A", type="uniform", min=0.0, max=0.2},     # Probability of hospitalised given a case (for adult)
-						 {name="probIH_E", type="uniform", min=0.0, max=0.3},     # Probability of hospitalised given a case (for elderly)
-						 {name="probID_C", type="uniform", min=0.0, max=0.002},   # Probability of death in community (for child)
-						 {name="probID_A", type="uniform", min=0.0, max=0.01},    # Probability of death in community (for adult)
-						 {name="probID_E", type="uniform", min=0.0, max=0.05},    # Probability of death in community (for elderly)
-						 {name="probHD_C", type="uniform", min=0.0, max=0.04},    # Probability of death given hospitalised (for child)
-						 {name="probHD_A", type="uniform", min=0.0, max=0.2},     # Probability of death given hospitalised (for adult)
-						 {name="probHD_E", type="uniform", min=0.0, max=0.8},     # Probability of death given hospitalised (for elderly)
+						 {name="probIH_C", value=0.14},     # Probability of hospitalised given a case (for child)
+						 {name="probIH_A", value=0.12},     # Probability of hospitalised given a case (for adult)
+						 {name="probIH_E", value=0.25},     # Probability of hospitalised given a case (for elderly)
+						 {name="probID_C", value=0.0007},   # Probability of death in community (for child)
+						 {name="probID_A", value=0.005},    # Probability of death in community (for adult)
+						 {name="probID_E", value=0.028},    # Probability of death in community (for elderly)
+						 {name="probHD_C", value=0.014},    # Probability of death given hospitalised (for child)
+						 {name="probHD_A", value=0.1},     # Probability of death given hospitalised (for adult)
+						 {name="probHD_E", value=0.6},     # Probability of death given hospitalised (for elderly)
 						 {name="sus_adult", value=0.0},     # Relative susceptibility of adults (on log scale)
 						 {name="sus_elderly", value=0.0},   # Relative susceptibility of elderly (on log scale)
 						 {name="den_slope", type="uniform", min=0.0, max=0.2}]     # The dependency of contact rate on population density
 
-
-# Define a prior on entering a particular state (used for implementing a value for the the infectious mortality rate) 
-
-#priorcomps=	[{comp="D", value=0.012, sd=0.001}]
-
-
 # The maximum number of infected individuals
 
-infmax 		= 300000
-
+infmax 		= 20000
+				 
 # Defines the linear spline used to represent disease transmission parameter beta.
 # Format: The name of the parameter followed by the time of the spline point.
-
-#betaspline= [{param="beta0", time=0.0}, 
-#						 {param="beta1", time=28.0},
-#						 {param="beta2", time=56.0}, 
-#						 {param="beta3", time=84.0},
-#						 {param="beta4", time=112.0}]
-				
-betaspline= [{param="beta0", time=0.0}, 
-						 {param="beta0", time=56.0},
-						 {param="beta1", time=56.0}, 
-						 {param="beta1", time=112.0}]				
+	
+betaspline= [{param="beta0", time="0"}, 
+						 {param="beta0", time="56"},
+						 {param="beta1", time="56"}, 
+						 {param="beta1", time="112"}]				
 
 # Defines the linear spline used to represent external force of infection phi.
 # Format: The name of the parameter followed by the time of the spline point. Note, The parameter 'zero' sets the value to zero.
 
-#phispline= [{param="phi", time=0.0}, 
-#						{param="phi", time=28.0},
-#						{param="zero", time=56.0}, 
-#						{param="zero", time=84.0},
-#						{param="zero", time=112.0}]
-	
-phispline= [{param="phi", time=0.0}, 
-						{param="phi", time=56.0},
-						{param="zero", time=56.0}, 
-					  {param="zero", time=112.0}]
-	
-
+phispline= [{param="phi", time="0"}, 
+						{param="phi", time="56"},
+						{param="zero", time="56"}, 
+					  {param="zero", time="112"}]
+						
 # The age groups used in the analysis.
 # Format: The age range followed by a parameter giving the relative susceptibility (on the log scale). 
 # Note, one parameter is set to 'zero' and the other parameters give the susceptibity relative to that group.
 
 ages			= [{range="age0-19", sus="zero"},{range="age20-64", sus="sus_adult"},{range="age65+", sus="sus_elderly"}]
-
 
 # Other demographic categories
 # Format: The name of the category is given followed by the potential values it can take along with their relative susceptibilities.
@@ -137,8 +120,7 @@ covars		= [{name="density", param="den_slope", func="log"}]
 
 # Defines discrete time periods. This example is for before and after lockdown
 
-timep = [{name="beforeLD", tend=56.0}, {name="afterLD", tend=112.0}]
-
+timep = [{name="beforeLD", tend="56"}, {name="afterLD", tend="end"}]
 
 ########### THE DATA #############
 
@@ -176,23 +158,23 @@ Q					= [{ timep="beforeLD", comp="I", file="Q_local_home_data.txt"},
 						 { timep="afterLD", comp="P", file="Q_local_home_data.txt"},
 						 { timep="beforeLD", comp="A", file="Q_flow_all_data.txt"},
 						 { timep="afterLD", comp="A", file="Q_local_home_data.txt"}]
-			
+ 
  
 # The observed numbers of transitions between different compartments.
 # Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-transdata	= [{from="I", to="H", area="reg", file="IH.txt", start=0, units="weeks"},
-						 {from="I", to="D", area="all", file="ID.txt", start=0, units="weeks"},
-						 {from="I", to="R", area="all", file="IR.txt", start=0, units="weeks"},
-						 {from="H", to="D", area="all", file="HD.txt", start=0, units="weeks"}]
-						 
+transdata	= [{from="I", to="H", area="reg", file="IH.txt", start="0", units="weeks"},
+						 {from="I", to="D", area="all", file="ID.txt", start="0", units="weeks"},
+						 {from="I", to="R", area="all", file="IR.txt", start="0", units="weeks"},
+						 {from="H", to="D", area="all", file="HD.txt", start="0", units="weeks"}]
+
 						 
 # The observed population number in different compartments
 # Format: 'comp' gives the name of the compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-popdata		= [{comp="H", area="reg", file="H.txt", start=0, units="weeks"}]
-	
-	
+popdata		= [{comp="H", area="reg", file="H.txt", start="0", units="weeks"}]
+						 
+						 
 # Gives the percentages for marginal distributions.
 						 
 margdata = 	[{from="I", to="H", area="all", type="age", file="IH_age.txt"},

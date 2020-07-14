@@ -35,7 +35,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	double invT, timeloop=0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
-	
+
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 
 	for(p = 0; p < nchain; p++){
@@ -127,29 +127,10 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
-		//if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
-		if(samp == nsamp-1){
+		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
+		  //if(samp == nsamp-1){
 			if(core == 0) outputresults(data,model,opsamp);
 			MBPdiagnostic(data,model,core,ncore,nchain);
-			
-			/*
-			if(core == 0){
-				cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-				cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-				cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-				cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-				cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
-				cout << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-				cout << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
-				cout << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
-				cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
-				cout << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
-				cout << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
-				cout << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
-				cout << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-				cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
-			}
-			*/
 		}
 	}
 }
@@ -447,5 +428,21 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			else diag << double(nac_addremtot[cc])/ntr_addremtot[cc] << " num:" << numaddremtot[cc] << ", ";
 			diag << endl << endl;
 		}
+		
+		diag << endl << "Timings for different parts of the algorithm:" << endl;
+		diag << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
+		diag << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+		diag << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
+		diag << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+		diag << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+		diag << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
+		diag << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
+		diag << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
+		diag << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
+		diag << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
+		diag << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
+		diag << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
+		diag << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
+		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
 	}
 }

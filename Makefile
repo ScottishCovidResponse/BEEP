@@ -1,6 +1,6 @@
 MPICXX := mpicxx
-CXXFLAGS := -g -O3 -Wall -std=c++11
-# -B flag forces compilation of all files
+CXXFLAGS := -g -O3 -std=c++11
+# -B flag forces compilation of all files -Wall 
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p
 SHELL = bash

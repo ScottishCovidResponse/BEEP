@@ -1,12 +1,16 @@
-# Input file for the CoronaPMCMC model
+# Input file for the BEEPmbp model
 
 ########### SIMULATION DETAILS #############
 
 # Perform a simulation.
 mode      = "sim"
 
-# The time period of simulation (in days).
-period    = 112
+# The format used for representing times
+timeformat = "number"
+
+# The starting and ending times (in days or dates).
+start = "0"
+end = "112"
 
 # The random seed used to run the simulation.
 seed      = 0
@@ -21,13 +25,13 @@ outputdir	= "Output"
 # Format: 'inf' gives the relative infectivity, 'dist' gives the distribution for waiting time.
 # Here 'exp' stands for exponential and 'lognorm' stands for lognormal follow by any parameters which define these distributions.
 
-comps			= [{name = "S", inf=0.0, dist="infection"},
-						 {name = "E", inf=0.0, dist="lognorm", mean="muE", sd="sdE"},
-						 {name = "A", inf=1.0, dist="exp", mean="tA"},
+comps			= [{name = "S", inf=0.0},
+						 {name = "E", inf=0.0},
+						 {name = "A", inf=1.0},
 						 {name = "R", inf=0.0},
-						 {name = "P", inf=1.0, dist="exp", mean="tP"},
-						 {name = "I", inf=1.0, dist="exp", mean="tI"},
-						 {name = "H", inf=0.0, dist="exp", mean="tH"},
+						 {name = "P", inf=1.0},
+						 {name = "I", inf=1.0},
+						 {name = "H", inf=0.0},
 						 {name = "D", inf=0.0}]
 
 						 
@@ -35,23 +39,22 @@ comps			= [{name = "S", inf=0.0, dist="infection"},
 # Format: 'from' gives the initial compartment, 'to' gives the final compartment and 'prob' defines a branching probability.
 # Note when a compartmental model has transitions to two others, only the probability down one branch needs to be defined.
 
-trans   	=	[{from="S", to="E"},
-						 {from="E", to="P", prob="probEP,probEP,probEP"},
-						 {from="E", to="A"},
-						 {from="A", to="R"},
-						 {from="P", to="I"},
-						 {from="I", to="H", prob="probIH_C,probIH_A,probIH_E"},
-						 {from="I", to="D", prob="probID_C,probID_A,probID_E"},
-						 {from="I", to="R"},
-						 {from="H", to="D", prob="probHD_C,probHD_A,probHD_E"},
-						 {from="H", to="R"}]
-	
+trans   	=	[{from="S", to="E", dist="infection"},
+						 {from="E", to="P", dist="lognorm", mean="muE", sd="sdE", prob="probEP,probEP,probEP"},
+						 {from="E", to="A", dist="lognorm", mean="muE", sd="sdE"},
+						 {from="A", to="R", dist="exp", mean="tA"},
+						 {from="P", to="I", dist="exp", mean="tP"},
+						 {from="I", to="H", dist="exp", mean="tI", prob="probIH_C,probIH_A,probIH_E"},
+						 {from="I", to="D", dist="exp", mean="tI", prob="probID_C,probID_A,probID_E"},
+						 {from="I", to="R", dist="exp", mean="tI"},
+						 {from="H", to="D", dist="exp", mean="tH", prob="probHD_C,probHD_A,probHD_E"},
+						 {from="H", to="R", dist="exp", mean="tH"}]
 	
 # Defines the parameters in the model
 
-params		= [{name="beta0", value=0.37},        # The values for the beta spline
+params		= [{name="beta0", value=0.25},        # The values for the beta spline
 						 {name="beta1", value=0.09},
-						 {name="phi", value=5.0},          # The values for the phi spline
+						 {name="phi", value=1.0},          # The values for the phi spline
 						 {name="muE", value=1.63},          # The latent period
 						 {name="sdE", value=0.5},	          # The standard deviation in latent period			 
 						 {name="tA", value=8.0},            # Mean time spend in asymptomatic state
@@ -75,31 +78,19 @@ params		= [{name="beta0", value=0.37},        # The values for the beta spline
 						 
 # Defines the linear spline used to represent disease transmission parameter beta.
 # Format: The name of the parameter followed by the time of the spline point.
-
-#betaspline= [{param="beta0", time=0.0}, 
-#						 {param="beta1", time=28.0},
-#						 {param="beta2", time=56.0}, 
-#						 {param="beta3", time=84.0},
-#						 {param="beta4", time=112.0}]
-				
-betaspline= [{param="beta0", time=0.0}, 
-						 {param="beta0", time=56.0},
-						 {param="beta1", time=56.0}, 
-						 {param="beta1", time=112.0}]				
+	
+betaspline= [{param="beta0", time="0"}, 
+						 {param="beta0", time="56"},
+						 {param="beta1", time="56"}, 
+						 {param="beta1", time="112"}]				
 
 # Defines the linear spline used to represent external force of infection phi.
 # Format: The name of the parameter followed by the time of the spline point. Note, The parameter 'zero' sets the value to zero.
 
-#phispline= [{param="phi", time=0.0}, 
-#						{param="phi", time=28.0},
-#						{param="zero", time=56.0}, 
-#						{param="zero", time=84.0},
-#						{param="zero", time=112.0}]
-	
-phispline= [{param="phi", time=0.0}, 
-						{param="phi", time=56.0},
-						{param="zero", time=56.0}, 
-					  {param="zero", time=112.0}]
+phispline= [{param="phi", time="0"}, 
+						{param="phi", time="56"},
+						{param="zero", time="56"}, 
+					  {param="zero", time="112"}]
 						
 # The age groups used in the analysis.
 # Format: The age range followed by a parameter giving the relative susceptibility (on the log scale). 
@@ -120,8 +111,7 @@ covars		= [{name="density", param="den_slope", func="log"}]
 
 # Defines discrete time periods. This example is for before and after lockdown
 
-timep = [{name="beforeLD", tend=56.0}, {name="afterLD", tend=112.0}]
-
+timep = [{name="beforeLD", tend="56"}, {name="afterLD", tend="end"}]
 
 ########### THE DATA #############
 
@@ -164,16 +154,16 @@ Q					= [{ timep="beforeLD", comp="I", file="Q_local_home_data.txt"},
 # The observed numbers of transitions between different compartments.
 # Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-transdata	= [{from="I", to="H", area="reg", file="IH.txt", start=0, units="weeks"},
-						 {from="I", to="D", area="all", file="ID.txt", start=0, units="weeks"},
-						 {from="I", to="R", area="all", file="IR.txt", start=0, units="weeks"},
-						 {from="H", to="D", area="all", file="HD.txt", start=0, units="weeks"}]
+transdata	= [{from="I", to="H", area="reg", file="IH.txt", start="0", units="weeks"},
+						 {from="I", to="D", area="all", file="ID.txt", start="0", units="weeks"},
+						 {from="I", to="R", area="all", file="IR.txt", start="0", units="weeks"},
+						 {from="H", to="D", area="all", file="HD.txt", start="0", units="weeks"}]
 
 						 
 # The observed population number in different compartments
 # Format: 'comp' gives the name of the compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-popdata		= [{comp="H", area="reg", file="H.txt", start=0, units="weeks"}]
+popdata		= [{comp="H", area="reg", file="H.txt", start="0", units="weeks"}]
 						 
 						 
 # Gives the percentages for marginal distributions.

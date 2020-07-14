@@ -1104,13 +1104,25 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			if(xp.size() >= model.infmax){ resetlists(); return;}
 			
 			z = ran()*lamsum[data.nsettardp-1];
+			if(lamsum[data.nsettardp-1] == 0) emsg("MBPchain: EC32a");
 			k = 0; dk = data.nsettardp/10; 
+			vector <unsigned int> kst;
 			do{
+				kst.push_back(k);
 				while(k < data.nsettardp && z > lamsum[k]) k += dk;
 				if(dk == 1) break;
-				k -= dk; dk /= 10; if(dk == 0) dk = 1;
+				k -= dk; if(k < 0) k = 0;
+				dk /= 10; if(dk == 0) dk = 1;
 			}while(1 == 1);
-			if(k > 0){ if(!(z < lamsum[k] && z > lamsum[k-1])) emsg("MBPchain: EC33");}
+			if(k >= data.nsettardp){
+				cout << k << " " << data.nsettardp << " kk\n";
+				for(j = 0; j < kst.size(); j++) cout << j << " " <<kst[j] <<" \n";
+				emsg("MBPchain: EC32b");
+			}
+			if(k > 0){
+				if(k >= lamsum.size()) emsg("MBPchain: EC32c");
+				if(!(z < lamsum[k] && z > lamsum[k-1])) emsg("MBPchain: EC33");
+			}
 			
 			probif += log(lam[k]/lamsum[data.nsettardp-1]);
 

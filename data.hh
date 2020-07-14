@@ -1,7 +1,5 @@
 #pragma once
 
-//#include "model.hh"
-
 struct GENQ{
 	string onoff;										       	 // set to "on" if the Q tensor needs to be calculated
 	string Nall;                             // The age matrix of all interations
@@ -161,12 +159,19 @@ class DATA
 	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
 	vector <double> settime;                 // The timings at which beta changes
 	
+	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
+	double thres_h;                          // The height of the threshold observation model
+
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
 	vector <POPDATA> popdata;                // Store information about population data
 	
 	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
 	
+	unsigned int tform;                      // The time format (e.g. times or dates)
+	string tformat;                          // A description of the time format ('time' or 'date').
+	unsigned int start;                      // The start time over which simulation/inference is performed
+	unsigned int end;                        // The start time over which simulation/inference is performed
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
 
 	GENQ genQ; 															 // Stores information about generating the Q matrix
@@ -211,16 +216,23 @@ class DATA
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
+	void readdata(unsigned int core, unsigned int ncore, unsigned int mod); 
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
 	void addQtensor(string timep, string comp, string file);
+	unsigned int gettime(string st);
+	string getdate(unsigned int t);
 	
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file);
+	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
+	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);
 	void normaliseQ(unsigned int q);
+	unsigned int getint(string st, string file);
+	void plotrawdata();
+	void generatedeathdata();
 };
