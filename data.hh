@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__DATA_HH
+#define BEEPMBP__DATA_HH
 
 struct GENQ{
 	string onoff;										       	 // set to "on" if the Q tensor needs to be calculated
@@ -236,3 +237,4 @@ class DATA
 	void plotrawdata();
 	void generatedeathdata();
 };
+#endif

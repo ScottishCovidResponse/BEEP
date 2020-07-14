@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <vector>
 #include <fstream>
+#include <cmath>
 
 using namespace std;
 

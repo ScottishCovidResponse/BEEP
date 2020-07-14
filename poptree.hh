@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__POPTREE_HH
+#define BEEPMBP__POPTREE_HH
 
 #include <vector>
 #include "model.hh"
@@ -27,3 +28,4 @@ class POPTREE
 	vector <LEVEL> lev;                     // Stores information about different levels on the tree
 	unsigned int level;                     // The number of levels of scale in the model
 };
+#endif

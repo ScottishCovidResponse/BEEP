@@ -1,6 +1,6 @@
-MPICXX := mpicxx
-CXXFLAGS := -g -O3 -std=c++11
-# -B flag forces compilation of all files -Wall 
+CXX := mpicxx
+CXXFLAGS := -g -O3 -W -Wall -std=c++11
+# -B flag forces compilation of all files
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p
 SHELL = bash
@@ -14,7 +14,7 @@ srcs := generateQ.cc MBP.cc MBPCHAIN.cc analysis.cc data.cc model.cc obsmodel.cc
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
 
-CPPFLAGS += -MMD -MP -I$(BUILD_DIR)
+CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
 # The TOML parser causes very long compile times, so we compile
 # analysis.cc without optimisation
@@ -23,11 +23,11 @@ CXXFLAGS_analysis.cc := -O0
 exe := run
 
 $(exe): $(objs)
-	$(MPICXX)  $(objs) -o $@
+	$(CXX)  $(objs) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
-	$(MPICXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
 
 # $(TARGET_ARCH)
 
@@ -35,8 +35,6 @@ $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 gitversion:
 	@$(MKDIR_P) $(BUILD_DIR)
 	bash ./gitversion.sh $(BUILD_DIR)/gitversion.hh
-
-$(BUILD_DIR)/gitversion.hh : gitversion
 
 .PHONY : all
 all: $(exe)

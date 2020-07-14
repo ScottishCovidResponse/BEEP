@@ -309,7 +309,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 }
 	
 /// Outputs an event sample fev
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree)
+void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model*/, POPTREE & /*poptree*/)
 {
 	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
@@ -522,7 +522,7 @@ STAT getstat(vector <double> &vec)
 /// Create a directory if it doesn't already exist
 static void ensuredirectory(const string &path) 
 {
-	struct stat st = {0};
+	struct stat st;
 	if (stat(path.c_str(), &st) == -1)
 	{
 		// Directory not found

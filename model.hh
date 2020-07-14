@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__MODEL_HH
+#define BEEPMBP__MODEL_HH
 
 #include <vector>
 
@@ -155,3 +156,4 @@ private:
 	double likelihood_dt(vector <double> &paramv);
 	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
 };
+#endif

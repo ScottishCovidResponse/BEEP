@@ -1,8 +1,11 @@
-#pragma once
+#ifndef BEEPMBP__UTILS_HH
+#define BEEPMBP__UTILS_HH
 
 #define USE_MPI 1
 
 #ifdef USE_MPI
+// See https://github.com/open-mpi/ompi/issues/5157
+#define OMPI_SKIP_MPICXX 1
 #include <mpi.h>
 #endif
 
@@ -22,3 +25,4 @@ double gammasamp(double a, double b);
 double gammaprob(double x, double a, double b);
 
 vector<string> split(const string& s, char delimiter);
+#endif

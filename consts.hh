@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BEEPMBP__CONSTS_HH
+#define BEEPMBP__CONSTS_HH
 
 using namespace std;
 
@@ -34,3 +35,4 @@ const unsigned int MAX_NUMBERS = 15000000;                       // The maximum 
 
 
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs
+#endif

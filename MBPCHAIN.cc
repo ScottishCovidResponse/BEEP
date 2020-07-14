@@ -139,7 +139,10 @@ unsigned int MBPCHAIN::mbp()
 
 	doev = model.dombpevents();
 
-	for(c = 0; c < comp.size(); c++) N[c] = 0; N[0] = data.popsize;
+	for(c = 0; c < comp.size(); c++) {
+		N[c] = 0;
+	}
+	N[0] = data.popsize;
 		
 	jmax = xp.size(); for(j = 0; j < jmax; j++) indevp[xp[j].ind].clear();
 	//indevp.clear(); indevp.resize(data.popsize);	
@@ -679,7 +682,7 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 }
 
 /// Used for checking the code is running correctly
-void MBPCHAIN::check(unsigned int num, double t, unsigned int sett)
+void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 {
 	unsigned int c, l, i, w, dp, a, wmin, wmax, v, j, e, emax, tra, timep;
 	double dd, dlam, sum, tt, ttt;
@@ -687,8 +690,9 @@ void MBPCHAIN::check(unsigned int num, double t, unsigned int sett)
 
 	for(j = 0; j < xp.size(); j++){ // Checks order
 		i = xp[j].ind; e = xp[j].e;
-		if(i < 0 || i >= indevp.size()) emsg("MBPchain: EC57");
-		if(e < 0 || e >= indevp[i].size()) emsg("MBPchain: EC58");
+		// Unsigned quantities always >= 0
+		if( /* i < 0 || */ i >= indevp.size()) emsg("MBPchain: EC57");
+		if( /* e < 0 || */ e >= indevp[i].size()) emsg("MBPchain: EC58");
 		if(j < xp.size()-1){
 			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsg("MBPchain: EC59");
 		}
@@ -770,8 +774,9 @@ void MBPCHAIN::check_addrem()
 	
 	for(j = 0; j < xi.size(); j++){
 		i = xi[j].ind; e = xi[j].e;
-		if(i < 0 || i >= indevi.size()) emsg("MBPchain: EC57");
-		if(e < 0 || e >= indevi[i].size()) emsg("MBPchain: EC58");
+		// Unsigned quantities always >= 0
+		if(/* i < 0 || */ i >= indevi.size()) emsg("MBPchain: EC57");
+		if(/* e < 0 || */ e >= indevi[i].size()) emsg("MBPchain: EC58");
 		if(j < xi.size()-1){
 			if(indevi[i][e].t > indevi[xi[j+1].ind][xi[j+1].e].t) emsg("MBPchain: EC59");
 		}
@@ -791,7 +796,8 @@ void MBPCHAIN::check_addrem()
 	for(sett = 0; sett < data.nsettime; sett++){
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
-			if(e < 0 || e >= indevi[i].size()) emsg("MBPchain: EC61");
+			// Unsigned quantity always >= 0
+			if(/* e < 0 || */ e >= indevi[i].size()) emsg("MBPchain: EC61");
 			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period); 
 			if(se != sett) emsg("MBPchain: EC62");
 			if(done[i][e] != 0) emsg("MBPchain: EC62");

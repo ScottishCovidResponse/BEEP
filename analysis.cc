@@ -107,10 +107,6 @@ int lookup_int_parameter(const map<string,string> &params,
 				oss << what;
 			}
 			emsg(oss.str());
-#ifdef USE_MPI
-			MPI_Finalize();
-#endif
-			exit(EXIT_FAILURE);
 		}
 	} else {
 		if (tomldata.contains(key)) {
@@ -262,7 +258,7 @@ int main(int argc, char** argv)
 	#endif
 
 	if (core == 0)
-		cout << "CoronaPMCMC version " << GIT_VERSION << endl;
+		cout << "BEEPmbp version " << GIT_VERSION << endl;
 	
 	DATA data;    // The following file names will need to be read in by the interface:
 	MODEL model(data);
@@ -271,7 +267,7 @@ int main(int argc, char** argv)
 	data.threshold=UNSET;
 
 	// A list of all supported parameters
-	vector<string>  definedparams {"threshold", "covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "timeformat", "start", "end", "timeunits", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile"};
+	vector<string>  definedparams {"threshold", "covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "timeformat", "start", "end", "timeunits", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile", "propsmethod"};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -289,10 +285,6 @@ int main(int argc, char** argv)
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();
 		emsg(oss.str());
-#ifdef USE_MPI
-		MPI_Finalize();
-#endif
-		exit(EXIT_FAILURE);
 	}
 		
 	vector<string>  tomlkeys = get_toml_keys(tomldata);
@@ -371,6 +363,21 @@ int main(int argc, char** argv)
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
 		
+	// proposals method
+	string propsmethod_str = lookup_string_parameter(cmdlineparams, tomldata, "propsmethod", param_verbose, "fixedtime");
+
+	enum proposalsmethod propsmethod;
+
+	if (propsmethod_str == "allchainsallparams") {
+		propsmethod = proposalsmethod::allchainsallparams;
+	} else if (propsmethod_str == "fixednum") {
+		propsmethod = proposalsmethod::fixednum;
+	} else if (propsmethod_str == "fixedtime") {
+		propsmethod = proposalsmethod::fixedtime;
+	} else {
+		emsg("Parameter propsmethod set to an unrecognised value \""+propsmethod_str+"\"");
+	}
+
 	// outputdir
 	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
 
@@ -772,7 +779,7 @@ int main(int argc, char** argv)
 	case MODE_INF: 
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 		if(nchain == UNSET) emsgroot("The number of chains must be set");
-		MBP(data,model,poptree,nsamp,core,ncore,nchain);
+		MBP(data,model,poptree,nsamp,core,ncore,nchain,propsmethod);
 		break;
 
 	default: emsgroot("Mode not recognised"); break;

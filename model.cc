@@ -18,7 +18,7 @@ MODEL::MODEL(DATA &data) : data(data)
 }
 
 /// Defines the compartmental model
-void MODEL::definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
+void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* popsize*/, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
 	unsigned int p, c, j, fi, tra, a;
 	SPLINEP spl;
@@ -590,7 +590,10 @@ unsigned int MODEL::settransprob()
 	
 		for(tra = 0; tra < trans.size(); tra++){
 			cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans" << endl;
-			for(k = 0; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", "; cout << "DQ" << endl;
+			for(k = 0; k < trans[tra].DQ.size(); k++) {
+				cout <<  trans[tra].DQ[k] << ", ";
+			}
+			cout << "DQ" << endl;
 		}
 	}
 	
@@ -909,7 +912,6 @@ void MODEL::calcprobin()
 					kst.push_back(0);
 				}
 			}
-				
 			if(comp[c].trans.size() > 1) prob *= comp[c].prob[a][k];
 			c = trans[comp[c].trans[k]].to;		
 		}while(1 == 1);
@@ -1046,7 +1048,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 			if(param[th].type > 0 && param[th].min != param[th].max){
 				paramst = paramv;	
 				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
-
+                Lp_prob = Li_prob;
 				if(paramv[th] < param[th].min || paramv[th] > param[th].max) flag = 0;
 				else{
 					if(param[th].type == 2){
@@ -1054,7 +1056,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 						if(settransprob() == 1) Lp_prob = -large;
 						else Lp_prob = likelihood_prob();
 					}
-					else Lp_prob = Li_prob;
 					
 					dL = dlikelihood_dt(paramst,paramv);
 					
@@ -1217,4 +1218,3 @@ unsigned int MODEL::dombpevents()
 	}
 	return 0;
 }
-	

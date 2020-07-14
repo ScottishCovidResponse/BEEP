@@ -1,5 +1,5 @@
 
-# CoronaPMCMC
+# BEEPmbp
 
 | Branch        | Test status   |
 | ------------- | ------------- |
@@ -15,7 +15,7 @@ C. M. Pooley† [1] and Glenn Marion [1]
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-CoronaPMCMC is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly case numbers at a healthboard level along with national mortality data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease susceptibility. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly case numbers at a healthboard level along with national mortality data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease susceptibility. 
 
 Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC). This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
@@ -28,7 +28,7 @@ Simulation:  ./run inputfile="examples/sim.toml"
 Inference:   mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
 (nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
 
-The input TOML file provides details of simulation or inference and contains all the information CoronaPMCMC needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with an simple test dataset.
+The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with an simple test dataset.
  
 # INPUTS:
 
