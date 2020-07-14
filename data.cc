@@ -696,6 +696,7 @@ void DATA::plotrawdata()
 	unsigned int row, tt, num, sum;
 	TABLE tab;
 	
+	
 	tab = loadtable("DailyDeathsConfirmedCovid.txt");
 	ofstream dout(outputdir+"/deathraw.txt");
 	sum = 0;
@@ -739,6 +740,29 @@ void DATA::plotrawdata()
 		if(num != UNKNOWN) sum += num;
 	}
 	cout << sum << " NHS cases" << endl;
+	
+	tab = loadtable("HD_NRS.txt");
+	ofstream dout5(outputdir+"/HDraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout5 << tt << " " <<  double(num)/7 << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << "HD Deaths" << endl;
+	
+	tab = loadtable("ID_NRS.txt");
+	ofstream dout6(outputdir+"/IDraw.txt");
+	sum = 0;
+	for(row = 0; row < tab.nrow; row++){
+		tt = gettime(tab.ele[row][0]) - start;
+		num = getint(tab.ele[row][1],"");
+		if(num != UNKNOWN) dout6 << tt << " " << double(num)/7 << endl;
+		if(num != UNKNOWN) sum += num;
+	}
+	cout << sum << "HI Deaths" << endl;
+	
 	
 	// estimate distribution
 	
