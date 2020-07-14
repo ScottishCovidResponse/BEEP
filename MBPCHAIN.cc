@@ -1169,7 +1169,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			w = c*data.ndemocatpos + data.ind[i].dp;
 	
 			dt = data.settime[sett+1]-data.settime[sett];
-			t = data.settime[sett] + ran()*dt;
+
 			probfi += log(1.0/dt);
 			kst.push_back(sett*data.nardp + w);
 			

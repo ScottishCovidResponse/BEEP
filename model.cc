@@ -23,7 +23,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	unsigned int p, c, j, fi, tra, a;
 	SPLINEP spl;
 	PRIORCOMP pricomp;
-	
+
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
 	if(data.mode == MODE_SIM){
@@ -45,7 +45,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		}
 		else{ emsg("The input file must contain parameter values through 'params'.");}
 	}
-	
+
 	if(data.mode != MODE_SIM){
 		if(tomldata.contains("priors")){
 			string name;
@@ -56,7 +56,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				const auto params = toml::find(paramsin,j);
 				if(!params.contains("name")) emsg("Parameter must contain a 'name' definition.");
 				name = toml::find<std::string>(params,"name");
-				
+
 				if(params.contains("value")){
 					value = toml::find<double>(params,"value");
 					addparam(name,value,value);
@@ -81,7 +81,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		else{ emsg("The input file must contain 'priors'.");}
 	}
 	addparam("zero",tiny,tiny);
-	
+
 	if(tomldata.contains("comps")) {
 		string name;
 		double inf;
@@ -99,7 +99,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		}
 	}
 	else{ emsg("The input file must contain compartment definition through 'comps'");}
-	
+
 	if(tomldata.contains("trans")){
 		string dist, mean="", sd="";
 		unsigned int distval;
@@ -163,7 +163,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		}
 	}
 	else{ emsg("The input file must contain transition definitions through 'trans'.");}
-	
+
 	if(data.mode != MODE_SIM){
 		if(tomldata.contains("priorcomps")){
 			string co;
@@ -190,7 +190,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 		}
 	}
-	
+
 	if(tomldata.contains("betaspline")) {
 		const auto bespin = toml::find(tomldata,"betaspline");
 		for(j = 0; j < bespin.size(); j++){
@@ -212,7 +212,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			betaspline.push_back(spl);
 		}
 	}
-			
+
 	if(tomldata.contains("phispline")) {
 		const auto bespin = toml::find(tomldata,"phispline");
 		for(j = 0; j < bespin.size(); j++){

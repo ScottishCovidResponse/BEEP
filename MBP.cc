@@ -120,6 +120,10 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		if(core == 0){
 			timeproptotsum = 0; ntimeproptotsum = 0; 
 			for(co = 0; co < ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
+            
+      // if(timeproptotsum == 0) timeloop = 1;
+      // else timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
+
 			// Update the time to run only if some proposals have run (otherwise it runs forever)
 			if (ntimeproptotsum > 0) {
 				timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
@@ -433,6 +437,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			diag << endl << endl;
 		}
 		
+		/*
 		diag << endl << "Timings for different parts of the algorithm:" << endl;
 		diag << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
 		diag << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
@@ -447,6 +452,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		diag << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
 		diag << double(timers.timebetaphiloop)/CLOCKS_PER_SEC << " Betaphiloop (seconds)" << endl;		
 		diag << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
+		diag << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
+		*/		
 	}
 }
