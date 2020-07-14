@@ -73,7 +73,7 @@ void generateQ(GENQ genQ)
 	
 	nage = genQ.nage;
 	datadir = genQ.datadir;
-	
+		
 	tab = loadtable(datadir+"/"+genQ.Nall,"nohead");        // Loads age stratified mixing matrices for different activities
 	N_all = matfromtable(tab,nage);
 	
@@ -129,13 +129,13 @@ void generateQ(GENQ genQ)
 	Q = generateQ(M,N_all);                                    // Outputs a Q matrix representative of 'normal' mixing
 	if(normon == 1) normalise(Q,area);
 	//outputQ(datadir+"/Q_flow_all_data.txt",Q);
-	outputQ(datadir+"/"+genQ.flowall,Q);
+	outputQ(genQ.outputdir+"/"+genQ.flowall,Q);
 
 	//Q = generateQ(I,N_home);                                   // Outputs a Q matrix representative of someone at home 
 	Q = generateQ(M,N_all);   
 	if(normon == 1) normalise(Q,area);
 	//outputQ(datadir+"/Q_local_home_data.txt",Q);
-	outputQ(datadir+"/"+genQ.localhome,Q);
+	outputQ(genQ.outputdir+"/"+genQ.localhome,Q);
 	
 	cout << endl;
 }
