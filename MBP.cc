@@ -125,7 +125,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
       // else timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
 
 			// Update the time to run only if some proposals have run (otherwise it runs forever)
-			if (ntimeproptotsum > 0) {
+			if (ntimeproptotsum > 0 && timeproptotsum > 0) {
 				timeloop = 10*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
 			}
 		}
