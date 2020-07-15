@@ -46,8 +46,9 @@ SRC_DIR := .
 
 # Test executable
 TEST_EXEC_NAME := runtests
+TEST_NAMES := test_data.cc test_utils.cc
 TEST_EXEC := $(BUILD_DIR)/$(TEST_EXEC_NAME)
-TEST_EXEC_SRCS := $(SRC_DIR)/$(TEST_EXEC_NAME).cc $(filter-out main.cc,$(srcs)) $(SRC_DIR)/tests.cc
+TEST_EXEC_SRCS := $(SRC_DIR)/$(TEST_EXEC_NAME).cc $(filter-out main.cc,$(srcs)) $(TEST_NAMES:%=$(SRC_DIR)/codetests/%)
 TEST_EXEC_OBJS := $(TEST_EXEC_SRCS:%=$(BUILD_DIR)/%.o)
 
 $(exe): $(objs)
