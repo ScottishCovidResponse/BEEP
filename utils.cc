@@ -101,6 +101,7 @@ vector<string> split(const string& s, char delimiter)
   return splits;                                           
 }
 
+/// @cond EXCLUDE
 /// Displays an error message
 void emsg(string msg)
 {
@@ -118,7 +119,7 @@ void emsgroot(string msg)
 	//MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
-
+/// @endcond
 /// Create a directory if it doesn't already exist
 void ensuredirectory(const string &path) 
 {
