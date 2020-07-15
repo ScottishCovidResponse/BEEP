@@ -23,9 +23,9 @@ Parameter inference is performed using a multi-temperature model-based proposal 
 
 Compilation: make
 
-Simulation:  ./run inputfile="examples/sim.toml" 
+Simulation:  ./beepmbp inputfile="examples/sim.toml" 
 
-Inference:   mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
+Inference:   mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 (nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
 
 The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with an simple test dataset.
@@ -88,7 +88,7 @@ THE DATA
 
 Note, all the single variable quantities in the TOML file can be overridden using equivalent comand line definitions.
 
-For example: mpirun -n 1 ./run inputfile="inf.toml" nsamp=10000 
+For example: mpirun -n 1 ./beepmbp inputfile="inf.toml" nsamp=10000 
 
 generate 10000 samples (irrespective of the definition given in "inf.toml").
 	

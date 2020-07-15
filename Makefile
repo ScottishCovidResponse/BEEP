@@ -20,7 +20,7 @@ CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 # analysis.cc without optimisation
 CXXFLAGS_analysis.cc := -O0
 
-exe := run
+exe := beepmbp
 
 $(exe): $(objs)
 	$(CXX)  $(objs) -o $@
