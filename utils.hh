@@ -14,8 +14,10 @@
 
 using namespace std;
 
+/// @cond EMSG
 [[ noreturn ]] void emsg(string msg);
 [[ noreturn ]] void emsgroot(string msg);
+/// @endcond
 
 double ran();
 double normal(float mu, float sd);
