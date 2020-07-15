@@ -588,7 +588,7 @@ int main(int argc, char** argv)
 		data.genQ.datadir = data.datadir;
 		data.genQ.outputdir = data.outputdir;
 		data.genQ.areadata = data.areadatafile;
-		//if(core == 0) generateQ(data.genQ); 
+		if(core == 0) generateQ(data.genQ); 
 	}
 
 	// Q

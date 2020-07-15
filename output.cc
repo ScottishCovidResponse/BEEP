@@ -109,7 +109,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &d
 /// Outputs a posterior graph
 void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
 {
-	unsigned int j, jmax, row, s, t, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
+	unsigned int j, jmax, row, s, t=0, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
 	double sum, valsum;
 	string name, file, filefull;
 	vector <double> vec;

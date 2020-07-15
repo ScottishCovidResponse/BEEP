@@ -992,7 +992,7 @@ vector <double> MODEL::R0calc()
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
 {	
-	unsigned int c, a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1, flag;
+	unsigned int a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1, flag;
 	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
 	vector <double> paramst;
 	
@@ -1014,7 +1014,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 		dp = data.ind[i].dp;
 		a = data.democatpos[dp][0];
 				
-		c = 0; t = 0;
+		t = 0;
 		emax = indev[i].size();
 		for(e = 0; e < emax; e++){
 			tra = indev[i][e].trans;
@@ -1030,8 +1030,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				case GAMMA_DIST: case LOGNORM_DIST: trans[tra].dtlist.push_back(dt); break;
 				}
 			}
-			
-			c = trans[tra].to;
 		}
 	}
 	
