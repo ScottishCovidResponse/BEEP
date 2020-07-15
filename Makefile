@@ -36,8 +36,8 @@ deps := $(objs:.o=.d)
 CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
 # Disable warning for old versions of GCC in files that include toml11/toml.hpp
-CXXFLAGS_analysis.cc := -Wno-unused-parameter
-CXXFLAGS_model.cc    := -Wno-unused-parameter
+CXXFLAGS_main.cc  := -Wno-unused-parameter
+CXXFLAGS_model.cc := -Wno-unused-parameter
 
 exe := beepmbp
 
