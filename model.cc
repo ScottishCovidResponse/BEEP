@@ -10,6 +10,7 @@
 #include "utils.hh"
 #include "model.hh"
 #include "utils.hh"
+#include "toml11/toml.hpp"
 
 using namespace std;
 

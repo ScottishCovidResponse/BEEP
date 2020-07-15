@@ -7,7 +7,7 @@ using namespace std;
 
 #include "consts.hh"
 #include "data.hh"
-#include "toml11/toml.hpp"
+#include "toml11/toml/types.hpp"
 
 struct FEV {                               // Stores information about a compartmental transition
   unsigned int trans;                      // References the transition type
