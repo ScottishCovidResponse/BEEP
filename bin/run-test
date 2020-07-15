@@ -32,4 +32,4 @@ fi
 
 echo "$message"
 
-${MPIRUN:-} ./run inputfile=$inputfile outputdir=${outdir}
+${MPIRUN:-} ./beepmbp inputfile=$inputfile outputdir=${outdir}
