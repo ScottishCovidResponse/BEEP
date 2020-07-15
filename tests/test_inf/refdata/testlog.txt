@@ -1,0 +1,125 @@
+/home/user/BEEPmbp
+Runing test with input file tests/test_inf/test_inf.toml and output directory regression_test_results/test_inf on 1 MPI processes
+BEEPmbp version lastgood-146-gc9c4e96
+
+Settings:
+  mode = inf
+  nchain = 1
+  nsamp = 2
+  infmax = 20000
+  timeformat = number
+  start = 0
+  end = 112
+  propsmethod = fixednum
+  outputdir = regression_test_results/test_inf
+  datadir = examples/Data_example
+  regions = regiondata.txt
+  areas = areadata.txt
+  genQ = on
+
+Age categories: 
+  age0-19 sus='zero', age20-64 sus='sus_adult', age65+ sus='sus_elderly'
+
+Area covariates: 
+  density   param='den_slope'
+
+Time periods defined:
+  beforeLD: 0 - 56
+  afterLD: 56 - 112
+
+Generating Q tensors.
+  Outputing file 'regression_test_results/test_inf/Q_flow_all_data.txt'.
+  Outputing file 'regression_test_results/test_inf/Q_local_home_data.txt'.
+
+Q tensors loaded:
+  timep: beforeLD  compartment: I  file: Q_local_home_data.txt  
+  timep: afterLD  compartment: I  file: Q_local_home_data.txt  
+  timep: beforeLD  compartment: P  file: Q_flow_all_data.txt  
+  timep: afterLD  compartment: P  file: Q_local_home_data.txt  
+  timep: beforeLD  compartment: A  file: Q_flow_all_data.txt  
+  timep: afterLD  compartment: A  file: Q_local_home_data.txt  
+
+Region data loaded.
+
+Area data loaded.
+
+Number of areas: 100
+
+Priors:
+  beta0 = Uniform(0.05 - 0.5)
+  beta1 = Uniform(0.05 - 0.5)
+  phi = Uniform(0 - 20)
+  muE = 1.63
+  sdE = 0.5
+  tA = 8
+  tP = 1.5
+  tI = 5
+  tH = 10
+  probEP = 0.75
+  probIH_C = 0.14
+  probIH_A = 0.12
+  probIH_E = 0.25
+  probID_C = 0.0007
+  probID_A = 0.005
+  probID_E = 0.028
+  probHD_C = 0.014
+  probHD_A = 0.1
+  probHD_E = 0.6
+  sus_adult = 0
+  sus_elderly = 0
+  den_slope = Uniform(0 - 0.2)
+
+Compartments:
+  S  Infectivity: 0
+  E  Infectivity: 0
+  A  Infectivity: 1
+  R  Infectivity: 0
+  P  Infectivity: 1
+  I  Infectivity: 1
+  H  Infectivity: 0
+  D  Infectivity: 0
+
+Transitions:
+  S → E Infection
+  E → P  with probability probEP, probEP, probEP Lognormal mean=muE sd=sdE
+  E → A Lognormal mean=muE sd=sdE
+  A → R Exponential  mean=tA
+  P → I Exponential  mean=tP
+  I → H  with probability probIH_C, probIH_A, probIH_E Exponential  mean=tI
+  I → D  with probability probID_C, probID_A, probID_E Exponential  mean=tI
+  I → R Exponential  mean=tI
+  H → D  with probability probHD_C, probHD_A, probHD_E Exponential  mean=tH
+  H → R Exponential  mean=tH
+
+Running....
+ Sample: 0 / 2
+ Sample: 1 / 2
+
+Posterior outputs in directory 'regression_test_results/test_inf':
+'Posterior_IH_r0.txt' gives numbers of I→H transitions for region 'Region_0'.
+'Posterior_IH_r1.txt' gives numbers of I→H transitions for region 'Region_1'.
+'Posterior_IH_r2.txt' gives numbers of I→H transitions for region 'Region_2'.
+'Posterior_IH_r3.txt' gives numbers of I→H transitions for region 'Region_3'.
+'Posterior_IH_sum.txt' gives numbers of I→H transitions.
+'Posterior_ID.txt' gives numbers of I→D transitions.
+'Posterior_IR.txt' gives numbers of I→R transitions.
+'Posterior_HD.txt' gives numbers of H→D transitions.
+'Posterior_H_r0.txt' gives the population in 'H' for region 'Region_0'.
+'Posterior_H_r1.txt' gives the population in 'H' for region 'Region_1'.
+'Posterior_H_r2.txt' gives the population in 'H' for region 'Region_2'.
+'Posterior_H_r3.txt' gives the population in 'H' for region 'Region_3'.
+'Posterior_H_sum.txt' gives the population in 'H'.
+'Posterior_IH_age.txt' gives I→H transitions stratified by 'age'.
+'Posterior_ID_age.txt' gives I→D transitions stratified by 'age'.
+'Posterior_IR_age.txt' gives I→R transitions stratified by 'age'.
+'Posterior_HD_age.txt' gives H→D transitions stratified by 'age'.
+'Posterior_R0.txt' gives the time variation in R0.
+'Posterior_parameters.txt' gives the model parameters.
+'regression_test_results/test_inf/trace.txt' gives trace plots for model parameters.
+'regression_test_results/test_inf/traceLi.txt' gives trace plots for the observation likelihoods on different chains.
+0.21493 Total time (seconds)
+5e-06 MBP waiting time (seconds)
+0.114361 MBP time (seconds)
+0.000238 MBP init (seconds)
+0.010799 MBP Qmap (seconds)
+0.061521 MBP prop (seconds)

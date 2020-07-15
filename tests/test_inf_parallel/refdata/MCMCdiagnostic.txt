@@ -1,0 +1,56 @@
+-------- Chain: 0 ----------
+
+invT: 1  Liav: -1618.58  
+MBP Accept: 
+beta0: 0.5 jump:0.00719554, 
+beta1: 0 jump:0.0180791, 
+phi: 1 jump:1.0552, 
+muE: --- 
+sdE: --- 
+tA: --- 
+tP: --- 
+tI: --- 
+tH: --- 
+probEP: --- 
+probIH_C: --- 
+probIH_A: --- 
+probIH_E: --- 
+probID_C: --- 
+probID_A: --- 
+probID_E: --- 
+probHD_C: --- 
+probHD_A: --- 
+probHD_E: --- 
+sus_adult: --- 
+sus_elderly: --- 
+den_slope: 1 jump:0.00227246, 
+zero: --- 
+
+Standard Accept: 
+beta0: 0.6875 jump:0.00719554, 
+beta1: 0.0625 jump:0.0180791, 
+phi: 0.5 jump:1.0552, 
+muE: --- 
+sdE: --- 
+tA: --- 
+tP: --- 
+tI: --- 
+tH: --- 
+probEP: --- 
+probIH_C: --- 
+probIH_A: --- 
+probIH_E: --- 
+probID_C: --- 
+probID_A: --- 
+probID_E: --- 
+probHD_C: --- 
+probHD_A: --- 
+probHD_E: --- 
+sus_adult: --- 
+sus_elderly: --- 
+den_slope: --- 
+zero: --- 
+
+Add / remove infected: 
+0.5 num:20, 
+
