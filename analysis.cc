@@ -3,21 +3,22 @@ Load mpi: module load mpi/openmpi-x86_64
 Compile using: make
 
 Simulation:  
- ./run inputfile="examples/sim.toml"        
- ./run inputfile="examples/simMSOA_noage.toml" mode="sim"
+ ./beepmbp inputfile="examples/sim.toml"        
+  ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
+ ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="sim"
   mode="inf"  nsamp=10000
 Inference:    
-mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
-mpirun -n 20 ./run inputfile="examples/inf.toml" nchain=20
+mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
+mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
-mpirun -n 20 ./run inputfile="examples/simMSOA_noage.toml" mode="inf" nchain=20 nsamp=10000
+mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="inf" nchain=20 nsamp=10000
 */
 
-// nohup mpirun -n 20 ./run inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
+// nohup mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
 
-// nohup mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
+// nohup mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./beepmbp inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
 
-// mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./run inputfile="examples/simMSOA.toml" nchain=2  mode="inf"  nsamp=10000 
+// mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./beepmbp inputfile="examples/simMSOA.toml" nchain=2  mode="inf"  nsamp=10000 
 // make -j 10
 /*
  Commands for running on DiRAC:

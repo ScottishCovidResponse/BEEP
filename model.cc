@@ -119,17 +119,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			
 			const auto dist = toml::find<std::string>(trans, "dist");
 			
-			int fl = 0;
+			distval = UNSET;
+			
 			if(dist == "infection"){
 				distval = INFECTION;
-				fl = 1;
 			}
 			
 			if(dist == "exp"){
 				distval = EXP_DIST;
 				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
-				fl = 1;
 			}
 			
 			if(dist == "lognorm"){
@@ -139,7 +138,6 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				
 				if(!trans.contains("sd")) emsg("Transition distribution must contain an 'sd' definition.");
 				sd = toml::find<std::string>(trans, "sd");
-				fl = 1;
 			}
 			
 			if(dist == "gamma"){
@@ -149,10 +147,9 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				
 				if(!trans.contains("sd")) emsg("Transition distribution must contain an 'sd' definition.");
 				sd = toml::find<std::string>(trans, "sd");
-				fl = 1;
 			}
 			
-			if(fl == 0) emsg("Distribution '"+dist+"' not recognised.");
+			if(distval == UNSET) emsg("Distribution '"+dist+"' not recognised.");
 			
 			if(trans.contains("prob")) {
 				const auto prob = toml::find<std::string>(trans, "prob");
@@ -925,7 +922,7 @@ void MODEL::calcprobin()
 vector <double> MODEL::R0calc()
 {
 	unsigned int c, cc, a, aa, k, kmax, st, timep, q, co, vi, dp, tra;
-	double t, dt, mean, sd, fac;
+	double t, dt, fac;
 	vector <double> R0;
 	vector <double> R0fac;
 
@@ -996,13 +993,12 @@ vector <double> MODEL::R0calc()
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri)
 {	
-	unsigned int c, a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1, flag;
+	unsigned int a, i, j, jmax, dp, e, emax, tra, th, loop, loopmax = 1, flag;
 	double t, dt, Li_dt, Li_prob, Lp_prob, Prp, al, dL, dd;
 	vector <double> paramst;
 	
 	timers.timecompparam -= clock();
 
-	
 	for(tra = 0; tra < trans.size(); tra++){
 		if(trans[tra].istimep == 0){
 			trans[tra].num.resize(data.nage); for(a = 0; a < data.nage; a++) trans[tra].num[a] = 0;
@@ -1019,7 +1015,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 		dp = data.ind[i].dp;
 		a = data.democatpos[dp][0];
 				
-		c = 0; t = 0;
+		t = 0;
 		emax = indev[i].size();
 		for(e = 0; e < emax; e++){
 			tra = indev[i][e].trans;
@@ -1035,8 +1031,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				case GAMMA_DIST: case LOGNORM_DIST: trans[tra].dtlist.push_back(dt); break;
 				}
 			}
-			
-			c = trans[tra].to;
 		}
 	}
 	
@@ -1049,7 +1043,8 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 			if(param[th].type > 0 && param[th].min != param[th].max){
 				paramst = paramv;	
 				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
-                Lp_prob = Li_prob;
+				
+        Lp_prob = Li_prob;
 				if(paramv[th] < param[th].min || paramv[th] > param[th].max) flag = 0;
 				else{
 					if(param[th].type == 2){

@@ -25,7 +25,7 @@ CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 CXXFLAGS_analysis.cc := -Wno-unused-parameter
 CXXFLAGS_model.cc    := -Wno-unused-parameter
 
-exe := run
+exe := beepmbp
 
 $(exe): $(objs)
 	$(CXX)  $(objs) $(LDFLAGS) -o $@

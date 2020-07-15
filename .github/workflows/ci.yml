@@ -33,11 +33,11 @@ jobs:
 
     - name: Run example simulation
       run: |
-        ./run inputfile="examples/sim.toml" 
+        ./beepmbp inputfile="examples/sim.toml" 
 
     - name: Run example inference
       run: |
-        mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2 nsamp=10
+        mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 nsamp=10
 
     - name: Run Clang Static Analyzer
       run: |

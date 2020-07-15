@@ -114,7 +114,6 @@ double singobs(DATA &data, unsigned int mean, unsigned int val)
 			return data.thres_h - double((val-data.threshold)*(val-data.threshold))/(2*var);
 		}
 	default:                    // A measurement is made
-		if(mean < 0) emsg("Cannot have a negative value in the observation model.");
 		var = mean; if(var < minvar) var = minvar;
 		var *= varfac;
 		return normalprob(val,mean,var);

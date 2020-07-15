@@ -15,17 +15,17 @@ C. M. Pooley† [1] and Glenn Marion [1]
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly case numbers at a healthboard level along with national mortality data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease susceptibility. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly hospitalisations and deaths for Covid-19 patients at a healthboard level along with national demographic data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease progression. 
 
-Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC). This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
+Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC) approach. This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
 ## Performing analysis
 
 Compilation: make
 
-Simulation:  ./run inputfile="examples/sim.toml" 
+Simulation:  ./beepmbp inputfile="examples/sim.toml" 
 
-Inference:   mpirun -n 2 ./run inputfile="examples/inf.toml" nchain=2
+Inference:   mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 (nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
 
 The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with an simple test dataset.
@@ -40,9 +40,11 @@ DETAILS
 		"sim" generates simulated data.
 		"inf" performs inference using multi-temperature MBP-MCMC.
 
-**period** - The time period of simulation / inference (in weeks).
+**timeformat** - The time format used (either dates or numerical times).
 
-**seed** - Sets the random seed when performing inference (this is set to zero by default)
+**start** and **end** - The time period for simulation / inference.
+
+**seed** - Sets the random seed when performing inference (this is set to zero by default).
 
 **nchain** - The total number of chains used when performing MCMC (should be a multiple of the number of cores).
 
@@ -72,6 +74,8 @@ Note, for examples of how these commands are used, see 'inf.toml'.
 
 **democats** - Used to define other demographic categories.
 
+**timep** - Used to define discrete time periods (e.g. before and after lockdown).
+
 THE DATA 
 
 **datadir** - The data directory.
@@ -80,27 +84,37 @@ THE DATA
 
 **areas** - Filename for a table giving information about areas (e.g. MSOAs or OAs).
 
-**geocont** - Filename for a table informing the matrix of contacts between different areas.
- 
-**agecont** - Filename for a matrix giving the contact rates between different age groups.
+**genQ** - Sets whether spatial and age mixing matrices are used to derive the Q tensors for the model.
 
-**transdata** - Transition data. Gives the observed numbers of transitions between different compartments. More than one set of transition data can be used in an analysis.
+**geomix** - Filename for a table informing the matrix of contacts between different areas.
+ 
+**agemix** - Filename for a matrix giving the contact rates between different age groups.
+
+**genQoutput** - Filenames for the derived Q tensors.
+
+**Q** - Assigns which Q tensor is applied to which compartment and time period (as defined in 'timep').
+
+**threshold** - Used to define the threshold when data is truncated below this value (represented by '*' in the data files).
+
+**transdata** - Transition data. Gives the observed numbers of transitions between different compartments. 
+
+**popdata** - Population data. Gives the number of individuals in specified compartments at specified time points.
+
+**margdata** - Allows for marginalised distrutions to be added (e.g. the percentage of overall cases in different age categories).
+
 
 Note, all the single variable quantities in the TOML file can be overridden using equivalent comand line definitions.
 
-For example: mpirun -n 1 ./run inputfile="inf.toml" nsamp=10000 
+For example: mpirun -n 1 ./beepmbp inputfile="inf.toml" nsamp=10000 
 
 generate 10000 samples (irrespective of the definition given in "inf.toml").
 	
 # OUTPUTS:
 
-Simulation - This creates the specified 'transdata' files along with an output directory containing:
-1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives time variation in R0.
-3) "parameter.txt", which gives the parameter values used in the simulation.
+Simulation - This creates the specified 'transdata', 'popdata' and/or 'margdata' files in the output directory.
 
 Inference - The output directory contains posterior information (with means and 90% credible intervals) for:
-1) Plots for the transitions corresponding to the 'transdata' files.
+1) Plots for the transitions corresponding to the 'transdata', 'popdata' and/or 'margdata' files.
 2) "R0.txt", which gives posterior plots time variation in R0.
 3) "parameter.txt", which gives information about parameters.
 4) "trace.txt", which gives trace plots for different models.
