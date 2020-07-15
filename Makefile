@@ -14,7 +14,21 @@ LDFLAGS += --coverage
 CXXFLAGS += --coverage
 endif
 
-srcs := generateQ.cc MBP.cc MBPCHAIN.cc main.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
+# Please keep these in lexicographic order to aid merging
+srcs := \
+ MBP.cc \
+ MBPCHAIN.cc \
+ data.cc \
+ generateQ.cc \
+ main.cc \
+ model.cc \
+ obsmodel.cc \
+ output.cc \
+ pack.cc \
+ poptree.cc \
+ simulate.cc \
+ timers.cc \
+ utils.cc
 
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
