@@ -1,6 +1,9 @@
 #ifndef BEEPMBP__DATA_HH
 #define BEEPMBP__DATA_HH
 
+#include <string>
+using namespace std;
+
 struct GENQ{
 	string onoff;										       	 // set to "on" if the Q tensor needs to be calculated
 	string Nall;                             // The age matrix of all interations
