@@ -76,6 +76,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	
 	loop = 0;
 	do{
+		cout << "Initialisation try: " << loop << endl;
 		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
 	
 		nparam = model.param.size();                   
@@ -1117,7 +1118,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 				kst.push_back(k);
 				while(k < data.nsettardp && z > lamsum[k]) k += dk;
 				if(dk == 1) break;
-				k -= dk; if(k < 0) k = 0;
+				if(k >= dk) k -= dk;
 				dk /= 10; if(dk == 0) dk = 1;
 			}while(1 == 1);
 			if(k >= data.nsettardp){

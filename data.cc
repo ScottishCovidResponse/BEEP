@@ -767,7 +767,7 @@ void DATA::plotrawdata()
 	// estimate distribution
 	
 	vector <unsigned int> numst, numst2;
-	int t, tmax = 140, j;
+	unsigned int t, tmax = 140, j;
 	double dt, mean_ns, sd_ns, sd, mean;
 	numst.resize(tmax); numst2.resize(tmax);
 	for(t = 0; t < tmax; t++){ numst[t] = 0, numst[t] = 0;}

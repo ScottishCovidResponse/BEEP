@@ -109,7 +109,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &d
 /// Outputs a posterior graph
 void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
 {
-	unsigned int j, jmax, row, s, t, nopsamp, opsampmin, rr, rrmin, rrmax, nrow, dc, jj;
+	unsigned int j, jmax, row, s, t, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
 	double sum, valsum;
 	string name, file, filefull;
 	vector <double> vec;
@@ -122,6 +122,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	case POP_DATA: name = data.popdata[d].file; break;
 	case TRANS_DATA: name = data.transdata[d].file; break;
 	case MARG_DATA: name = data.margdata[d].file; break;
+	default: emsg("Output: EC10"); break;
 	}
 	
 	j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
@@ -151,10 +152,10 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		break;
 	
 	case MARG_DATA:
-		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
-		dataout << "# The " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
 		dc = data.margdata[d].democat;
 		nrow = data.democat[dc].value.size();
+		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
+		dataout << "# The " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
 		break;
 	}	
 	
@@ -211,6 +212,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 					switch(type){
 					case POP_DATA: jj = data.popdata[d].num[rr][row]; break;
 					case TRANS_DATA: jj = data.transdata[d].num[rr][row]; break;
+					default: jj = 0; break;
 					}
 					switch(jj){
 					case UNKNOWN: break;
@@ -229,8 +231,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, opsampmin, row, j, jj, jmax, d;
-	double sum;
+	unsigned int p, r, s, st, nopsamp, opsampmin, d;
 	string file, filefull;
 	vector <double> vec;
 	STAT stat;
