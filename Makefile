@@ -54,6 +54,10 @@ clean:
 test: $(exe)
 	external/regtests/bin/run-all-regression-tests
 
+.PHONY : test-update
+test-update:
+	set -e; for test in tests/*; do external/regtests/bin/store-regression-test-results regression_test_results/$${test##*/} tests/$${test##*/}; done
+
 .PHONY : coverage
 coverage :
 	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --print-summary
