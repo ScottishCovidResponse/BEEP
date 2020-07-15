@@ -23,6 +23,10 @@ jobs:
       run: |
         make -j 4 --output-sync COVERAGE=1
 
+    - name: Run code tests
+      run: |
+        make codetest
+
     - name: Run regression tests
       run: |
         make test
