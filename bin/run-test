@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+set -u
+
+testdir=$1
+outdir=$2
+
+pwd
+
+inputfile=""
+
+for f in ${testdir}/*.toml; do
+    if [ -n "$inputfile" ]; then
+        echo "More than one .toml file found in $testdir" >&2
+        exit 1
+    fi
+    inputfile=$f
+done
+
+mkdir $outdir
+
+
+procs=$(awk '$1=="nchain" {print $3}' $inputfile)
+
+message="Runing test with input file $inputfile and output directory ${outdir}"
+
+if [ -n "$procs" ]; then
+    MPIRUN="mpirun -n $procs"
+    message+=" on $procs MPI processes"
+fi
+
+echo "$message"
+
+${MPIRUN:-} ./run inputfile=$inputfile outputdir=${outdir}

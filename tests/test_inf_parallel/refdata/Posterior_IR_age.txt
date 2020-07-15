@@ -1,0 +1,5 @@
+# The I→R transitions stratified by 'age'.
+category, data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
+age0-19 22.7562 35.461102 35.346495 35.575708 ---
+age20-64 73.1622 58.334916 58.095648 58.574185 ---
+age65+ 4.08163 6.203982 6.079320 6.328643 ---

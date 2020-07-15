@@ -9,6 +9,11 @@ ifeq (${DEBUG},1)
 CXXFLAGS += -D_GLIBCXX_DEBUG # -D_LIBCPP_DEBUG (this is for libc++ / macOS, but fails to link)
 endif
 
+ifeq (${COVERAGE},1)
+LDFLAGS += --coverage
+CXXFLAGS += --coverage
+endif
+
 srcs := generateQ.cc MBP.cc MBPCHAIN.cc analysis.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
 
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
@@ -23,7 +28,7 @@ CXXFLAGS_model.cc    := -Wno-unused-parameter
 exe := run
 
 $(exe): $(objs)
-	$(CXX)  $(objs) -o $@
+	$(CXX)  $(objs) $(LDFLAGS) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
@@ -44,3 +49,15 @@ clean:
 	rm -rf $(exe) $(BUILD_DIR)
 
 -include $(deps)
+
+.PHONY : test
+test: $(exe)
+	external/regtests/bin/run-all-regression-tests
+
+.PHONY : test-update
+test-update:
+	set -e; for test in tests/*; do external/regtests/bin/store-regression-test-results regression_test_results/$${test##*/} tests/$${test##*/}; done
+
+.PHONY : coverage
+coverage :
+	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --print-summary
