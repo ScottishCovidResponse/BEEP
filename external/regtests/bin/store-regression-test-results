@@ -18,7 +18,7 @@ if grep -rn -- "-dirty" ${results_dir}/${TEST_OUTPUT_SUBDIR}/; then
 fi
 
 # Store test results
-rsync -az --no-links --exclude "*.diffs" ${results_dir}/${TEST_OUTPUT_SUBDIR}/ ${ref_dir}/refdata/
+rsync -az --no-links --exclude "*.diffs" --exclude "${TEST_STORE_EXCLUDE_PATTERN}" ${results_dir}/${TEST_OUTPUT_SUBDIR}/ ${ref_dir}/refdata/
 
 # Compress HDF5 data
 for f in ${ref_dir}/*.h5; do
