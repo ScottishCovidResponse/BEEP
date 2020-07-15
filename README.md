@@ -120,3 +120,21 @@ Inference - The output directory contains posterior information (with means and 
   the committer.  They are also visible on the
   [Actions](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions)
   page.
+- Regression tests can be run with
+  ```
+  make test
+  ```
+  This will report whether the code gives the same results as when the reference data in `tests/*/refdata` was
+  committed. The output of the tests will be stored in `regression_test_results`.  If the tests fail because you
+  have made a change which *should* change the results, run
+  ```
+  make test-update
+  ```
+  which will store the new results from `regression_test_results` into `tests/*/refdata'.  If you ran the tests
+  with an uncommitted version of the code, this will fail; you need to commit the code changes and rerun "make test"
+  before storing the results. This ensures that the reference data corresponds to a committed version of the code.
+  You can then commit the new results with
+  ```
+  git add tests/*/refdata
+  git commit -m "Regenerate test reference data"
+  ```
