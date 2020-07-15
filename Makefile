@@ -14,7 +14,7 @@ LDFLAGS += --coverage
 CXXFLAGS += --coverage
 endif
 
-srcs := generateQ.cc MBP.cc MBPCHAIN.cc analysis.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
+srcs := generateQ.cc MBP.cc MBPCHAIN.cc main.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
 
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
