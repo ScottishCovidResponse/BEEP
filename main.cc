@@ -49,7 +49,6 @@ mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="inf" nchain
 #include "poptree.hh"
 #include "model.hh"
 #include "data.hh"
-#include "generateQ.hh"
 
 #include "simulate.hh"
 #include "gitversion.hh"
@@ -305,7 +304,7 @@ int main(int argc, char** argv)
 		"trans",
 		"transdata",
 	};
-
+	
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
 	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");
@@ -618,12 +617,6 @@ int main(int argc, char** argv)
 	}
 	else emsgroot("'genQoutput' must be specified.");
 	
-	data.genQ.nage = data.democat[0].value.size();
-	data.genQ.datadir = data.datadir;
-	data.genQ.outputdir = data.outputdir;
-	data.genQ.areadata = data.areadatafile;
-	if(core == 0) generateQ(data.genQ); 
-
 	// Q
 	if(tomldata.contains("Q")) {
 		const auto Qlist = toml::find(tomldata,"Q");
@@ -636,10 +629,10 @@ int main(int argc, char** argv)
 			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
 			const auto comp = toml::find<std::string>(Q,"comp");
 			
-			if(!Q.contains("file")) emsgroot("'file' must be specified in 'Q'.");
-			const auto file = toml::find<std::string>(Q,"file");
+			if(!Q.contains("name")) emsgroot("'name' must be specified in 'Q'.");
+			const auto name = toml::find<std::string>(Q,"name");
 			
-			data.addQtensor(timep,comp,file);
+			data.addQtensor(timep,comp,name);
 		}
 	}
 	else emsgroot("Property 'timep' defining time periods must be set.");
@@ -647,7 +640,7 @@ int main(int argc, char** argv)
 	if(core == 0){
 		cout << "Q tensors loaded:" << endl;
 		for(j = 0; j < data.Q.size(); j++){
-			cout << "  ";
+			cout << "    ";
 			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
 			cout << "compartment: " << data.Q[j].comp << "  ";
 			cout << "name: " << data.Q[j].name << "  ";
@@ -804,7 +797,7 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	sran(core*10000+seed);
+	srand(core*10000+seed);
 	
 	switch(mode){
 	case MODE_SIM:
