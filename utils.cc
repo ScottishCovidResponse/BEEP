@@ -42,7 +42,8 @@ double ran()
 		return double(0.999999999*rand())/RAND_MAX;
 	}
 #else
-	std::uniform_real_distribution<> dist(0.,1.);
+	//std::uniform_real_distribution<> dist(0.,1.);
+	std::uniform_real_distribution<> dist(0.0000000001,0.999999999);
 	return dist(mt);
 #endif
 }

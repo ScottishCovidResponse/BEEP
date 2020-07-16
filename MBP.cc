@@ -130,7 +130,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		swap(model,core,ncore,nchain);
 		
-		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%5 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
 		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
 		  //if(samp == nsamp-1){
@@ -441,6 +441,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		timings << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
 		timings << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
 		timings << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+		timings << double(timers.timembpconRtot)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
 		timings << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
 		timings << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
 		timings << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;

@@ -14,6 +14,7 @@ using namespace std;
 #include "data.hh"	
 #include "consts.hh"
 #include "pack.hh"
+#include "generateQ.hh"
 
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
@@ -242,10 +243,11 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				}
 			}
 		}
+		
+		generateQ(nage,datadir,genQ,area); 
 	}
 
 	if(ncore > 1) copydata(core);
-
 	
 	vec.resize(nage);                                                 // Reads in Q tensors
 	for(q = 0; q < Q.size(); q++){
@@ -886,7 +888,7 @@ void DATA::convertOAtoM()
 				dx = area[j0].x - area[j1].x;
 				dy = area[j0].y - area[j1].y;
 				rr = sqrt(dx*dx+dy*dy);
-				if(rr < 3*r){
+				if(rr < 0.5*r){
 					numcont[j0][j1] = 1.0/(1+rr*rr/(r*r));
 				}
 			}

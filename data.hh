@@ -10,8 +10,8 @@ struct QTENSOR {                           // Stores information about a Q tenso
 
 struct SPARSETENSOR{                       // Stores the Q tensor in a sparse way
 	string name;                             // The reference name
-	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <double> > > val; 	
+	vector <vector <unsigned short> > to;      // Stores the mixing matrix between areas and ages at different times
+	vector <vector< vector <float> > > val; 	
 };
 
 struct GENQ{
@@ -23,10 +23,8 @@ struct GENQ{
 	string M;                                // The geographic mixing matrix
 	string localhome;                        // The Q matrix for someone at home
 	string flowall;                          // The Q matrix for general daily life
-	unsigned int nage;			   							 // The number of age groups
-	string datadir;                          // The data directory
-	string outputdir;                        // The output directory
-	string areadata;                         // Data about the areas
+	//unsigned int nage;			   							 // The number of age groups
+	//string areadata;                         // Data about the areas
 	
 	vector <SPARSETENSOR> Qten;              // Stores the actual tensors
 };

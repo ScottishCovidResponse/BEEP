@@ -16,6 +16,7 @@ struct TIMERS {
 	long timebetaphiloop;
 	long timecompparam;
 	long timeaddrem;
+	long timembpconRtot;
 };
 
 extern TIMERS timers;

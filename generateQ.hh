@@ -5,6 +5,6 @@ using namespace std;
 
 #include "data.hh"
 
-void generateQ(GENQ &genq);
+void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area);
 
 #endif

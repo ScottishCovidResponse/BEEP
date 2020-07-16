@@ -140,9 +140,7 @@ unsigned int MBPCHAIN::mbp()
 
 	doev = model.dombpevents();
 
-	for(c = 0; c < comp.size(); c++) {
-		N[c] = 0;
-	}
+	for(c = 0; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
 	jmax = xp.size(); for(j = 0; j < jmax; j++) indevp[xp[j].ind].clear();
@@ -181,7 +179,8 @@ unsigned int MBPCHAIN::mbp()
 		do{
 			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
 			
-			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(ran())/Rtot[0][0];
+			double v; v = ran();
+			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(v)/Rtot[0][0];
 				
 			if(txi >= tmax && tinf >= tmax){ t = tmax; break;}
 			
@@ -193,6 +192,7 @@ unsigned int MBPCHAIN::mbp()
 			else{            // An event on initial sequence 
 				t = txi;
 				i = ev.ind;
+			
 				if(stat[i] == BOTH){
 					w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
@@ -302,6 +302,8 @@ void MBPCHAIN::constructRtot(unsigned int sett)
 	int l;
 	double sum, dlam, faci, facp;
 	
+	timers.timembpconRtot -= clock();
+		
 	l = poptree.level-1;
 	for(c = 0; c < data.narea; c++){
 		wmin = c*data.ndemocatpos; wmax = wmin + data.ndemocatpos;
@@ -314,11 +316,11 @@ void MBPCHAIN::constructRtot(unsigned int sett)
 			a = data.democatpos[dp][0];
 			lami[w] = model.susi[dp]*(faci*Qmapi[sett][v+a] + phii);
 			lamp[w] = model.susp[dp]*(facp*Qmapp[sett][v+a] + phip);
-
 			dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
+		if(std::isnan(sum)) emsg("nan here");
 		Rtot[l][c] = sum;
 	}
 	
@@ -331,6 +333,8 @@ void MBPCHAIN::constructRtot(unsigned int sett)
 			Rtot[l][c] = sum;
 		}
 	}
+	
+	timers.timembpconRtot += clock();
 }
 	
 /// Performs an MBP on parameter 'th'
@@ -551,6 +555,8 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 	FEV fev;
 	TRANS tr;
 
+	timers.timembpQmap -= clock();
+
 	nage = data.nage;
 	
 	jmax = trevi[sett].size();
@@ -594,7 +600,6 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 			}
 		}
 	}
-	timers.timembpQmap -= clock();
 	
 	nage = data.nage;
 	jmax = dQbuflistv.size();
