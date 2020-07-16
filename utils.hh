@@ -14,10 +14,13 @@
 
 using namespace std;
 
+/// @cond EMSG
 [[ noreturn ]] void emsg(string msg);
 [[ noreturn ]] void emsgroot(string msg);
+/// @endcond
 
 double ran();
+void sran(int seed);
 double normal(float mu, float sd);
 double normalprob(double x, double mean, double var);
 double lognormprob(double x, double mean, double var);

@@ -1,0 +1,3 @@
+TEST_RUN_CMD=bin/run-test
+TEST_FILE_EXCLUDE_PATTERN='testlog\.txt|MCMCdiagnostic_timings\.txt'
+TEST_STORE_EXCLUDE_PATTERN=MCMCdiagnostic_timings.txt

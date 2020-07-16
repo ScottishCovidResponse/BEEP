@@ -9,21 +9,40 @@ ifeq (${DEBUG},1)
 CXXFLAGS += -D_GLIBCXX_DEBUG # -D_LIBCPP_DEBUG (this is for libc++ / macOS, but fails to link)
 endif
 
-srcs := generateQ.cc MBP.cc MBPCHAIN.cc analysis.cc data.cc model.cc obsmodel.cc output.cc pack.cc poptree.cc simulate.cc timers.cc utils.cc
+ifeq (${COVERAGE},1)
+LDFLAGS += --coverage
+CXXFLAGS += --coverage
+endif
+
+# Please keep these in lexicographic order to aid merging
+srcs := \
+ MBP.cc \
+ MBPCHAIN.cc \
+ data.cc \
+ generateQ.cc \
+ main.cc \
+ model.cc \
+ obsmodel.cc \
+ output.cc \
+ pack.cc \
+ poptree.cc \
+ simulate.cc \
+ timers.cc \
+ utils.cc
 
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
 
-CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
+CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR) -DOLD_RAND
 
-# The TOML parser causes very long compile times, so we compile
-# analysis.cc without optimisation
-CXXFLAGS_analysis.cc := -O0
+# Disable warning for old versions of GCC in files that include toml11/toml.hpp
+CXXFLAGS_main.cc  := -Wno-unused-parameter -O
+CXXFLAGS_model.cc := -Wno-unused-parameter
 
 exe := beepmbp
 
 $(exe): $(objs)
-	$(CXX)  $(objs) -o $@
+	$(CXX)  $(objs) $(LDFLAGS) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
@@ -44,3 +63,15 @@ clean:
 	rm -rf $(exe) $(BUILD_DIR)
 
 -include $(deps)
+
+.PHONY : test
+test: $(exe)
+	external/regtests/bin/run-all-regression-tests
+
+.PHONY : test-update
+test-update:
+	set -e; for test in tests/*; do external/regtests/bin/store-regression-test-results regression_test_results/$${test##*/} tests/$${test##*/}; done
+
+.PHONY : coverage
+coverage :
+	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --print-summary

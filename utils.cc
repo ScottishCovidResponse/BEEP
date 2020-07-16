@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <random>
 #include "stdlib.h"
 #include "math.h"
 #include <sys/stat.h>
@@ -13,9 +14,21 @@
 
 using namespace std;
 
+static std::mt19937 mt(0);
+
+void sran(int seed)
+{
+#ifdef OLD_RAND
+	srand(seed);
+#else
+	mt = std::mt19937(seed);
+#endif
+}
+
 /// Draws a random number between 0 and 1
 double ran()
 {
+#ifdef OLD_RAND
 	if(RAND_MAX == 32767) {
 		double v = (double(rand())*32766.0+rand())/(32767.0*RAND_MAX);
 		if(v == 0 || v == 1) {
@@ -28,6 +41,10 @@ double ran()
 	else {
 		return double(0.999999999*rand())/RAND_MAX;
 	}
+#else
+	std::uniform_real_distribution<> dist(0.,1.);
+	return dist(mt);
+#endif
 }
 
 /// Draws a normally distributed number with mean mu and standard deviation sd
@@ -101,6 +118,8 @@ vector<string> split(const string& s, char delimiter)
   return splits;                                           
 }
 
+/// @cond EMSG
+
 /// Displays an error message
 void emsg(string msg)
 {
@@ -118,6 +137,7 @@ void emsgroot(string msg)
 	//MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
+/// @endcond
 
 /// Create a directory if it doesn't already exist
 void ensuredirectory(const string &path) 

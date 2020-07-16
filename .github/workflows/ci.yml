@@ -17,17 +17,25 @@ jobs:
         submodules: true
     
     - name: Install packages
-      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha clang-tools
+      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha clang-tools gcovr
 
     - name: Compile
       run: |
-        make -j 4 --output-sync
+        make -j 4 --output-sync COVERAGE=1
 
-    - name: Run simulation
+    - name: Run regression tests
+      run: |
+        make test
+
+    - name: Compute test coverage
+      run: |
+        make coverage
+
+    - name: Run example simulation
       run: |
         ./beepmbp inputfile="examples/sim.toml" 
 
-    - name: Run inference
+    - name: Run example inference
       run: |
         mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 nsamp=10
 

@@ -266,8 +266,45 @@ int main(int argc, char** argv)
 	data.outputdir="Output";                // The default output directory
 	data.threshold=UNSET;
 
-	// A list of all supported parameters
-	vector<string>  definedparams {"threshold", "covars", "infmax", "datadir", "trans", "betaspline", "phispline", "comps", "params", "priorcomps", "priors", "democats", "ages", "regions", "areas", "genQ", "agemix", "geomix", "genQoutput", "Q", "timep", "mode", "model", "nchain", "nsamp", "timeformat", "start", "end", "timeunits", "seed", "margdata", "transdata", "popdata", "outputdir", "inputfile", "propsmethod"};
+	// A list of all supported parameters (please keep in lexicographic order)
+	vector<string>  definedparams {
+		"Q",
+		"agemix",
+		"ages",
+		"areas",
+		"betaspline",
+		"comps",
+		"covars",
+		"datadir",
+		"democats",
+		"end",
+		"genQ",
+		"genQoutput",
+		"geomix",
+		"infmax",
+		"inputfile",
+		"margdata",
+		"mode",
+		"model",
+		"nchain",
+		"nsamp",
+		"outputdir",
+		"params",
+		"phispline",
+		"popdata",
+		"priorcomps",
+		"priors",
+		"propsmethod",
+		"regions",
+		"seed",
+		"start",
+		"threshold",
+		"timeformat",
+		"timep",
+		"timeunits",
+		"trans",
+		"transdata",
+	};
 
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
@@ -767,7 +804,7 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	srand(core*10000+seed);
+	sran(core*10000+seed);
 	
 	switch(mode){
 	case MODE_SIM:
