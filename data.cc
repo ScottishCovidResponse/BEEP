@@ -877,8 +877,10 @@ void DATA::convertOAtoM()
 		double xmin, xmax;
 		xmin = large; xmax = -large;
 		for(a = 0; a < area.size(); a++){
-			if(area[a].x < xmin) xmin = area[a].x; if(area[a].x > xmax) xmax = area[a].x;
-			if(area[a].x < xmin) xmin = area[a].x; if(area[a].x > xmax) xmax = area[a].x;
+			if(area[a].x < xmin) xmin = area[a].x; 
+			if(area[a].x > xmax) xmax = area[a].x;
+			if(area[a].x < xmin) xmin = area[a].x; 
+			if(area[a].x > xmax) xmax = area[a].x;
 		}
 		r = (xmax-xmin)/100;
 		
