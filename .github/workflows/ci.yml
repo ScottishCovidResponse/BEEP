@@ -25,7 +25,11 @@ jobs:
 
     - name: Run code tests
       run: |
-        make codetest
+        make COVERAGE=1 codetest
+
+    - name: Compute regression test coverage
+      run: |
+        make GCOVRFLAGS=--delete coverage
 
     - name: Run regression tests
       run: |
@@ -33,7 +37,7 @@ jobs:
 
     - name: Compute test coverage
       run: |
-        make coverage
+        make GCOVRFLAGS=--delete coverage
 
     - name: Run example simulation
       run: |
