@@ -93,4 +93,4 @@ test-update:
 
 .PHONY : coverage
 coverage :
-	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --print-summary
+	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --exclude codetests --exclude catch.hpp --print-summary $(GCOVRFLAGS)
