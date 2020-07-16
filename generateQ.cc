@@ -44,7 +44,7 @@ MATRIX matfromtable(TABLE tab, unsigned int N);
 SPARSEMATRIX loadsparse(string file, unsigned int N);
 SPARSEMATRIX identity(unsigned int N);
 void plotmat(MATRIX mat, string title);
-void generateQten(SPARSEMATRIX M, MATRIX N, string name, GENQ &genQ, vector <AREA> &area);
+void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area);
 
 string strip(string line);
 
@@ -141,7 +141,7 @@ vector <AREA> loadarea(TABLE tab)
 	return area;
 }
 
-void generateQten(SPARSEMATRIX M, MATRIX N, string name, GENQ &genQ, vector <AREA> &area)
+void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area)
 {
 	unsigned int nage = N.N, narea = M.N, k, c, cc, a, aa, vi, j, jmax, q;
 	double v, sum, sum2;
