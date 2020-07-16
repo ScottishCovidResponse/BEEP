@@ -920,7 +920,7 @@ void MODEL::calcprobin()
 /// Calculates R0
 vector <double> MODEL::R0calc()
 {
-	unsigned int c, cc, a, aa, k, kmax, st, timep, q, co, vi, dp, tra;
+	unsigned int c, cc, a, aa, k, kmax, st, timep, q, qt, co, vi, dp, tra;
 	double t, dt, fac;
 	vector <double> R0;
 	vector <double> R0fac;
@@ -955,6 +955,8 @@ vector <double> MODEL::R0calc()
 		
 	for(q = 0; q < data.Q.size(); q++){
 		timep = data.Q[q].timep;
+		qt = data.Q[q].Qtenref;
+		
 		for(co = 0; co < comp.size(); co++) if(data.Q[q].comp == comp[co].name) break;
 		if(co == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
 		
@@ -963,12 +965,12 @@ vector <double> MODEL::R0calc()
 				fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
 				if(fac != 0){
 					vi = c*data.nage + a;
-					kmax = data.Q[q].to[vi].size();
+					kmax = data.genQ.Qten[qt].to[vi].size();
 					for(k = 0; k < kmax; k++){
-						cc = data.Q[q].to[vi][k];
+						cc = data.genQ.Qten[qt].to[vi][k];
 						for(dp = 0; dp < data.ndemocatpos; dp++){
 							aa = data.democatpos[dp][0];
-							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.Q[q].val[vi][k][aa]*data.area[cc].pop[dp];
+							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.genQ.Qten[qt].val[vi][k][aa]*data.area[cc].pop[dp];
 						}
 					}
 				}

@@ -5,6 +5,6 @@ using namespace std;
 
 #include "data.hh"
 
-void generateQ(GENQ genq);
+void generateQ(GENQ &genq);
 
 #endif

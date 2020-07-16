@@ -247,7 +247,7 @@ void MBPCHAIN::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, 
 /// Based on the the event sequence in xi, this sets Qmapi
 void MBPCHAIN::setQmapi(unsigned int check)
 {
-	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop;
+	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop, qt;
 	double val, fac;
 	FEV fev;
 
@@ -279,11 +279,12 @@ void MBPCHAIN::setQmapi(unsigned int check)
 					if(q != UNSET){
 						fac = model.DQ[dq].fac[loop];
 						
-						kmax = data.Q[q].to[v].size();
+						qt = data.Q[q].Qtenref;
+						kmax = data.genQ.Qten[qt].to[v].size();
 						for(k = 0; k < kmax; k++){
-							vv = data.Q[q].to[v][k]*nage;	
+							vv = data.genQ.Qten[qt].to[v][k]*nage;	
 							for(a = 0; a < nage; a++){
-								dQmap[vv] += fac*data.Q[q].val[v][k][a];
+								dQmap[vv] += fac*data.genQ.Qten[qt].val[v][k][a];
 								vv++;
 							}
 						}
@@ -545,7 +546,7 @@ void MBPCHAIN::resetlists()
 /// Updates dQmap based on events which occur in timestep sett in the initial and proposed states
 void MBPCHAIN::updatedQmap(unsigned int sett)
 {
-	unsigned int j, jmax, k, kmax, i, v, dq, q, vv, a, nage, loop;
+	unsigned int j, jmax, k, kmax, i, v, dq, q, vv, a, nage, loop, qt;
 	double fac;
 	FEV fev;
 	TRANS tr;
@@ -598,14 +599,14 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 	nage = data.nage;
 	jmax = dQbuflistv.size();
 	for(j = 0; j < jmax; j++){
-		v = dQbuflistv[j]; q = dQbuflistq[j]; 
+		v = dQbuflistv[j]; q = dQbuflistq[j]; qt = data.Q[q].Qtenref;
 		fac = dQbuf[v][q];
 		if(fac < -vtiny || fac > vtiny){
-			kmax = data.Q[q].to[v].size();
+			kmax = data.genQ.Qten[qt].to[v].size();
 			for(k = 0; k < kmax; k++){
-				vv = data.Q[q].to[v][k]*nage;	
+				vv = data.genQ.Qten[qt].to[v][k]*nage;	
 				for(a = 0; a < nage; a++){
-					dQmap[vv] += fac*data.Q[q].val[v][k][a];
+					dQmap[vv] += fac*data.genQ.Qten[qt].val[v][k][a];
 					vv++;
 				}
 			}

@@ -4,13 +4,12 @@ Compile using: make
 
 Simulation:  
  ./beepmbp inputfile="examples/sim.toml"        
-  ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
- ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="sim"
-  mode="inf"  nsamp=10000
+ 
 Inference:    
 mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
-
+./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
+ ./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
 mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="inf" nchain=20 nsamp=10000
 */
 
@@ -390,9 +389,7 @@ int main(int argc, char** argv)
 
 	// area data
 	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
-
-	data.genQ.onoff = lookup_string_parameter(cmdlineparams, tomldata, "genQ", param_verbose, "UNSET");
-
+	
 	// threshold
 	if(tomldata.contains("threshold")){
 		data.threshold = lookup_int_parameter(cmdlineparams, tomldata, "threshold", param_verbose);
@@ -536,60 +533,59 @@ int main(int argc, char** argv)
 	}
 
 	// genQ
-	if(data.genQ.onoff == "on"){
-		if(tomldata.contains("agemix")) {
-			const auto agemix = toml::find(tomldata,"agemix");
-			
-			if(!agemix.contains("Nall")) emsgroot("'Nall' must be specified in 'agemix'.");
-			const auto Nall = toml::find<std::string>(agemix,"Nall");
-			data.genQ.Nall = Nall;
-			
-			if(!agemix.contains("Nhome")) emsgroot("'Nhome' must be specified in 'agemix'.");
-			const auto Nhome = toml::find<std::string>(agemix,"Nhome");
-			data.genQ.Nhome = Nhome;
-			
-			if(!agemix.contains("Nother")) emsgroot("'Nother' must be specified in 'agemix'.");
-			const auto Nother = toml::find<std::string>(agemix,"Nother");
-			data.genQ.Nother = Nother;
-			
-			if(!agemix.contains("Nschool")) emsgroot("'Nschool' must be specified in 'agemix'.");
-			const auto Nschool = toml::find<std::string>(agemix,"Nschool");
-			data.genQ.Nschool = Nschool;
-			
-			if(!agemix.contains("Nwork")) emsgroot("'Nwork' must be specified in 'agemix'.");
-			const auto Nwork = toml::find<std::string>(agemix,"Nwork");
-			data.genQ.Nwork = Nwork;
-		}
-		else emsgroot("'agemix' must be specified.");
-	
-		if(tomldata.contains("geomix")) {
-			const auto geomix = toml::find(tomldata,"geomix");
-			
-			if(!geomix.contains("M")) emsgroot("'M' must be specified in 'geomix'.");
-			const auto M = toml::find<std::string>(geomix,"M");
-			data.genQ.M = M;
-		}
-		else emsgroot("'geomix' must be specified.");
+
+	if(tomldata.contains("agemix")) {
+		const auto agemix = toml::find(tomldata,"agemix");
 		
-		if(tomldata.contains("genQoutput")) {
-			const auto qout = toml::find(tomldata,"genQoutput");
-			
-			if(!qout.contains("localhome")) emsgroot("'localhome' must be specified in 'genQoutput'.");
-			const auto localhome = toml::find<std::string>(qout,"localhome");
-			data.genQ.localhome = localhome;
-	
-			if(!qout.contains("flowall")) emsgroot("'flowall' must be specified in 'genQoutput'.");
-			const auto flowall = toml::find<std::string>(qout,"flowall");
-			data.genQ.flowall = flowall;
-		}
-		else emsgroot("'genQoutput' must be specified.");
+		if(!agemix.contains("Nall")) emsgroot("'Nall' must be specified in 'agemix'.");
+		const auto Nall = toml::find<std::string>(agemix,"Nall");
+		data.genQ.Nall = Nall;
 		
-		data.genQ.nage = data.democat[0].value.size();
-		data.genQ.datadir = data.datadir;
-		data.genQ.outputdir = data.outputdir;
-		data.genQ.areadata = data.areadatafile;
-		if(core == 0) generateQ(data.genQ); 
+		if(!agemix.contains("Nhome")) emsgroot("'Nhome' must be specified in 'agemix'.");
+		const auto Nhome = toml::find<std::string>(agemix,"Nhome");
+		data.genQ.Nhome = Nhome;
+		
+		if(!agemix.contains("Nother")) emsgroot("'Nother' must be specified in 'agemix'.");
+		const auto Nother = toml::find<std::string>(agemix,"Nother");
+		data.genQ.Nother = Nother;
+		
+		if(!agemix.contains("Nschool")) emsgroot("'Nschool' must be specified in 'agemix'.");
+		const auto Nschool = toml::find<std::string>(agemix,"Nschool");
+		data.genQ.Nschool = Nschool;
+		
+		if(!agemix.contains("Nwork")) emsgroot("'Nwork' must be specified in 'agemix'.");
+		const auto Nwork = toml::find<std::string>(agemix,"Nwork");
+		data.genQ.Nwork = Nwork;
 	}
+	else emsgroot("'agemix' must be specified.");
+
+	if(tomldata.contains("geomix")) {
+		const auto geomix = toml::find(tomldata,"geomix");
+		
+		if(!geomix.contains("M")) emsgroot("'M' must be specified in 'geomix'.");
+		const auto M = toml::find<std::string>(geomix,"M");
+		data.genQ.M = M;
+	}
+	else emsgroot("'geomix' must be specified.");
+	
+	if(tomldata.contains("genQoutput")) {
+		const auto qout = toml::find(tomldata,"genQoutput");
+		
+		if(!qout.contains("localhome")) emsgroot("'localhome' must be specified in 'genQoutput'.");
+		const auto localhome = toml::find<std::string>(qout,"localhome");
+		data.genQ.localhome = localhome;
+
+		if(!qout.contains("flowall")) emsgroot("'flowall' must be specified in 'genQoutput'.");
+		const auto flowall = toml::find<std::string>(qout,"flowall");
+		data.genQ.flowall = flowall;
+	}
+	else emsgroot("'genQoutput' must be specified.");
+	
+	data.genQ.nage = data.democat[0].value.size();
+	data.genQ.datadir = data.datadir;
+	data.genQ.outputdir = data.outputdir;
+	data.genQ.areadata = data.areadatafile;
+	if(core == 0) generateQ(data.genQ); 
 
 	// Q
 	if(tomldata.contains("Q")) {
@@ -617,7 +613,7 @@ int main(int argc, char** argv)
 			cout << "  ";
 			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
 			cout << "compartment: " << data.Q[j].comp << "  ";
-			cout << "file: " << data.Q[j].file << "  ";
+			cout << "name: " << data.Q[j].name << "  ";
 			cout << endl;
 		}
 		cout << endl;

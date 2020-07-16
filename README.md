@@ -15,7 +15,7 @@ C. M. Pooley† [1] and Glenn Marion [1]
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly hospitalisations and deaths for Covid-19 patients at a healthboard level along with national demographic data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease progression. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly hospitalisations and deaths for Covid-19 patients at a health board level along with national demographic data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease progression. 
 
 Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC) approach. This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
@@ -100,10 +100,10 @@ THE DATA
 
 **popdata** - Population data. Gives the number of individuals in specified compartments at specified time points.
 
-**margdata** - Allows for marginalised distrutions to be added (e.g. the percentage of overall cases in different age categories).
+**margdata** - Allows for marginalised distributions to be added (e.g. the percentage of overall cases in different age categories).
 
 
-Note, all the single variable quantities in the TOML file can be overridden using equivalent comand line definitions.
+Note, all the single variable quantities in the TOML file can be overridden using equivalent command line definitions.
 
 For example: mpirun -n 1 ./beepmbp inputfile="inf.toml" nsamp=10000 
 
