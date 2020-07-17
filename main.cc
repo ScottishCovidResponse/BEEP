@@ -64,6 +64,11 @@ nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=
 #include "MBP.hh"
 #include "consts.hh"
 
+#ifdef USE_DATA_PIPELINE
+#include "pybind11/embed.h"
+#include "datapipeline.hh"
+#endif
+
 using namespace std;
 
 string lookup_string_parameter(const map<string,string> &params,
@@ -271,6 +276,24 @@ int main(int argc, char** argv)
 		cout << "BEEPmbp version " << gitversion() << endl;
 	}
 	
+
+#ifdef USE_DATA_PIPELINE
+	pybind11::scoped_interpreter guard{};
+
+	DataPipeline dp("../data_pipeline_api/tests/data/config.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp", GIT_VERSION);
+
+	double est = dp.read_estimate("parameter", "example-estimate");
+
+	cout << "Read estimate from data pipeline: " << est << endl;
+
+	Table table = dp.read_table("object", "example-table");
+
+	vector<long> cola = table.get_column<long>("a");
+	vector<long> colb = table.get_column<long>("b");
+
+	cout << "Read table from data pipeline: " << endl << table.to_string() << endl;
+#endif
+
 	DATA data;    // The following file names will need to be read in by the interface:
 	MODEL model(data);
 		

@@ -14,6 +14,27 @@ LDFLAGS += --coverage
 CXXFLAGS += --coverage
 endif
 
+DATA_PIPELINE := 1
+
+ifeq (${DATA_PIPELINE},1)
+CXXFLAGS += -DUSE_DATA_PIPELINE
+
+PYTHON           := python3
+PYTHON_CONFIG    := $(PYTHON)-config
+PYBIND11_INCLUDE := -I$(shell $(PYTHON) -c 'import os; import pybind11; print(os.path.dirname(pybind11.__file__)+"/include")')
+PYTHON_CONFIG_FLAGS := $(shell $(PYTHON) -c 'import sys; print("" if (sys.version_info.major < 3 or sys.version_info.minor < 8) else "--embed")')
+PYTHON_CFLAGS := $(PYTHON_EXTRA_CFLAGS) $(PYBIND11_INCLUDE) $(shell $(PYTHON_CONFIG) $(PYTHON_CONFIG_FLAGS) --cflags) -UNDEBUG -fPIC
+PYTHON_LDFLAGS := $(PYTHON_EXTRA_LDFLAGS) $(shell $(PYTHON_CONFIG) $(PYTHON_CONFIG_FLAGS) --ldflags)
+
+DATA_PIPELINE_DIR := ../data_pipeline_api/bindings/cpp
+DATA_PIPELINE_LDFLAGS := -L$(DATA_PIPELINE_DIR)/build -ldatapipeline
+DATA_PIPELINE_CPPFLAGS := -I$(DATA_PIPELINE_DIR)
+
+CXXFLAGS := $(CXXFLAGS) $(PYTHON_CFLAGS) $(DATA_PIPELINE_CPPFLAGS)
+LDFLAGS := $(LDFLAGS) $(PYTHON_LDFLAGS) $(DATA_PIPELINE_LDFLAGS)
+
+endif
+
 # Please keep these in lexicographic order to aid merging
 srcs := \
  MBP.cc \
