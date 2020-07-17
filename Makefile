@@ -39,7 +39,17 @@ CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR) -DOLD_RAND
 CXXFLAGS_main.cc  := -Wno-unused-parameter -O
 CXXFLAGS_model.cc := -Wno-unused-parameter
 
+# Main executable
 exe := beepmbp
+
+SRC_DIR := .
+
+# Test executable
+TEST_EXEC_NAME := runtests
+TEST_NAMES := test_data.cc test_utils.cc
+TEST_EXEC := $(BUILD_DIR)/$(TEST_EXEC_NAME)
+TEST_EXEC_SRCS := $(SRC_DIR)/$(TEST_EXEC_NAME).cc $(filter-out main.cc,$(srcs)) $(TEST_NAMES:%=$(SRC_DIR)/codetests/%)
+TEST_EXEC_OBJS := $(TEST_EXEC_SRCS:%=$(BUILD_DIR)/%.o)
 
 $(exe): $(objs)
 	$(CXX)  $(objs) $(LDFLAGS) -o $@
@@ -47,6 +57,11 @@ $(exe): $(objs)
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+
+# Link the test executable from its corresponding object files
+$(TEST_EXEC): $(BUILD_DIR)/% : $(TEST_EXEC_OBJS)
+	$(MKDIR_P) $(dir $@)
+	$(CXX) $^ -o $@ $(LDFLAGS)
 
 # $(TARGET_ARCH)
 
@@ -68,10 +83,14 @@ clean:
 test: $(exe)
 	external/regtests/bin/run-all-regression-tests
 
+.PHONY : codetest
+codetest: $(TEST_EXEC)
+	$(TEST_EXEC)
+
 .PHONY : test-update
 test-update:
 	set -e; for test in tests/*; do external/regtests/bin/store-regression-test-results regression_test_results/$${test##*/} tests/$${test##*/}; done
 
 .PHONY : coverage
 coverage :
-	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --print-summary
+	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --exclude codetests --exclude catch.hpp --print-summary $(GCOVRFLAGS)
