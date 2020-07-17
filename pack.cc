@@ -56,6 +56,13 @@ void pack(vector <unsigned int> &vec)
 	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
 }
 
+void pack(vector <unsigned short> &vec)
+{
+	unsigned short imax, i; 
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
+	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
+}
+
 void pack(vector <int> &vec)
 {
 	unsigned int imax, i; 
@@ -81,6 +88,16 @@ void pack(vector< vector <unsigned int> > &vec)
 }
 
 void pack(vector< vector <double> > &vec)
+{
+	unsigned int imax, i, jmax, j;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
+	for(i = 0; i < imax; i++){
+		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+		for(j = 0; j < jmax; j++){ buffer[k] = vec[i][j]; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");}
+	}
+}
+
+void pack(vector< vector <float> > &vec)
 {
 	unsigned int imax, i, jmax, j;
 	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1"); 
@@ -201,6 +218,13 @@ void unpack(vector <unsigned int> &vec)
 	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
 }
 
+void unpack(vector <unsigned short> &vec)
+{
+	unsigned int imax, i; 
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
+}
+
 void unpack(vector <int> &vec)
 {
 	unsigned int imax, i; 
@@ -226,6 +250,16 @@ void unpack(vector< vector <unsigned int> > &vec)
 }
 
 void unpack(vector< vector <double> > &vec)
+{
+	unsigned int imax, i, jmax, j;
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){
+		jmax = buffer[k]; k++; vec[i].resize(jmax);
+		for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
+	}
+}
+
+void unpack(vector< vector <float> > &vec)
 {
 	unsigned int imax, i, jmax, j;
 	imax = buffer[k]; k++; vec.resize(imax);

@@ -4,8 +4,20 @@
 #include <string>
 using namespace std;
 
+struct QTENSOR {                           // Stores information about a Q tensor
+	string comp;                             // The compartment on which the tensor acts
+	unsigned int timep;                      // The time period over which the tensor acts
+	string name;     			 									 // The name of the file
+	unsigned int Qtenref;                    // References the actual tensor information in genQ
+};
+
+struct SPARSETENSOR{                       // Stores the Q tensor in a sparse way
+	string name;                             // The reference name
+	vector <vector <unsigned short> > to;      // Stores the mixing matrix between areas and ages at different times
+	vector <vector< vector <float> > > val; 	
+};
+
 struct GENQ{
-	string onoff;										       	 // set to "on" if the Q tensor needs to be calculated
 	string Nall;                             // The age matrix of all interations
 	string Nhome;                            // The age matrix of home interations
 	string Nother;                           // The age matrix of other interations
@@ -14,10 +26,10 @@ struct GENQ{
 	string M;                                // The geographic mixing matrix
 	string localhome;                        // The Q matrix for someone at home
 	string flowall;                          // The Q matrix for general daily life
-	unsigned int nage;			   							 // The number of age groups
-	string datadir;                          // The data directory
-	string outputdir;                        // The output directory
-	string areadata;                         // Data about the areas
+	//unsigned int nage;			   							 // The number of age groups
+	//string areadata;                         // Data about the areas
+	
+	vector <SPARSETENSOR> Qten;              // Stores the actual tensors
 };
 
 struct TABLE {                             // Loads a table
@@ -31,14 +43,6 @@ struct TABLE {                             // Loads a table
 struct TIMEP { 														 // Stores a time period
 	string name;														 // The name of the time period
 	double tend;														 // The end time
-};
-
-struct QTENSOR {                           // Stores information about a Q tensor
-	string comp;                             // The compartment on which the tensor acts
-	unsigned int timep;                      // The time period over which the tensor acts
-	string file;  													 // The name of the file
-	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <double> > > val; 	
 };
 
 struct TRANSDATA{                          // Stores data about transitions
@@ -225,7 +229,7 @@ class DATA
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
-	void addQtensor(string timep, string comp, string file);
+	void addQtensor(string timep, string comp, string name);
 	unsigned int gettime(string st);
 	string getdate(unsigned int t);
 	
@@ -236,9 +240,10 @@ class DATA
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);
-	void normaliseQ(unsigned int q);
+	//void normaliseQ(unsigned int q);
 	unsigned int getint(string st, string file);
 	void plotrawdata();
 	void generatedeathdata();
+	void convertOAtoM();
 };
 #endif

@@ -133,22 +133,22 @@ areas			= "areadata.txt"
 
 
 # Generates Q matrices from geographic and age mixing matrices
-genQ			= "on"
+
 agemix		= {Nall="Ndata_all.txt", Nhome="Ndata_home.txt", Nother="Ndata_other.txt", Nschool="Ndata_school.txt", Nwork="Ndata_work.txt"}
 geomix		= {M="Mdata.txt"}
-genQoutput= {localhome="Q_local_home_data.txt", flowall="Q_flow_all_data.txt"}
+genQoutput= {localhome="Q_local_home_data", flowall="Q_flow_all_data"}
 
 
 # A list of different Q tensors which act at different periods (timep is before and after lockdown)
 # and on different compartments (as defined by comp).
 # The files provide information on the actual Q tensor itself.
 
-Q					= [{ timep="beforeLD", comp="I", file="Q_local_home_data.txt"},
-						 { timep="afterLD", comp="I", file="Q_local_home_data.txt"},
-						 { timep="beforeLD", comp="P", file="Q_flow_all_data.txt"},
-						 { timep="afterLD", comp="P", file="Q_local_home_data.txt"},
-						 { timep="beforeLD", comp="A", file="Q_flow_all_data.txt"},
-						 { timep="afterLD", comp="A", file="Q_local_home_data.txt"}]
+Q					= [{ timep="beforeLD", comp="I", name="Q_local_home_data"},
+						 { timep="afterLD", comp="I", name="Q_local_home_data"},
+						 { timep="beforeLD", comp="P", name="Q_flow_all_data"},
+						 { timep="afterLD", comp="P", name="Q_local_home_data"},
+						 { timep="beforeLD", comp="A", name="Q_flow_all_data"},
+						 { timep="afterLD", comp="A", name="Q_local_home_data"}]
  
  
 # The observed numbers of transitions between different compartments.

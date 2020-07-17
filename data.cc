@@ -14,11 +14,12 @@ using namespace std;
 #include "data.hh"	
 #include "consts.hh"
 #include "pack.hh"
+#include "generateQ.hh"
 
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 {
-	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, cc, fl, d, dp, a, aa, q, s, row;
+	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
 	int dc;
 	double v=0, sum;
@@ -117,6 +118,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				if(std::isnan(are.covar[j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
 			
 				if(covar[j].func == "log"){
+					if(v == 0) v = 0.01;
 					if(v <= 0) emsg("Log transformed quantities must be positive.");
 					are.covar[j] = log(v);
 				}
@@ -173,6 +175,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			}
 		}
 		
+		//convertOAtoM(); emsg("done");
+			
 		if(mode != MODE_SIM){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
@@ -239,34 +243,19 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				}
 			}
 		}
-
-		vec.resize(nage);                                                 // Reads in Q tensors
-		for(q = 0; q < Q.size(); q++){
-			tab = loadtable(Q[q].file);
-			
-			Q[q].to.resize(narea*nage); Q[q].val.resize(narea*nage);
-			for(row = 0; row < tab.nrow; row++){
-				c = atoi(tab.ele[row][0].c_str()); cc = atoi(tab.ele[row][1].c_str());
-				
-				for(a = 0; a < nage; a++){
-					for(aa = 0; aa < nage; aa++) vec[aa] = atof(tab.ele[row][2+a*nage+aa].c_str()); 
-					
-					Q[q].to[c*nage+a].push_back(cc);
-					Q[q].val[c*nage+a].push_back(vec);
-					
-					if(c < cc){
-						Q[q].to[cc*nage+a].push_back(c);
-						Q[q].val[cc*nage+a].push_back(vec);
-					}
-				}
-			}
-			
-			normaliseQ(q);
-		}
+		
+		generateQ(nage,datadir,genQ,area); 
 	}
 
 	if(ncore > 1) copydata(core);
-
+	
+	vec.resize(nage);                                                 // Reads in Q tensors
+	for(q = 0; q < Q.size(); q++){
+		j = 0; while(j < genQ.Qten.size() && genQ.Qten[j].name != Q[q].name) j++;
+		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+Q[q].name+"'.");
+		Q[q].Qtenref = j;
+	}
+		
 	agedist.resize(nage); for(a = 0; a < nage; a++) agedist[a] = 0;
 	
 	for(c = 0; c < narea; c++){                                              // Adds individuals to the system
@@ -319,36 +308,6 @@ unsigned int DATA::getint(string st, string file)
 	return i;
 }
 
-/// Normalises the Q tensors
-void DATA::normaliseQ(unsigned int q)
-{
-	unsigned int c, a, cc, aa, vi, j, jmax;
-	double sum, sum2;
-	
-	for(c = 0; c < narea; c++){
-		sum = 0; sum2 = 0;
-		for(a = 0; a < nage; a++){
-			sum2 += area[c].agepop[a];
-			vi = c*nage + a;
-		
-			jmax = Q[q].to[vi].size();
-			for(j = 0; j < jmax; j++){
-				cc = Q[q].to[vi][j];
-				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*Q[q].val[vi][j][aa]*area[cc].agepop[aa];
-			}
-		}
-		sum /= sum2;
-
-		for(a = 0; a < nage; a++){
-			vi = c*nage + a;
-			jmax = Q[q].to[vi].size();
-			for(j = 0; j < jmax; j++){
-				for(aa = 0; aa < nage; aa++) Q[q].val[vi][j][aa] /= sum;
-			}
-		}
-	}
-}
-
 /// Adds a time period
 void DATA::addtimep(string name, double tend)
 {
@@ -360,7 +319,7 @@ void DATA::addtimep(string name, double tend)
 }
 	
 /// Adds a Q tensor
-void DATA::addQtensor(string timep, string comp, string file)
+void DATA::addQtensor(string timep, string comp, string name)
 {
 	unsigned int tp;
 	QTENSOR qten;
@@ -370,7 +329,7 @@ void DATA::addQtensor(string timep, string comp, string file)
 	
 	qten.timep = tp;
 	qten.comp = comp;
-	qten.file = file;
+	qten.name = name;
 	Q.push_back(qten);
 }
 
@@ -490,7 +449,7 @@ unsigned int DATA::findcol(TABLE &tab, string name)
 /// Copies data from core zero to all the others
 void DATA::copydata(unsigned int core)
 {
-	unsigned int td, pd, md, q, v, vmin, vmax, num;
+	unsigned int td, pd, md, k, kmax, v, vmin, vmax, num;
 	int si;
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
@@ -514,12 +473,17 @@ void DATA::copydata(unsigned int core)
 		for(md = 0; md < margdata.size(); md++){
 			pack(margdata[md].percent);
 		}
+		kmax = genQ.Qten.size();
+		pack(kmax);
+		for(k = 0; k < kmax; k++){
+			pack(genQ.Qten[k].name);
+		}
 		si = packsize();
 	}
 
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
-		
+
 	if(core != 0){
 		packinit();
 		unpack(ndemocatpos);
@@ -541,13 +505,18 @@ void DATA::copydata(unsigned int core)
 		for(md = 0; md < margdata.size(); md++){
 			unpack(margdata[md].percent);
 		}
+		unpack(kmax);
+		genQ.Qten.resize(kmax);
+		for(k = 0; k < kmax; k++){
+			unpack(genQ.Qten[k].name);
+		}
 		if(si != packsize()) emsg("Data: EC9");
 	}
-	
-	for(q = 0; q < Q.size(); q++){                                                   // Copies the Q matrices
-		num = Q[q].to.size();
+
+	for(k = 0; k < genQ.Qten.size(); k++){                                                   // Copies the Q matrices
+		num = genQ.Qten[k].to.size();
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-		if(core != 0){ Q[q].to.resize(num); Q[q].val.resize(num);}
+		if(core != 0){ genQ.Qten[k].to.resize(num); genQ.Qten[k].val.resize(num);}
 		 
 		vmin = 0;
 		do{
@@ -556,24 +525,24 @@ void DATA::copydata(unsigned int core)
 			if(core == 0){
 				packinit();
 				for(v = vmin; v < vmax; v++){
-					pack(Q[q].to[v]);
-					pack(Q[q].val[v]);
+					pack(genQ.Qten[k].to[v]);
+					pack(genQ.Qten[k].val[v]);
 				}
 				si = packsize();
 			}
-				
+
 			MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 			MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	
+
 			if(core != 0){
 				packinit();	
 				for(v = vmin; v < vmax; v++){
-					unpack(Q[q].to[v]);
-					unpack(Q[q].val[v]);
+					unpack(genQ.Qten[k].to[v]);
+					unpack(genQ.Qten[k].val[v]);
 				}
 				if(si != packsize()) emsg("Data: EC9");
 			}
-		
+	
 			vmin = vmax;
 		}while(vmin < num);
 	}		
@@ -883,4 +852,79 @@ void DATA::generatedeathdata()
 	for(w = 0; w < nweek; w++){
 		IDout << linedate[w] << "\t" << IDnum[w] << endl;
 	}
+}
+
+/// Generates the M matrix for OAs
+void DATA::convertOAtoM()
+{
+	unsigned int row, num, j0, j1, a, n=0;
+	double r, dx, dy, rr;
+	
+	string a0, a1;
+	vector < vector <float> > numcont;
+	
+	TABLE tab;
+	
+	numcont.resize(area.size());
+	for(j0 = 0; j0 < area.size(); j0++){
+		numcont[j0].resize(area.size());
+		for(j1 = 0; j1 < area.size(); j1++){
+			numcont[j0][j1] = 0;
+		}
+	}
+	
+	if(1 == 1){    // A powerlaw spatial kernel
+		double xmin, xmax;
+		xmin = large; xmax = -large;
+		for(a = 0; a < area.size(); a++){
+			if(area[a].x < xmin) xmin = area[a].x; 
+			if(area[a].x > xmax) xmax = area[a].x;
+			if(area[a].x < xmin) xmin = area[a].x; 
+			if(area[a].x > xmax) xmax = area[a].x;
+		}
+		r = (xmax-xmin)/100;
+		
+		for(j0 = 0; j0 < area.size(); j0++){
+			cout << j0 << " " << area.size() << "\n";
+			for(j1 = 0; j1 < area.size(); j1++){
+				dx = area[j0].x - area[j1].x;
+				dy = area[j0].y - area[j1].y;
+				rr = sqrt(dx*dx+dy*dy);
+				if(rr < 0.5*r){
+					numcont[j0][j1] = 1.0/(1+rr*rr/(r*r));
+				}
+			}
+		}
+	}
+	else{
+		tab = loadtable("direct.txt");
+		for(row = 0; row < tab.nrow; row++){
+			cout << row << " / " << tab.nrow << "\n";
+			stringstream ss(tab.ele[row][0]);
+			ss >> a0 >> a1 >> num;
+			a0 = strip(a0); a1 = strip(a1); 
+			
+			j0 = 0; while(j0 < area.size() && area[j0].code != a0) j0++;
+			if(j0 == area.size()) cout << "cannot find\n";
+			
+			j1 = 0; while(j1 < area.size() && area[j1].code != a1) j1++;
+			if(j1 == area.size()) cout << "cannot find\n";
+			
+			numcont[j0][j1] += num;
+			if(j0 != j1) numcont[j1][j0] += num;
+		}
+	}
+	
+	ofstream Mout((datadir+"/Mdata.txt").c_str());
+	Mout.precision(4);
+	Mout << "oa1	oa2	contact" << endl;
+	for(j0 = 0; j0 < area.size(); j0++){
+		for(j1 = j0; j1 < area.size(); j1++){
+			if(numcont[j0][j1] != 0){
+				Mout << j0 << "\t" << j1 << "\t" << numcont[j0][j1] << endl;
+				n++;
+			}
+		}
+	}
+	cout << double(n)/(area.size()*area.size()) << "Sparcity\n";
 }

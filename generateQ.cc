@@ -22,59 +22,40 @@ using namespace std;
 #include "utils.hh"
 
 unsigned int nage;                         // The number of age categories used 
-const short normon = 0;                    // Determines if matrix normalised
+const short normon = 1;                    // Determines if matrix normalised
 const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
-
-/*
-struct AREA {                              // Stores information about areas
-	vector <unsigned int> agepop;            // The populations in different age groups
-};
-
-struct TABLE {                             // Loads a table
-	unsigned int ncol;                       // The number of columns
-	unsigned int nrow;                       // The number if rows
-	vector <string> heading;                 // The headings for the columns
-	vector <vector <string> > ele;        	 // The elements of the table
-};
-*/
 
 struct MATRIX {                            // Loads a matrix
 	unsigned int N;													 // The size of the matrix
 	vector <vector <double> > ele;           // The elements of the matrix
 };
 
-struct TENSOR {                            // Loads a tensor
-	vector <vector <vector <vector <double> > > > ele;  // The elements of the tensor
+struct SPARSEMATRIX {                      // Loads a matrix
+	unsigned int N;													 // The size of the matrix
+	vector <unsigned int> i;
+	vector <unsigned int> j;
+	vector <double> val;                     // The elements of the matrix
 };
 
 TABLE loadtable(string file, string head);
 unsigned int findcol(TABLE &tab, string name);
 vector <AREA> loadarea(TABLE tab);
 MATRIX matfromtable(TABLE tab, unsigned int N);
-MATRIX matfromtable_sparse(TABLE tab, unsigned int N);
-TENSOR generateQ(MATRIX M, MATRIX N);
-MATRIX identity(unsigned int N);
-void normalise(TENSOR &Q, vector <AREA> &area);
-void outputQ(string file, TENSOR Q);
+SPARSEMATRIX loadsparse(string file, unsigned int N);
+SPARSEMATRIX identity(unsigned int N);
 void plotmat(MATRIX mat, string title);
+void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area);
 
 string strip(string line);
-//void emsg(string msg);
 
-void generateQ(GENQ genQ)
+
+void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area)
 {
-	string datadir;
-	string outputdir;
-	vector <AREA> area;
 	TABLE tab;
-	MATRIX N_all, N_home, N_other, N_school, N_work, M, I;
-	TENSOR Q;
-	
+	MATRIX N_all, N_home, N_other, N_school, N_work;
+	SPARSEMATRIX M, I;
+
 	cout << "Generating Q tensors." << endl;
-	
-	nage = genQ.nage;
-	datadir = genQ.datadir;
-	outputdir = genQ.outputdir;
 	
 	tab = loadtable(datadir+"/"+genQ.Nall,"nohead");        // Loads age stratified mixing matrices for different activities
 	N_all = matfromtable(tab,nage);
@@ -91,56 +72,21 @@ void generateQ(GENQ genQ)
 	tab = loadtable(datadir+"/"+genQ.Nwork,"nohead");
 	N_work = matfromtable(tab,nage);
 
-	tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
-	area = loadarea(tab);
+	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
+	//area = loadarea(tab);
 	
-	tab = loadtable(datadir+"/"+genQ.M,"head");              // Loads the census flow data
-	M = matfromtable_sparse(tab,area.size());
-	
-	/*
-	if(argc != 2) emsg("Incorrect number of arguments");
-	datadir = argv[1];                                         // The data directory
-	
-	tab = loadtable(datadir+"/Ndata_all.txt","nohead");        // Loads age stratified mixing matrices for different activities
-	N_all = matfromtable(tab,nage);
-	
-	tab = loadtable(datadir+"/Ndata_home.txt","nohead");
-	N_home = matfromtable(tab,nage);
-	
-	tab = loadtable(datadir+"/Ndata_other.txt","nohead");
-	N_other = matfromtable(tab,nage);
-	
-	tab = loadtable(datadir+"/Ndata_school.txt","nohead");
-	N_school = matfromtable(tab,nage);
-	
-	tab = loadtable(datadir+"/Ndata_work.txt","nohead");
-	N_work = matfromtable(tab,nage);
-
-	tab = loadtable(datadir+"/areadata.txt","head");           // Loads information about the areas
-	area = loadarea(tab);
-	
-	tab = loadtable(datadir+"/Mdata.txt","head");              // Loads the census flow data
-	M = matfromtable_sparse(tab,area.size());
-	*/
+	M = loadsparse(datadir+"/"+genQ.M,area.size());
 	
 	I = identity(area.size());                                 // Generates the identity matrix
 	
 	//plotmat(N_all,"'All' matrix");                             // Outputs matrices to the terminal
 	//plotmat(N_home,"'Home' matrix");
 		
-	Q = generateQ(M,N_all);                                    // Outputs a Q matrix representative of 'normal' mixing
-	if(normon == 1) normalise(Q,area);
-	//outputQ(datadir+"/Q_flow_all_data.txt",Q);
-
-	ensuredirectory(outputdir);
-	outputQ(outputdir+"/"+genQ.flowall,Q);
-
-	//Q = generateQ(I,N_home);                                   // Outputs a Q matrix representative of someone at home 
-	Q = generateQ(M,N_all);   
-	if(normon == 1) normalise(Q,area);
-	//outputQ(datadir+"/Q_local_home_data.txt",Q);
-	outputQ(outputdir+"/"+genQ.localhome,Q);
+	generateQten(M,N_all,genQ.flowall,genQ,area);      
 	
+	//generateQten(I,N_home,genQ.localhome,genQ,area);      
+	generateQten(M,N_all,genQ.localhome,genQ,area);      
+
 	cout << endl;
 }
 
@@ -155,46 +101,6 @@ void plotmat(MATRIX mat, string title)
 		cout << endl;
 	}
 	cout << endl;
-}
-
-/// Outputs the non-zero elements of Q
-void outputQ(string file, TENSOR Q)
-{
-	unsigned int c, cc, ccmin, a, aa, narea;
-	
-	ofstream op(file.c_str());
-	if(!op) emsg("Cannot write file");
-	
-	cout << "  Outputing file '" << file << "'." << endl;
-	
-	op << "area A\tarea B";
-	for(a = 0; a < nage; a++){
-		for(aa = 0; aa < nage; aa++){
-			op << "\tAG" << a << "/" << "AG" << aa; 
-		}
-	}
-	op << endl;
-
-	narea = Q.ele.size();
-	for(c = 0; c < narea; c++){
-		if(symetric == 1) ccmin = c; else ccmin = 0;
-		for(cc = ccmin; cc < narea; cc++){
-			for(a = 0; a < nage; a++){
-				for(aa = 0; aa < nage; aa++) if(Q.ele[c][a][cc][aa] != 0) break;
-				if(aa != nage) break;
-			}
-			
-			if(a != nage){
-				op << c << "\t" << cc;
-				for(a = 0; a < nage; a++){
-					for(aa = 0; aa < nage; aa++){
-						op << "\t" << Q.ele[c][a][cc][aa];
-					}
-				}
-				op << endl;
-			}
-		}
-	}
 }
 
 /// Loads age stratified population data for areas
@@ -235,75 +141,80 @@ vector <AREA> loadarea(TABLE tab)
 	return area;
 }
 
-/// Generates a Q tensor from a movement matrix and an age contact matrix
-TENSOR generateQ(MATRIX M, MATRIX N)
+void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area)
 {
-	unsigned int c, a, cc, aa;
-	TENSOR Q;
+	unsigned int nage = N.N, narea = M.N, k, c, cc, a, aa, vi, j, jmax, q;
+	double v, sum, sum2;
+	vector <float> vec;
+
+	q = genQ.Qten.size();
+	genQ.Qten.push_back(SPARSETENSOR ());
+
+	genQ.Qten[q].name = name;
 	
-	Q.ele.resize(M.N);
-	for(c = 0; c < M.N; c++){
-		Q.ele[c].resize(N.N);
-		for(a = 0; a < N.N; a++){
-			Q.ele[c][a].resize(M.N);
-			for(cc = 0; cc < M.N; cc++){
-				Q.ele[c][a][cc].resize(N.N);
-				for(aa = 0; aa < N.N; aa++){
-					Q.ele[c][a][cc][aa] = M.ele[c][cc]*N.ele[a][aa];
-				}
+	vec.resize(nage);
+	genQ.Qten[q].to.resize(nage*narea);
+	genQ.Qten[q].val.resize(nage*narea);
+
+	long num = 0;
+	for(k = 0; k < M.val.size(); k++){
+		c = M.i[k]; cc = M.j[k]; v = M.val[k];
+		for(a = 0; a < nage; a++){
+			for(aa = 0; aa < nage; aa++){
+				vec[aa] = v*N.ele[a][aa];
+				if(std::isnan(vec[aa])) emsg("Raw value in '"+name+"' not a number");
+			}
+
+			genQ.Qten[q].to[c*nage+a].push_back(cc); num++;
+			genQ.Qten[q].val[c*nage+a].push_back(vec);
+					
+			if(c < cc){
+				genQ.Qten[q].to[cc*nage+a].push_back(c);
+				genQ.Qten[q].val[cc*nage+a].push_back(vec);
 			}
 		}
-	}	
-	
-	return Q;
-}
+	}
 
-/// Generates the identity matrix
-MATRIX identity(unsigned int N)
-{
-	unsigned int i, j;
-	MATRIX M;
-	
-	M.N = N;
-	M.ele.resize(N);
-	for(j = 0; j < N; j++){
-		M.ele[j].resize(N);
-		for(i = 0; i < N; i++){
-			if(i == j) M.ele[j][i] = 1; else M.ele[j][i] = 0;
-		}
-	}	
-	
-	return M;
-}
-	
-/// Normalises the matrix by area
-void normalise(TENSOR &Q, vector <AREA> &area)
-{
-	unsigned int c, a, cc, aa, narea;
-	double sum, sum2;
-	
-	narea = area.size();
-	
-	for(c = 0; c < narea; c++){ 
+	for(c = 0; c < narea; c++){                       // Normalises the tensor
 		sum = 0; sum2 = 0;
 		for(a = 0; a < nage; a++){
 			sum2 += area[c].agepop[a];
-			for(cc = 0; cc < narea; cc++){  
-				for(aa = 0; aa < nage; aa++){ 
-					sum += area[c].agepop[a]*Q.ele[c][a][cc][aa]*area[cc].agepop[aa];
-				}
+			vi = c*nage + a;
+		
+			jmax = genQ.Qten[q].to[vi].size();
+			for(j = 0; j < jmax; j++){
+				cc = genQ.Qten[q].to[vi][j];
+				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*genQ.Qten[q].val[vi][j][aa]*area[cc].agepop[aa];
 			}
 		}
 		sum /= sum2;
-
+		
 		for(a = 0; a < nage; a++){
-			for(cc = 0; cc < narea; cc++){  
-				for(aa = 0; aa < nage; aa++){ 
-					Q.ele[c][a][cc][aa] /= sum;
+			vi = c*nage + a;
+			jmax = genQ.Qten[q].to[vi].size();
+			for(j = 0; j < jmax; j++){
+				for(aa = 0; aa < nage; aa++){
+					genQ.Qten[q].val[vi][j][aa] /= sum;
+					if(std::isnan(genQ.Qten[q].val[vi][j][aa])) emsg("Value in '"+name+"' not a number");
 				}
 			}
 		}
 	}
+}
+
+/// Generates the identity matrix
+SPARSEMATRIX identity(unsigned int N)
+{
+	unsigned int k;
+	SPARSEMATRIX M;
+	
+	M.N = N;
+	M.i.resize(N); M.j.resize(N); M.val.resize(N);
+	for(k = 0; k < N; k++){
+		M.i[k] = k; M.j[k] = k; M.val[k] = 1; 
+	}
+	
+	return M;
 }
 
 /// Creates a matrix from a table
@@ -352,27 +263,31 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 	return mat;
 }
 
-/// Uses 'from' and 'to' columns to generate a matrix
-MATRIX matfromtable_sparse(TABLE tab, unsigned int N)
+/// Uses 'from' and 'to' columns to generate a sparse matrix
+SPARSEMATRIX loadsparse(string file, unsigned int N)
 {
-	unsigned int i, j, r, a1, a2;
+	unsigned int a1, a2;
 	double v;
-	MATRIX mat;
+	string line;
+	SPARSEMATRIX mat;
 	
-	mat.N = N;
-	mat.ele.resize(N);
-	for(j = 0; j < N; j++){
-		mat.ele[j].resize(N);
-		for(i = 0; i < N; i++){
-			mat.ele[j][i] = 0;
-		}
-	}
+	ifstream in(file.c_str());                             // Loads information about areas
+	if(!in) emsg("Cannot open the file '"+file+"'");
 	
-	for(r = 0; r < tab.nrow; r++){
-		a1 = atoi(tab.ele[r][0].c_str()); a2 = atoi(tab.ele[r][1].c_str()); v = atof(tab.ele[r][2].c_str());
-		mat.ele[a1][a2] = v; mat.ele[a2][a1] = v;
-	}
-	
+	mat.N = N;	
+	getline(in,line);
+	do{
+		getline(in,line);
+		if(in.eof()) break;
+				
+		stringstream ss(line);
+		ss >> a1 >> a2 >> v;
+		mat.i.push_back(a1);
+		mat.j.push_back(a2);
+		if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+		mat.val.push_back(v);
+	}while(1 == 1);
+
 	return mat;
 }
 
@@ -439,12 +354,3 @@ string strip(string line)
 	}
 	return line;
 }	
-
-/*
-/// Displays an error message
-void emsg(string msg)
-{
-	cout << msg << endl;
-	exit (EXIT_FAILURE);
-}
-*/
