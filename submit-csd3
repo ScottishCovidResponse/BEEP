@@ -1,22 +1,24 @@
 #!/bin/bash
 
 # Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 32 --nnodes 1 --walltime 1:00:00 --dir /path/to/run/dir
-# dos2unix submit-csd3
+# Usage: ./submit-csd3 --inputfile "examples/infMSOA_noage.toml" --seed 0 --samples 10 --nprocs 32 --nnodes 1 --walltime 0:01:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test1
+
+# dos2unix submit-csd3 
 
 set -e
 set -u
 
 # Defaults
-groups=65536
-samples=10
+inputfile="examples/inf.toml"
 seed=0
-nprocs=1
+samples=1000
+nprocs=32
 nnodes=1
 walltime=1:00:00
 
 while [ $# -gt 0 ]; do
-    if [ $1 = "--groups" ]; then
-        groups=$2
+    if [ $1 == "--inputfile" ]; then
+        inputfile=$2
         shift 2
     elif [ $1 == "--seed" ]; then
         seed=$2
@@ -24,17 +26,17 @@ while [ $# -gt 0 ]; do
     elif [ $1 == "--samples" ]; then
         samples=$2
         shift 2
-    elif [ $1 == "--dir" ]; then
-        dir=$2
-        shift 2
     elif [ $1 == "--nprocs" ]; then
         nprocs=$2
-	shift 2
+				shift 2
     elif [ $1 == "--nnodes" ]; then
         nnodes=$2
-	shift 2
+				shift 2
     elif [ $1 == "--walltime" ]; then
         walltime=$2
+        shift 2
+		elif [ $1 == "--dir" ]; then
+        dir=$2
         shift 2
     else
         echo "Unrecognised arguments: $*" >&2
@@ -44,13 +46,20 @@ done
 
 jobname=$(basename $dir)
 
+echo $dir
+
 mkdir $dir
-cp -a ./run $dir
 
-# cp -a ./cases_realscotsim.txt $dir
+cp -a ./beepmbp $dir
 
-# cp -a ./houses_realscotsim.txt $dir
+mkdir $dir/examples
 
+mkdir $dir/examples/Data_ScotlandMSOA
+
+cp -a $inputfile $dir/$inputfile 
+
+cp -a ./examples/Data_ScotlandMSOA/* $dir/examples/Data_ScotlandMSOA/
+ 
 cat >$dir/submit.sh <<EOF
 #!/bin/bash
 #SBATCH --job-name $jobname
@@ -75,17 +84,19 @@ module load rhel7/default-peta4
 # Run BEEPmbp
 ####################################################################
 
-echo
-echo "Running simulation"
-echo "=================="
-echo
-mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
+#echo
+#echo "Running simulation"
+#echo "=================="
+#echo
+#mpirun -n 1 ./run mode=sim model=irish simtype=smallsim area=1024 seed=0 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
 
 echo
 echo "Running inference"
 echo "================="
 echo
-mpirun -n $nprocs ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
+#mpirun -n $nprocs ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
+
+mpirun -n $nprocs ./beepmbp inputfile=$inputfile seed=$seed nchain=$nprocs nsamp=$samples 
 
 EOF
 
