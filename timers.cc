@@ -17,7 +17,11 @@ void timersinit()
 	timers.timembptemp2 = 0;	timers.timembptemp3 = 0;	timers.timembptemp4 = 0;
 	timers.timestandard = 0;	
 	timers.timeparam = 0;	
-	timers.timebetaphiloop = 0;
+	
+	timers.timebetaphi = 0;
+	timers.timebetaphiinit = 0;
+	timers.timecovarinit = 0;
+	timers.timecovar = 0;
 	timers.timeaddrem = 0;	
 	timers.timecompparam = 0;
 	timers.timembpconRtot = 0;

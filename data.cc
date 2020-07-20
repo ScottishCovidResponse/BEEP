@@ -157,6 +157,29 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		}
 		narea = area.size();
 		
+		if(1 == 1){  // Averages covariates across regions
+			vector <double> av, nav;
+			av.resize(region.size()); nav.resize(region.size());
+			for(j = 0; j < ncovar; j++){  
+				for(r = 0; r < region.size(); r++){ av[r] = 0; nav[r] = 0;}
+				
+				for(c = 0; c < narea; c++){
+					r = area[c].region;
+					if(covar[j].func == "log") av[r] += exp(area[c].covar[j]);
+					else av[r] += area[c].covar[j];
+					nav[r]++;
+				}
+				
+				for(c = 0; c < narea; c++){
+					r = area[c].region;
+					if(covar[j].func == "log") area[c].covar[j] = log(av[r]/nav[r]);
+					else area[c].covar[j] = av[r]/nav[r];
+				}
+				
+				for(r = 0; r < region.size(); r++) cout << region[r].name << " " << av[r]/nav[r] << " average\n";
+			}
+		}
+		
 		for(j = 0; j < ncovar; j++){            // Shifts covariates so average is zero
 			sum = 0; for(c = 0; c < narea; c++) sum += area[c].covar[j];
 			sum /= narea;
@@ -280,6 +303,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
 	
+	// 
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");
 }
@@ -663,9 +687,18 @@ void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);
 /// This is used to plot raw data files (this is used for diagnoistic purposed, and not in the analysis)
 void DATA::plotrawdata()
 {
-	unsigned int row, tt, num, sum;
-	TABLE tab;
+	unsigned int row, tt, num, sum, pd, r, t;	
+	vector <unsigned int> numst, numst2;
+	unsigned tmax = 140, j;
+	double dt, mean_ns, sd_ns, sd, mean;
 	
+	TABLE tab;
+	vector <int> dif, Hnum, adm;
+	
+	for(t = 0; t < tmax; t++){
+		Hnum.push_back(0);
+		adm.push_back(0);
+	}
 	
 	tab = loadtable("DailyDeathsConfirmedCovid.txt");
 	ofstream dout(outputdir+"/deathraw.txt");
@@ -684,11 +717,14 @@ void DATA::plotrawdata()
 	for(row = 0; row < tab.nrow; row++){
 		tt = gettime(tab.ele[row][0]) - start;
 		num = getint(tab.ele[row][1],"");
-		if(num != UNKNOWN) dout2 << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
+		if(num != UNKNOWN) dout2 << tt << " " << num << " " << sum << endl;
+		if(num == UNKNOWN) num = 0;
+		adm[tt] = num;
 	}
 	cout << sum << " Admissions" << endl;
 		
+
 	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt");
 	ofstream dout3(outputdir+"/nhsothercasesraw.txt");
 	sum = 0;
@@ -699,6 +735,28 @@ void DATA::plotrawdata()
 		if(num != UNKNOWN) sum += num;
 	}
 	cout << sum << " NHS+other cases" << endl;
+	
+	ofstream poptot(outputdir+"/Htot.txt");
+	cout << "poptot\n";
+	pd = 0;
+	for(row = 0; row < popdata[pd].rows; row++){
+		sum = 0;
+		for(r = 0; r < region.size(); r++){
+			num = popdata[pd].num[r][row];
+
+			if(num == UNKNOWN) num = 0;
+			if(num == THRESH) num = 0;
+			sum += num;	
+		}
+		Hnum[popdata[pd].start + row*popdata[pd].units] = sum;
+		cout <<sum << " "<< r << " " << row << "p\n";
+		poptot << popdata[pd].start + row*popdata[pd].units << " "<< sum<< endl;
+	}
+	
+	ofstream recrate(outputdir+"/recrate.txt");
+	for(t = 54; t < 134; t++){
+		recrate << t << " " << " " << Hnum[t] << " " << adm[t] << " " << adm[t] - ( Hnum[t+1] - Hnum[t]) << "\n";
+	}
 	
 	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt");
 	ofstream dout4(outputdir+"/nhsonlycasesraw.txt");
@@ -735,10 +793,7 @@ void DATA::plotrawdata()
 	
 	
 	// estimate distribution
-	
-	vector <unsigned int> numst, numst2;
-	unsigned int t, tmax = 140, j;
-	double dt, mean_ns, sd_ns, sd, mean;
+
 	numst.resize(tmax); numst2.resize(tmax);
 	for(t = 0; t < tmax; t++){ numst[t] = 0, numst[t] = 0;}
 	

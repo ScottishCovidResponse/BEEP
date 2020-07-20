@@ -19,7 +19,8 @@ class MBPCHAIN                                          // Stores all the things
 	double Levi;         																	// The latent process likelihood
 	double Pri; 																				  // The prior probability
 	
-	double invT;                                          // The inverse temperature 
+	double invTtrue;                                         // The inverse temperature 
+	double invT;                                          // The inverse temperature
 	
 	vector <float> paramjump;                             // The size of jumps in parameter space
 	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
@@ -105,6 +106,7 @@ class MBPCHAIN                                          // Stores all the things
 		void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
 		void calcQmapp();
 		void betaphi_prop( unsigned int samp, unsigned int burnin);
+		void covar_prop(unsigned int samp, unsigned int burnin);
 		void addrem_prop(unsigned int samp, unsigned int burnin);
 };
 #endif
