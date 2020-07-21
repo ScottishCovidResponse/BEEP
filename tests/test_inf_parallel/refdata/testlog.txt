@@ -1,6 +1,6 @@
 /home/user/BEEPmbp
 Runing test with input file tests/test_inf_parallel/test_inf_parallel.toml and output directory regression_test_results/test_inf_parallel on 1 MPI processes
-BEEPmbp version lastgood-146-gc9c4e96
+BEEPmbp version init-344-g28ddec6
 
 Settings:
   mode = inf
@@ -15,7 +15,6 @@ Settings:
   datadir = examples/Data_example
   regions = regiondata.txt
   areas = areadata.txt
-  genQ = on
 
 Age categories: 
   age0-19 sus='zero', age20-64 sus='sus_adult', age65+ sus='sus_elderly'
@@ -27,21 +26,23 @@ Time periods defined:
   beforeLD: 0 - 56
   afterLD: 56 - 112
 
-Generating Q tensors.
-  Outputing file 'regression_test_results/test_inf_parallel/Q_flow_all_data.txt'.
-  Outputing file 'regression_test_results/test_inf_parallel/Q_local_home_data.txt'.
-
 Q tensors loaded:
-  timep: beforeLD  compartment: I  file: Q_local_home_data.txt  
-  timep: afterLD  compartment: I  file: Q_local_home_data.txt  
-  timep: beforeLD  compartment: P  file: Q_flow_all_data.txt  
-  timep: afterLD  compartment: P  file: Q_local_home_data.txt  
-  timep: beforeLD  compartment: A  file: Q_flow_all_data.txt  
-  timep: afterLD  compartment: A  file: Q_local_home_data.txt  
+    timep: beforeLD  compartment: I  name: Q_local_home_data  
+    timep: afterLD  compartment: I  name: Q_local_home_data  
+    timep: beforeLD  compartment: P  name: Q_flow_all_data  
+    timep: afterLD  compartment: P  name: Q_local_home_data  
+    timep: beforeLD  compartment: A  name: Q_flow_all_data  
+    timep: afterLD  compartment: A  name: Q_local_home_data  
 
 Region data loaded.
+Region_0 0.987758 average
+Region_1 1.00114 average
+Region_2 1.00832 average
+Region_3 0.905698 average
 
 Area data loaded.
+Generating Q tensors.
+
 
 Number of areas: 100
 
@@ -49,8 +50,8 @@ Priors:
   beta0 = Uniform(0.05 - 0.5)
   beta1 = Uniform(0.05 - 0.5)
   phi = Uniform(0 - 20)
-  muE = 1.63
-  sdE = 0.5
+  muE = 4.5
+  cvE = 0.533
   tA = 8
   tP = 1.5
   tI = 5
@@ -81,8 +82,8 @@ Compartments:
 
 Transitions:
   S → E Infection
-  E → P  with probability probEP, probEP, probEP Lognormal mean=muE sd=sdE
-  E → A Lognormal mean=muE sd=sdE
+  E → P  with probability probEP, probEP, probEP Lognormal mean=muE cv=cvE
+  E → A Lognormal mean=muE cv=cvE
   A → R Exponential  mean=tA
   P → I Exponential  mean=tP
   I → H  with probability probIH_C, probIH_A, probIH_E Exponential  mean=tI
@@ -117,9 +118,9 @@ Posterior outputs in directory 'regression_test_results/test_inf_parallel':
 'Posterior_parameters.txt' gives the model parameters.
 'regression_test_results/test_inf_parallel/trace.txt' gives trace plots for model parameters.
 'regression_test_results/test_inf_parallel/traceLi.txt' gives trace plots for the observation likelihoods on different chains.
-0.218385 Total time (seconds)
-5e-06 MBP waiting time (seconds)
-0.113485 MBP time (seconds)
-0.000236 MBP init (seconds)
-0.010618 MBP Qmap (seconds)
-0.063105 MBP prop (seconds)
+0.547136 Total time (seconds)
+3e-06 MBP waiting time (seconds)
+0.351295 MBP time (seconds)
+0.000545 MBP init (seconds)
+0.280498 MBP Qmap (seconds)
+0.236251 MBP prop (seconds)

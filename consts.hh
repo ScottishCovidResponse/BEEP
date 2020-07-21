@@ -3,7 +3,7 @@
 
 using namespace std;
 
-const unsigned int MODE_SIM=0, MODE_INF=1;                       // Different modes of operation 
+const unsigned int MODE_SIM=0, MODE_INF=1, MODE_MULTISIM=2;           // Different modes of operation 
  
 const unsigned int FEV_EV=0, INF_EV=1;                           // Event types (future event/infection/settime/external)
 const unsigned int SET_EV=2, EXT_EV=3, XIFEV_EV=4, XPFEV_EV=5;
@@ -17,7 +17,7 @@ const unsigned int TFORM_NUM = 0, TFORM_YMD = 1;                 // Different ty
 
 const double vtiny = 0.00000000000000001;                        // Used to represent a very tiny number
 const double tiny = 0.00000001;                                  // Used to represent a tiny number
-const double large = 1000000;                                    // Used to represent a big number
+const double large = 10000000;                                    // Used to represent a big number
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 const unsigned int THRESH = 999999998;                           // Represents a number is under the threshold set
 const unsigned int UNKNOWN = 999999997;                          // Represents a number is unknown

@@ -5,23 +5,33 @@ Compile using: make
 Simulation:  
  ./beepmbp inputfile="examples/sim.toml"        
  
+ ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" mode="sim"
+ 
+ Multiple simulations
+ ./beepmbp inputfile="examples/infMSOA_noage.toml" mode="multisim" nsamp=10
+
+ 
 Inference:    
 mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
  ./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
-mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" mode="inf" nchain=20 nsamp=10000
+mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=10000
+
+nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=20000 > outp.txt
+
+
+nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=20 nsamp=20000 
 */
 
-// nohup mpirun -n 20 ./beepmbp inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
 
-// nohup mpirun -n 20 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./beepmbp inputfile="examples/simMSOA_noage.toml" nchain=20  mode="inf"  nsamp=10000 &
+// nohup mpirun -n 5 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=5 nsamp=20000 outputdir="Output2" > wo.txt&
 
-// mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args ./beepmbp inputfile="examples/simMSOA.toml" nchain=2  mode="inf"  nsamp=10000 
 // make -j 10
 /*
  Commands for running on DiRAC:
  ./submit-csd3 --groups 65536 --seed 1 --samples 10 --nprocs 32 --nnode 1  --walltime 1:00:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test
+ 
  dos2unix submit-csd3
  squeue -u dc-pool1
  scancel <jobid>
@@ -348,14 +358,14 @@ int main(int argc, char** argv)
 	
 	// mode
 	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");
-	map<string,int>  modemap{{"sim", MODE_SIM}, {"inf", MODE_INF}};
+	map<string,int>  modemap{{"sim", MODE_SIM}, {"inf", MODE_INF}, {"multisim", MODE_MULTISIM}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
 	} else {
 		emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	}
 
-	if(mode != MODE_SIM){
+	if(mode == MODE_INF){
 		// nchain
 		int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
 		if (nchaintot != UNSET) {
@@ -364,10 +374,12 @@ int main(int argc, char** argv)
 		}
 	}
 	
-	if(mode != MODE_SIM){
+	if(mode == MODE_MULTISIM || mode == MODE_INF){
 		// nsamp
 		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
-		
+	}
+	
+	if(mode == MODE_INF){
 		// infmax
 		if(tomldata.contains("infmax")) {
 			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
@@ -687,7 +699,7 @@ int main(int argc, char** argv)
 				else emsgroot("Units in 'transdata' not recognised");
 			}
 			
-			if(mode == MODE_SIM){
+			if(mode != MODE_INF){
 				transdata.rows = (unsigned int)((data.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
@@ -729,7 +741,7 @@ int main(int argc, char** argv)
 				else emsgroot("Units in 'popdata' not recognised");
 			}
 			
-			if(mode == MODE_SIM){
+			if(mode != MODE_INF){
 				popdata.rows = (unsigned int)((data.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
@@ -775,7 +787,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(mode == MODE_SIM && ncore != 1) emsgroot("Simulation only requires one core");
+	if(mode != MODE_INF && ncore != 1) emsgroot("Simulation only requires one core");
 	
 	if(mode == UNSET) emsgroot("The property 'mode' must be set"); 
  
@@ -800,8 +812,8 @@ int main(int argc, char** argv)
 	sran(core*10000+seed);
 	
 	switch(mode){
-	case MODE_SIM:
-		simulatedata(data,model,poptree);
+	case MODE_SIM: 	case MODE_MULTISIM:
+		simulatedata(data,model,poptree,nsamp);
 		break;
 
 	case MODE_INF: 

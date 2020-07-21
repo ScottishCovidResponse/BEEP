@@ -40,8 +40,8 @@ comps			= [{name = "S", inf=0.0},
 # Note when a compartmental model has transitions to two others, only the probability down one branch needs to be defined.
 
 trans   	=	[{from="S", to="E", dist="infection"},
-						 {from="E", to="P", dist="lognorm", mean="muE", sd="sdE", prob="probEP,probEP,probEP"},
-						 {from="E", to="A", dist="lognorm", mean="muE", sd="sdE"},
+						 {from="E", to="P", dist="lognorm", mean="muE", cv="cvE", prob="probEP,probEP,probEP"},
+						 {from="E", to="A", dist="lognorm", mean="muE", cv="cvE"},
 						 {from="A", to="R", dist="exp", mean="tA"},
 						 {from="P", to="I", dist="exp", mean="tP"},
 						 {from="I", to="H", dist="exp", mean="tI", prob="probIH_C,probIH_A,probIH_E"},
@@ -52,11 +52,11 @@ trans   	=	[{from="S", to="E", dist="infection"},
 	
 # Defines the parameters in the model
 
-params		= [{name="beta0", value=0.25},        # The values for the beta spline
+params		= [{name="beta0", value=0.3},        # The values for the beta spline
 						 {name="beta1", value=0.09},
 						 {name="phi", value=1.0},          # The values for the phi spline
-						 {name="muE", value=1.63},          # The latent period
-						 {name="sdE", value=0.5},	          # The standard deviation in latent period			 
+						 {name="muE", value=4.5},          # The latent period
+						 {name="cvE", value=0.533},	          # The standard deviation in latent period			 
 						 {name="tA", value=8.0},            # Mean time spend in asymptomatic state
 						 {name="tP", value=1.5},            # Mean time spend in pre-symptomatic state
 						 {name="tI", value=5.0},            # Mean time spend in infectious state

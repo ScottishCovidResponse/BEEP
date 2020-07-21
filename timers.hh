@@ -13,7 +13,10 @@ struct TIMERS {
 	long timembptemp;	long timembptemp2;	long timembptemp3;	long timembptemp4;
 	long timestandard;
 	long timeparam;
-	long timebetaphiloop;
+	long timebetaphiinit;
+	long timebetaphi;
+	long timecovarinit;
+	long timecovar;
 	long timecompparam;
 	long timeaddrem;
 	long timembpconRtot;

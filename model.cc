@@ -27,7 +27,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
-	if(data.mode == MODE_SIM){
+	if(data.mode == MODE_SIM || data.mode == MODE_MULTISIM){
 		if(tomldata.contains("params")){
 			string name;
 			double value;
@@ -47,7 +47,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		else{ emsg("The input file must contain parameter values through 'params'.");}
 	}
 
-	if(data.mode != MODE_SIM){
+	if(data.mode == MODE_INF){
 		if(tomldata.contains("priors")){
 			string name;
 			double value;
@@ -102,7 +102,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	else{ emsg("The input file must contain compartment definition through 'comps'");}
 
 	if(tomldata.contains("trans")){
-		string dist, mean="", sd="";
+		string dist, mean="", cv="";
 		unsigned int distval;
 		
 		const auto transin = toml::find(tomldata,"trans");
@@ -136,8 +136,8 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
-				if(!trans.contains("sd")) emsg("Transition distribution must contain an 'sd' definition.");
-				sd = toml::find<std::string>(trans, "sd");
+				if(!trans.contains("cv")) emsg("Transition distribution must contain an 'cv' definition.");
+				cv = toml::find<std::string>(trans, "cv");
 			}
 			
 			if(dist == "gamma"){
@@ -145,24 +145,24 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
-				if(!trans.contains("sd")) emsg("Transition distribution must contain an 'sd' definition.");
-				sd = toml::find<std::string>(trans, "sd");
+				if(!trans.contains("cv")) emsg("Transition distribution must contain an 'cv' definition.");
+				cv = toml::find<std::string>(trans, "cv");
 			}
 			
 			if(distval == UNSET) emsg("Distribution '"+dist+"' not recognised.");
 			
 			if(trans.contains("prob")) {
 				const auto prob = toml::find<std::string>(trans, "prob");
-				addtrans(from,to,prob,distval,mean,sd);  
+				addtrans(from,to,prob,distval,mean,cv);  
 			}
 			else{
-				addtrans(from,to,"",distval,mean,sd);  
+				addtrans(from,to,"",distval,mean,cv);  
 			}
 		}
 	}
 	else{ emsg("The input file must contain transition definitions through 'trans'.");}
 
-	if(data.mode != MODE_SIM){
+	if(data.mode == MODE_INF){
 		if(tomldata.contains("priorcomps")){
 			string co;
 		
@@ -245,9 +245,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	}
 
 	for(p = 0; p < param.size(); p++){
-		if(param[p].used == 0){
-			if(data.mode == MODE_SIM) emsg("Parameter '"+param[p].name+"' not in the model.");
-		}
+		if(param[p].used == 0) emsg("Parameter '"+param[p].name+"' not in the model.");
 	}
 
 	ntr = 0; nac = 0;
@@ -275,7 +273,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
-		if(data.mode == MODE_SIM){
+		if(data.mode == MODE_SIM || data.mode == MODE_MULTISIM){
 			cout << "Parameters:" << endl;
 			for(p = 0; p < param.size()-1; p++){
 				cout << "  " << param[p].name << " = " << param[p].min << endl;
@@ -317,11 +315,11 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 					break;
 				case GAMMA_DIST:
 					cout << " Gamma mean=" << param[trans[tra].param1].name 
-							 << " sd=" << param[trans[tra].param2].name; 
+							 << " cv=" << param[trans[tra].param2].name; 
 					break;
 				case LOGNORM_DIST:
 					cout << " Lognormal mean=" << param[trans[tra].param1].name 
-							 << " sd=" << param[trans[tra].param2].name; 
+							 << " cv=" << param[trans[tra].param2].name; 
 					break;
 				default:
 					break;
@@ -416,17 +414,31 @@ void MODEL::priorsamp()
 	for(th = 0; th < param.size(); th++){	
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
+	
 	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 	/*
-	paramval[0] = 0.37;
-	paramval[1] = 0.09;
-	paramval[2] = 3;
-		paramval[8] = 10;
-		paramval[9] = 5;
-			paramval[10] = 20;
-		paramval[11] = 10;
-				paramval[15] = 0.2;
-	paramval[16] = 0.1;
+	paramval[0] = 0.35;
+paramval[1] = 0.06;
+paramval[2] = 2.9;
+paramval[3] = 4.5;
+paramval[4] = 0.533;
+paramval[5] = 8;
+paramval[6] = 1.5;
+paramval[7] = 5;
+paramval[8] = 5.4;
+paramval[9] = 1;
+paramval[10] = 15.7;
+paramval[11] = 0.5;
+paramval[12] = 15.7;
+paramval[13] = 0.5;
+paramval[14] = 28;
+paramval[15] = 0.5;
+paramval[16] = 0.75;
+paramval[17] = 0.5;
+paramval[18] = 0.12;
+paramval[19] = 0.33;
+paramval[20] = 0.1;
+paramval[21] = 1e-08;
 */
 }
 
@@ -628,7 +640,7 @@ unsigned int MODEL::settransprob()
 void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t)
 {
 	unsigned int k, kmax, tra, timep, a;
-	double mean, sd, mean_ns, sd_ns, z, dt;
+	double mean, sd, mean_ns, cv_ns, z, dt;
 	FEV ev;
 	vector <double> probsum;
 
@@ -660,24 +672,26 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		
 		switch(trans[tra].type){
 		case EXP_DIST:
-			t += -log(ran())*paramval[trans[tra].param1];
+			dt = -log(ran())*paramval[trans[tra].param1];
 			break;
 		
 		case GAMMA_DIST:
-			mean = paramval[trans[tra].param1]; sd = paramval[trans[tra].param2];
-			t += gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
+			mean = paramval[trans[tra].param1]; sd = paramval[trans[tra].param2]*mean;
+			dt = gammasamp(mean*mean/(sd*sd),mean/sd*sd);
 			break;
 			
 		case LOGNORM_DIST:
-			mean_ns = paramval[trans[tra].param1]; sd_ns = paramval[trans[tra].param2];
-			sd = sqrt(log((1+sd_ns*sd_ns/(mean_ns*mean_ns)))); mean = log(mean_ns) - sd*sd/2;
+			mean_ns = paramval[trans[tra].param1]; cv_ns = paramval[trans[tra].param2];
+			sd = sqrt(log((1+cv_ns*cv_ns))); mean = log(mean_ns) - sd*sd/2;
 			dt = exp(normal(mean,sd));
-			t += dt;
 			break;
 			
 		default: emsg("MODEL: EC2b"); break;
 		}
 
+		if(dt < tiny) dt = tiny;
+		t += dt;
+		
 		while(timep < ntimeperiod-1 && timeperiod[timep].tend < t){    // Adds in changes in time period
 			ev.trans = comp[c].transtimep; ev.t = timeperiod[timep].tend;
 			evlist.push_back(ev);
@@ -696,7 +710,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 {
 	unsigned int c, k, kmax, tra, e, emax, i, p, p2, timep, a;
-	double meani, sdi, meanp, sdp, mean_nsi, sd_nsi, mean_nsp, sd_nsp, z, ti, tp, dt, sum, dif;
+	double meani, sdi, meanp, sdp, mean_nsi, cv_nsi, mean_nsp, cv_nsp, z, ti, tp, dt, sum, dif, dtnew;
 	FEV ev;
 	vector <double> sumst;
 
@@ -744,29 +758,33 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			switch(trans[tra].type){
 			case EXP_DIST:
 				p = trans[tra].param1;
-				tp += dt*paramp[p]/parami[p];
+				dtnew = dt*paramp[p]/parami[p];
 				break;
 			
 			case GAMMA_DIST:
+				dtnew = 0; 
 				emsg("model: EC9");
 				break;
 				
 			case LOGNORM_DIST:
 				p = trans[tra].param1; p2 = trans[tra].param2;
 				
-				mean_nsi = parami[p]; sd_nsi = parami[p2];
-				mean_nsp = paramp[p]; sd_nsp = paramp[p2];
+				mean_nsi = parami[p]; cv_nsi = parami[p2];
+				mean_nsp = paramp[p]; cv_nsp = paramp[p2];
 				
-				if(mean_nsi == mean_nsp && sd_nsi == sd_nsp) tp += dt;
+				if(mean_nsi == mean_nsp && cv_nsi == cv_nsp) dtnew = dt;
 				else{
-					sdi = sqrt(log((1+sd_nsi*sd_nsi/(mean_nsi*mean_nsi)))); meani = log(mean_nsi) - sdi*sdi/2;
-					sdp = sqrt(log((1+sd_nsp*sd_nsp/(mean_nsp*mean_nsp)))); meanp = log(mean_nsp) - sdp*sdp/2;
-					tp += exp(meanp + (log(dt) - meani)*sdp/sdi);
+					sdi = sqrt(log(1+cv_nsi*cv_nsi)); meani = log(mean_nsi) - sdi*sdi/2;
+					sdp = sqrt(log(1+cv_nsp*cv_nsp)); meanp = log(mean_nsp) - sdp*sdp/2;
+					dtnew = exp(meanp + (log(dt) - meani)*sdp/sdi); 
 				}
 				break;
 				
-			default: emsg("MODEL: EC2b"); break;
+			default: dtnew = 0; emsg("MODEL: EC2b"); break;
 			}
+	
+			if(dtnew < tiny) dtnew = tiny;
+			tp += dtnew;
 	
 			while(timep < ntimeperiod-1 && timeperiod[timep].tend < tp){    // Adds in changes in time period
 				ev.trans = comp[c].transtimep; ev.t = timeperiod[timep].tend;
@@ -1025,6 +1043,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				trans[tra].num[a]++;
 	
 				dt = indev[i][e].t-t;
+				if(dt == 0) emsg("Model: EC78");
 				t += dt;
 				
 				trans[tra].numvisittot++;
@@ -1115,7 +1134,7 @@ double MODEL::likelihood_prob()
 double MODEL::likelihood_dt(vector <double> &paramv)
 {
 	unsigned int tra, j, jmax;
-	double L, r, mean, sd, mean_ns, sd_ns;
+	double L, r, mean, sd, mean_ns, cv_ns;
 	
 	L = 0;
 	for(tra = 0; tra < trans.size(); tra++){
@@ -1126,18 +1145,21 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 			break;
 		
 		case GAMMA_DIST:
-			mean = paramv[trans[tra].param1]; sd = paramv[trans[tra].param2];
+			mean = paramv[trans[tra].param1]; sd = paramv[trans[tra].param2]*mean;
 			jmax = trans[tra].dtlist.size();
 			for(j = 0; j < jmax; j++) L += gammaprob(trans[tra].dtlist[j],mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
 		case LOGNORM_DIST:
-			mean_ns = paramval[trans[tra].param1]; sd_ns = paramval[trans[tra].param2];
-			sd = sqrt(log((1+sd_ns*sd_ns/(mean_ns*mean_ns)))); mean = log(mean_ns) - sd*sd/2;
+			mean_ns = paramval[trans[tra].param1]; cv_ns = paramval[trans[tra].param2];
+			sd = sqrt(log(1+cv_ns*cv_ns)); mean = log(mean_ns) - sd*sd/2;
 			jmax = trans[tra].dtlist.size();
 			
 			double ss = 0; for(j = 0; j < jmax; j++) ss += trans[tra].dtlist[j];
-			for(j = 0; j < jmax; j++) L += lognormprob(trans[tra].dtlist[j],mean,sd*sd);
+			for(j = 0; j < jmax; j++){
+				if(trans[tra].dtlist[j] == 0) emsg("Time zero");
+				L += lognormprob(trans[tra].dtlist[j],mean,sd*sd);
+			}
 			break;
 		}
 	}
@@ -1149,7 +1171,7 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 {
 	unsigned int tra, j, jmax;
-	double L, ri, meani, sdi, rf, meanf, sdf, mean_nsi, sd_nsi, mean_nsf, sd_nsf;
+	double L, ri, meani, sdi, rf, meanf, sdf, mean_nsi, cv_nsi, mean_nsf, cv_nsf;
 	
 	L = 0;
 	for(tra = 0; tra < trans.size(); tra++){
@@ -1163,8 +1185,8 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 			break;
 		
 		case GAMMA_DIST:
-			meani = paramvi[trans[tra].param1]; sdi = paramvi[trans[tra].param2];
-			meanf = paramvf[trans[tra].param1]; sdf = paramvf[trans[tra].param2];
+			meani = paramvi[trans[tra].param1]; sdi = paramvi[trans[tra].param2]*meani;
+			meanf = paramvf[trans[tra].param1]; sdf = paramvf[trans[tra].param2]*meanf;
 	
 			if(meani != meanf || sdi != sdf){
 				jmax = trans[tra].dtlist.size();
@@ -1176,11 +1198,11 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 			break;
 			
 		case LOGNORM_DIST:
-			mean_nsi = paramvi[trans[tra].param1]; sd_nsi = paramvi[trans[tra].param2];
-			mean_nsf = paramvf[trans[tra].param1]; sd_nsf = paramvf[trans[tra].param2];
-			if(mean_nsi != mean_nsf || sd_nsi != sd_nsf){
-				sdi = sqrt(log((1+sd_nsi*sd_nsi/(mean_nsi*mean_nsi)))); meani = log(mean_nsi) - sdi*sdi/2;
-				sdf = sqrt(log((1+sd_nsf*sd_nsf/(mean_nsf*mean_nsf)))); meanf = log(mean_nsf) - sdf*sdf/2;
+			mean_nsi = paramvi[trans[tra].param1]; cv_nsi = paramvi[trans[tra].param2];
+			mean_nsf = paramvf[trans[tra].param1]; cv_nsf = paramvf[trans[tra].param2];
+			if(mean_nsi != mean_nsf || cv_nsi != cv_nsf){
+				sdi = sqrt(log(1+cv_nsi*cv_nsi)); meani = log(mean_nsi) - sdi*sdi/2;
+				sdf = sqrt(log(1+cv_nsf*cv_nsf)); meanf = log(mean_nsf) - sdf*sdf/2;
 	
 				jmax = trans[tra].dtlist.size();
 				for(j = 0; j < jmax; j++){
