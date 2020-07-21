@@ -61,7 +61,6 @@ nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=
 #include "data.hh"
 
 #include "simulate.hh"
-#include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
 
@@ -238,6 +237,8 @@ vector<string> keys_of_map(map<string,string> m)
 	return keys;
 }
 
+string gitversion();
+
 int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
@@ -266,8 +267,9 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 
-	if (core == 0)
-		cout << "BEEPmbp version " << GIT_VERSION << endl;
+	if (core == 0) {
+		cout << "BEEPmbp version " << gitversion() << endl;
+	}
 	
 	DATA data;    // The following file names will need to be read in by the interface:
 	MODEL model(data);

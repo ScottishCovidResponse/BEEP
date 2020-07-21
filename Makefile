@@ -20,6 +20,7 @@ srcs := \
  MBPCHAIN.cc \
  data.cc \
  generateQ.cc \
+ gitversion.cc \
  main.cc \
  model.cc \
  obsmodel.cc \
