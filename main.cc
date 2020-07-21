@@ -277,6 +277,7 @@ int main(int argc, char** argv)
 
 	// A list of all supported parameters (please keep in lexicographic order)
 	vector<string>  definedparams {
+		"baseinputfile",
 		"Q",
 		"agemix",
 		"ages",
@@ -327,6 +328,22 @@ int main(int argc, char** argv)
 	decltype(toml::parse(inputfilename)) tomldata;
 	try {
 		tomldata = toml::parse(inputfilename);
+
+		// Allow using values from another TOML file as a base for this one. TODO:
+		// make this into functions so you can do this recursively.
+		if (tomldata.contains("baseinputfile")) {
+			const string basefile = toml::find<string>(tomldata,"baseinputfile");
+			// TODO: make the filename relative to the original TOML file
+			decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
+
+			for(const auto& p : basetomlddata.as_table())
+			{
+				if (!tomldata.contains(p.first)) {
+					tomldata[p.first] = p.second;
+				}
+			}
+		}
+
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();
