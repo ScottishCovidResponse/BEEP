@@ -4,6 +4,8 @@
 #include <string>
 using namespace std;
 
+#include "datapipeline.hh"
+
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
 	unsigned int timep;                      // The time period over which the tensor acts
@@ -155,10 +157,12 @@ class DATA
 {
 	public:
 	
-	DATA() : compX(area), compY(area)
+	DATA(DataPipeline &dp) : compX(area), compY(area)
 	{
+		datapipeline = std::make_shared<DataPipeline>(dp);
 	}
 
+	shared_ptr<DataPipeline> datapipeline;             // DataPipeline object
 	unsigned int mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
@@ -237,6 +241,9 @@ class DATA
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file);
+	TABLE loadtablefromdatapipeline(string file);
+	TABLE loadtablefromfile(string file);
+
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);

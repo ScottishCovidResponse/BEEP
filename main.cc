@@ -244,6 +244,18 @@ vector<string> keys_of_map(map<string,string> m)
 
 string gitversion();
 
+
+void dpexport_regiondata()
+{
+
+
+}
+
+
+
+
+
+
 int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
@@ -280,21 +292,26 @@ int main(int argc, char** argv)
 #ifdef USE_DATA_PIPELINE
 	pybind11::scoped_interpreter guard{};
 
-	DataPipeline dp("../data_pipeline_api/tests/data/config.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp", GIT_VERSION);
+// 	DataPipeline dp("../data_pipeline_api/tests/data/config.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp", gitversion());
 
-	double est = dp.read_estimate("parameter", "example-estimate");
+// 	double est = dp.read_estimate("parameter", "example-estimate");
 
-	cout << "Read estimate from data pipeline: " << est << endl;
+// 	cout << "Read estimate from data pipeline: " << est << endl;
 
-	Table table = dp.read_table("object", "example-table");
+// 	Table table = dp.read_table("object", "example-table");
 
-	vector<long> cola = table.get_column<long>("a");
-	vector<long> colb = table.get_column<long>("b");
+// 	vector<long> cola = table.get_column<long>("a");
+// 	vector<long> colb = table.get_column<long>("b");
 
-	cout << "Read table from data pipeline: " << endl << table.to_string() << endl;
+// 	cout << "Read table from data pipeline: " << endl << table.to_string() << endl;
+// #endif
+
+ 	DataPipeline dp("dpexportconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
+									gitversion());
+
 #endif
 
-	DATA data;    // The following file names will need to be read in by the interface:
+	DATA data(dp);    // The following file names will need to be read in by the interface:
 	MODEL model(data);
 		
 	data.outputdir="Output";                // The default output directory
