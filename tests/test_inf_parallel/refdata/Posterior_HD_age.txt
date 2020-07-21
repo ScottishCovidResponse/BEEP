@@ -1,5 +1,5 @@
 # The H→D transitions stratified by 'age'.
 category, data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
-age0-19 2.5974 5.557461 5.464837 5.650086 ---
-age20-64 49.3506 31.457976 30.315609 32.600343 ---
-age65+ 48.0519 62.984563 61.934820 64.034305 ---
+age0-19 2.5974 0.836835 0.833683 0.839986 ---
+age20-64 49.3506 51.046919 50.854692 51.239146 ---
+age65+ 48.0519 48.116246 47.920868 48.311625 ---
