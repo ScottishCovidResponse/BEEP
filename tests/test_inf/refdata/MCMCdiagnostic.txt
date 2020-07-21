@@ -1,6 +1,6 @@
 -------- Chain: 0 ----------
 
-invT: 1  Liav: -1239.76  
+invT: 1  Liav: -1010.16  
 MBP Accept: 
 beta0: 0 jump:0.135893, 
 beta1: 1 jump:0.0823682, 
