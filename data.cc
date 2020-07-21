@@ -364,13 +364,19 @@ TABLE DATA::loadtable(string file)
 	string line, st;
 	vector <string> vec;
 	ifstream in;
+
+	string used_file;
 	
-	in.open((datadir+"/"+file).c_str());
+	in.open((outputdir+"/"+file).c_str());
+	used_file = (outputdir+"/"+file);
 	if(!in){
-		in.open((outputdir+"/"+file).c_str());
+		used_file = (datadir+"/"+file);
+		in.open((datadir+"/"+file).c_str());
 		if(!in) emsg("Cannot open the file '"+file+"'");
 	}
 	
+	cout << "Loaded " << used_file << endl;
+
 	tab.file = file;
 	
 	getline(in,line);
