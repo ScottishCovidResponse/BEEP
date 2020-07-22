@@ -23,7 +23,7 @@ outputdir	= "Output"
 nchain    = 20
 
 # The number of MCMC samples.
-nsamp     = 1000
+nsamp     = 5000
 
 
 ########### THE MODEL #############
@@ -62,50 +62,30 @@ trans   	=	[{from="S", to="E", dist="infection"},
 	
 # Defines the parameters in the model
 
-params		= [{name="beta0", value=0.3},        # The values for the beta spline
-						 {name="beta1", value=0.06},
-						 {name="phi", value=2.9},          # The values for the phi spline
-						 {name="muE", value=4.5},          # The latent period
-						 {name="cvE", value=0.533},	          # The standard deviation in latent period			 
-						 {name="tA", value=8.0},            # Mean time spend in asymptomatic state
-						 {name="tP", value=1.5},            # Mean time spend in pre-symptomatic state
-						 {name="tI", value=5.0},            # Mean time spend in infectious state
-						 {name="muIH", value=5.4},           # Mean time spend in hospital
-						 {name="cvIH", value=1.4},           # Mean time spend in hospital 
-						 {name="muH", value=15.7},           # Mean time spend in hospital
-						 {name="cvH", value=0.5},           # Mean time spend in hospital
-						 {name="muID", value=28.0},           # Mean time spend in hospital
-						 {name="cvID", value=0.5},           # Mean time spend in hospital
-						 {name="probEP", value=0.75},       # Probability of being symptomatic
-						 {name="probIH", value=0.2},     # Probability of hospitalised given a case (for child)
-						 {name="probID", value=0.12},   # Probability of death in community (for child)
-						 {name="probHD", value=0.33},    # Probability of death given hospitalised (for child)
-						 {name="den_slope", value = 0.2}]   # The dependency of contact rate on population density
-
-priors		= [{name="beta0", type="uniform", min=0.03, max=0.6},        # The values for the beta spline
+priors		= [{name="beta0", type="uniform", min=0.03, max=0.6},        # The values for the beta spline (a step function in this case)
 						 {name="beta1", type="uniform", min=0.03, max=0.6},
-						 {name="phi", type="uniform", min=0.0, max=20.0},          # The values for the phi spline
-						 {name="muE", value=4.5},          # The latent period
-						 {name="cvE", value=0.533},	          # The standard deviation in latent period			 
-						 {name="tA", value=8.0},            # Mean time spend in asymptomatic state
-						 {name="tP", value=1.5},            # Mean time spend in pre-symptomatic state
-						 {name="muI",  type="uniform", min=5.0, max=20.0},           # Mean time spend in infectious state
-						 {name="cvI",  type="uniform", min=0.1, max=2.0},           # Mean time spend in infectious state
-						 {name="muHD", type="uniform", min=3.0, max=25.0},           # Mean time spend in hospital
-						 {name="cvHD", type="uniform", min=0.1, max=2.0},           # Mean time spend in hospital
-						 {name="muHR", type="uniform", min=3.0, max=25.0},           # Mean time spend in hospital
-						 {name="cvHR", type="uniform", min=0.1, max=2.0},           # Mean time spend in hospital
-						 {name="muC", type="uniform", min=3.0, max=40.0},           # Mean time spend in hospital
-						 {name="cvC", type="uniform", min=0.1, max=2.0},           # Mean time spend in hospital
-						 {name="probEP", value=0.75},       # Probability of being symptomatic
-						 {name="probIH", value=0.5},     # Probability of hospitalised given a case (for child)
-						 {name="probIC", type="uniform", min=0.0, max=0.3},   # Probability of death in community (for child)
-						 {name="probHD",  type="uniform", min=0.0, max=0.5},    # Probability of death given hospitalised (for child)
-						 {name="den_slope",  type="uniform", min=0.0, max=0.4}]   # The dependency of contact rate on population density
+						 {name="phi", type="uniform", min=0.0, max=20.0},          # The values for the phi spline (a step function to zero)
+						 {name="muE", value=4.5},                                  # The latent period
+						 {name="cvE", value=0.533},	                               # The coefficent of variation for latent period			 
+						 {name="tA", value=8.0},                                   # Mean time spend in asymptomatic state
+						 {name="tP", value=1.5},                                   # Mean time spend in pre-symptomatic state
+						 {name="muI",  type="uniform", min=5.0, max=20.0},         # Mean time spend in infectious state
+						 {name="cvI",  type="uniform", min=0.1, max=2.0},          # The coefficent of variation in the infectious state
+						 {name="muHD", type="uniform", min=3.0, max=25.0},         # Mean time for hospital deaths
+						 {name="cvHD", type="uniform", min=0.1, max=2.0},          # The coefficent of variation for hospital deaths
+						 {name="muHR", type="uniform", min=3.0, max=25.0},         # Mean time for hospital recoveries
+						 {name="cvHR", type="uniform", min=0.1, max=2.0},          # The coefficent of variation for hospital recoveries
+						 {name="muC", type="uniform", min=3.0, max=40.0},          # Mean time spend in critical compartment
+						 {name="cvC", type="uniform", min=0.1, max=2.0},           # The coefficent of variation in critical compartment
+						 {name="probEP", value=0.75},                              # Probability of being symptomatic
+						 {name="probIH", value=0.2},                               # Probability of hospitalised given in I state
+						 {name="probIC", type="uniform", min=0.0, max=0.3},        # Probability of death in community 
+						 {name="probHD",  type="uniform", min=0.0, max=0.5},       # Probability of death given hospitalised 
+						 {name="den_slope",  type="uniform", min=0.0, max=0.4}]    # The dependency of contact rate on log(population density)
 
 # The maximum number of infected individuals
 
-infmax 		= 40000
+infmax 		= 100000
 
 # Defines the linear spline used to represent disease transmission parameter beta.
 # Format: The name of the parameter followed by the time of the spline point.
@@ -151,7 +131,7 @@ timep = [{name="beforeLD", tend="2020-03-23"}, {name="afterLD", tend="end"}]
 # The data directory
 
 datadir		= "examples/Data_ScotlandMSOA"
-#datadir		= "examples/Data_example"
+
 
 # A table giving data regions (e.g. "Lanarkshire	S08000032").
 # Format: Tab-separated with region name then region code.
@@ -163,11 +143,6 @@ regions		= "regiondata.txt"
 # Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
 
 areas			= "areadata.txt"
-
-
-# Adds two columns in the table and stores the result
-
-#addcol 		= [{col1="age15-44",col2="age45-64",res="age15-64"}]
 
 
 # Generates Q matrices from geographic and age mixing matrices
@@ -196,8 +171,6 @@ threshold = 5
 # The observed numbers of transitions between different compartments.
 # Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-#transdata	= [{from="I", to="H", area="all", file="IH.txt", start="2020-03-01", units="days"}]
-
 transdata	= [{from="I", to="H", area="all", file="IH.txt", start="2020-03-01", units="days"},
 						 {from="H", to="D", area="all", file="HD_NRS.txt", start="2020-03-16", units="weeks"},
 						 {from="C", to="D", area="all", file="ID_NRS.txt", start="2020-03-16", units="weeks"}
@@ -209,8 +182,7 @@ transdata	= [{from="I", to="H", area="all", file="IH.txt", start="2020-03-01", u
 
 popdata	=[{comp="D", area="reg", file="D_NRS_reg.txt", start="2020-03-16", units="weeks"},
 {comp="H", area="reg", file="H_reg.txt", start="2020-02-28", units="weeks"}]
-
-		
+	
 						 
 # Gives the percentages for marginal distributions.
 						 
