@@ -121,13 +121,13 @@ Inference - The output directory contains posterior information (with means and 
 5) "traceLi.txt", which gives trace plots for the likelihoods on different chains.
 6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
 
-Diagnostic checks - Two types of checks can ber performed to ensure that the results obtained are reliable:
+Diagnostic checks - Two types of checks can be performed to ensure that the results obtained are reliable:
 1) Estimates for the effective sample size in "Posterior_parameter.txt". These should exceed 200 for all parameters if the number of samples is sufficiently large. If this is not the case it indicates that MCMC should be run with more samples (see the 'nsamp' option in the input TOML file).
-2) Results from different runs can be combined to ensure that they all converge on the same posterior distribution (if the likelihood exhibits significant multimodality then under some circumstances different runs can converge on different solutions rendering the results questionable). This is achieved by running BEEPmbp in 'combinetrace' mode. For example if two sets of inference results using different seeds have been placed into directories 'OutputA' and 'OutputB', the following command:
+2) Results from different runs can be combined to ensure that they all converge on the same posterior distribution (if the likelihood exhibits significant multimodality then under some circumstances different runs can converge on different solutions rendering the results questionable). This is achieved by running BEEPmbp in 'combinetrace' mode. For example, if two sets of inference results using different seeds have been placed into directories 'OutputA' and 'OutputB', the following command:
 
 ./beepmbp mode="combinetrace" dirs="OutputA,OutputB" output="parameter_combined.txt"
 
-generates a file combining the two sets of samples along with Gelman–Rubin convergence diagnostic reuslts that test for convergence across runs.
+generates a file combining the two sets of samples along with Gelman–Rubin convergence diagnostic results that test for convergence across runs.
 
 # Development
 
