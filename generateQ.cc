@@ -345,7 +345,7 @@ unsigned int findcol(TABLE &tab, string name)
 	return c;
 }		
 
-/// Strips off '\r' character if necessary
+/// Strips off '\\r' character if necessary
 string strip(string line)
 {
 	unsigned int len = line.length();
