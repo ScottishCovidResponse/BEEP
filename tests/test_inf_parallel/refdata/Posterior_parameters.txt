@@ -1,5 +1,7 @@
 # Posterior distributions for model parameters.
-# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
+# For convergence ESS should be greater than 200.
+
+# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
 beta0 0.270016 (0.270016 - 0.270016) ---
 beta1 0.133093 (0.133093 - 0.133093) ---
 phi 3.260379 (3.249206 - 3.271552) ---
@@ -22,4 +24,3 @@ probHD_E 0.600000 (0.600000 - 0.600000) ---
 sus_adult 0.000000 (0.000000 - 0.000000) ---
 sus_elderly 0.000000 (0.000000 - 0.000000) ---
 den_slope 0.092490 (0.031235 - 0.153745) ---
-zero 0.000000 (0.000000 - 0.000000) ---
