@@ -559,7 +559,7 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 	FEV fev;
 	TRANS tr;
 
-	timers.timembpQmap -= clock();
+	//timers.timembpQmap -= clock();
 
 	nage = data.nage;
 	
@@ -604,7 +604,7 @@ void MBPCHAIN::updatedQmap(unsigned int sett)
 			}
 		}
 	}
-	
+		timers.timembpQmap -= clock();
 	nage = data.nage;
 	jmax = dQbuflistv.size();
 	for(j = 0; j < jmax; j++){

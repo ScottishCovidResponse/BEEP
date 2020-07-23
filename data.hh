@@ -240,8 +240,10 @@ class DATA
 	unsigned int findcol(TABLE &tab, string name);
 	//void normaliseQ(unsigned int q);
 	unsigned int getint(string st, string file);
+	
 	void plotrawdata();
 	void generatedeathdata();
 	void convertOAtoM();
+	void convertRegion_M();
 };
 #endif
