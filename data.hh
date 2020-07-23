@@ -1,6 +1,9 @@
 #ifndef BEEPMBP__DATA_HH
 #define BEEPMBP__DATA_HH
 
+#include <string>
+using namespace std;
+
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
 	unsigned int timep;                      // The time period over which the tensor acts

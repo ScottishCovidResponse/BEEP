@@ -23,13 +23,21 @@ jobs:
       run: |
         make -j 4 --output-sync COVERAGE=1
 
+    - name: Run code tests
+      run: |
+        make COVERAGE=1 codetest
+
+    - name: Compute regression test coverage
+      run: |
+        make GCOVRFLAGS=--delete coverage
+
     - name: Run regression tests
       run: |
         make test
 
     - name: Compute test coverage
       run: |
-        make coverage
+        make GCOVRFLAGS=--delete coverage
 
     - name: Run example simulation
       run: |

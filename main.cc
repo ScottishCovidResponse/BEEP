@@ -69,7 +69,6 @@ Combine trace plots:
 #include "data.hh"
 
 #include "simulate.hh"
-#include "gitversion.hh"
 #include "MBP.hh"
 #include "consts.hh"
 
@@ -246,6 +245,8 @@ vector<string> keys_of_map(map<string,string> m)
 	return keys;
 }
 
+string gitversion();
+
 int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
@@ -274,8 +275,9 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 
-	if (core == 0)
-		cout << "BEEPmbp version " << GIT_VERSION << endl;
+	if (core == 0) {
+		cout << "BEEPmbp version " << gitversion() << endl;
+	}
 	
 	DATA data;    // The following file names will need to be read in by the interface:
 	MODEL model(data);
@@ -285,6 +287,7 @@ int main(int argc, char** argv)
 
 	// A list of all supported parameters (please keep in lexicographic order)
 	vector<string>  definedparams {
+		"baseinputfile",
 		"Q",
 		"agemix",
 		"ages",
@@ -352,6 +355,22 @@ int main(int argc, char** argv)
 	decltype(toml::parse(inputfilename)) tomldata;
 	try {
 		tomldata = toml::parse(inputfilename);
+
+		// Allow using values from another TOML file as a base for this one. TODO:
+		// make this into functions so you can do this recursively.
+		if (tomldata.contains("baseinputfile")) {
+			const string basefile = toml::find<string>(tomldata,"baseinputfile");
+			// TODO: make the filename relative to the original TOML file
+			decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
+
+			for(const auto& p : basetomlddata.as_table())
+			{
+				if (!tomldata.contains(p.first)) {
+					tomldata[p.first] = p.second;
+				}
+			}
+		}
+
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();

@@ -1,6 +1,6 @@
 /home/user/BEEPmbp
 Runing test with input file tests/test_sim/test_sim.toml and output directory regression_test_results/test_sim
-BEEPmbp version lastgood-178-gb94ac10
+BEEPmbp version init-353-gac05f55
 
 Settings:
   mode = sim
@@ -227,5 +227,5 @@ Simulated data in directory 'regression_test_results/test_sim':
   'IR_age.txt' gives the 'age' stratified number of I→R transitions.
   'HD_age.txt' gives the 'age' stratified number of H→D transitions.
 
-0.037365 Total time (seconds)
+0.036554 Total time (seconds)
 0 Simulation time (seconds)
