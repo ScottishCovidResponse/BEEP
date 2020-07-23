@@ -14,14 +14,22 @@ Simulation:
 Inference:    
 mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
+
+nohup mpirun -n 10 ./beepmbp inputfile="examples/inf.toml" outputdir="a" seed=10 nchain=10 nsamp=1000&
+
+
 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
- ./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
+./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
 mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=10000
 
+mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=10000
 nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=20000 > outp.txt
 
 
 nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=20 nsamp=20000 
+
+Combine trace plots:
+ ./beepmbp mode="combinetrace" dirs="a" output="para.txt"
 */
 
 
@@ -294,12 +302,14 @@ int main(int argc, char** argv)
 		"genQoutput",
 		"geomix",
 		"infmax",
+		"dirs",
 		"inputfile",
 		"margdata",
 		"mode",
 		"model",
 		"nchain",
 		"nsamp",
+		"output",
 		"outputdir",
 		"params",
 		"phispline",
@@ -321,6 +331,21 @@ int main(int argc, char** argv)
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
 	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");
+	
+	if (cmdlineparams.count("mode") == 1) {
+		if(cmdlineparams["mode"] == "combinetrace"){
+			if (cmdlineparams.count("dirs") == 0) emsg("Must set the 'dirs' property");
+			vector <string> dirs;
+			dirs = split(cmdlineparams["dirs"],',');
+			
+			if (cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
+		
+			string output;
+			output = cmdlineparams["output"];
+			data.combinetrace(dirs,output);
+			return 0;
+		}
+	}
 	
 	// Read TOML parameters
 	string inputfilename = "/dev/null";
@@ -426,7 +451,7 @@ int main(int argc, char** argv)
 	data.period = data.end - data.start;
 
 	// seed
-	if(mode == MODE_SIM){
+	if(tomldata.contains("seed")){
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
 		

@@ -108,6 +108,7 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	if(data.mode != MODE_INF) return;
 	
 	Li = Lobs(data,model,poptree,trevi,indevi);
+	//emsg("P");
 	Pri = model.prior();
 
 	setQmapi(1);
@@ -1182,8 +1183,6 @@ void MBPCHAIN::covar_prop(unsigned int samp, unsigned int burnin)
 					paramval[th] = valst;
 					if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 0.975; else  paramjumpxi[th] *= 0.995;}
 				}
-				
-			//cout << likelihood(Qmapi,xi,indevi) << " "<< Levi << "ch\n";
 			}
 		}
 	}
@@ -1339,7 +1338,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	timers.timembptemp4 += clock();
 		
 	al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);
-	if(checkon == 1) cout << al << " " << Li << " " << Lp << " " << Levi << " " << Levp << " "  << probif << " " << probfi << "al" << endl;		
+	if(checkon == 1) cout << al << " " << Li << " " << Lp << " " << Levi << " " << Levp << "al" << endl;		
 	 
 	ntr_addrem++;
 	if(ran() < al){

@@ -415,6 +415,8 @@ void MODEL::priorsamp()
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 	
+//	paramval[1] = 0.09;
+	
 	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 	/*
 	paramval[0] = 0.35;
@@ -425,20 +427,18 @@ paramval[4] = 0.533;
 paramval[5] = 8;
 paramval[6] = 1.5;
 paramval[7] = 5;
-paramval[8] = 5.4;
-paramval[9] = 1;
-paramval[10] = 15.7;
+paramval[8] = 20;
+paramval[9] = 0.5;
+paramval[10] = 20;
 paramval[11] = 0.5;
-paramval[12] = 15.7;
+paramval[12] = 20;
 paramval[13] = 0.5;
-paramval[14] = 28;
+paramval[14] = 0.75;
 paramval[15] = 0.5;
-paramval[16] = 0.75;
-paramval[17] = 0.5;
-paramval[18] = 0.12;
-paramval[19] = 0.33;
-paramval[20] = 0.1;
-paramval[21] = 1e-08;
+paramval[16] = 0.12;
+paramval[17] = 0.33;
+paramval[18] = 0.2;
+paramval[19] = 1e-08;
 */
 }
 

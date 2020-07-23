@@ -1,6 +1,6 @@
 /home/user/BEEPmbp
 Runing test with input file tests/test_inf/test_inf.toml and output directory regression_test_results/test_inf on 1 MPI processes
-BEEPmbp version lastgood-178-gb94ac10
+BEEPmbp version init-353-gac05f55
 
 Settings:
   mode = inf
@@ -10,6 +10,7 @@ Settings:
   timeformat = number
   start = 0
   end = 112
+  seed = 0
   propsmethod = fixednum
   outputdir = regression_test_results/test_inf
   datadir = examples/Data_example
@@ -118,9 +119,9 @@ Posterior outputs in directory 'regression_test_results/test_inf':
 'Posterior_parameters.txt' gives the model parameters.
 'regression_test_results/test_inf/trace.txt' gives trace plots for model parameters.
 'regression_test_results/test_inf/traceLi.txt' gives trace plots for the observation likelihoods on different chains.
-0.505032 Total time (seconds)
-3e-06 MBP waiting time (seconds)
-0.331647 MBP time (seconds)
-0.000452 MBP init (seconds)
-0.259886 MBP Qmap (seconds)
-0.224966 MBP prop (seconds)
+0.534264 Total time (seconds)
+5e-06 MBP waiting time (seconds)
+0.34334 MBP time (seconds)
+0.000393 MBP init (seconds)
+0.26827 MBP Qmap (seconds)
+0.231951 MBP prop (seconds)

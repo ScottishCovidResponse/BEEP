@@ -15,6 +15,7 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 #include "generateQ.hh"
+#include "output.hh"
 
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
@@ -60,7 +61,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		ndemocatpos = democatpos.size();
 		ndemocatposperage = ndemocatpos/nage;
  
-		tab = loadtable(regiondatafile);
+		tab = loadtable(regiondatafile,"");
 		namecol = findcol(tab,"name");
 		codecol = findcol(tab,"code");
 		
@@ -77,7 +78,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		}
 	
 		file = areadatafile;
-		tab = loadtable(file);
+		tab = loadtable(file,"");
 		
 		for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == "age0-14") break;
 		if(c < tab.ncol){
@@ -203,7 +204,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		if(mode != MODE_SIM){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
-				tab = loadtable(file);
+				tab = loadtable(file,"");
 				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
 				
 				rcol.clear();
@@ -228,7 +229,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		if(mode != MODE_SIM){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
-				tab = loadtable(file);
+				tab = loadtable(file,"");
 				table_selectdates(popdata[pd].start,popdata[pd].units,tab,"pop");
 			
 				rcol.clear();
@@ -251,7 +252,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		if(mode != MODE_SIM){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
-				tab = loadtable(file);
+				tab = loadtable(file,"");
 	
 				rcol.clear();
 				if(margdata[md].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
@@ -303,7 +304,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
 	
-	// 
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");
 }
@@ -357,8 +357,8 @@ void DATA::addQtensor(string timep, string comp, string name)
 	Q.push_back(qten);
 }
 
-/// Loads a table from a file
-TABLE DATA::loadtable(string file)
+/// Loads a table from a file (if dir is specified then this directory is used
+TABLE DATA::loadtable(string file, string dir)
 {
 	TABLE tab;
 	string line, st;
@@ -367,12 +367,19 @@ TABLE DATA::loadtable(string file)
 
 	string used_file;
 	
-	in.open((outputdir+"/"+file).c_str());
-	used_file = (outputdir+"/"+file);
-	if(!in){
-		used_file = (datadir+"/"+file);
-		in.open((datadir+"/"+file).c_str());
-		if(!in) emsg("Cannot open the file '"+file+"'");
+	if(dir != ""){
+        used_file =dir+"/"+file;
+		in.open(used_file.c_str());
+		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
+	}
+	else{
+        used_file = outputdir+"/"+file;
+		in.open(used_file.c_str());
+		if(!in){
+            used_file = (datadir+"/"+file);
+			in.open(used_file.c_str());
+			if(!in) emsg("Cannot open the file '"+file+"'");
+		}
 	}
 	
 	cout << "Loaded " << used_file << endl;
@@ -706,7 +713,7 @@ void DATA::plotrawdata()
 		adm.push_back(0);
 	}
 	
-	tab = loadtable("DailyDeathsConfirmedCovid.txt");
+	tab = loadtable("DailyDeathsConfirmedCovid.txt","");
 	ofstream dout(outputdir+"/deathraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -717,7 +724,7 @@ void DATA::plotrawdata()
 	}
 	cout << sum << " Deaths" << endl;
 	
-	tab = loadtable("hospital_admissions_number_per_day.txt");
+	tab = loadtable("hospital_admissions_number_per_day.txt","");
 	ofstream dout2(outputdir+"/hospadminraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -731,7 +738,7 @@ void DATA::plotrawdata()
 	cout << sum << " Admissions" << endl;
 		
 
-	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt");
+	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt","");
 	ofstream dout3(outputdir+"/nhsothercasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -764,7 +771,7 @@ void DATA::plotrawdata()
 		recrate << t << " " << " " << Hnum[t] << " " << adm[t] << " " << adm[t] - ( Hnum[t+1] - Hnum[t]) << "\n";
 	}
 	
-	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt");
+	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt","");
 	ofstream dout4(outputdir+"/nhsonlycasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -775,7 +782,7 @@ void DATA::plotrawdata()
 	}
 	cout << sum << " NHS cases" << endl;
 	
-	tab = loadtable("HD_NRS.txt");
+	tab = loadtable("HD_NRS.txt","");
 	ofstream dout5(outputdir+"/HDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -786,7 +793,7 @@ void DATA::plotrawdata()
 	}
 	cout << sum << "HD Deaths" << endl;
 	
-	tab = loadtable("ID_NRS.txt");
+	tab = loadtable("ID_NRS.txt","");
 	ofstream dout6(outputdir+"/IDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
@@ -803,7 +810,7 @@ void DATA::plotrawdata()
 	numst.resize(tmax); numst2.resize(tmax);
 	for(t = 0; t < tmax; t++){ numst[t] = 0, numst[t] = 0;}
 	
-	tab = loadtable("hospital_admissions_number_per_day.txt");
+	tab = loadtable("hospital_admissions_number_per_day.txt","");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
 		t = gettime(tab.ele[row][0]) - start;
@@ -838,7 +845,7 @@ void DATA::generatedeathdata()
 	TABLE tab;
 	string reg, date, file, sex, age, cause, loc;
 	
-	tab = loadtable("deathdata.txt");
+	tab = loadtable("deathdata.txt","");
 	
 	num.resize(nweek); linedate.resize(nweek); HDnum.resize(nweek); IDnum.resize(nweek);
 	for(w = 0; w < nweek; w++){
@@ -958,7 +965,7 @@ void DATA::convertOAtoM()
 		}
 	}
 	else{
-		tab = loadtable("direct.txt");
+		tab = loadtable("direct.txt","");
 		for(row = 0; row < tab.nrow; row++){
 			cout << row << " / " << tab.nrow << "\n";
 			stringstream ss(tab.ele[row][0]);
@@ -988,4 +995,40 @@ void DATA::convertOAtoM()
 		}
 	}
 	cout << double(n)/(area.size()*area.size()) << "Sparcity\n";
+}
+
+
+// This function combines results from different trace files to generate overall statistics
+void DATA::combinetrace(vector <string> inputdirs, string output)
+{
+	unsigned int inp, i, row, th;
+	double v;
+	vector <string> paramname;
+	vector < vector < vector <double> > > vals;
+	TABLE tab;
+	
+	vals.resize(inputdirs.size());
+	for(inp = 0; inp < inputdirs.size(); inp++){
+		tab = loadtable("trace.txt",inputdirs[inp]);
+	
+		for(i = 1; i < tab.ncol; i++){
+			if(tab.heading[i] == "zero") break;
+			if(inp == 0) paramname.push_back(tab.heading[i]);
+			else{
+				if(i-1 >= paramname.size()) emsg("The columns in the input files do not match up.");
+				if(paramname[i-1] != tab.heading[i]) emsg("The headings in the input files do not match up.");
+			}
+		}
+		vals[inp].resize(paramname.size());
+		
+		for(th = 0; th < paramname.size(); th++){
+			for(row = 0; row < tab.nrow; row++){
+				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("'"+tab.ele[row][th]+"' is not a number.");
+				vals[inp][th].push_back(v);
+			}
+		}
+		cout <<  "Loading trace.txt from '" << inputdirs[inp] << "'." << endl;
+	}
+	
+	outputcombinedtrace(paramname,vals,output);
 }

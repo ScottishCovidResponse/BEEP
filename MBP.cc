@@ -69,7 +69,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
-
+	
 		for(p = 0; p < nchain; p++){
 			if(samp < quench) mbpchain[p]->invT = (double(samp)/quench)*mbpchain[p]->invTtrue;
 			else mbpchain[p]->invT = mbpchain[p]->invTtrue;
@@ -79,7 +79,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		time = clock();
 
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
-	
+		
 		timeprop -= clock();
 		switch(propmethod){
 		case proposalsmethod::allchainsallparams:
@@ -316,7 +316,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	
+
 	if(core == 0){
 		double L, Pr;
 		vector < vector <EVREF> > trevplot;
@@ -343,7 +343,7 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			unpack(ninfplot);
 			if(packsize() != siz) emsg("MBP: EC10");
 		}
-		
+
 		opsamp.push_back(outputsamp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
 	}
 	else{

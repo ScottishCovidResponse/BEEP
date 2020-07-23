@@ -232,11 +232,12 @@ class DATA
 	void addQtensor(string timep, string comp, string name);
 	unsigned int gettime(string st);
 	string getdate(unsigned int t);
+	void combinetrace(vector <string> inputdirs, string output);
 	
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
-	TABLE loadtable(string file);
+	TABLE loadtable(string file, string dir);
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);
