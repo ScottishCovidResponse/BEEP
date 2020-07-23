@@ -145,6 +145,10 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 			MBPdiagnostic(data,model,core,ncore,nchain);
 		}
 	}
+
+	for(p = 0; p < nchain; p++){
+		delete mbpchain[p];
+	}
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 
