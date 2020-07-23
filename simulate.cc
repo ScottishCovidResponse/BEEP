@@ -24,7 +24,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 {
 	unsigned int s;
 	vector <SAMPLE> opsamp; 
-	MBPCHAIN mbpchain{data,model,poptree};
+	MBPCHAIN mbpchain(data,model,poptree);
 					
 	model.infmax = large;
 		
