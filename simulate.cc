@@ -24,23 +24,22 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 {
 	unsigned int s;
 	vector <SAMPLE> opsamp; 
-	MBPCHAIN mbpchain(data,model,poptree);
 					
 	model.infmax = large;
 		
 	switch(data.mode){
 	case MODE_SIM:       // Performs a single simulation 
-		mbpchain.init(data,model,poptree,1,0);
-		
-		proportions(data,model,mbpchain.indevi);
-	
-		outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
+		{
+			MBPCHAIN mbpchain(data,model,poptree,1,0);
+			proportions(data,model,mbpchain.indevi);
+			outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
+		}
 		break;
 		
 	case MODE_MULTISIM:  // Performs multiple simulations and plots the distribution of results
 		for(s = 0; s < nsamp; s++){
 			cout << "Simulating sample " << (s+1) << endl;
-			mbpchain.init(data,model,poptree,1,0);
+			MBPCHAIN mbpchain(data,model,poptree,1,0);
 			opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain.paramval,0,mbpchain.trevi,mbpchain.indevi));
 		}
 		outputresults(data,model,opsamp);

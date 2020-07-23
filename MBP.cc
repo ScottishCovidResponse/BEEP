@@ -40,14 +40,13 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 
 	for(p = 0; p < nchain; p++){
-		mbpchain[p] = new MBPCHAIN(data,model,poptree);
 		
 		pp = core*nchain+p;
 		pp = core*nchain+p;
 		if(nchaintot == 1) invT = invTmax;
 		else invT = pow((K-pp)/K,5);
 
-		mbpchain[p]->init(data,model,poptree,invT,pp);
+		mbpchain[p] = new MBPCHAIN(data,model,poptree,invT,pp);
 	}
 
 	if(core == 0){

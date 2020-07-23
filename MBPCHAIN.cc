@@ -18,30 +18,7 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
-{
-}
-
-struct EVREFT {                
-	unsigned int ind;                   
-	unsigned int e;	              
-	double t;	 
-};
-
-static bool compEVREFT(EVREFT lhs, EVREFT rhs)
-{
-	return lhs.t < rhs.t;
-};
-
-struct LCONT {                
-	unsigned int w;       
-	unsigned int num;       	
-	double betafac;	              
-	double phifac;	 
-};
-
-/// Initialises an MCMC chain
-void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart)
+MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
 {
 	unsigned int th, nparam, v, q, j, sett, loop, loopmax=1000;
 	int l;
@@ -131,6 +108,24 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	popw.resize(data.nardp);                                        // Used for event based changes
 	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
 }
+
+struct EVREFT {                
+	unsigned int ind;                   
+	unsigned int e;	              
+	double t;	 
+};
+
+static bool compEVREFT(EVREFT lhs, EVREFT rhs)
+{
+	return lhs.t < rhs.t;
+};
+
+struct LCONT {                
+	unsigned int w;       
+	unsigned int num;       	
+	double betafac;	              
+	double phifac;	 
+};
 
 /// Performs a MBP
 unsigned int MBPCHAIN::mbp()

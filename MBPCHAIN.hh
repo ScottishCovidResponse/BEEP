@@ -12,7 +12,7 @@ using namespace std;
 class MBPCHAIN                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
-	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree);
+	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
@@ -84,7 +84,6 @@ class MBPCHAIN                                          // Stores all the things
 	vector <LEVEL> &lev;
 	 
 	public:
-		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
 		void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 		void standard_prop(unsigned int samp, unsigned int burnin);
 		void setQmapi(unsigned int check);
