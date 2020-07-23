@@ -115,7 +115,7 @@ double singobs(DATA &data, unsigned int mean, unsigned int val, double fac)
 		}
 	default:                    // A measurement is made
 		var = mean; if(var < minvar) var = minvar;
-		var *= fac;
+		var *= fac; //cout << val << " " << mean << "k\n"; if(val != mean) emsg("PP");
 		return normalprob(val,mean,var);
 	}
 }
