@@ -14,6 +14,7 @@
 #include "MBPCHAIN.hh"
 #include "data.hh"
 #include "output.hh"
+#include "obsmodel.hh"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 {
 	unsigned int s;
 	vector <SAMPLE> opsamp; 
+	vector <PARAMSAMP> psamp; 
 	MBPCHAIN mbpchain(data,model,poptree);
 					
 	model.infmax = large;
@@ -38,12 +40,20 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 		break;
 		
 	case MODE_MULTISIM:  // Performs multiple simulations and plots the distribution of results
+		SAMPLE sample;
+		PARAMSAMP paramsamp;
+		
 		for(s = 0; s < nsamp; s++){
 			cout << "Simulating sample " << (s+1) << endl;
 			mbpchain.init(data,model,poptree,1,0);
-			opsamp.push_back(outputsamp(0,0,0,0,data,model,poptree,mbpchain.paramval,0,mbpchain.trevi,mbpchain.indevi));
+			
+			sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
+			model.setup(mbpchain.paramval);
+			sample.R0 = model.R0calc();
+			paramsamp.paramval =  mbpchain.paramval;
+			opsamp.push_back(sample);
 		}
-		outputresults(data,model,opsamp);
+		outputresults(data,model,psamp,opsamp);
 		break;
 	}
 }

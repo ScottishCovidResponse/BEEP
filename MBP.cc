@@ -16,10 +16,13 @@ using namespace std;
 #include "consts.hh"
 #include "timers.hh"
 #include "MBP.hh"
+#include "obsmodel.hh"
 
-static void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
+static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain);
+static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
+static double calcME();
 
 static MBPCHAIN* mbpchain[chainmax]; 
 static vector <vector <double> > Listore;
@@ -36,7 +39,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	double invT, timeloop=0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
-
+	vector <PARAMSAMP> psamp;
+	
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 
 	for(p = 0; p < nchain; p++){
@@ -79,8 +83,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		time = clock();
 
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
-		
-		propmethod = proposalsmethod::fixednum;
 		
 		timeprop -= clock();
 		switch(propmethod){
@@ -139,15 +141,19 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		if(duplicate == 0) swap(model,core,ncore,nchain);
 		
-		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%1 == 0) MBPoutput_param(data,model,psamp,core,ncore,nchain);
+		if(samp%5 == 0) MBPoutput_meas(data,model,poptree,opsamp,core,ncore,nchain);
 		
 		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
 		  //if(samp == nsamp-1){
-			if(core == 0) outputresults(data,model,opsamp);
+			if(core == 0){
+				outputresults(data,model,psamp,opsamp);
+				cout << "Model evidence: " << calcME() << endl;
+			}
 			MBPdiagnostic(data,model,core,ncore,nchain);
 		}
 	}
-cout << ran() << "end ran\n";
+
 	for(p = 0; p < nchain; p++){
 		delete mbpchain[p];
 	}
@@ -280,7 +286,7 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 }
 
 /// Calculates the model evidence
-double calcME()
+static double calcME()
 {
 	unsigned int ch, j, jmin, jmax;
 	double max, dinvT, ME, sum;
@@ -299,13 +305,14 @@ double calcME()
 	return ME;
 }
 
-/// Ouputs a sample from the MBP algorithm
-void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
+/// Ouputs a parameter sample from the MBP algorithm
+static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
-	unsigned int p, ppost, nchaintot = ncore*nchain, samp = long(opsamp.size());
+	unsigned int p, ppost, nchaintot = ncore*nchain, samp = psamp.size();
 	int siz;
 	double Li[nchain], Litot[nchaintot], Liord[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
+	PARAMSAMP paramsamp;
 
 	timers.timeoutput -= clock();
 		
@@ -327,14 +334,11 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 
 	if(core == 0){
 		double L, Pr;
-		vector < vector <EVREF> > trevplot;
-		vector < vector <FEV> > indevplot;
-		vector <double> paramplot;
 		unsigned int ninfplot;
-
+	
 		if(ppost < nchain){
-			trevplot = mbpchain[ppost]->trevi; indevplot = mbpchain[ppost]->indevi; 
-			paramplot = mbpchain[ppost]->paramval; L = mbpchain[ppost]->Li; Pr = mbpchain[ppost]->Pri;
+			paramsamp.paramval = mbpchain[ppost]->paramval;
+			L = mbpchain[ppost]->Li; Pr = mbpchain[ppost]->Pri;
 			ninfplot =  mbpchain[ppost]->xi.size();
 		}
 		else{
@@ -343,31 +347,90 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
 		
 			packinit();
-			unpack(trevplot);
-			unpack(indevplot,0,data.popsize);
-			unpack(paramplot);
+			unpack(paramsamp.paramval);
 			unpack(L);
 			unpack(Pr);
 			unpack(ninfplot);
-			if(packsize() != siz) emsg("MBP: EC10");
 		}
-
-		opsamp.push_back(outputsamp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
+	
+		outputtrace(data,model,samp,L,Pr,ninfplot,paramsamp.paramval);
+		psamp.push_back(paramsamp);
 	}
 	else{
 		if(core == ppost/nchain){
 			p = ppost%nchain;
+		
 			packinit();
-			pack(mbpchain[p]->trevi);
-			pack(mbpchain[p]->indevi,0,data.popsize);
 			pack(mbpchain[p]->paramval);
 			pack(mbpchain[p]->Li);
 			pack(mbpchain[p]->Pri);
-			pack((unsigned int)mbpchain[p]->xi.size());
+			pack((unsigned int) mbpchain[p]->xi.size());
 			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
 	
+	timers.timeoutput += clock();
+}
+
+/// Ouputs a measurement sample from the MBP algorithm
+static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
+{
+	unsigned int p,  ppost, nchaintot = ncore*nchain;
+	int siz;
+	unsigned int ch[nchain], chtot[nchaintot];
+	MEAS meas;
+	vector <double> R0;	 
+	SAMPLE sample;
+
+	timers.timeoutput -= clock();
+
+	for(p = 0; p < nchain; p++) ch[p] = mbpchain[p]->ch;
+			
+	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	
+	if(core == 0){
+		for(p = 0; p < nchaintot; p++){ if(chtot[p] == 0){ ppost = p; break;}}
+		if(p == nchaintot) emsg("MBP: EC5");
+	}
+	
+	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+
+	if(core == 0){
+		if(ppost < nchain){
+			sample.meas = getmeas(data,model,poptree,mbpchain[ppost]->trevi,mbpchain[ppost]->indevi);
+			model.setup(mbpchain[ppost]->paramval);
+			sample.R0 = model.R0calc();
+		}
+		else{
+			MPI_Status status;
+			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
+			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
+		
+			packinit();
+			unpack(sample.meas.transnum);
+			unpack(sample.meas.popnum);
+			unpack(sample.meas.margnum);
+			unpack(sample.R0);
+		}
+		opsamp.push_back(sample);
+	}
+	else{
+		if(core == ppost/nchain){
+			p = ppost%nchain;
+			
+			meas = getmeas(data,model,poptree,mbpchain[p]->trevi,mbpchain[p]->indevi);
+			model.setup(mbpchain[p]->paramval);
+			R0 = model.R0calc();
+	
+			packinit();
+			pack(meas.transnum);
+			pack(meas.popnum);
+			pack(meas.margnum);
+			pack(R0);
+			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+		}
+	}
+
 	timers.timeoutput += clock();
 }
 

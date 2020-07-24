@@ -217,6 +217,15 @@ void pack(float **vec, unsigned int imax, unsigned int jmax)
 	}
 }
 
+void pack(vector < vector <vector <unsigned int> > > &vec)
+{
+	unsigned int i, imax;
+	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsg("Pack: EC1");  
+	for(i = 0; i < imax; i++){
+		pack(vec[i]);
+	}
+}
+
 void unpack(unsigned int &num)
 {
 	num = buffer[k]; k++;
@@ -404,5 +413,14 @@ void unpack(float** &vec, unsigned int imax, unsigned int jmax)
 		for(j = 0; j < jmax; j++){
 			vec[i][j] = buffer[k]; k++;
 		}
+	}
+}
+
+void unpack(vector < vector <vector <unsigned int> > > &vec)
+{
+	unsigned int i, imax;
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){
+		unpack(vec[i]);
 	}
 }

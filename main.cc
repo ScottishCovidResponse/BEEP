@@ -26,6 +26,8 @@ mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=1
 
 mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=200
 
+mpirun -n 2 ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=200
+
 nohup mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=100
 
 mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=10000
