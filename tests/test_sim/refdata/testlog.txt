@@ -1,6 +1,6 @@
 /home/user/BEEPmbp
 Runing test with input file tests/test_sim/test_sim.toml and output directory regression_test_results/test_sim
-BEEPmbp version init-353-gac05f55
+BEEPmbp version init-378-g78d2a70
 
 Settings:
   mode = sim
@@ -32,11 +32,13 @@ Q tensors loaded:
     timep: beforeLD  compartment: A  name: Q_flow_all_data  
     timep: afterLD  compartment: A  name: Q_local_home_data  
 
+Loaded examples/Data_example/regiondata.txt
 Region data loaded.
-Region_0 0.987758 average
-Region_1 1.00114 average
-Region_2 1.00832 average
-Region_3 0.905698 average
+Loaded examples/Data_example/areadata.txt
+Region_0 0.987758 average density
+Region_1 1.00114 average density
+Region_2 1.00832 average density
+Region_3 0.905698 average density
 
 Area data loaded.
 Generating Q tensors.
@@ -227,5 +229,5 @@ Simulated data in directory 'regression_test_results/test_sim':
   'IR_age.txt' gives the 'age' stratified number of I→R transitions.
   'HD_age.txt' gives the 'age' stratified number of H→D transitions.
 
-0.036554 Total time (seconds)
+0.043466 Total time (seconds)
 0 Simulation time (seconds)
