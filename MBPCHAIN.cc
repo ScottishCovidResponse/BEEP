@@ -43,7 +43,7 @@ struct LCONT {
 /// Initialises an MCMC chain
 void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart)
 {
-	unsigned int th, nparam, v, q, j, sett, loop, loopmax=1000;
+	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=1000;
 	int l;
 	vector <double> paramvalinit;
 
@@ -56,6 +56,12 @@ void MBPCHAIN::init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart
 	indevp.clear(); indevp.resize(data.popsize);
 	
 	setuplists();
+	
+	indmap.resize(data.popsize);
+	for(i = 0; i < data.popsize; i++){
+		indmap[i].resize(model.trans.size());
+		for(tra = 0; tra < model.trans.size(); tra++) indmap[i][tra] = 0;
+	}
 	
 	dQmap.resize(data.narage);                                                 // Initialises vectors
 	
@@ -176,7 +182,7 @@ unsigned int MBPCHAIN::mbp()
 			Qmapp[sett][v] = val;
 		}
 
-		constructRtot(sett);
+		constructRtot(Qmapi[sett],Qmapp[sett]);
 	
 		tmax = data.settime[sett+1];
 		do{
@@ -217,7 +223,7 @@ unsigned int MBPCHAIN::mbp()
 		}while(1 == 1);
 		if(xp.size() >= model.infmax) break; 
 
-		updatedQmap(sett);	
+		updatedQmap(trevi[sett],trevp[sett]);	
 		if(checkon == 1) check(1,t,sett);
 	}
 
@@ -252,6 +258,8 @@ void MBPCHAIN::setQmapi(unsigned int check)
 {
 	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop, qt;
 	double val, fac;
+	unsigned short *cref;
+	float **valref;	
 	FEV fev;
 
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
@@ -283,12 +291,21 @@ void MBPCHAIN::setQmapi(unsigned int check)
 						fac = model.DQ[dq].fac[loop];
 						
 						qt = data.Q[q].Qtenref;
-						kmax = data.genQ.Qten[qt].to[v].size();
-						for(k = 0; k < kmax; k++){
-							vv = data.genQ.Qten[qt].to[v][k]*nage;	
-							for(a = 0; a < nage; a++){
-								dQmap[vv] += fac*data.genQ.Qten[qt].val[v][k][a];
-								vv++;
+						kmax = data.genQ.Qten[qt].ntof[v];
+						cref = data.genQ.Qten[qt].tof[v];
+						valref = data.genQ.Qten[qt].valf[v];
+						if(nage == 1){
+							for(k = 0; k < kmax; k++){
+								dQmap[cref[k]*nage] += fac*valref[k][0];
+							}
+						}
+						else{
+							for(k = 0; k < kmax; k++){
+								vv = cref[k]*nage;	
+								for(a = 0; a < nage; a++){
+									dQmap[vv] += fac*valref[k][a];
+									vv++;
+								}
 							}
 						}
 					}
@@ -299,7 +316,7 @@ void MBPCHAIN::setQmapi(unsigned int check)
 }
 
 /// Constructs the tree Rtot for fast Gilelspie sampling	
-void MBPCHAIN::constructRtot(unsigned int sett)
+void MBPCHAIN::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 {
 	unsigned int c, cmax, wmin, wmax, dp, v, a, w, j, jmax;
 	int l;
@@ -317,8 +334,8 @@ void MBPCHAIN::constructRtot(unsigned int sett)
 		sum = 0; dp = 0; v = c*data.nage; 
 		for(w = wmin; w < wmax; w++){
 			a = data.democatpos[dp][0];
-			lami[w] = model.susi[dp]*(faci*Qmapi[sett][v+a] + phii);
-			lamp[w] = model.susp[dp]*(facp*Qmapp[sett][v+a] + phip);
+			lami[w] = model.susi[dp]*(faci*Qmi[v+a] + phii);
+			lamp[w] = model.susp[dp]*(facp*Qmp[v+a] + phip);
 			dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
@@ -552,71 +569,98 @@ void MBPCHAIN::resetlists()
 }
 
 /// Updates dQmap based on events which occur in timestep sett in the initial and proposed states
-void MBPCHAIN::updatedQmap(unsigned int sett)
+void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 {
-	unsigned int j, jmax, k, kmax, i, v, dq, q, vv, a, nage, loop, qt;
+	unsigned int j, jmax, k, kmax, i, tra, v, dq, q, vv, a, nage, loop, qt;
 	double fac;
-	FEV fev;
-	TRANS tr;
+	unsigned short *cref;
+	float **valref;	
 
-	//timers.timembpQmap -= clock();
-
+	timers.timembpQmap -= clock();
+	
 	nage = data.nage;
-	
-	jmax = trevi[sett].size();
+
+	jmax = trei.size();
 	for(j = 0; j < jmax; j++){
-		i = trevi[sett][j].ind;
-		fev = indevi[i][trevi[sett][j].e];
-
-		v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
-		dq = trans[fev.trans].DQ[fev.timep];
-		if(dq != UNSET){
-			for(loop = 0; loop < 2; loop++){
-				q = model.DQ[dq].q[loop];
-				if(q != UNSET){
-					if(dQbuf[v][q] == 0){ dQbuflistv.push_back(v); dQbuflistq.push_back(q);}
-					dQbuf[v][q] -= model.DQ[dq].fac[loop];
-				}
-			}
-		}
+		i = trei[j].ind; 
+		tra = indevi[i][trei[j].e].trans;
+		indmap[i][tra] = 1;
 	}
-
-	jmax = trevp[sett].size();
-	for(j = 0; j < jmax; j++){ 
-		i = trevp[sett][j].ind; if(indevp[i].size() == 0) emsg("MBPchain: EC43");
-
-		fev = indevp[i][trevp[sett][j].e];
-		tr = trans[fev.trans];
 	
-		N[tr.from]--;
-		N[tr.to]++;
+	jmax = trep.size(); 
+	for(j = 0; j < jmax; j++){
+		i = trep[j].ind; 
+		tra = indevp[i][trep[j].e].trans;	
+		if(indmap[i][tra] == 0){
+			v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			dq = trans[tra].DQ[indevp[i][trep[j].e].timep];
 
-		v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
-		dq = trans[fev.trans].DQ[fev.timep];
-
-		if(dq != UNSET){
-			for(loop = 0; loop < 2; loop++){
-				q = model.DQ[dq].q[loop];
-				if(q != UNSET){
-					if(dQbuf[v][q] == 0){ dQbuflistv.push_back(v); dQbuflistq.push_back(q);}
-					dQbuf[v][q] += model.DQ[dq].fac[loop];
+			if(dq != UNSET){
+				for(loop = 0; loop < 2; loop++){
+					q = model.DQ[dq].q[loop];
+					if(q != UNSET){
+						if(dQbuf[v][q] == 0){ dQbuflistv.push_back(v); dQbuflistq.push_back(q);}
+						dQbuf[v][q] += model.DQ[dq].fac[loop];
+					}
 				}
 			}
 		}
+		else indmap[i][tra] = 0;
+	}	
+	
+	jmax = trei.size(); 
+	for(j = 0; j < jmax; j++){
+		i = trei[j].ind; 
+		tra = indevi[i][trei[j].e].trans;
+		if(indmap[i][tra] == 1){
+			
+			v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			dq = trans[tra].DQ[indevi[i][trei[j].e].timep];
+			if(dq != UNSET){
+				for(loop = 0; loop < 2; loop++){
+					q = model.DQ[dq].q[loop];
+					if(q != UNSET){
+						if(dQbuf[v][q] == 0){ dQbuflistv.push_back(v); dQbuflistq.push_back(q);}
+						dQbuf[v][q] -= model.DQ[dq].fac[loop];
+					}
+				}
+			}
+			indmap[i][tra] = 0;
+		}
 	}
-		timers.timembpQmap -= clock();
+	
+	if(data.mode == MODE_SIM){
+		jmax = trep.size(); 
+		for(j = 0; j < jmax; j++){
+			tra = indevp[trep[j].ind][trep[j].e].trans;
+		
+			N[trans[tra].from]--;
+			N[trans[tra].to]++;
+		}
+	}
+
 	nage = data.nage;
 	jmax = dQbuflistv.size();
 	for(j = 0; j < jmax; j++){
 		v = dQbuflistv[j]; q = dQbuflistq[j]; qt = data.Q[q].Qtenref;
 		fac = dQbuf[v][q];
 		if(fac < -vtiny || fac > vtiny){
-			kmax = data.genQ.Qten[qt].to[v].size();
-			for(k = 0; k < kmax; k++){
-				vv = data.genQ.Qten[qt].to[v][k]*nage;	
-				for(a = 0; a < nage; a++){
-					dQmap[vv] += fac*data.genQ.Qten[qt].val[v][k][a];
-					vv++;
+			kmax = data.genQ.Qten[qt].ntof[v];
+			
+			cref = data.genQ.Qten[qt].tof[v];
+			valref = data.genQ.Qten[qt].valf[v];
+			if(nage == 1){
+				for(k = 0; k < kmax; k++){
+					dQmap[cref[k]] += fac*valref[k][0];
+				}
+			}
+			else{
+				for(k = 0; k < kmax; k++){
+					vv = cref[k]*nage;	
+					for(a = 0; a < nage; a++){
+						dQmap[vv] += fac*valref[k][a];
+						vv++;
+					}
 				}
 			}
 		}
@@ -775,6 +819,12 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		}
 		dd = Rtot[l][c] - sum; if(sqrt(dd*dd) > tiny){ emsg("MBPchain: EC69");}
 	}
+	
+	for(i = 0; i < data.popsize; i++){
+		for(tra = 0; tra < model.trans.size(); tra++){
+			if(indmap[i][tra] != 0) emsg("MBPchain: EC65");
+		}
+	}
 }
 
 /// Checks that quantities used when adding and removing events are correctly updated
@@ -901,7 +951,7 @@ void MBPCHAIN::calcQmapp()
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
-		updatedQmap(sett);
+		updatedQmap(trevi[sett],trevp[sett]);	
 	} 
 }
 

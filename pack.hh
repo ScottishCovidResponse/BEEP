@@ -10,6 +10,7 @@ int packsize();
 double * packbuffer();
 
 void pack(unsigned int num);
+void pack(unsigned short num);
 void pack(double num);
 void pack(string &vec);
 void pack(vector <unsigned int> &vec);
@@ -26,8 +27,11 @@ void pack(vector <AREA> &vec);
 void pack(vector <REGION> &vec);
 void pack(vector <DEMOCAT> &vec);
 void pack(vector <vector <EVREF> > &vec);
+void pack(unsigned short *vec, unsigned int imax);
+void pack(float **vec, unsigned int imax, unsigned int jmax);
 
 void unpack(unsigned int &num);
+void unpack(unsigned short &num);
 void unpack(double &num);
 void unpack(string &vec);
 void unpack(vector <unsigned int> &vec);
@@ -44,5 +48,7 @@ void unpack(vector <AREA> &vec);
 void unpack(vector <REGION> &vec);
 void unpack(vector <DEMOCAT> &vec);
 void unpack(vector <vector <EVREF> > &vec);
+void unpack(unsigned short*&vec, unsigned int imax);
+void unpack(float** &vec, unsigned int imax, unsigned int jmax);
 
 #endif

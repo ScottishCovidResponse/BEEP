@@ -71,6 +71,7 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 }
 
 /// Outputs trace plot for parameters and store state data for plotting later
+
 SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
 {
 	SAMPLE sa;
@@ -106,6 +107,7 @@ SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &d
 	
 	return sa;
 }
+
 
 /// Outputs a posterior graph
 void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)

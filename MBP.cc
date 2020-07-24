@@ -28,7 +28,7 @@ static vector <double> invTstore;
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain, enum proposalsmethod propmethod)
 {
-	const double invTmax = 1, invTmin = 0.1;
+	double invTmax = 1, invTmin = 0.1;
 
 	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
 	unsigned int samp, burnin = nsamp/4, quench = nsamp/5;
@@ -44,7 +44,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		pp = core*nchain+p;
 		pp = core*nchain+p;
-		if(nchaintot == 1) invT = invTmax;
+		if(nchaintot == 1 || duplicate == 1) invT = invTmax;
 		else invT = pow((K-pp)/K,5);
 
 		mbpchain[p]->init(data,model,poptree,invT,pp);
@@ -53,7 +53,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	if(core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
-			if(nchaintot == 1) invT = invTmax;
+			if(nchaintot == 1 || duplicate == 1) invT = invTmax;
 			else invT = pow((K-pp)/K,5);
 			invTstore[pp] = invT;
 		}
@@ -79,6 +79,8 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		time = clock();
 
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
+		
+		propmethod = proposalsmethod::fixednum;
 		
 		timeprop -= clock();
 		switch(propmethod){
@@ -135,7 +137,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		swap(model,core,ncore,nchain);
+		if(duplicate == 0) swap(model,core,ncore,nchain);
 		
 		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
 		
@@ -145,7 +147,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 			MBPdiagnostic(data,model,core,ncore,nchain);
 		}
 	}
-
+cout << ran() << "end ran\n";
 	for(p = 0; p < nchain; p++){
 		delete mbpchain[p];
 	}
@@ -174,6 +176,8 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	unsigned int ntr_addrem[nchain], ntr_addremtot[nchaintot];
 	unsigned int nac_addrem[nchain], nac_addremtot[nchaintot];
 
+	timers.timeswap -= clock();
+		
 	for(p = 0; p < nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
 		invT[p] = mbpchain[p]->invT; 
@@ -271,6 +275,8 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 		mbpchain[p]->ntr_addrem = ntr_addrem[p];
 		mbpchain[p]->nac_addrem = nac_addrem[p];
 	}
+	
+	timers.timeswap += clock();
 }
 
 /// Calculates the model evidence
@@ -301,6 +307,8 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 	double Li[nchain], Litot[nchaintot], Liord[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
 
+	timers.timeoutput -= clock();
+		
 	for(p = 0; p < nchain; p++){ Li[p] = mbpchain[p]->Li; ch[p] = mbpchain[p]->ch;}
 		
 	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -359,6 +367,8 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
+	
+	timers.timeoutput += clock();
 }
 
 /// Outputs MBP MCMC diagnoistic information
@@ -472,6 +482,8 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		timings << double(timers.timecovarinit)/CLOCKS_PER_SEC << " Covarinit (seconds)" << endl;
 		timings << double(timers.timecovar)/CLOCKS_PER_SEC << " Covar (seconds)" << endl;
 		timings << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
+		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
+		timings << double(timers.timeswap)/CLOCKS_PER_SEC << " Swap (seconds)" << endl;	
+		timings << double(timers.timeoutput)/CLOCKS_PER_SEC << " Output (seconds)" << endl;			
 	}
 }
