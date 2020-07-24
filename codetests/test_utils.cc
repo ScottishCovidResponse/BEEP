@@ -19,7 +19,7 @@ TEST_CASE("test_ran") {
 
 //	cout << "r == " << std::setprecision(19) << r << endl;
 
-  CHECK(r == 0.8401877163145218264);
+  CHECK(r == 0.5928446159645536229);
 }
 
 TEST_CASE("split") {
