@@ -1,4 +1,4 @@
 Category	all
 age0-19	0
-age20-64	84
-age65+	16
+age20-64	69.5652
+age65+	30.4348
