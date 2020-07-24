@@ -417,7 +417,7 @@ void MODEL::priorsamp()
 	
 //	paramval[1] = 0.09;
 	
-	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
+//	for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 	/*
 	paramval[0] = 0.35;
 paramval[1] = 0.06;
@@ -984,12 +984,12 @@ vector <double> MODEL::R0calc()
 				fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
 				if(fac != 0){
 					vi = c*data.nage + a;
-					kmax = data.genQ.Qten[qt].to[vi].size();
+					kmax = data.genQ.Qten[qt].ntof[vi];
 					for(k = 0; k < kmax; k++){
-						cc = data.genQ.Qten[qt].to[vi][k];
+						cc = data.genQ.Qten[qt].tof[vi][k];
 						for(dp = 0; dp < data.ndemocatpos; dp++){
 							aa = data.democatpos[dp][0];
-							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.genQ.Qten[qt].val[vi][k][aa]*data.area[cc].pop[dp];
+							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.genQ.Qten[qt].valf[vi][k][aa]*data.area[cc].pop[dp];
 						}
 					}
 				}

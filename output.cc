@@ -41,8 +41,31 @@ void outputinit(DATA &data, MODEL &model)
 	for(pc = 0; pc < model.priorcomps.size(); pc++) trace << "\tProb in " << model.comp[model.priorcomps[pc].comp].name;
 	trace << "\tLi"; 
 	trace << "\tPri"; 
-	trace << "\tinvT"; 
 	trace << "\tninf";
+	trace << endl;
+}
+
+/// Output trace plot
+void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval)
+{
+	unsigned int p, c, pc, a;
+	double pr;
+	
+	trace << samp; 
+	for(p = 0; p < paramval.size(); p++) trace << "\t" << paramval[p]; 
+	
+	if(model.priorcomps.size() > 0){
+		model.calcprobin();
+		for(pc = 0; pc < model.priorcomps.size(); pc++){
+			c = model.priorcomps[pc].comp;
+			pr = 0; for(a = 0; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
+			trace << "\t" << pr;
+		}
+	}
+
+	trace << "\t" << Li; 
+	trace << "\t" << Pri; 
+	trace << "\t" << ninf; 
 	trace << endl;
 }
 
@@ -68,43 +91,6 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 	traceLi << samp;
 	for(p = 0; p < nchaintot; p++) traceLi << "\t" << Litot[p]; 
 	traceLi << endl;
-}
-
-/// Outputs trace plot for parameters and store state data for plotting later
-SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
-{
-	SAMPLE sa;
-	unsigned int p, np, pc, c, a;
-	double pr;
-	vector <unsigned int> num, numtot;
-	
-	np = paramval.size();
-
-	trace << samp; 
-	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
-	
-	if(model.priorcomps.size() > 0){
-		model.calcprobin();
-		for(pc = 0; pc < model.priorcomps.size(); pc++){
-			c = model.priorcomps[pc].comp;
-			pr = 0; for(a = 0; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
-			trace << "\t" << pr;
-		}
-	}
-
-	trace << "\t" << Li; 
-	trace << "\t" << Pri; 
-	trace << "\t" << invT; 
-	trace << "\t" << ninf; 
-	trace << endl;
-	
-	sa.paramval = paramval;
-	
-	sa.meas = getmeas(data,model,poptree,trev,indev);
-
-	sa.R0 = model.R0calc();
-	
-	return sa;
 }
 
 /// Outputs a posterior graph
@@ -230,9 +216,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
+void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, opsampmin, d;
+	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d;
 	string file, filefull;
 	vector <double> vec;
 	STAT stat;
@@ -284,6 +270,9 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
+	npsamp = opsamp.size();
+	psampmin = npsamp/4;
+	
 	file = "Posterior_parameters.txt";
 	filefull = data.outputdir+"/"+file;
 	ofstream paramout(filefull.c_str());
@@ -297,7 +286,7 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
 	for(p = 0; p < model.param.size()-1; p++){
-		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
+		vec.clear(); for(s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
 		stat = getstat(vec);
 			
 		paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 

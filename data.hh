@@ -13,8 +13,9 @@ struct QTENSOR {                           // Stores information about a Q tenso
 
 struct SPARSETENSOR{                       // Stores the Q tensor in a sparse way
 	string name;                             // The reference name
-	vector <vector <unsigned short> > to;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <float> > > val; 	
+	unsigned short *ntof;                 	  // Stores the mixing matrix between areas and ages at different times
+	unsigned short **tof;
+	float ***valf;
 };
 
 struct GENQ{
@@ -26,9 +27,7 @@ struct GENQ{
 	string M;                                // The geographic mixing matrix
 	string localhome;                        // The Q matrix for someone at home
 	string flowall;                          // The Q matrix for general daily life
-	//unsigned int nage;			   							 // The number of age groups
-	//string areadata;                         // Data about the areas
-	
+
 	vector <SPARSETENSOR> Qten;              // Stores the actual tensors
 };
 
@@ -237,14 +236,16 @@ class DATA
 	private:
 	string strip(string line);
 	void copydata(unsigned int core);
-	TABLE loadtable(string file, string dir);
+	TABLE loadtable(string file, string dir="");
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);
 	//void normaliseQ(unsigned int q);
 	unsigned int getint(string st, string file);
+	
 	void plotrawdata();
 	void generatedeathdata();
 	void convertOAtoM();
+	void convertRegion_M();
 };
 #endif
