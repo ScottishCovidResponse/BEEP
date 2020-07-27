@@ -396,6 +396,9 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 	}
 
 	tab.nrow = tab.ele.size();
+
+	cout << "Loaded table " << file << " from data pipeline" << endl;
+
 	return tab;
 }
 
@@ -424,7 +427,7 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 		}
 	}
 	
-	cout << "Loaded " << used_file << endl;
+	cout << "Loaded table " << file << " from file " << used_file << endl;
 
 	tab.file = file;
 	
