@@ -136,7 +136,7 @@ areas			= "beepmbp/data_example/areadata"
 
 # Generates Q matrices from geographic and age mixing matrices
 
-agemix		= {Nall="Ndata_all.txt", Nhome="Ndata_home.txt", Nother="Ndata_other.txt", Nschool="Ndata_school.txt", Nwork="Ndata_work.txt"}
+agemix		= {Nall="beepmbp/data_example/Ndata_all", Nhome="beepmbp/data_example/Ndata_home", Nother="beepmbp/data_example/Ndata_other", Nschool="beepmbp/data_example/Ndata_school", Nwork="beepmbp/data_example/Ndata_work"}
 geomix		= {M="Mdata.txt"}
 genQoutput= {localhome="Q_local_home_data", flowall="Q_flow_all_data"}
 
