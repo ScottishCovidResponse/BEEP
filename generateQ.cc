@@ -20,6 +20,7 @@ using namespace std;
 
 #include "generateQ.hh"
 #include "utils.hh"
+#include "array.hh"
 #include "datapipeline.hh"
 
 unsigned int nage;                         // The number of age categories used 
@@ -39,6 +40,7 @@ struct SPARSEMATRIX {                      // Loads a matrix
 };
 
 TABLE loadtable(string file, string head);
+TABLE loadarray(string file, string dir);
 unsigned int findcol(TABLE &tab, string name);
 vector <AREA> loadarea(TABLE tab);
 MATRIX matfromtable(TABLE tab, unsigned int N);
@@ -62,19 +64,19 @@ void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &are
 
 	cout << "Generating Q tensors." << endl;
 	
-	tab = loadtable(datadir+"/"+genQ.Nall,"nohead");        // Loads age stratified mixing matrices for different activities
+	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
 	N_all = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nhome,"nohead");
+	tab = loadarray(genQ.Nhome, datadir);
 	N_home = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nother,"nohead");
+	tab = loadarray(genQ.Nother, datadir);
 	N_other = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nschool,"nohead");
+	tab = loadarray(genQ.Nschool, datadir);
 	N_school = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nwork,"nohead");
+	tab = loadarray(genQ.Nwork, datadir);
 	N_work = matfromtable(tab,nage);
 
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
@@ -317,6 +319,56 @@ SPARSEMATRIX loadsparse(string file, unsigned int N)
 	return mat;
 }
 
+static bool hasEnding (std::string const &fullString, std::string const &ending)
+{
+	if (fullString.length() >= ending.length()) {
+		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+	} else {
+		return false;
+	}
+}
+
+/// Loads a table from the data pipeline
+TABLE loadarrayfromdatapipeline(string file)
+{
+	Array<double> dparray = datapipeline->read_array(file,"default");
+	vector<int>   dims = dparray.size();
+
+	TABLE tab;
+
+	tab.file = file;
+//	tab.heading = ????;
+	tab.ncol = dims.at(1);
+	
+	for (size_t i = 0; i < dims.at(0); i++) {
+		vector<string> vec;
+
+		for (size_t j = 0; j < dims.at(1); j++) {
+			vec.push_back(to_string(dparray(i,j)));
+		}
+		tab.ele.push_back(vec);
+	}
+
+	tab.nrow = tab.ele.size();
+
+	cout << "Loaded array " << file << " from data pipeline" << endl;
+
+	return tab;
+}
+
+
+/// Loads a table from a file
+TABLE loadarray(string file, string dir)
+{
+	if (hasEnding(file, ".txt")) {
+		return loadtable(dir+"/"+file, "nohead");
+	} else {
+		return loadarrayfromdatapipeline(file);
+	}
+}
+
+
+
 /// Loads a table from a file
 TABLE loadtable(string file, string head)
 {
@@ -358,6 +410,8 @@ TABLE loadtable(string file, string head)
 	}while(1 == 1);
 	tab.nrow = tab.ele.size();
 	
+	cout << "Loaded array " << file << " from file " << file << endl;
+
 	return tab;
 }
 
