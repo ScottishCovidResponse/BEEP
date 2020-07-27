@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <cassert>
 #include "stdlib.h"
 #include "math.h"
 
@@ -45,7 +46,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 
 	for(p = 0; p < nchain; p++){
 		
-		pp = core*nchain+p;
 		pp = core*nchain+p;
 		if(nchaintot == 1 || duplicate == 1) invT = invTmax;
 		else invT = pow((K-pp)/K,5);
@@ -161,6 +161,10 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 /// Stochastically swaps chains with similar inverse temperatures 
 static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
+	assert(ncore > 0);
+	assert(core < ncore);
+	assert(nchain);
+	
 	unsigned int p, p1, p2, th, tempi;
 	unsigned int nparam = model.param.size(), nchaintot = nchain*ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
 	double temp, al;
@@ -307,6 +311,10 @@ static double calcME()
 /// Ouputs a parameter sample from the MBP algorithm
 static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
+	assert(ncore > 0);
+	assert(core < ncore);
+	assert(nchain > 0);
+
 	unsigned int p, ppost, nchaintot = ncore*nchain, samp = psamp.size();
 	int siz;
 	double Li[nchain], Litot[nchaintot], Liord[nchaintot];
@@ -374,6 +382,10 @@ static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp,
 /// Ouputs a measurement sample from the MBP algorithm
 static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
+	assert(ncore > 0);
+	assert(core < ncore);
+	assert(nchain > 0);
+
 	unsigned int p,  ppost, nchaintot = ncore*nchain;
 	int siz;
 	unsigned int ch[nchain], chtot[nchaintot];
