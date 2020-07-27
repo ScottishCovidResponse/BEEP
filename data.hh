@@ -156,12 +156,12 @@ class DATA
 {
 	public:
 	
-	DATA(DataPipeline &dp) : compX(area), compY(area)
+	DATA(DataPipeline *dp) : compX(area), compY(area)
 	{
-		datapipeline = std::make_shared<DataPipeline>(dp);
+		datapipeline = dp;
 	}
 
-	shared_ptr<DataPipeline> datapipeline;             // DataPipeline object
+	DataPipeline *datapipeline;             // DataPipeline object
 	unsigned int mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events

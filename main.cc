@@ -322,11 +322,13 @@ int main(int argc, char** argv)
 // 	cout << "Read table from data pipeline: " << endl << table.to_string() << endl;
 // #endif
 
- 	DataPipeline dp("dpexportconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
-									gitversion());
 	using namespace pybind11::literals;
 
   pybind11::module::import("logging").attr("basicConfig")("level"_a="DEBUG", "format"_a="%(asctime)s %(filename)s:%(lineno)s %(levelname)s - %(message)s");
+
+ 	DataPipeline *dp = new DataPipeline(
+		"dpexportconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
+		gitversion());
 
 #endif
 
@@ -959,6 +961,8 @@ int main(int argc, char** argv)
 		}
 	}
 	
+	delete dp;
+
 	#ifdef USE_MPI
 	MPI_Finalize();
 	#endif
