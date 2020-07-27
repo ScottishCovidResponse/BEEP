@@ -163,7 +163,7 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 {
 	assert(ncore > 0);
 	assert(core < ncore);
-	assert(nchain);
+	assert(nchain > 0);
 	
 	unsigned int p, p1, p2, th, tempi;
 	unsigned int nparam = model.param.size(), nchaintot = nchain*ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
