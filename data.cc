@@ -280,7 +280,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			}
 		}
 		
-		generateQ(nage,datadir,genQ,area); 
+		generateQ(nage,datadir,genQ,area,datapipeline);
 	}
 
 	if(ncore > 1) copydata(core);

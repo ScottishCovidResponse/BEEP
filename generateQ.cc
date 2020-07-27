@@ -20,6 +20,7 @@ using namespace std;
 
 #include "generateQ.hh"
 #include "utils.hh"
+#include "datapipeline.hh"
 
 unsigned int nage;                         // The number of age categories used 
 const short normon = 1;                    // Determines if matrix normalised
@@ -48,12 +49,16 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <A
 
 string strip(string line);
 
+DataPipeline *datapipeline;             // DataPipeline object
 
-void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area)
+void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area,
+							 DataPipeline *dp)
 {
 	TABLE tab;
 	MATRIX N_all, N_home, N_other, N_school, N_work;
 	SPARSEMATRIX M, I;
+
+	datapipeline = dp;
 
 	cout << "Generating Q tensors." << endl;
 	
