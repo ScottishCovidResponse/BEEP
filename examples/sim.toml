@@ -123,13 +123,15 @@ datadir		= "examples/Data_example"
 # A table giving data regions (e.g. "Lanarkshire	S08000032").
 # Format: Tab-separated with region name then region code.
 
-regions		= "regiondata.txt"
+#regions		= "regiondata.txt"
+regions		= "beepmbp/data_example/regiondata"
 
 
 # A table giving information about areas.
 # Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
 
-areas			= "areadata.txt"
+#areas			= "areadata.txt"
+areas			= "beepmbp/data_example/areadata"
 
 
 # Generates Q matrices from geographic and age mixing matrices
