@@ -14,14 +14,30 @@ Simulation:
 Inference:    
 mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
 mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
+
+ ./beepmbp inputfile="examples/infregion.toml" nsamp=10
+
+nohup mpirun -n 10 ./beepmbp inputfile="examples/inf.toml" outputdir="a" seed=10 nchain=10 nsamp=1000&
+
+
 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
- ./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
+./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
 mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=10000
 
+mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=200
+
+mpirun -n 2 ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=200
+
+nohup mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=100
+
+mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=10000
 nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=20000 > outp.txt
 
 
 nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=20 nsamp=20000 
+
+Combine trace plots:
+ ./beepmbp mode="combinetrace" dirs="a" output="para.txt"
 */
 
 
@@ -334,12 +350,14 @@ int main(int argc, char** argv)
 		"genQoutput",
 		"geomix",
 		"infmax",
+		"dirs",
 		"inputfile",
 		"margdata",
 		"mode",
 		"model",
 		"nchain",
 		"nsamp",
+		"output",
 		"outputdir",
 		"params",
 		"phispline",
@@ -361,6 +379,21 @@ int main(int argc, char** argv)
 	// Read command line parameters
 	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
 	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");
+	
+	if (cmdlineparams.count("mode") == 1) {
+		if(cmdlineparams["mode"] == "combinetrace"){
+			if (cmdlineparams.count("dirs") == 0) emsg("Must set the 'dirs' property");
+			vector <string> dirs;
+			dirs = split(cmdlineparams["dirs"],',');
+			
+			if (cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
+		
+			string output;
+			output = cmdlineparams["output"];
+			data.combinetrace(dirs,output);
+			return 0;
+		}
+	}
 	
 	// Read TOML parameters
 	string inputfilename = "/dev/null";
@@ -466,7 +499,7 @@ int main(int argc, char** argv)
 	data.period = data.end - data.start;
 
 	// seed
-	if(mode == MODE_SIM){
+	if(tomldata.contains("seed")){
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
 		
@@ -868,7 +901,8 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	sran(core*10000+seed);
+	if(duplicate == 1) sran(seed);
+	else sran(core*10000+seed);
 	
 	switch(mode){
 	case MODE_SIM: 	case MODE_MULTISIM:
@@ -897,6 +931,28 @@ int main(int argc, char** argv)
 			cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
 			cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
 			cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+			
+			cout << "ac\n";
+				cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
+		cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
+		cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
+		cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
+		cout << double(timers.timembpconRtot)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
+		cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
+		cout << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
+		cout << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
+		cout << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
+		cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
+		cout << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
+		cout << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
+		cout << double(timers.timebetaphiinit)/CLOCKS_PER_SEC << " Betaphiinit (seconds)" << endl;		
+		cout << double(timers.timebetaphi)/CLOCKS_PER_SEC << " Betaphi (seconds)" << endl;	
+		cout << double(timers.timecovarinit)/CLOCKS_PER_SEC << " Covarinit (seconds)" << endl;
+		cout << double(timers.timecovar)/CLOCKS_PER_SEC << " Covar (seconds)" << endl;
+		cout << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
+		cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;		
+				cout << double(timers.timeswap)/CLOCKS_PER_SEC << " Swap (seconds)" << endl;	
+				cout << double(timers.timeoutput)/CLOCKS_PER_SEC << " Output (seconds)" << endl;	
 		}
 	}
 	

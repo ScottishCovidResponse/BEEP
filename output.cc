@@ -15,6 +15,7 @@ using namespace std;
 #include "output.hh"
 #include "obsmodel.hh"
 #include "consts.hh"
+#include "data.hh"
 
 struct STAT{                                           // Stores statistical information
 	string mean;                                         // The mean
@@ -40,8 +41,31 @@ void outputinit(DATA &data, MODEL &model)
 	for(pc = 0; pc < model.priorcomps.size(); pc++) trace << "\tProb in " << model.comp[model.priorcomps[pc].comp].name;
 	trace << "\tLi"; 
 	trace << "\tPri"; 
-	trace << "\tinvT"; 
 	trace << "\tninf";
+	trace << endl;
+}
+
+/// Output trace plot
+void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval)
+{
+	unsigned int p, c, pc, a;
+	double pr;
+	
+	trace << samp; 
+	for(p = 0; p < paramval.size(); p++) trace << "\t" << paramval[p]; 
+	
+	if(model.priorcomps.size() > 0){
+		model.calcprobin();
+		for(pc = 0; pc < model.priorcomps.size(); pc++){
+			c = model.priorcomps[pc].comp;
+			pr = 0; for(a = 0; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
+			trace << "\t" << pr;
+		}
+	}
+
+	trace << "\t" << Li; 
+	trace << "\t" << Pri; 
+	trace << "\t" << ninf; 
 	trace << endl;
 }
 
@@ -67,43 +91,6 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 	traceLi << samp;
 	for(p = 0; p < nchaintot; p++) traceLi << "\t" << Litot[p]; 
 	traceLi << endl;
-}
-
-/// Outputs trace plot for parameters and store state data for plotting later
-SAMPLE outputsamp(double invT, unsigned int samp, double Li, double Pri, DATA &data, MODEL &model, POPTREE &poptree, vector <double> &paramval, unsigned int ninf, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
-{
-	SAMPLE sa;
-	unsigned int p, np, pc, c, a;
-	double pr;
-	vector <unsigned int> num, numtot;
-	
-	np = paramval.size();
-
-	trace << samp; 
-	for(p = 0; p < np; p++) trace << "\t" << paramval[p]; 
-	
-	if(model.priorcomps.size() > 0){
-		model.calcprobin();
-		for(pc = 0; pc < model.priorcomps.size(); pc++){
-			c = model.priorcomps[pc].comp;
-			pr = 0; for(a = 0; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
-			trace << "\t" << pr;
-		}
-	}
-	
-	trace << "\t" << Li; 
-	trace << "\t" << Pri; 
-	trace << "\t" << invT; 
-	trace << "\t" << ninf; 
-	trace << endl;
-	
-	sa.paramval = paramval;
-	
-	sa.meas = getmeas(data,model,poptree,trev,indev);
-
-	sa.R0 = model.R0calc();
-	
-	return sa;
 }
 
 /// Outputs a posterior graph
@@ -229,9 +216,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
+void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, opsampmin, d;
+	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d;
 	string file, filefull;
 	vector <double> vec;
 	STAT stat;
@@ -283,6 +270,9 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 	
+	npsamp = opsamp.size();
+	psampmin = npsamp/4;
+	
 	file = "Posterior_parameters.txt";
 	filefull = data.outputdir+"/"+file;
 	ofstream paramout(filefull.c_str());
@@ -290,10 +280,13 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 	cout << "'" << file << "' gives the model parameters." << endl;
 	paramout << "# Posterior distributions for model parameters." << endl;
-	paramout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
+	paramout << "# For convergence ESS should be greater than 200." << endl;
+	paramout << endl;
+	
+	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	for(p = 0; p < model.param.size(); p++){
-		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].paramval[p]);
+	for(p = 0; p < model.param.size()-1; p++){
+		vec.clear(); for(s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
 		stat = getstat(vec);
 			
 		paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
@@ -305,6 +298,59 @@ void outputresults(DATA &data, MODEL &model, vector <SAMPLE> &opsamp)
 	
 	if(data.mode == MODE_INF){
 		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
+	}
+}
+
+void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file)
+{
+	unsigned int p, inp, s, nopsamp, opsampmin, N, M, nmax, nmin;
+	double W, B, valav, varr, muav;
+	string GR;
+	vector <double> vec, mu, vari;
+	STAT stat;
+		
+	ofstream paramout(file.c_str());
+	if(!paramout) emsg("Cannot output the file '"+file+"'");
+	
+	cout << "'" << file << "' gives the model parameters combining the input trace files." << endl;
+	paramout << "# Posterior distributions for model parameters." << endl;
+	paramout << "# For convergence ESS should be greater than 200 and PSRF should be between 0.9 and 1.1." << endl;
+	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, effective sample size (ESS), potential scale reduction factor (PSRF) otherwise known as the Gelman-Rubin convergence diagnostic." << endl;
+	paramout << endl;
+
+	M = vals.size();
+	nmax = large;
+	for(inp = 0; inp < M; inp++) if(vals[inp][0].size() < nmax) nmax = vals[inp][0].size();
+	nmin = nmax/4;
+	N = nmax-nmin; 
+		
+	mu.resize(M); vari.resize(M);
+	for(p = 0; p < paramname.size(); p++){
+		GR = "---";
+		if(M > 1){
+			muav = 0;
+			for(inp = 0; inp < M; inp++){
+				valav = 0; for(s = nmin; s < nmax; s++) valav += vals[inp][p][s]/N;
+				varr = 0; for(s = nmin; s < nmax; s++) varr += (vals[inp][p][s]-valav)*(vals[inp][p][s]-valav)/(N-1);
+				mu[inp] = valav;
+				vari[inp] = varr;
+				muav += mu[inp]/M;
+			}
+					
+			W = 0; for(inp = 0; inp < M; inp++) W += vari[inp]/M;
+			B = 0; for(inp = 0; inp < M; inp++) B += (mu[inp]-muav)*(mu[inp]-muav)*N/(M-1);
+			if(W > tiny) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
+		}
+	
+		vec.clear(); 
+		for(inp = 0; inp < M; inp++){
+			nopsamp = vals[inp][p].size();
+			opsampmin = nopsamp/4;
+			for(s = opsampmin; s < nopsamp; s++) vec.push_back(vals[inp][p][s]);
+		}
+		stat = getstat(vec);
+			
+		paramout << paramname[p]  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << " " << GR << endl; 
 	}
 }
 	
@@ -475,6 +521,7 @@ STAT getstat(vector <double> &vec)
 	unsigned int n, i, d;
 	double sum, sum2, var, sd, a, cor, f;
 	STAT stat;
+	vector <double> vec2;
 	
 	n = vec.size();
 	if(n == 0){
@@ -484,33 +531,34 @@ STAT getstat(vector <double> &vec)
 		sum = 0; sum2 = 0; for(i = 0; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
 		sum /= n; sum2 /= n;
 		stat.mean = to_string(sum); 
-	
-		sort(vec.begin(),vec.end());
+		
+		vec2 = vec;
+		sort(vec2.begin(),vec2.end());
 	
 		if(n >= 2){
 			i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
-			stat.CImin = to_string(vec[i]*(1-f) + vec[i+1]*f);
+			stat.CImin = to_string(vec2[i]*(1-f) + vec2[i+1]*f);
 				
 			i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
-			stat.CImax = to_string(vec[i]*(1-f) + vec[i+1]*f);
+			stat.CImax = to_string(vec2[i]*(1-f) + vec2[i+1]*f);
 		}
 		else{
-			stat.CImin = to_string(vec[0]);
-			stat.CImax = to_string(vec[0]);
+			stat.CImin = to_string(vec2[0]);
+			stat.CImax = to_string(vec2[0]);
 		}
 
 		var = sum2 - sum*sum;
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
-		else{
-			sd = sqrt(sum2 - sum*sum);
+		else{	
+			sd = sqrt(var);
 			for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
 				
 			sum = 1;
-			for(d = 0; d < n/2; d++){             // calculates the effective sample size
+			for(d = 1; d < n/2; d++){             // calculates the effective sample size
 				a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
 				cor = a/(n-d);
 				if(cor < 0) break;
-				sum += 0.5*cor;			
+				sum += 2*cor;			
 			}
 			stat.ESS = to_string(int(n/sum));
 		}

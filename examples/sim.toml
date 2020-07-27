@@ -69,8 +69,8 @@ params		= [{name="beta0", value=0.3},        # The values for the beta spline
 						 {name="probID_A", value=0.005},    # Probability of death in community (for adult)
 						 {name="probID_E", value=0.028},    # Probability of death in community (for elderly)
 						 {name="probHD_C", value=0.014},    # Probability of death given hospitalised (for child)
-						 {name="probHD_A", value=0.1},     # Probability of death given hospitalised (for adult)
-						 {name="probHD_E", value=0.6},     # Probability of death given hospitalised (for elderly)
+						 {name="probHD_A", value=0.1},      # Probability of death given hospitalised (for adult)
+						 {name="probHD_E", value=0.6},      # Probability of death given hospitalised (for elderly)
 						 {name="sus_adult", value=0.0},     # Relative susceptibility of adults (on log scale)
 						 {name="sus_elderly", value=0.0},   # Relative susceptibility of elderly (on log scale)
 						 {name="den_slope", value = 0.1}]   # The dependency of contact rate on population density

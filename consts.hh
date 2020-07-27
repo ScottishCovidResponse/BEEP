@@ -27,6 +27,7 @@ const double minvar = 5; 																				 // The minimum variance for the ob
 const double varfac = 4;                                         // A factor which relaxes the observation model
 
 const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
+const unsigned int duplicate = 0;                                // Set to one to duplicate chains (this is used as a diagnostic check)
 
 const unsigned int partmax = 10000;                              // The maximum number of particles per core (arbitrarily set)
 const unsigned int chainmax = 10000;                             // The maximum number of chains per core (arbitrarily set)

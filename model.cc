@@ -415,7 +415,9 @@ void MODEL::priorsamp()
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 	
-	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
+//	paramval[1] = 0.09;
+	
+//	for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 	/*
 	paramval[0] = 0.35;
 paramval[1] = 0.06;
@@ -425,20 +427,18 @@ paramval[4] = 0.533;
 paramval[5] = 8;
 paramval[6] = 1.5;
 paramval[7] = 5;
-paramval[8] = 5.4;
-paramval[9] = 1;
-paramval[10] = 15.7;
+paramval[8] = 20;
+paramval[9] = 0.5;
+paramval[10] = 20;
 paramval[11] = 0.5;
-paramval[12] = 15.7;
+paramval[12] = 20;
 paramval[13] = 0.5;
-paramval[14] = 28;
+paramval[14] = 0.75;
 paramval[15] = 0.5;
-paramval[16] = 0.75;
-paramval[17] = 0.5;
-paramval[18] = 0.12;
-paramval[19] = 0.33;
-paramval[20] = 0.1;
-paramval[21] = 1e-08;
+paramval[16] = 0.12;
+paramval[17] = 0.33;
+paramval[18] = 0.2;
+paramval[19] = 1e-08;
 */
 }
 
@@ -984,12 +984,12 @@ vector <double> MODEL::R0calc()
 				fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
 				if(fac != 0){
 					vi = c*data.nage + a;
-					kmax = data.genQ.Qten[qt].to[vi].size();
+					kmax = data.genQ.Qten[qt].ntof[vi];
 					for(k = 0; k < kmax; k++){
-						cc = data.genQ.Qten[qt].to[vi][k];
+						cc = data.genQ.Qten[qt].tof[vi][k];
 						for(dp = 0; dp < data.ndemocatpos; dp++){
 							aa = data.democatpos[dp][0];
-							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.genQ.Qten[qt].val[vi][k][aa]*data.area[cc].pop[dp];
+							R0fac[timep] += fac*sus[dp]*areafac[cc]*data.genQ.Qten[qt].valf[vi][k][aa]*data.area[cc].pop[dp];
 						}
 					}
 				}

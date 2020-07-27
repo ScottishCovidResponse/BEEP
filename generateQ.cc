@@ -146,15 +146,12 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <A
 	unsigned int nage = N.N, narea = M.N, k, c, cc, a, aa, vi, j, jmax, q;
 	double v, sum, sum2;
 	vector <float> vec;
-
-	q = genQ.Qten.size();
-	genQ.Qten.push_back(SPARSETENSOR ());
-
-	genQ.Qten[q].name = name;
+	vector <vector <unsigned short> > to;      // Stores the mixing matrix between areas and ages at different times
+	vector <vector< vector <float> > > val;
 	
 	vec.resize(nage);
-	genQ.Qten[q].to.resize(nage*narea);
-	genQ.Qten[q].val.resize(nage*narea);
+	to.resize(nage*narea);
+	val.resize(nage*narea);
 
 	long num = 0;
 	for(k = 0; k < M.val.size(); k++){
@@ -165,12 +162,12 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <A
 				if(std::isnan(vec[aa])) emsg("Raw value in '"+name+"' not a number");
 			}
 
-			genQ.Qten[q].to[c*nage+a].push_back(cc); num++;
-			genQ.Qten[q].val[c*nage+a].push_back(vec);
+			to[c*nage+a].push_back(cc); num++;
+			val[c*nage+a].push_back(vec);
 					
 			if(c < cc){
-				genQ.Qten[q].to[cc*nage+a].push_back(c);
-				genQ.Qten[q].val[cc*nage+a].push_back(vec);
+				to[cc*nage+a].push_back(c);
+				val[cc*nage+a].push_back(vec);
 			}
 		}
 	}
@@ -181,23 +178,47 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <A
 			sum2 += area[c].agepop[a];
 			vi = c*nage + a;
 		
-			jmax = genQ.Qten[q].to[vi].size();
+			jmax = to[vi].size();
 			for(j = 0; j < jmax; j++){
-				cc = genQ.Qten[q].to[vi][j];
-				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*genQ.Qten[q].val[vi][j][aa]*area[cc].agepop[aa];
+				cc = to[vi][j];
+				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*val[vi][j][aa]*area[cc].agepop[aa];
 			}
 		}
 		sum /= sum2;
 		
 		for(a = 0; a < nage; a++){
 			vi = c*nage + a;
-			jmax = genQ.Qten[q].to[vi].size();
+			jmax = to[vi].size();
 			for(j = 0; j < jmax; j++){
 				for(aa = 0; aa < nage; aa++){
-					genQ.Qten[q].val[vi][j][aa] /= sum;
-					if(std::isnan(genQ.Qten[q].val[vi][j][aa])) emsg("Value in '"+name+"' not a number");
+					val[vi][j][aa] /= sum;
+					if(std::isnan(val[vi][j][aa])) emsg("Value in '"+name+"' not a number");
 				}
 			}
+		}
+	}
+	
+	q = genQ.Qten.size();
+	genQ.Qten.push_back(SPARSETENSOR ());
+
+	genQ.Qten[q].name = name;
+	
+	genQ.Qten[q].tof = new unsigned short*[to.size()];
+	genQ.Qten[q].ntof = new unsigned short[to.size()];
+	for(vi = 0; vi < to.size(); vi++){
+		genQ.Qten[q].ntof[vi] = to[vi].size();
+		genQ.Qten[q].tof[vi] = new unsigned short[to[vi].size()];
+		for(j = 0; j < to[vi].size(); j++){
+			genQ.Qten[q].tof[vi][j] = to[vi][j];
+		}
+	}		
+
+	genQ.Qten[q].valf = new float**[val.size()];
+	for(vi = 0; vi < val.size(); vi++){
+		genQ.Qten[q].valf[vi] = new float*[val[vi].size()];
+		for(j = 0; j < val[vi].size(); j++){
+			genQ.Qten[q].valf[vi][j] = new float[val[vi][j].size()];
+			for(a = 0; a < nage; a++) genQ.Qten[q].valf[vi][j][a] = val[vi][j][a];
 		}
 	}
 }
@@ -345,7 +366,7 @@ unsigned int findcol(TABLE &tab, string name)
 	return c;
 }		
 
-/// Strips off '\r' character if necessary
+/// Strips off '\\r' character if necessary
 string strip(string line)
 {
 	unsigned int len = line.length();

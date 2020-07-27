@@ -1,6 +1,6 @@
 /home/user/BEEPmbp
 Runing test with input file tests/test_sim/test_sim.toml and output directory regression_test_results/test_sim
-BEEPmbp version lastgood-178-gb94ac10
+BEEPmbp version init-382-gc674c2f
 
 Settings:
   mode = sim
@@ -32,11 +32,13 @@ Q tensors loaded:
     timep: beforeLD  compartment: A  name: Q_flow_all_data  
     timep: afterLD  compartment: A  name: Q_local_home_data  
 
+Loaded examples/Data_example/regiondata.txt
 Region data loaded.
-Region_0 0.987758 average
-Region_1 1.00114 average
-Region_2 1.00832 average
-Region_3 0.905698 average
+Loaded examples/Data_example/areadata.txt
+Region_0 0.987758 average density
+Region_1 1.00114 average density
+Region_2 1.00832 average density
+Region_3 0.905698 average density
 
 Area data loaded.
 Generating Q tensors.
@@ -92,129 +94,129 @@ Transitions:
 
 Running....
   Time: 0  S:59939  E:0  A:0  R:0  P:0  I:0  H:0  D:0
-  Time: 1  S:59936  E:3  A:0  R:0  P:0  I:0  H:0  D:0
-  Time: 2  S:59936  E:3  A:0  R:0  P:0  I:0  H:0  D:0
+  Time: 1  S:59938  E:1  A:0  R:0  P:0  I:0  H:0  D:0
+  Time: 2  S:59934  E:5  A:0  R:0  P:0  I:0  H:0  D:0
   Time: 3  S:59934  E:5  A:0  R:0  P:0  I:0  H:0  D:0
-  Time: 4  S:59931  E:6  A:2  R:0  P:0  I:0  H:0  D:0
-  Time: 5  S:59930  E:7  A:2  R:0  P:0  I:0  H:0  D:0
-  Time: 6  S:59926  E:11  A:1  R:1  P:0  I:0  H:0  D:0
-  Time: 7  S:59926  E:10  A:2  R:1  P:0  I:0  H:0  D:0
-  Time: 8  S:59924  E:12  A:1  R:2  P:0  I:0  H:0  D:0
-  Time: 9  S:59923  E:13  A:1  R:2  P:0  I:0  H:0  D:0
-  Time: 10  S:59919  E:15  A:1  R:2  P:1  I:1  H:0  D:0
-  Time: 11  S:59918  E:12  A:1  R:2  P:3  I:3  H:0  D:0
-  Time: 12  S:59915  E:14  A:1  R:3  P:3  I:2  H:1  D:0
-  Time: 13  S:59915  E:10  A:1  R:5  P:3  I:5  H:0  D:0
-  Time: 14  S:59912  E:12  A:1  R:5  P:4  I:4  H:1  D:0
-  Time: 15  S:59910  E:8  A:3  R:5  P:4  I:8  H:1  D:0
-  Time: 16  S:59901  E:14  A:3  R:6  P:6  I:8  H:1  D:0
-  Time: 17  S:59892  E:22  A:2  R:8  P:3  I:11  H:1  D:0
-  Time: 18  S:59888  E:24  A:3  R:8  P:1  I:14  H:1  D:0
-  Time: 19  S:59880  E:22  A:6  R:11  P:6  I:13  H:1  D:0
-  Time: 20  S:59867  E:32  A:6  R:13  P:1  I:18  H:2  D:0
-  Time: 21  S:59857  E:36  A:7  R:15  P:4  I:17  H:3  D:0
-  Time: 22  S:59848  E:35  A:7  R:18  P:11  I:16  H:4  D:0
-  Time: 23  S:59835  E:41  A:11  R:22  P:8  I:18  H:4  D:0
-  Time: 24  S:59813  E:56  A:11  R:28  P:9  I:19  H:3  D:0
-  Time: 25  S:59800  E:61  A:12  R:31  P:8  I:25  H:2  D:0
-  Time: 26  S:59780  E:69  A:16  R:39  P:9  I:23  H:3  D:0
-  Time: 27  S:59758  E:76  A:15  R:48  P:9  I:29  H:3  D:1
-  Time: 28  S:59738  E:79  A:17  R:55  P:14  I:32  H:2  D:2
-  Time: 29  S:59715  E:87  A:20  R:63  P:17  I:32  H:3  D:2
-  Time: 30  S:59685  E:103  A:21  R:69  P:19  I:36  H:4  D:2
-  Time: 31  S:59655  E:110  A:23  R:78  P:25  I:40  H:5  D:3
-  Time: 32  S:59620  E:122  A:28  R:88  P:27  I:43  H:7  D:4
-  Time: 33  S:59592  E:124  A:29  R:99  P:29  I:54  H:8  D:4
-  Time: 34  S:59549  E:141  A:34  R:113  P:26  I:62  H:9  D:5
-  Time: 35  S:59516  E:143  A:36  R:130  P:31  I:69  H:9  D:5
-  Time: 36  S:59469  E:165  A:40  R:147  P:27  I:76  H:10  D:5
-  Time: 37  S:59420  E:173  A:47  R:168  P:32  I:84  H:10  D:5
-  Time: 38  S:59352  E:213  A:49  R:187  P:34  I:90  H:9  D:5
-  Time: 39  S:59293  E:228  A:52  R:213  P:42  I:97  H:9  D:5
-  Time: 40  S:59226  E:241  A:61  R:239  P:52  I:104  H:11  D:5
-  Time: 41  S:59149  E:265  A:68  R:262  P:59  I:120  H:11  D:5
-  Time: 42  S:59067  E:302  A:69  R:293  P:53  I:137  H:13  D:5
-  Time: 43  S:58980  E:328  A:77  R:324  P:55  I:150  H:19  D:6
-  Time: 44  S:58888  E:349  A:89  R:358  P:62  I:166  H:21  D:6
-  Time: 45  S:58786  E:378  A:105  R:393  P:68  I:180  H:23  D:6
-  Time: 46  S:58679  E:400  A:119  R:441  P:74  I:190  H:28  D:8
-  Time: 47  S:58551  E:449  A:126  R:498  P:76  I:196  H:34  D:9
-  Time: 48  S:58426  E:485  A:138  R:539  P:89  I:216  H:37  D:9
-  Time: 49  S:58276  E:549  A:144  R:601  P:94  I:226  H:37  D:12
-  Time: 50  S:58116  E:621  A:147  R:659  P:107  I:238  H:39  D:12
-  Time: 51  S:57927  E:701  A:161  R:732  P:114  I:254  H:37  D:13
-  Time: 52  S:57739  E:748  A:177  R:797  P:138  I:278  H:47  D:15
-  Time: 53  S:57540  E:805  A:199  R:867  P:145  I:316  H:51  D:16
-  Time: 54  S:57329  E:840  A:218  R:950  P:171  I:355  H:59  D:17
-  Time: 55  S:57090  E:909  A:237  R:1052  P:163  I:406  H:64  D:18
-  Time: 56  S:56847  E:974  A:248  R:1159  P:184  I:434  H:74  D:19
-  Time: 57  S:56758  E:857  A:281  R:1271  P:214  I:466  H:72  D:20
-  Time: 58  S:56666  E:757  A:296  R:1396  P:191  I:531  H:78  D:24
-  Time: 59  S:56573  E:650  A:316  R:1529  P:224  I:534  H:86  D:27
-  Time: 60  S:56473  E:582  A:331  R:1649  P:206  I:579  H:92  D:27
-  Time: 61  S:56365  E:543  A:319  R:1812  P:174  I:606  H:93  D:27
-  Time: 62  S:56266  E:538  A:303  R:1954  P:148  I:597  H:103  D:30
-  Time: 63  S:56190  E:480  A:304  R:2101  P:146  I:577  H:108  D:33
-  Time: 64  S:56104  E:440  A:292  R:2248  P:144  I:560  H:117  D:34
-  Time: 65  S:56009  E:423  A:276  R:2394  P:128  I:551  H:121  D:37
-  Time: 66  S:55917  E:412  A:273  R:2524  P:128  I:519  H:127  D:39
-  Time: 67  S:55834  E:406  A:269  R:2659  P:110  I:494  H:127  D:40
-  Time: 68  S:55757  E:390  A:258  R:2777  P:103  I:485  H:126  D:43
-  Time: 69  S:55678  E:363  A:266  R:2913  P:113  I:434  H:126  D:46
-  Time: 70  S:55596  E:360  A:255  R:3022  P:108  I:430  H:121  D:47
-  Time: 71  S:55519  E:355  A:239  R:3146  P:97  I:419  H:114  D:50
-  Time: 72  S:55431  E:365  A:232  R:3255  P:78  I:414  H:110  D:54
-  Time: 73  S:55361  E:354  A:228  R:3379  P:76  I:375  H:110  D:56
-  Time: 74  S:55283  E:355  A:220  R:3469  P:85  I:356  H:115  D:56
-  Time: 75  S:55206  E:361  A:210  R:3564  P:93  I:331  H:116  D:58
-  Time: 76  S:55159  E:323  A:215  R:3651  P:87  I:318  H:125  D:61
-  Time: 77  S:55099  E:293  A:216  R:3744  P:94  I:314  H:118  D:61
-  Time: 78  S:55040  E:269  A:218  R:3828  P:97  I:315  H:110  D:62
-  Time: 79  S:54980  E:274  A:208  R:3906  P:80  I:324  H:103  D:64
-  Time: 80  S:54932  E:260  A:192  R:3980  P:77  I:324  H:109  D:65
-  Time: 81  S:54883  E:239  A:193  R:4063  P:76  I:313  H:107  D:65
-  Time: 82  S:54829  E:241  A:190  R:4154  P:64  I:290  H:105  D:66
-  Time: 83  S:54787  E:233  A:174  R:4238  P:72  I:267  H:100  D:68
-  Time: 84  S:54736  E:215  A:173  R:4302  P:70  I:273  H:101  D:69
-  Time: 85  S:54704  E:213  A:162  R:4371  P:52  I:264  H:104  D:69
-  Time: 86  S:54662  E:213  A:154  R:4451  P:42  I:249  H:99  D:69
-  Time: 87  S:54620  E:184  A:152  R:4521  P:57  I:236  H:97  D:72
-  Time: 88  S:54591  E:167  A:150  R:4597  P:48  I:223  H:91  D:72
-  Time: 89  S:54558  E:156  A:143  R:4662  P:43  I:215  H:90  D:72
-  Time: 90  S:54532  E:143  A:138  R:4729  P:40  I:196  H:88  D:73
-  Time: 91  S:54501  E:145  A:137  R:4788  P:27  I:188  H:78  D:75
-  Time: 92  S:54474  E:140  A:130  R:4833  P:29  I:182  H:76  D:75
-  Time: 93  S:54443  E:135  A:127  R:4891  P:30  I:165  H:73  D:75
-  Time: 94  S:54415  E:131  A:118  R:4934  P:34  I:157  H:75  D:75
-  Time: 95  S:54387  E:135  A:118  R:4976  P:33  I:145  H:69  D:76
-  Time: 96  S:54365  E:128  A:109  R:5026  P:27  I:144  H:62  D:78
-  Time: 97  S:54344  E:120  A:108  R:5062  P:33  I:135  H:58  D:79
-  Time: 98  S:54329  E:102  A:107  R:5097  P:25  I:141  H:59  D:79
-  Time: 99  S:54301  E:103  A:102  R:5144  P:28  I:127  H:53  D:81
-  Time: 100  S:54276  E:106  A:99  R:5176  P:29  I:116  H:56  D:81
-  Time: 101  S:54247  E:110  A:97  R:5217  P:24  I:107  H:54  D:83
-  Time: 102  S:54230  E:103  A:89  R:5250  P:30  I:99  H:54  D:84
-  Time: 103  S:54211  E:94  A:87  R:5286  P:27  I:101  H:48  D:85
-  Time: 104  S:54192  E:89  A:88  R:5308  P:28  I:101  H:47  D:86
-  Time: 105  S:54171  E:98  A:78  R:5340  P:21  I:98  H:44  D:89
-  Time: 106  S:54154  E:83  A:76  R:5369  P:30  I:94  H:43  D:90
-  Time: 107  S:54137  E:80  A:71  R:5402  P:31  I:86  H:41  D:91
-  Time: 108  S:54117  E:85  A:68  R:5424  P:28  I:83  H:43  D:91
-  Time: 109  S:54098  E:82  A:63  R:5451  P:30  I:81  H:42  D:92
-  Time: 110  S:54085  E:73  A:66  R:5472  P:28  I:82  H:40  D:93
-  Time: 111  S:54070  E:72  A:61  R:5501  P:22  I:79  H:40  D:94
+  Time: 4  S:59933  E:6  A:0  R:0  P:0  I:0  H:0  D:0
+  Time: 5  S:59931  E:7  A:0  R:0  P:1  I:0  H:0  D:0
+  Time: 6  S:59928  E:9  A:0  R:0  P:1  I:1  H:0  D:0
+  Time: 7  S:59928  E:6  A:1  R:1  P:2  I:1  H:0  D:0
+  Time: 8  S:59925  E:6  A:1  R:1  P:1  I:5  H:0  D:0
+  Time: 9  S:59922  E:8  A:2  R:1  P:1  I:4  H:1  D:0
+  Time: 10  S:59915  E:15  A:2  R:1  P:0  I:5  H:1  D:0
+  Time: 11  S:59911  E:17  A:3  R:5  P:0  I:2  H:1  D:0
+  Time: 12  S:59908  E:18  A:3  R:5  P:2  I:2  H:1  D:0
+  Time: 13  S:59906  E:17  A:3  R:7  P:2  I:4  H:0  D:0
+  Time: 14  S:59900  E:19  A:4  R:9  P:3  I:4  H:0  D:0
+  Time: 15  S:59897  E:20  A:4  R:10  P:3  I:4  H:0  D:1
+  Time: 16  S:59895  E:18  A:4  R:13  P:4  I:4  H:0  D:1
+  Time: 17  S:59885  E:21  A:4  R:16  P:6  I:6  H:0  D:1
+  Time: 18  S:59880  E:23  A:4  R:18  P:5  I:8  H:0  D:1
+  Time: 19  S:59870  E:28  A:4  R:18  P:7  I:11  H:0  D:1
+  Time: 20  S:59859  E:35  A:4  R:21  P:6  I:12  H:0  D:2
+  Time: 21  S:59850  E:41  A:4  R:24  P:3  I:14  H:1  D:2
+  Time: 22  S:59841  E:42  A:5  R:28  P:8  I:11  H:2  D:2
+  Time: 23  S:59830  E:45  A:4  R:35  P:8  I:13  H:2  D:2
+  Time: 24  S:59816  E:53  A:5  R:39  P:10  I:12  H:2  D:2
+  Time: 25  S:59807  E:53  A:9  R:41  P:9  I:15  H:3  D:2
+  Time: 26  S:59795  E:51  A:10  R:45  P:14  I:19  H:3  D:2
+  Time: 27  S:59781  E:59  A:9  R:48  P:12  I:24  H:4  D:2
+  Time: 28  S:59767  E:61  A:12  R:55  P:14  I:22  H:6  D:2
+  Time: 29  S:59749  E:65  A:12  R:59  P:12  I:32  H:8  D:2
+  Time: 30  S:59727  E:78  A:16  R:66  P:7  I:35  H:8  D:2
+  Time: 31  S:59708  E:83  A:20  R:71  P:8  I:40  H:7  D:2
+  Time: 32  S:59677  E:103  A:21  R:77  P:12  I:41  H:6  D:2
+  Time: 33  S:59651  E:105  A:26  R:86  P:19  I:43  H:7  D:2
+  Time: 34  S:59627  E:106  A:30  R:96  P:19  I:51  H:8  D:2
+  Time: 35  S:59595  E:122  A:27  R:109  P:22  I:51  H:10  D:3
+  Time: 36  S:59569  E:117  A:33  R:125  P:30  I:51  H:11  D:3
+  Time: 37  S:59523  E:135  A:37  R:142  P:38  I:49  H:11  D:4
+  Time: 38  S:59469  E:157  A:43  R:149  P:33  I:72  H:12  D:4
+  Time: 39  S:59415  E:182  A:43  R:166  P:30  I:85  H:14  D:4
+  Time: 40  S:59357  E:201  A:49  R:189  P:30  I:93  H:15  D:5
+  Time: 41  S:59293  E:226  A:52  R:218  P:37  I:95  H:13  D:5
+  Time: 42  S:59240  E:239  A:54  R:247  P:40  I:100  H:13  D:6
+  Time: 43  S:59177  E:263  A:58  R:278  P:47  I:98  H:12  D:6
+  Time: 44  S:59096  E:285  A:64  R:303  P:58  I:114  H:13  D:6
+  Time: 45  S:59045  E:282  A:66  R:333  P:67  I:125  H:15  D:6
+  Time: 46  S:58968  E:293  A:72  R:365  P:72  I:148  H:15  D:6
+  Time: 47  S:58859  E:345  A:82  R:390  P:71  I:165  H:21  D:6
+  Time: 48  S:58750  E:371  A:90  R:432  P:88  I:178  H:24  D:6
+  Time: 49  S:58642  E:421  A:97  R:474  P:69  I:201  H:29  D:6
+  Time: 50  S:58528  E:436  A:99  R:533  P:84  I:220  H:33  D:6
+  Time: 51  S:58403  E:469  A:107  R:579  P:93  I:245  H:37  D:6
+  Time: 52  S:58254  E:535  A:113  R:640  P:89  I:262  H:40  D:6
+  Time: 53  S:58108  E:565  A:115  R:710  P:109  I:282  H:44  D:6
+  Time: 54  S:57954  E:606  A:134  R:778  P:111  I:304  H:46  D:6
+  Time: 55  S:57755  E:684  A:145  R:848  P:119  I:330  H:49  D:9
+  Time: 56  S:57564  E:726  A:158  R:934  P:137  I:358  H:52  D:10
+  Time: 57  S:57498  E:663  A:169  R:1001  P:138  I:403  H:57  D:10
+  Time: 58  S:57427  E:580  A:181  R:1094  P:156  I:427  H:63  D:11
+  Time: 59  S:57351  E:510  A:190  R:1217  P:157  I:429  H:73  D:12
+  Time: 60  S:57286  E:433  A:209  R:1317  P:159  I:453  H:70  D:12
+  Time: 61  S:57195  E:411  A:210  R:1421  P:146  I:469  H:75  D:12
+  Time: 62  S:57106  E:396  A:203  R:1535  P:134  I:467  H:84  D:14
+  Time: 63  S:57020  E:395  A:198  R:1646  P:118  I:459  H:89  D:14
+  Time: 64  S:56938  E:378  A:195  R:1757  P:109  I:457  H:88  D:17
+  Time: 65  S:56871  E:361  A:198  R:1856  P:100  I:439  H:95  D:19
+  Time: 66  S:56794  E:361  A:189  R:1958  P:90  I:430  H:96  D:21
+  Time: 67  S:56739  E:335  A:191  R:2049  P:95  I:408  H:99  D:23
+  Time: 68  S:56678  E:316  A:192  R:2147  P:101  I:380  H:98  D:27
+  Time: 69  S:56626  E:279  A:184  R:2236  P:110  I:381  H:95  D:28
+  Time: 70  S:56560  E:283  A:176  R:2339  P:76  I:381  H:94  D:30
+  Time: 71  S:56499  E:275  A:168  R:2436  P:82  I:346  H:102  D:31
+  Time: 72  S:56447  E:257  A:162  R:2526  P:70  I:342  H:101  D:34
+  Time: 73  S:56402  E:247  A:165  R:2594  P:73  I:321  H:103  D:34
+  Time: 74  S:56346  E:256  A:157  R:2694  P:55  I:303  H:92  D:36
+  Time: 75  S:56312  E:229  A:142  R:2778  P:63  I:287  H:91  D:37
+  Time: 76  S:56267  E:214  A:143  R:2848  P:57  I:280  H:92  D:38
+  Time: 77  S:56221  E:202  A:141  R:2911  P:59  I:278  H:86  D:41
+  Time: 78  S:56173  E:210  A:132  R:2969  P:57  I:274  H:82  D:42
+  Time: 79  S:56117  E:233  A:129  R:3044  P:41  I:250  H:80  D:45
+  Time: 80  S:56071  E:237  A:128  R:3102  P:44  I:227  H:85  D:45
+  Time: 81  S:56033  E:222  A:119  R:3161  P:49  I:224  H:81  D:50
+  Time: 82  S:56002  E:201  A:118  R:3203  P:57  I:227  H:79  D:52
+  Time: 83  S:55968  E:187  A:116  R:3261  P:62  I:214  H:78  D:53
+  Time: 84  S:55940  E:175  A:121  R:3310  P:51  I:214  H:75  D:53
+  Time: 85  S:55916  E:151  A:117  R:3384  P:55  I:189  H:74  D:53
+  Time: 86  S:55879  E:153  A:110  R:3440  P:46  I:186  H:70  D:55
+  Time: 87  S:55848  E:144  A:104  R:3500  P:39  I:182  H:66  D:56
+  Time: 88  S:55818  E:151  A:103  R:3540  P:22  I:186  H:63  D:56
+  Time: 89  S:55796  E:132  A:93  R:3590  P:38  I:171  H:60  D:59
+  Time: 90  S:55769  E:124  A:87  R:3636  P:34  I:173  H:54  D:62
+  Time: 91  S:55739  E:120  A:82  R:3690  P:30  I:163  H:53  D:62
+  Time: 92  S:55717  E:115  A:83  R:3720  P:31  I:158  H:53  D:62
+  Time: 93  S:55689  E:122  A:74  R:3759  P:27  I:154  H:51  D:63
+  Time: 94  S:55668  E:119  A:74  R:3795  P:28  I:149  H:43  D:63
+  Time: 95  S:55651  E:108  A:70  R:3836  P:30  I:137  H:43  D:64
+  Time: 96  S:55631  E:101  A:69  R:3868  P:35  I:125  H:46  D:64
+  Time: 97  S:55617  E:86  A:62  R:3899  P:37  I:127  H:47  D:64
+  Time: 98  S:55595  E:84  A:57  R:3938  P:30  I:133  H:38  D:64
+  Time: 99  S:55573  E:90  A:56  R:3967  P:25  I:128  H:35  D:65
+  Time: 100  S:55551  E:96  A:54  R:4005  P:22  I:111  H:34  D:66
+  Time: 101  S:55537  E:88  A:55  R:4032  P:28  I:96  H:35  D:68
+  Time: 102  S:55527  E:82  A:49  R:4059  P:24  I:97  H:33  D:68
+  Time: 103  S:55503  E:76  A:51  R:4088  P:33  I:87  H:32  D:69
+  Time: 104  S:55489  E:72  A:46  R:4115  P:23  I:92  H:32  D:70
+  Time: 105  S:55469  E:76  A:46  R:4135  P:24  I:89  H:30  D:70
+  Time: 106  S:55454  E:76  A:47  R:4162  P:18  I:82  H:30  D:70
+  Time: 107  S:55439  E:72  A:46  R:4178  P:21  I:82  H:31  D:70
+  Time: 108  S:55425  E:71  A:38  R:4207  P:22  I:78  H:28  D:70
+  Time: 109  S:55407  E:73  A:36  R:4226  P:25  I:73  H:28  D:71
+  Time: 110  S:55391  E:75  A:32  R:4250  P:21  I:71  H:28  D:71
+  Time: 111  S:55378  E:69  A:32  R:4267  P:24  I:71  H:25  D:73
 
-# Infected individuals: 5879
+# Infected individuals: 4572
 
 Proportion of infected individuals visiting different compartments:
   S: 100%
   E: 100%
-  A: 25.0213%
-  R: 98.282%
-  P: 74.9787%
-  I: 74.9787%
-  H: 10.461%
-  D: 1.71798%
+  A: 24.4969%
+  R: 98.294%
+  P: 75.5031%
+  I: 75.5031%
+  H: 10.1706%
+  D: 1.70604%
 
 Simulated data in directory 'regression_test_results/test_sim':
   'IH.txt' gives the observed weekly number of I→H transitions for different regions.
@@ -227,5 +229,5 @@ Simulated data in directory 'regression_test_results/test_sim':
   'IR_age.txt' gives the 'age' stratified number of I→R transitions.
   'HD_age.txt' gives the 'age' stratified number of H→D transitions.
 
-0.037365 Total time (seconds)
+0.047173 Total time (seconds)
 0 Simulation time (seconds)

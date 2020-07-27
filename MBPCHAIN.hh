@@ -12,7 +12,7 @@ using namespace std;
 class MBPCHAIN                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
-	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree);
+	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
@@ -30,6 +30,8 @@ class MBPCHAIN                                          // Stores all the things
 	
 	vector <float> paramjumpxi;                           // The size of jumps in parameter space (fixed event sequence)
 	vector <unsigned int> ntrxi, nacxi;                   // The number of jumps tried and accepted
+	
+	vector < vector <short> > indmap;										  // A map which is used for fast update in updatedQmap 
 	
 	long timeprop;                                        // The time for the proposals
 	
@@ -84,7 +86,6 @@ class MBPCHAIN                                          // Stores all the things
 	vector <LEVEL> &lev;
 	 
 	public:
-		void init(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
 		void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 		void standard_prop(unsigned int samp, unsigned int burnin);
 		void setQmapi(unsigned int check);
@@ -96,11 +97,11 @@ class MBPCHAIN                                          // Stores all the things
 		void addinfc(unsigned int c, double t);
 		void check(unsigned int num, double t, unsigned int sett);
 		void check_addrem();
-		void updatedQmap(unsigned int sett);
+		void updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep);
 		void setuplists();
 		void resetlists();
 		void changestat(unsigned int i, unsigned int st, unsigned int updateR);
-		void constructRtot(unsigned int sett);
+		void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
 		double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev);
 		void infsampler(vector< vector<double> > &Qmap);
 		void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);

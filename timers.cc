@@ -25,4 +25,7 @@ void timersinit()
 	timers.timeaddrem = 0;	
 	timers.timecompparam = 0;
 	timers.timembpconRtot = 0;
+	
+	timers.timeswap = 0;
+	timers.timeoutput = 0;
 }

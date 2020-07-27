@@ -55,7 +55,7 @@ srcs := \
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
 
-CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR) -DOLD_RAND
+CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
 # Disable warning for old versions of GCC in files that include toml11/toml.hpp
 CXXFLAGS_main.cc  := -Wno-unused-parameter -O

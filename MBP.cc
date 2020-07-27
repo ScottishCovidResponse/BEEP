@@ -16,10 +16,13 @@ using namespace std;
 #include "consts.hh"
 #include "timers.hh"
 #include "MBP.hh"
+#include "obsmodel.hh"
 
-static void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
+static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain);
+static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
+static double calcME();
 
 static MBPCHAIN* mbpchain[chainmax]; 
 static vector <vector <double> > Listore;
@@ -28,7 +31,7 @@ static vector <double> invTstore;
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain, enum proposalsmethod propmethod)
 {
-	const double invTmax = 1, invTmin = 0.1;
+	double invTmax = 1, invTmin = 0.1;
 
 	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
 	unsigned int samp, burnin = nsamp/4, quench = nsamp/5;
@@ -36,24 +39,24 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	double invT, timeloop=0.1, K;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
-
+	vector <PARAMSAMP> psamp;
+	
 	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
 
 	for(p = 0; p < nchain; p++){
-		mbpchain[p] = new MBPCHAIN(data,model,poptree);
 		
 		pp = core*nchain+p;
 		pp = core*nchain+p;
-		if(nchaintot == 1) invT = invTmax;
+		if(nchaintot == 1 || duplicate == 1) invT = invTmax;
 		else invT = pow((K-pp)/K,5);
 
-		mbpchain[p]->init(data,model,poptree,invT,pp);
+		mbpchain[p] = new MBPCHAIN(data,model,poptree,invT,pp);
 	}
 
 	if(core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
-			if(nchaintot == 1) invT = invTmax;
+			if(nchaintot == 1 || duplicate == 1) invT = invTmax;
 			else invT = pow((K-pp)/K,5);
 			invTstore[pp] = invT;
 		}
@@ -69,7 +72,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
-
+	
 		for(p = 0; p < nchain; p++){
 			if(samp < quench) mbpchain[p]->invT = (double(samp)/quench)*mbpchain[p]->invTtrue;
 			else mbpchain[p]->invT = mbpchain[p]->invTtrue;
@@ -79,7 +82,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		time = clock();
 
 		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
-	
+		
 		timeprop -= clock();
 		switch(propmethod){
 		case proposalsmethod::allchainsallparams:
@@ -135,15 +138,23 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		swap(model,core,ncore,nchain);
+		if(duplicate == 0) swap(model,core,ncore,nchain);
 		
-		if(samp%1 == 0) MBPoutput(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%1 == 0) MBPoutput_param(data,model,psamp,core,ncore,nchain);
+		if(samp%5 == 0) MBPoutput_meas(data,model,poptree,opsamp,core,ncore,nchain);
 		
 		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
 		  //if(samp == nsamp-1){
-			if(core == 0) outputresults(data,model,opsamp);
+			if(core == 0){
+				outputresults(data,model,psamp,opsamp);
+				cout << "Model evidence: " << calcME() << endl;
+			}
 			MBPdiagnostic(data,model,core,ncore,nchain);
 		}
+	}
+
+	for(p = 0; p < nchain; p++){
+		delete mbpchain[p];
 	}
 }
 
@@ -170,6 +181,8 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	unsigned int ntr_addrem[nchain], ntr_addremtot[nchaintot];
 	unsigned int nac_addrem[nchain], nac_addremtot[nchaintot];
 
+	timers.timeswap -= clock();
+		
 	for(p = 0; p < nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
 		invT[p] = mbpchain[p]->invT; 
@@ -267,10 +280,12 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 		mbpchain[p]->ntr_addrem = ntr_addrem[p];
 		mbpchain[p]->nac_addrem = nac_addrem[p];
 	}
+	
+	timers.timeswap += clock();
 }
 
 /// Calculates the model evidence
-double calcME()
+static double calcME()
 {
 	unsigned int ch, j, jmin, jmax;
 	double max, dinvT, ME, sum;
@@ -289,14 +304,17 @@ double calcME()
 	return ME;
 }
 
-/// Ouputs a sample from the MBP algorithm
-void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
+/// Ouputs a parameter sample from the MBP algorithm
+static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain)
 {
-	unsigned int p, ppost, nchaintot = ncore*nchain, samp = long(opsamp.size());
+	unsigned int p, ppost, nchaintot = ncore*nchain, samp = psamp.size();
 	int siz;
 	double Li[nchain], Litot[nchaintot], Liord[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
+	PARAMSAMP paramsamp;
 
+	timers.timeoutput -= clock();
+		
 	for(p = 0; p < nchain; p++){ Li[p] = mbpchain[p]->Li; ch[p] = mbpchain[p]->ch;}
 		
 	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -312,17 +330,14 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	
+
 	if(core == 0){
 		double L, Pr;
-		vector < vector <EVREF> > trevplot;
-		vector < vector <FEV> > indevplot;
-		vector <double> paramplot;
 		unsigned int ninfplot;
-
+	
 		if(ppost < nchain){
-			trevplot = mbpchain[ppost]->trevi; indevplot = mbpchain[ppost]->indevi; 
-			paramplot = mbpchain[ppost]->paramval; L = mbpchain[ppost]->Li; Pr = mbpchain[ppost]->Pri;
+			paramsamp.paramval = mbpchain[ppost]->paramval;
+			L = mbpchain[ppost]->Li; Pr = mbpchain[ppost]->Pri;
 			ninfplot =  mbpchain[ppost]->xi.size();
 		}
 		else{
@@ -331,30 +346,91 @@ void MBPoutput(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsa
 			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
 		
 			packinit();
-			unpack(trevplot);
-			unpack(indevplot,0,data.popsize);
-			unpack(paramplot);
+			unpack(paramsamp.paramval);
 			unpack(L);
 			unpack(Pr);
 			unpack(ninfplot);
-			if(packsize() != siz) emsg("MBP: EC10");
 		}
-		
-		opsamp.push_back(outputsamp(calcME(),samp,L,Pr,data,model,poptree,paramplot,ninfplot,trevplot,indevplot));
+	
+		outputtrace(data,model,samp,L,Pr,ninfplot,paramsamp.paramval);
+		psamp.push_back(paramsamp);
 	}
 	else{
 		if(core == ppost/nchain){
 			p = ppost%nchain;
+		
 			packinit();
-			pack(mbpchain[p]->trevi);
-			pack(mbpchain[p]->indevi,0,data.popsize);
 			pack(mbpchain[p]->paramval);
 			pack(mbpchain[p]->Li);
 			pack(mbpchain[p]->Pri);
-			pack((unsigned int)mbpchain[p]->xi.size());
+			pack((unsigned int) mbpchain[p]->xi.size());
 			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
+	
+	timers.timeoutput += clock();
+}
+
+/// Ouputs a measurement sample from the MBP algorithm
+static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain)
+{
+	unsigned int p,  ppost, nchaintot = ncore*nchain;
+	int siz;
+	unsigned int ch[nchain], chtot[nchaintot];
+	MEAS meas;
+	vector <double> R0;	 
+	SAMPLE sample;
+
+	timers.timeoutput -= clock();
+
+	for(p = 0; p < nchain; p++) ch[p] = mbpchain[p]->ch;
+			
+	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	
+	if(core == 0){
+		for(p = 0; p < nchaintot; p++){ if(chtot[p] == 0){ ppost = p; break;}}
+		if(p == nchaintot) emsg("MBP: EC5");
+	}
+	
+	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+
+	if(core == 0){
+		if(ppost < nchain){
+			sample.meas = getmeas(data,model,poptree,mbpchain[ppost]->trevi,mbpchain[ppost]->indevi);
+			model.setup(mbpchain[ppost]->paramval);
+			sample.R0 = model.R0calc();
+		}
+		else{
+			MPI_Status status;
+			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
+			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
+		
+			packinit();
+			unpack(sample.meas.transnum);
+			unpack(sample.meas.popnum);
+			unpack(sample.meas.margnum);
+			unpack(sample.R0);
+		}
+		opsamp.push_back(sample);
+	}
+	else{
+		if(core == ppost/nchain){
+			p = ppost%nchain;
+			
+			meas = getmeas(data,model,poptree,mbpchain[p]->trevi,mbpchain[p]->indevi);
+			model.setup(mbpchain[p]->paramval);
+			R0 = model.R0calc();
+	
+			packinit();
+			pack(meas.transnum);
+			pack(meas.popnum);
+			pack(meas.margnum);
+			pack(R0);
+			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+		}
+	}
+
+	timers.timeoutput += clock();
 }
 
 /// Outputs MBP MCMC diagnoistic information
@@ -468,6 +544,8 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 		timings << double(timers.timecovarinit)/CLOCKS_PER_SEC << " Covarinit (seconds)" << endl;
 		timings << double(timers.timecovar)/CLOCKS_PER_SEC << " Covar (seconds)" << endl;
 		timings << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;					
+		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
+		timings << double(timers.timeswap)/CLOCKS_PER_SEC << " Swap (seconds)" << endl;	
+		timings << double(timers.timeoutput)/CLOCKS_PER_SEC << " Output (seconds)" << endl;			
 	}
 }

@@ -20,6 +20,8 @@ struct TIMERS {
 	long timecompparam;
 	long timeaddrem;
 	long timembpconRtot;
+	long timeswap;
+	long timeoutput;
 };
 
 extern TIMERS timers;

@@ -15,6 +15,7 @@ using namespace std;
 #include "consts.hh"
 #include "pack.hh"
 #include "generateQ.hh"
+#include "output.hh"
 #include "datapipeline.hh"
 #include "table.hh"
 
@@ -87,6 +88,15 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			agecols.push_back(findcol(tab,"age0-14"));
 			agecols.push_back(findcol(tab,"age15-44"));
 			agecols.push_back(findcol(tab,"age45-64"));
+			agecols.push_back(findcol(tab,"age65+"));	
+			table_createcol("all",agecols,tab);
+		}
+		
+		for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == "age0-19") break;
+		if(c < tab.ncol){
+			vector <unsigned int> agecols;
+			agecols.push_back(findcol(tab,"age0-19"));
+			agecols.push_back(findcol(tab,"age20-64"));
 			agecols.push_back(findcol(tab,"age65+"));	
 			table_createcol("all",agecols,tab);
 		}
@@ -178,7 +188,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 					else area[c].covar[j] = av[r]/nav[r];
 				}
 				
-				for(r = 0; r < region.size(); r++) cout << region[r].name << " " << av[r]/nav[r] << " average\n";
+				for(r = 0; r < region.size(); r++) cout << region[r].name << " " << av[r]/nav[r] << " average density\n";
 			}
 		}
 		
@@ -201,7 +211,8 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		}
 		
 		//convertOAtoM(); emsg("done");
-			
+		//convertRegion_M(); emsg("done");
+			 
 		if(mode != MODE_SIM){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
@@ -305,7 +316,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	nardp = narea*ndemocatpos; 
 	nsettardp = nsettime*nardp;
 	
-	// 
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");
 }
@@ -390,7 +400,7 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 }
 
 /// Loads a table from a file
-TABLE DATA::loadtablefromfile(string file)
+TABLE DATA::loadtablefromfile(string file, string dir)
 {
 	TABLE tab;
 	string line, st;
@@ -399,12 +409,19 @@ TABLE DATA::loadtablefromfile(string file)
 
 	string used_file;
 	
-	in.open((outputdir+"/"+file).c_str());
-	used_file = (outputdir+"/"+file);
-	if(!in){
-		used_file = (datadir+"/"+file);
-		in.open((datadir+"/"+file).c_str());
-		if(!in) emsg("Cannot open the file '"+file+"'");
+	if(dir != ""){
+        used_file =dir+"/"+file;
+		in.open(used_file.c_str());
+		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
+	}
+	else{
+        used_file = outputdir+"/"+file;
+		in.open(used_file.c_str());
+		if(!in){
+            used_file = (datadir+"/"+file);
+			in.open(used_file.c_str());
+			if(!in) emsg("Cannot open the file '"+file+"'");
+		}
 	}
 	
 	cout << "Loaded " << used_file << endl;
@@ -450,11 +467,11 @@ static bool hasEnding (std::string const &fullString, std::string const &ending)
 	}
 }
 
-/// Loads a table from a file
-TABLE DATA::loadtable(string file)
+/// Loads a table from a file (if dir is specified then this directory is used
+TABLE DATA::loadtable(string file, string dir)
 {
 	if (hasEnding(file, ".txt")) {
-		return loadtablefromfile(file);
+		return loadtablefromfile(file, dir);
 	} else {
 		return loadtablefromdatapipeline(file);
 	}
@@ -595,10 +612,14 @@ void DATA::copydata(unsigned int core)
 	}
 
 	for(k = 0; k < genQ.Qten.size(); k++){                                                   // Copies the Q matrices
-		num = genQ.Qten[k].to.size();
+		num = narea*nage;
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-		if(core != 0){ genQ.Qten[k].to.resize(num); genQ.Qten[k].val.resize(num);}
-		 
+		if(core != 0){
+			genQ.Qten[k].ntof = new unsigned short[num];
+			genQ.Qten[k].tof = new unsigned short*[num];
+			genQ.Qten[k].valf = new float**[num];
+		}
+		
 		vmin = 0;
 		do{
 			vmax = vmin+1000; if(vmax > num) vmax = num;
@@ -606,8 +627,9 @@ void DATA::copydata(unsigned int core)
 			if(core == 0){
 				packinit();
 				for(v = vmin; v < vmax; v++){
-					pack(genQ.Qten[k].to[v]);
-					pack(genQ.Qten[k].val[v]);
+					pack(genQ.Qten[k].ntof[v]);
+					pack(genQ.Qten[k].tof[v],genQ.Qten[k].ntof[v]);
+					pack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
 				}
 				si = packsize();
 			}
@@ -618,15 +640,16 @@ void DATA::copydata(unsigned int core)
 			if(core != 0){
 				packinit();	
 				for(v = vmin; v < vmax; v++){
-					unpack(genQ.Qten[k].to[v]);
-					unpack(genQ.Qten[k].val[v]);
+					unpack(genQ.Qten[k].ntof[v]);
+					unpack(genQ.Qten[k].tof[v],genQ.Qten[k].ntof[v]);
+					unpack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
 				}
 				if(si != packsize()) emsg("Data: EC9");
 			}
 	
 			vmin = vmax;
 		}while(vmin < num);
-	}		
+	}	
 }
 
 /// Adds demographic categories
@@ -735,6 +758,42 @@ string DATA::getdate(unsigned int t)
 	
 }
 
+
+// This function combines results from different trace files to generate overall statistics
+void DATA::combinetrace(vector <string> inputdirs, string output)
+{
+	unsigned int inp, i, row, th;
+	double v;
+	vector <string> paramname;
+	vector < vector < vector <double> > > vals;
+	TABLE tab;
+	
+	vals.resize(inputdirs.size());
+	for(inp = 0; inp < inputdirs.size(); inp++){
+		tab = loadtable("trace.txt",inputdirs[inp]);
+	
+		for(i = 1; i < tab.ncol; i++){
+			if(tab.heading[i] == "zero") break;
+			if(inp == 0) paramname.push_back(tab.heading[i]);
+			else{
+				if(i-1 >= paramname.size()) emsg("The columns in the input files do not match up.");
+				if(paramname[i-1] != tab.heading[i]) emsg("The headings in the input files do not match up.");
+			}
+		}
+		vals[inp].resize(paramname.size());
+		
+		for(th = 0; th < paramname.size(); th++){
+			for(row = 0; row < tab.nrow; row++){
+				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("'"+tab.ele[row][th]+"' is not a number.");
+				vals[inp][th].push_back(v);
+			}
+		}
+		cout <<  "Loading trace.txt from '" << inputdirs[inp] << "'." << endl;
+	}
+	
+	outputcombinedtrace(paramname,vals,output);
+}
+
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
 
@@ -794,7 +853,7 @@ void DATA::plotrawdata()
 	cout << sum << " NHS+other cases" << endl;
 	
 	ofstream poptot(outputdir+"/Htot.txt");
-	cout << "poptot\n";
+
 	pd = 0;
 	for(row = 0; row < popdata[pd].rows; row++){
 		sum = 0;
@@ -806,7 +865,7 @@ void DATA::plotrawdata()
 			sum += num;	
 		}
 		Hnum[popdata[pd].start + row*popdata[pd].units] = sum;
-		cout <<sum << " "<< r << " " << row << "p\n";
+
 		poptot << popdata[pd].start + row*popdata[pd].units << " "<< sum<< endl;
 	}
 	
@@ -1040,3 +1099,35 @@ void DATA::convertOAtoM()
 	}
 	cout << double(n)/(area.size()*area.size()) << "Sparcity\n";
 }
+
+/// Generates the M matrix for Regional model
+void DATA::convertRegion_M()
+{
+	const unsigned int L = 171;
+	unsigned int i, j; 
+	vector <vector <double> > m;
+	string file;
+
+	file = datadir+"/contact matrix regional-2.txt";
+	ifstream matrix(file);
+	m.resize(L);
+	for(j = 0; j < L; j++){
+		m[j].resize(L);
+		for(i = 0; i < L; i++){
+			matrix >> m[j][i];
+		}
+	}
+	
+	file = datadir+"/Mdata.txt";
+	ofstream Mout(file.c_str());
+
+	Mout << "area1	area2	contact" << endl;	
+	for(i = 0; i < area.size(); i++){
+		for(j = i; j < area.size(); j++){
+			if(m[j][i] != 0){
+				Mout << i << "\t" << j << "\t" << m[j][i] << endl;
+			}
+		}	
+	}
+}
+
