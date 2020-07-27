@@ -587,7 +587,7 @@ void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		i = trep[j].ind; 
 		tra = indevp[i][trep[j].e].trans;	
 		if(indmap[i][tra] == 0){
-			v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			v = data.ind[i].area*nage+data.democatpos[data.ind[i].dp][0];
 			dq = trans[tra].DQ[indevp[i][trep[j].e].timep];
 
 			if(dq != UNSET){
@@ -609,7 +609,7 @@ void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		tra = indevi[i][trei[j].e].trans;
 		if(indmap[i][tra] == 1){
 			
-			v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			v = data.ind[i].area*nage+data.democatpos[data.ind[i].dp][0];
 			dq = trans[tra].DQ[indevi[i][trei[j].e].timep];
 			if(dq != UNSET){
 				for(loop = 0; loop < 2; loop++){
@@ -988,7 +988,7 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 {	
 	unsigned int c, dp, w, v, i, j, jmax, n, sett, loop, loopmax, th, pos;
-	double t, tt, tmax, betasum, phisum, beta, phi, al, Levp, valst, fac;
+	double t, tt, tmax, betasum, phisum, al, Levp, valst, fac;
 	vector <unsigned int> map;
 	FEV ev;
 	vector <double> betafac, phifac;
@@ -1013,7 +1013,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 	
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
-		beta = model.beta[sett]; phi = model.phi[sett];
+		//beta = model.beta[sett]; phi = model.phi[sett];
 		tmax = data.settime[sett+1];
 
 		lcontlist.clear();
@@ -1091,7 +1091,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 
 					Levp = 0; 
 					for(sett = 0; sett < data.nsettime; sett++){
-						beta = model.beta[sett]; phi = model.phi[sett];
+						double beta = model.beta[sett], phi = model.phi[sett];
 						Levp += betafac[sett]*beta + phifac[sett]*phi;
 						
 						jmax = lc[sett].size();
