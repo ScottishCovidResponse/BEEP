@@ -863,7 +863,7 @@ void DATA::plotrawdata()
 	for(t = 0; t < tmax; t++){ numst[t] = 0, numst[t] = 0;}
 	
 	tab = loadtable("hospital_admissions_number_per_day.txt");
-	sum = 0;
+	//sum = 0;
 	for(row = 0; row < tab.nrow; row++){
 		t = gettime(tab.ele[row][0]) - start;
 		num = getint(tab.ele[row][1],"");

@@ -710,10 +710,11 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 {
 	unsigned int c, k, kmax, tra, e, emax, i, p, p2, timep, a;
-	double meani, sdi, meanp, sdp, mean_nsi, cv_nsi, mean_nsp, cv_nsp, z, ti, tp, dt, sum, dif, dtnew;
+	double meani, sdi, meanp, sdp, mean_nsi, cv_nsi, mean_nsp, cv_nsp, z, ti, tp, dt, sum, dif;
 	FEV ev;
 	vector <double> sumst;
-
+	double dtnew=0;
+	
 	evlistp.clear();
 	
 	ev = evlisti[0];
@@ -762,7 +763,6 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 				break;
 			
 			case GAMMA_DIST:
-				dtnew = 0; 
 				emsg("model: EC9");
 				break;
 				
@@ -780,7 +780,9 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 				}
 				break;
 				
-			default: dtnew = 0; emsg("MODEL: EC2b"); break;
+			default:
+				emsg("MODEL: EC2b");
+				break;
 			}
 	
 			if(dtnew < tiny) dtnew = tiny;
@@ -906,7 +908,7 @@ void MODEL::calcprobin()
 			if(comp[c].trans.size() == 0){
 				if(cst.size() == 0) break;
 				
-				while(cst.size() > 0){
+				do {
 					j = cst.size()-1;
 					c = cst[j];
 					prob = probst[j]; 
@@ -917,7 +919,7 @@ void MODEL::calcprobin()
 					cst.pop_back();
 					probst.pop_back();
 					kst.pop_back();
-				}
+				} while(cst.size() > 0);
 				if(k == comp[c].trans.size()) break;
 			}
 			else{
@@ -961,7 +963,9 @@ vector <double> MODEL::R0calc()
 				case EXP_DIST: dt = paramval[trans[tra].param1]; break;
 				case GAMMA_DIST: dt = paramval[trans[tra].param1]; break;
 				case LOGNORM_DIST: dt = paramval[trans[tra].param1]; break;
-				default: dt = 0; emsg("MODEL: EC56"); break;
+				default:
+					//dt=0;
+					emsg("MODEL: EC56"); break;
 				}	
 				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
 				else comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt*comp[c].prob[a][k];
