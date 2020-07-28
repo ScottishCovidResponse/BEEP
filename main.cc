@@ -330,9 +330,11 @@ int main(int argc, char** argv)
 		"dpexportconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
+	DATA data(dp);    // The following file names will need to be read in by the interface:
+#else
+	DATA data;    // The following file names will need to be read in by the interface:
 #endif
 
-	DATA data(dp);    // The following file names will need to be read in by the interface:
 	MODEL model(data);
 		
 	data.outputdir="Output";                // The default output directory
@@ -961,7 +963,9 @@ int main(int argc, char** argv)
 		}
 	}
 	
+#ifdef USE_DATA_PIPELINE
 	delete dp;
+#endif
 
 	#ifdef USE_MPI
 	MPI_Finalize();

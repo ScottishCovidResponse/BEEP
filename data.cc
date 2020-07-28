@@ -16,8 +16,11 @@ using namespace std;
 #include "pack.hh"
 #include "generateQ.hh"
 #include "output.hh"
+
+#ifdef USE_DATA_PIPELINE
 #include "datapipeline.hh"
 #include "table.hh"
+#endif
 
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
@@ -372,8 +375,9 @@ void DATA::addQtensor(string timep, string comp, string name)
 /// Loads a table from the data pipeline
 TABLE DATA::loadtablefromdatapipeline(string file)
 {
-	Table dptable = datapipeline->read_table(file,"default");
 	TABLE tab;
+#ifdef USE_DATA_PIPELINE
+	Table dptable = datapipeline->read_table(file,"default");
 
 	tab.file = filebasename(file);
 	tab.heading = dptable.get_column_names();
@@ -398,6 +402,9 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 	tab.nrow = tab.ele.size();
 
 	cout << "Loaded table " << file << " from data pipeline" << endl;
+#else
+	throw(logic_error("loadtablefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in"));
+#endif
 
 	return tab;
 }

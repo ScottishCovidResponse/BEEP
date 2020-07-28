@@ -20,8 +20,11 @@ using namespace std;
 
 #include "generateQ.hh"
 #include "utils.hh"
-#include "array.hh"
+
+#ifdef USE_DATA_PIPELINE
 #include "datapipeline.hh"
+#include "array.hh"
+#endif
 
 unsigned int nage;                         // The number of age categories used 
 const short normon = 1;                    // Determines if matrix normalised
@@ -304,10 +307,12 @@ static bool hasEnding (std::string const &fullString, std::string const &ending)
 /// Uses 'from' and 'to' columns to generate a sparse matrix
 SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 {
+	SPARSEMATRIX mat;
+#ifdef USE_DATA_PIPELINE
+
 	unsigned int a1, a2;
 	double v;
 	string line;
-	SPARSEMATRIX mat;
 	
 	mat.N = N;	
 
@@ -344,6 +349,8 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 	// }
 
 	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
+
+#endif
 
 	return mat;
 }
@@ -392,10 +399,13 @@ SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
 /// Loads a table from the data pipeline
 TABLE loadarrayfromdatapipeline(string file)
 {
+	TABLE tab;
+
+#ifdef USE_DATA_PIPELINE
+
 	Array<double> dparray = datapipeline->read_array(file,"default");
 	vector<int>   dims = dparray.size();
 
-	TABLE tab;
 
 	tab.file = file;
 //	tab.heading = ????;
@@ -413,6 +423,8 @@ TABLE loadarrayfromdatapipeline(string file)
 	tab.nrow = tab.ele.size();
 
 	cout << "Loaded array " << file << " from data pipeline" << endl;
+
+#endif
 
 	return tab;
 }

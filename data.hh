@@ -4,8 +4,6 @@
 #include <string>
 using namespace std;
 
-#include "datapipeline.hh"
-
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
 	unsigned int timep;                      // The time period over which the tensor acts
@@ -152,11 +150,13 @@ private:
 	vector <AREA> &area;
 };
 
+class DataPipeline;
+
 class DATA
 {
 	public:
 	
-	DATA(DataPipeline *dp) : compX(area), compY(area)
+	DATA(DataPipeline *dp=0) : compX(area), compY(area)
 	{
 		datapipeline = dp;
 	}
