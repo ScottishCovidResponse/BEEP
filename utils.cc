@@ -152,3 +152,9 @@ void ensuredirectory(const string &path)
 			emsg("Error creating directory '"+path+"'");
 	}
 }
+
+string filebasename(const string &path)
+{
+	auto filecomps = split(path,'/');
+	return filecomps.at(filecomps.size()-1);
+}
