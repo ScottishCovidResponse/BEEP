@@ -14,7 +14,7 @@ LDFLAGS += --coverage
 CXXFLAGS += --coverage
 endif
 
-DATA_PIPELINE := 1
+DATA_PIPELINE := 0
 
 ifeq (${DATA_PIPELINE},1)
 CXXFLAGS += -DUSE_DATA_PIPELINE
