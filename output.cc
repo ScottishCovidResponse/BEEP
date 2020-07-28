@@ -112,6 +112,8 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	default: emsg("Output: EC10"); break;
 	}
 	
+	name = filebasename(name); // TODO: think about this
+
 	j = 0; jmax = name.length(); while(j < jmax && name.substr(j,1) != ".") j++;
 	name = name.substr(0,j);
 	
