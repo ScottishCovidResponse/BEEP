@@ -132,19 +132,20 @@ datadir		= "examples/Data_example"
 # A table giving data regions (e.g. "Lanarkshire	S08000032").
 # Format: Tab-separated with region name then region code.
 
-regions		= "regiondata.txt"
+regions		= "beepmbp/data_example/regiondata"
 
 
 # A table giving information about areas.
 # Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
 
-areas			= "areadata.txt"
+areas			= "beepmbp/data_example/areadata"
 
 
 # Generates Q matrices from geographic and age mixing matrices
+
 genQ			= "on"
-agemix		= {Nall="Ndata_all.txt", Nhome="Ndata_home.txt", Nother="Ndata_other.txt", Nschool="Ndata_school.txt", Nwork="Ndata_work.txt"}
-geomix		= {M="Mdata.txt"}
+agemix		= {Nall="beepmbp/data_example/Ndata_all", Nhome="beepmbp/data_example/Ndata_home", Nother="beepmbp/data_example/Ndata_other", Nschool="beepmbp/data_example/Ndata_school", Nwork="beepmbp/data_example/Ndata_work"}
+geomix		= {M="beepmbp/data_example/Mdata"}
 genQoutput= {localhome="Q_local_home_data", flowall="Q_flow_all_data"}
 
 
@@ -163,21 +164,21 @@ Q					= [{ timep="beforeLD", comp="I", name="Q_local_home_data"},
 # The observed numbers of transitions between different compartments.
 # Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-transdata	= [{from="I", to="H", area="reg", file="IH.txt", start="0", units="weeks"},
-						 {from="I", to="D", area="all", file="ID.txt", start="0", units="weeks"},
-						 {from="I", to="R", area="all", file="IR.txt", start="0", units="weeks"},
-						 {from="H", to="D", area="all", file="HD.txt", start="0", units="weeks"}]
+transdata	= [{from="I", to="H", area="reg", file="beepmbp/data_example/IH", start="0", units="weeks"},
+						 {from="I", to="D", area="all", file="beepmbp/data_example/ID", start="0", units="weeks"},
+						 {from="I", to="R", area="all", file="beepmbp/data_example/IR", start="0", units="weeks"},
+						 {from="H", to="D", area="all", file="beepmbp/data_example/HD", start="0", units="weeks"}]
 
 						 
 # The observed population number in different compartments
 # Format: 'comp' gives the name of the compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
 
-popdata		= [{comp="H", area="reg", file="H.txt", start="0", units="weeks"}]
+popdata		= [{comp="H", area="reg", file="beepmbp/data_example/H", start="0", units="weeks"}]
 						 
 						 
 # Gives the percentages for marginal distributions.
 						 
-margdata = 	[{from="I", to="H", area="all", type="age", file="IH_age.txt"},
-						 {from="I", to="D", area="all", type="age", file="ID_age.txt"},
-						 {from="I", to="R", area="all", type="age", file="IR_age.txt"},
-						 {from="H", to="D", area="all", type="age", file="HD_age.txt"}]
+margdata = 	[{from="I", to="H", area="all", type="age", file="beepmbp/data_example/IH_age"},
+						 {from="I", to="D", area="all", type="age", file="beepmbp/data_example/ID_age"},
+						 {from="I", to="R", area="all", type="age", file="beepmbp/data_example/IR_age"},
+						 {from="H", to="D", area="all", type="age", file="beepmbp/data_example/HD_age"}]
