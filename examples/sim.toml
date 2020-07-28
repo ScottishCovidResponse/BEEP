@@ -123,21 +123,19 @@ datadir		= "examples/Data_example"
 # A table giving data regions (e.g. "Lanarkshire	S08000032").
 # Format: Tab-separated with region name then region code.
 
-#regions		= "regiondata.txt"
-regions		= "beepmbp/data_example/regiondata"
+regions		= "regiondata.txt"
 
 
 # A table giving information about areas.
 # Format tab-separated table with: Area code, geographical position (long,lat), region code, columns for covariates (e.g. density of population), columns for populations in different age groups, columns for other deomgraphic categories (giving percentages).
 
-#areas			= "areadata.txt"
-areas			= "beepmbp/data_example/areadata"
+areas			= "areadata.txt"
 
 
 # Generates Q matrices from geographic and age mixing matrices
 
-agemix		= {Nall="beepmbp/data_example/Ndata_all", Nhome="beepmbp/data_example/Ndata_home", Nother="beepmbp/data_example/Ndata_other", Nschool="beepmbp/data_example/Ndata_school", Nwork="beepmbp/data_example/Ndata_work"}
-geomix		= {M="beepmbp/data_example/Mdata"}
+agemix		= {Nall="Ndata_all.txt", Nhome="Ndata_home.txt", Nother="Ndata_other.txt", Nschool="Ndata_school.txt", Nwork="Ndata_work.txt"}
+geomix		= {M="Mdata.txt"}
 genQoutput= {localhome="Q_local_home_data", flowall="Q_flow_all_data"}
 
 
