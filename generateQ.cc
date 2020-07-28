@@ -44,10 +44,11 @@ TABLE loadarray(string file, string dir);
 unsigned int findcol(TABLE &tab, string name);
 vector <AREA> loadarea(TABLE tab);
 MATRIX matfromtable(TABLE tab, unsigned int N);
-SPARSEMATRIX loadsparse(string file, unsigned int N);
+SPARSEMATRIX loadsparse(string file, string dir, unsigned int N);
 SPARSEMATRIX identity(unsigned int N);
 void plotmat(MATRIX mat, string title);
 void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area);
+TABLE loadarrayfromdatapipeline(string file);
 
 string strip(string line);
 
@@ -82,7 +83,7 @@ void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &are
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
 	
-	M = loadsparse(datadir+"/"+genQ.M,area.size());
+	M = loadsparse(genQ.M,datadir,area.size());
 	
 	I = identity(area.size());                                 // Generates the identity matrix
 	
@@ -291,8 +292,65 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 	return mat;
 }
 
+static bool hasEnding (std::string const &fullString, std::string const &ending)
+{
+	if (fullString.length() >= ending.length()) {
+		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+	} else {
+		return false;
+	}
+}
+
 /// Uses 'from' and 'to' columns to generate a sparse matrix
-SPARSEMATRIX loadsparse(string file, unsigned int N)
+SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
+{
+	unsigned int a1, a2;
+	double v;
+	string line;
+	SPARSEMATRIX mat;
+	
+	mat.N = N;	
+
+	Table  dptable = datapipeline->read_table(file, "default");
+
+	int nrows = dptable.get_column_size();
+	
+	vector<long> area1 = dptable.get_column<long>("area1");
+	vector<long> area2 = dptable.get_column<long>("area2");
+	vector<double> contact = dptable.get_column<double>("contact");
+
+	for (int i = 0; i < nrows; i++) {
+		a1 = area1.at(i);
+		a2 = area2.at(i);
+		v = contact.at(i);
+		mat.i.push_back(a1);
+		mat.j.push_back(a2);
+		if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+		mat.val.push_back(v);
+	}
+
+	// Array<double> dparray = datapipeline->read_array(file,"default");
+	// vector<int>   dims = dparray.size();
+
+	// for (int i = 0; i < dims.at(0); i++) {
+	// 	a1 = dparray(i,0);
+	// 	a2 = dparray(i,1);
+	// 	v = dparray(i,2);
+	// 	mat.i.push_back(a1);
+	// 	mat.j.push_back(a2);
+	// 	if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+	// 	mat.val.push_back(v);
+
+	// }
+
+	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
+
+	return mat;
+}
+
+
+/// Uses 'from' and 'to' columns to generate a sparse matrix
+SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
 {
 	unsigned int a1, a2;
 	double v;
@@ -316,15 +374,18 @@ SPARSEMATRIX loadsparse(string file, unsigned int N)
 		mat.val.push_back(v);
 	}while(1 == 1);
 
+	cout << "Loaded sparse matrix " << file << " from file" << endl;
+
 	return mat;
 }
 
-static bool hasEnding (std::string const &fullString, std::string const &ending)
+/// Uses 'from' and 'to' columns to generate a sparse matrix
+SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
 {
-	if (fullString.length() >= ending.length()) {
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+	if (hasEnding(file, ".txt")) {
+		return loadsparsefromfile(dir+"/"+file, N);
 	} else {
-		return false;
+		return loadsparsefromdatapipeline(file, N);
 	}
 }
 
