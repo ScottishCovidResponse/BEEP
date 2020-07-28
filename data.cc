@@ -375,7 +375,7 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 	Table dptable = datapipeline->read_table(file,"default");
 	TABLE tab;
 
-	tab.file = file;
+	tab.file = filebasename(file);
 	tab.heading = dptable.get_column_names();
 	tab.ncol = tab.heading.size();
 	
