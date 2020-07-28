@@ -30,6 +30,8 @@ DATA_PIPELINE_DIR := ../data_pipeline_api/bindings/cpp
 DATA_PIPELINE_LDFLAGS := -L$(DATA_PIPELINE_DIR)/build -ldatapipeline
 DATA_PIPELINE_CPPFLAGS := -I$(DATA_PIPELINE_DIR)
 
+exe_deps := $(DATA_PIPELINE_DIR)/build/libdatapipeline.a
+
 CXXFLAGS := $(CXXFLAGS) $(PYTHON_CFLAGS) $(DATA_PIPELINE_CPPFLAGS)
 LDFLAGS := $(LDFLAGS) $(PYTHON_LDFLAGS) $(DATA_PIPELINE_LDFLAGS)
 
@@ -73,7 +75,7 @@ TEST_EXEC := $(BUILD_DIR)/$(TEST_EXEC_NAME)
 TEST_EXEC_SRCS := $(SRC_DIR)/$(TEST_EXEC_NAME).cc $(filter-out main.cc,$(srcs)) $(TEST_NAMES:%=$(SRC_DIR)/codetests/%)
 TEST_EXEC_OBJS := $(TEST_EXEC_SRCS:%=$(BUILD_DIR)/%.o)
 
-$(exe): $(objs)
+$(exe): $(objs) $(exe_deps)
 	$(CXX)  $(objs) $(LDFLAGS) -o $@
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
