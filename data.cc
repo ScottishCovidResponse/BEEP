@@ -403,7 +403,7 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 
 	cout << "Loaded table " << file << " from data pipeline" << endl;
 #else
-	throw(logic_error("loadtablefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in"));
+	emsg("loadtablefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;

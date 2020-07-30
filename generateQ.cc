@@ -351,8 +351,8 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
 
 #else
-	file = file;
 	N = N;
+	emsg("loadsparsefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
 #endif
 
 	return mat;
@@ -427,7 +427,7 @@ TABLE loadarrayfromdatapipeline(string file)
 
 	cout << "Loaded array " << file << " from data pipeline" << endl;
 #else
-	file = file;
+	emsg("loadarrayfromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;
