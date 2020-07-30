@@ -187,9 +187,9 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
 
 # Development
 
-- [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
+- [Code documentation](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/index.html) -- not yet automatically updated
   
-  - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
+  - [Call tree](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/main_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
 - Work on feature branches and then create a PR for merge into dev branch
 - Continuous integration is implemented using Github Actions,
   controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
