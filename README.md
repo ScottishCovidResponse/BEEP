@@ -19,9 +19,22 @@ BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals)
 
 Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC) approach. This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
+## Downloading
+
+The code should be downloaded from git using the "--recursive" flag to
+ensure that submodules are included. For example:
+```
+git clone --recursive https://github.com/ScottishCovidResponse/BEEPmbp.git
+```
+
+If you have downloaded without the --recursive flag, you can update the submodules with
+```
+git submodule update --init
+```
+
 ## Requirements
 
-You need to have MPI installed to run this code.
+You need to have MPI installed to compile and run this code.
 
 ## Performing analysis
 
@@ -29,7 +42,7 @@ To compile the code, from the repository directory:
 ```
 make
 ```
-The code uses mpicxx to compile, so this must be available on your PATH.
+The code uses mpicxx to compile, so this must be available on your PATH. You can use multiple make processes, e.g. `make -j 4` to speed up compilation.
 
 To run a simulation using demographic data from examples/Data_example
 and a fixed set of epidemic parameters:
@@ -38,7 +51,10 @@ and a fixed set of epidemic parameters:
 ./beepmbp inputfile="examples/sim.toml" outputdir="OutputSim"
 ```
 
-The output appears in OutputSim.
+The output appears in OutputSim. If you have Python 3, MatPlotLib and Pandas installed, you can visualise the number of hospitalisations in region 0 with
+```
+python3 -c 'import pandas as pd; import matplotlib.pyplot as plt; plt.plot(pd.read_csv("OutputSim/H.txt",sep="\t",index_col="time")["r0"]); plt.show()'
+```
 
 To run inference on simulated data provided in examples/Data_example:
 
@@ -49,6 +65,14 @@ mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 outputdir="OutputIn
 (Note: if you use the same outputdir for inference as simulation,
 inference will be performed on the data produced by the simulation,
 not the example data.)
+
+You can plot the histogram of samples for beta0, which should be
+roughly peaked near to the simulated value (0.3). Increase the number
+of samples (e.g. nsamp=1000) on the command line to improve this.
+
+```
+python3 -c 'import pandas as pd; import matplotlib.pyplot as plt; plt.hist(pd.read_csv("OutputInf/trace.txt",sep="\t")["beta0"][10:],30); plt.show()'
+```
 
 The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with a simple test dataset.
 
@@ -202,4 +226,7 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
 
   There are currently only example tests implemented (1% coverage as of 30-Jul-2020). Coverage is reported in the build logs accessible from the [GitHub Actions Page (dev
   branch)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).
-
+- Running "make" stores intermediate build objects in the "build"
+  directory, but the executable (for historical and convenience
+  reasons) is written to the current directory.
+- Clean the build with `make clean`
