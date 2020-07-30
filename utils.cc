@@ -103,7 +103,7 @@ double gammaprob(double x, double a, double b)                                  
 double lognormprob(double x, double mean, double var)
 {
 	double val;
-	if(x <= 0){ cout << x << " " << mean << " " << var << " prob\n"; emsg("Log normal must be positive.");}
+	if(x <= 0) emsg("Log normal must be positive.");
 	if(var < 0) emsg("Variance must be positive."); 
 	val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;

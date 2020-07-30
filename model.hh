@@ -115,7 +115,12 @@ public:
 	vector< vector <unsigned int> > sus_param;  // The parameters related to fixed effect for susceptibility
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
-	vector <TIMEP> timeperiod;              // The timings of changes to Q;
+	unsigned int regioneffect;               // Set to 1 if a regional random effect is put in the force of infection
+	unsigned int logbeta_param;                 // The parameter for the base beta transmission rate
+	unsigned int sigma_param;                // The standard deviation of the regional effect
+	vector <unsigned int> regioneff_param;   // The parameters related to regional effects
+
+	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 	unsigned int ntimeperiod;
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 

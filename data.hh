@@ -170,6 +170,8 @@ class DATA
 	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	double thres_h;                          // The height of the threshold observation model
 
+	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
+	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
 	vector <POPDATA> popdata;                // Store information about population data
@@ -231,9 +233,9 @@ class DATA
 	void addQtensor(string timep, string comp, string name);
 	unsigned int gettime(string st);
 	string getdate(unsigned int t);
-	void combinetrace(vector <string> inputdirs, string output);
+	void combinetrace(vector <string> inputdirs, string output, string distfile, unsigned int burnin);
 	
-	private:
+private:
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file, string dir="");

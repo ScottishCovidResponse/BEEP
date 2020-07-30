@@ -18,13 +18,12 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
+MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=1000;
 	int l;
 	vector <double> paramvalinit;
 
-	invT = invTstart;	invTtrue = invTstart;
 	ch = chstart;
 
 	xi.clear();
@@ -60,7 +59,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart,
 	
 	loop = 0;
 	do{
-		//if(data.mode == MODE_INF) cout << "Initialisation try: " << loop << endl;
+		//if(data.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
 		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
 
 		nparam = model.param.size();                   
@@ -75,7 +74,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart,
 		model.copyi();
 		model.setup(paramval);
 		model.copyp();
-	
+
 		if(mbp() == 0) break;
 
 		loop++;
@@ -106,6 +105,10 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart,
 		paramjumpxi[th] = paramval[th]/10; if(paramjumpxi[th] == 0) paramjumpxi[th] = 0.1;
 		ntrxi[th] = 0; nacxi[th] = 0;
 	}
+	
+	logbetajump = 0.01;
+	sigmajump = 0.01;
+		
 	timeprop = 0;
 	
 	numaddrem = 20;
@@ -366,7 +369,6 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 			
 	valst = paramval[th];
 
-	//cout << model.param[th].name << "up\n";
 	paramval[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
 
 	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
@@ -966,8 +968,9 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 	for(loop = 0; loop < loopmax; loop++){
 		timers.timeparam -= clock();
 		betaphi_prop(samp,burnin);
-		covar_prop(samp,burnin);
+		area_prop(samp,burnin);
 		model.compparam_prop(samp,burnin,xi,indevi,paramval,paramjumpxi,ntrxi,nacxi,Pri);
+		if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 		timers.timeparam += clock();
 			
 		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24b");}
@@ -980,7 +983,7 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 	}
 	
 	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsg("MBPchain: EC24d");}}
-		
+
 	timers.timestandard += clock();
 }
 
@@ -1045,7 +1048,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 			v = c*data.nage + data.democatpos[dp][0]; 
 			
 			if(map[w] == 0){
-				lcont.w = w; lcont.betafac = fac*model.sus[dp]*Qmapi[sett][v]; lcont.phifac = model.sus[dp];
+				lcont.w = w; lcont.betafac = fac*model.sus[dp]*Qmapi[sett][v]; lcont.phifac = model.sus[dp]; lcont.num = UNSET;
 				lcontlist.push_back(lcont);
 			}
 			map[w]++;
@@ -1120,11 +1123,11 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 	timers.timebetaphi += clock();
 }
 
-/// Makes proposal to change covariates
-void MBPCHAIN::covar_prop(unsigned int samp, unsigned int burnin)
+/// Makes proposal to change factors affecting transmission rates in areas
+void MBPCHAIN::area_prop(unsigned int samp, unsigned int burnin)
 {	
-	unsigned int c, dp, w, v, i, n, sett, k, kmax, j, th, loop, loopmax;
-	double L0, t, tt, tmax, beta, phi, fac, valst, al, Levp;
+	unsigned int c, dp, w, v, i, n, sett, j, th, loop, loopmax, num;
+	double L0, t, tt, tmax, beta, phi;
 	FEV ev;
 	
 	vector <double> areasum, lamareafac, lamphifac;
@@ -1193,45 +1196,116 @@ void MBPCHAIN::covar_prop(unsigned int samp, unsigned int burnin)
 	timers.timecovarinit += clock();
 		
 	timers.timecovar -= clock();
-	loopmax = 12/model.covar_param.size(); if(loopmax == 0) loopmax = 1;
+	
+	num = model.covar_param.size(); if(model.regioneffect == 1) num += data.nregion;
+	loopmax = 12/num; if(loopmax == 0) loopmax = 1;
+	
 	for(loop = 0; loop < loopmax; loop++){
+		th = model.logbeta_param;
+		if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
+		
 		for(j = 0; j < model.covar_param.size(); j++){ 
 			th = model.covar_param[j];
+			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
+		}
 		
-			if(model.param[th].min != model.param[th].max){
-				valst = paramval[th];	
-				paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
-
-				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Levp = -large;}
-				else{
-					model.setup(paramval);
-
-					Levp = L0;
-					for(c = 0; c < data.narea; c++){
-						fac = model.areafac[c];
-						Levp += areasum[c]*fac;
-						kmax = mult[c].size();
-						for(k = 0; k < kmax; k++) Levp += log(mult[c][k]*fac + add[c][k]);
-					}
-					if(std::isnan(Levp)) emsg("MBPchain: EC77b");
-	
-					al = exp(Levp-Levi);
-				}
-			
-				ntrxi[th]++;
-				if(ran() < al){
-					Levi = Levp;
-					nacxi[th]++;
-					if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 1.05; else paramjumpxi[th] *= 1.01;}
-				}
-				else{
-					paramval[th] = valst;
-					if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 0.975; else  paramjumpxi[th] *= 0.995;}
-				}
+		if(model.regioneffect == 1){
+			for(j = 0; j < data.nregion; j++){ 
+				th = model.regioneff_param[j];
+				if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
 			}
+		
+			th = model.sigma_param;
+			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
 		}
 	}
 	timers.timecovar += clock();
+}
+
+void MBPCHAIN::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add)
+{
+	unsigned int c, k, kmax;
+	double valst, al, Levp, fac, Prp;
+	
+	valst = paramval[th];	
+	paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
+
+	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Levp = -large; Prp = -large;}
+	else{
+		model.setup(paramval);
+
+		Levp = L0;
+		for(c = 0; c < data.narea; c++){
+			fac = model.areafac[c];
+			Levp += areasum[c]*fac;
+			kmax = mult[c].size();
+			for(k = 0; k < kmax; k++) Levp += log(mult[c][k]*fac + add[c][k]);
+		}
+		if(std::isnan(Levp)) emsg("MBPchain: EC77b");
+	
+	  Prp = model.prior();
+		al = exp(Prp-Pri + Levp-Levi);
+	}
+
+	ntrxi[th]++;
+	if(ran() < al){
+		Levi = Levp;
+		Pri = Prp;
+		nacxi[th]++;
+		if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 1.05; else paramjumpxi[th] *= 1.01;}
+	}
+	else{
+		paramval[th] = valst;
+		if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 0.975; else paramjumpxi[th] *= 0.995;}
+	}
+}
+
+/// Makes fast proposals whilst fixing area factor 
+void MBPCHAIN::fixarea_prop(unsigned int samp, unsigned int burnin)
+{
+	unsigned int th, r, loop, loopmax=10;
+	double al, Prp, sd, dlogbeta, valst;
+	
+	for(loop = 0; loop < loopmax; loop++){
+		th = model.logbeta_param;
+		dlogbeta = normal(0,logbetajump);
+		paramval[th] += dlogbeta;
+		for(r = 0; r < data.nregion; r++) paramval[model.regioneff_param[r]] -= dlogbeta;
+	
+		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Prp = Pri;}
+		else{
+			sd = paramval[model.sigma_param]; Prp = 0; for(r = 0; r < data.nregion; r++) Prp += normalprob(paramval[model.regioneff_param[r]],0,sd*sd);
+			al = exp(Prp-Pri);
+		}
+
+		if(ran() < al){
+			Pri = Prp;
+			if(samp < burnin){ if(samp < 50) logbetajump *= 1.05; else logbetajump *= 1.01;}
+		}
+		else{
+			paramval[th] -= dlogbeta;
+			for(r = 0; r < data.nregion; r++) paramval[model.regioneff_param[r]] += dlogbeta;
+			if(samp < burnin){ if(samp < 50) logbetajump *= 0.975; else logbetajump *= 0.995;}
+		}
+		
+		th = model.sigma_param;
+		valst = paramval[th];
+		paramval[th] += normal(0,sigmajump);
+		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Prp = Pri;}
+		else{
+			sd = paramval[model.sigma_param]; Prp = 0; for(r = 0; r < data.nregion; r++) Prp += normalprob(paramval[model.regioneff_param[r]],0,sd*sd);
+			al = exp(Prp-Pri);
+		}
+
+		if(ran() < al){
+			Pri = Prp;
+			if(samp < burnin){ if(samp < 50) sigmajump *= 1.05; else sigmajump *= 1.01;}
+		}
+		else{
+			paramval[th] = valst;
+			if(samp < burnin){ if(samp < 50) sigmajump *= 0.975; else sigmajump *= 0.995;}
+		}
+	}
 }
 
 /// Time orders x

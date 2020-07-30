@@ -20,11 +20,14 @@ seed      = 0
 outputdir	= "Output"
 
 # The number of MCMC chains.
-nchain    = 20
+nchain    = 1
 
 # The number of MCMC samples.
 nsamp     = 5000
 
+# The minimum and maximum inverse temperatures
+invTmin 	= 0.25
+invTmax 	= 0.25
 
 ########### THE MODEL #############
 
@@ -52,54 +55,87 @@ trans   	=	[{from="S", to="E", dist="infection"},
 						 {from="E", to="A", dist="lognorm", mean="muE", cv="cvE"},
 						 {from="A", to="R", dist="exp", mean="tA"},
 						 {from="P", to="I", dist="exp", mean="tP"},
-						 {from="I", to="H", dist="lognorm", mean="muI", cv="cvI", prob="probIH"},
-						 {from="I", to="C", dist="lognorm", mean="muI", cv="cvI", prob="probIC"},
-						 {from="I", to="R", dist="lognorm", mean="muI", cv="cvI"},
+						 {from="I", to="H", dist="exp", mean="tI", prob="probIH"},
+						 {from="I", to="C", dist="exp", mean="tI", prob="probIC"},
+						 {from="I", to="R", dist="exp", mean="tI"},
 						 {from="C", to="D", dist="lognorm", mean="muC", cv="cvC"},
 						 {from="H", to="D", dist="lognorm", mean="muHD", cv="cvHD", prob="probHD"},
 						 {from="H", to="R", dist="lognorm", mean="muHR", cv="cvHR"}]
-	
-	
+						 
 # Defines the parameters in the model
 
-priors		= [{name="beta0", type="uniform", min=0.03, max=0.6},        # The values for the beta spline (a step function in this case)
-						 {name="beta1", type="uniform", min=0.03, max=0.6},
-						 {name="phi", type="uniform", min=0.0, max=20.0},          # The values for the phi spline (a step function to zero)
+params		= [{name="beta0", value=1.0},        # The values for the beta spline (a step function in this case)
+						 {name="beta1", value=0.9},
+						 {name="beta2", value=0.4},        # The values for the beta spline (a step function in this case)
+						 {name="beta3", value=0.17},
+						 {name="beta4", value=0.2},
+						 {name="phi", value=2.5},          # The values for the phi spline (a step function to zero)
+						 {name="logbeta", value=-1.08}, 
 						 {name="muE", value=4.5},                                  # The latent period
 						 {name="cvE", value=0.533},	                               # The coefficent of variation for latent period			 
 						 {name="tA", value=8.0},                                   # Mean time spend in asymptomatic state
 						 {name="tP", value=1.5},                                   # Mean time spend in pre-symptomatic state
-						 {name="muI",  type="uniform", min=5.0, max=20.0},         # Mean time spend in infectious state
-						 {name="cvI",  type="uniform", min=0.1, max=2.0},          # The coefficent of variation in the infectious state
-						 {name="muHD", type="uniform", min=3.0, max=25.0},         # Mean time for hospital deaths
-						 {name="cvHD", type="uniform", min=0.1, max=2.0},          # The coefficent of variation for hospital deaths
-						 {name="muHR", type="uniform", min=3.0, max=25.0},         # Mean time for hospital recoveries
-						 {name="cvHR", type="uniform", min=0.1, max=2.0},          # The coefficent of variation for hospital recoveries
-						 {name="muC", type="uniform", min=3.0, max=40.0},          # Mean time spend in critical compartment
-						 {name="cvC", type="uniform", min=0.1, max=2.0},           # The coefficent of variation in critical compartment
+						 {name="tI",  value=10.0},         # Mean time spend in infectious state
+					   {name="muHD", value=20.0},         # Mean time for hospital deaths
+						 {name="cvHD", value=1.7},          # The coefficent of variation for hospital deaths
+						 {name="muHR", value=25.0},         # Mean time for hospital recoveries
+						 {name="cvHR", value=3.0},          # The coefficent of variation for hospital recoveries
+						 {name="muC", value=18.0},          # Mean time spend in critical compartment
+						 {name="cvC", value=0.2},           # The coefficent of variation in critical compartment
 						 {name="probEP", value=0.75},                              # Probability of being symptomatic
-						 {name="probIH", value=0.2},                               # Probability of hospitalised given in I state
-						 {name="probIC", type="uniform", min=0.0, max=0.3},        # Probability of death in community 
-						 {name="probHD",  type="uniform", min=0.0, max=0.5},       # Probability of death given hospitalised 
-						 {name="den_slope",  type="uniform", min=0.0, max=0.4}]    # The dependency of contact rate on log(population density)
+						 {name="probIH", value=0.5},                               # Probability of hospitalised given in I state
+						 {name="probIC", value=0.21},        # Probability of death in community 
+						 {name="probHD", value=0.35},       # Probability of death given hospitalised 
+						 {name="den_slope", value=0.2},     # The dependency of contact rate on log(population density)
+						 {name="regeff_sigma", value=0.05}   # The standard deviation in the regional effect
+						 ]   
 
+
+	
+priors		= [{name="beta0", value=1.0},        # The values for the beta spline (a step function in this case)
+						 {name="beta1", type="uniform", min=0.0, max=1.0},
+						 {name="beta2", type="uniform", min=0.0, max=1.0},
+						 {name="beta3", type="uniform", min=0.0, max=1.0},
+						 {name="beta4", type="uniform", min=0.0, max=1.0},
+						 {name="phi", type="uniform", min=0.0, max=10.0},          # The values for the phi spline (a step function to zero)
+						 {name="logbeta", type="uniform", min=-3.0, max=-0.5}, 
+						 {name="muE", value=4.5},                                  # The latent period
+						 {name="cvE", value=0.533},	                               # The coefficent of variation for latent period			 
+						 {name="tA", value=8.0},                                   # Mean time spend in asymptomatic state
+						 {name="tP", value=1.5},                                   # Mean time spend in pre-symptomatic state
+						 {name="tI",  value=10.0},                                # Mean time spend in infectious state
+						 {name="muHD", type="uniform", min=0.0, max=40.0},         # Mean time for hospital deaths
+						 {name="cvHD", type="uniform", min=0.1, max=3.0},          # The coefficent of variation for hospital deaths
+						 {name="muHR", type="uniform", min=0.0, max=40.0},         # Mean time for hospital recoveries
+						 {name="cvHR", type="uniform", min=0.1, max=5.0},          # The coefficent of variation for hospital recoveries
+						 {name="muC", type="uniform", min=0.0, max=40.0},          # Mean time spend in critical compartment
+						 {name="cvC", type="uniform", min=0.05, max=3.0},           # The coefficent of variation in critical compartment
+						 {name="probEP", value=0.75},                              # Probability of being symptomatic
+						 {name="probIH", value=0.5},                               # Probability of hospitalised given in I state
+						 {name="probIC", type="uniform", min=0.0, max=1.0},        # Probability of death in community 
+						 {name="probHD",  type="uniform", min=0.0, max=1.0},       # Probability of death given hospitalised 
+						 {name="den_slope",type="uniform", min=0.0, max=0.4},      # The dependency of contact rate on log(population density)
+						 {name="regeff_sigma",type="uniform", min=0.0, max=0.4}  
+						]  
+						
+						 
 # The maximum number of infected individuals
 
-infmax 		= 100000
+infmax 		= 50000
 
 # Defines the linear spline used to represent disease transmission parameter beta.
 # Format: The name of the parameter followed by the time of the spline point.
 
 betaspline= [{param="beta0", time="start"}, 
-						 {param="beta0", time="2020-03-23"},
-						 {param="beta1", time="2020-03-23"}, 
-						 {param="beta1", time="end"}]				
+						 {param="beta1", time="2020-03-23"},
+						 {param="beta2", time="2020-03-23"}, 
+						 {param="beta3", time="2020-04-05"}, 
+						 {param="beta4", time="end"}]				
 
 # Defines the linear spline used to represent external force of infection phi.
 # Format: The name of the parameter followed by the time of the spline point. Note, The parameter 'zero' sets the value to zero.
 
-phispline= [{param="zero", time="start"}, 
-						{param="phi", time="2020-02-10"},
+phispline= [{param="phi", time="start"},
 						{param="phi", time="2020-03-23"},
 						{param="zero", time="2020-03-23"}, 
 					  {param="zero", time="end"}]
@@ -130,6 +166,7 @@ timep = [{name="beforeLD", tend="2020-03-23"}, {name="afterLD", tend="end"}]
 
 # The data directory
 
+#datadir		= "examples/Data_ScotlandRegion"
 datadir		= "examples/Data_ScotlandMSOA"
 
 
@@ -170,6 +207,8 @@ threshold = 5
  
 # The observed numbers of transitions between different compartments.
 # Format: 'from' comapartment, 'to' compartment, the area used by the data ('reg'=on a regional level, 'all'=across all regions), the name of the file, the start time and the units used.
+
+#transdata	= [{from="I", to="H", area="reg", file="IH.txt", start="2020-03-01", units="weeks"}]
 
 transdata	= [{from="I", to="H", area="all", file="IH.txt", start="2020-03-01", units="days"},
 						 {from="H", to="D", area="all", file="HD_NRS.txt", start="2020-03-16", units="weeks"},

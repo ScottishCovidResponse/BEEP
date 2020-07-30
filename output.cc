@@ -23,7 +23,13 @@ struct STAT{                                           // Stores statistical inf
 	string ESS;                                          // The estimated sample size
 };
 
-STAT getstat(vector <double> &vec);
+struct DIST{                                          // Stores a probability distribution
+	vector <string> value;
+	vector <string> prob;
+};
+
+static STAT getstat(vector <double> &vec);
+static DIST getdist(vector <double> &vec);
 
 ofstream trace, traceLi;
 
@@ -211,18 +217,21 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 			dataout << valsum;
 		}
 		else dataout << stat.mean;
-		dataout << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		dataout << " " << stat.mean << " " << stat.CImin << " " << stat.CImax << " " << stat.ESS << endl; 
 	}
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
 void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 {      
-	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d;
+	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d, b, c;
+	double areaav;
 	string file, filefull;
 	vector <double> vec;
 	STAT stat;
 	string name;
+	vector <DIST> paramdist;
+	vector <double> paramav, Rav;
 
 	ensuredirectory(data.outputdir);
 		
@@ -263,13 +272,31 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	R0out << "# Gives the time variation in R0." << endl;	
 	R0out << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
+	Rav.resize(data.nsettime);
 	for(st = 0; st < data.nsettime; st++){
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
+		Rav[st] = atof(stat.mean.c_str());
 		
 		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
+
+	file = "Posterior_phi.txt";
+	filefull = data.outputdir+"/"+file;
+	ofstream phiout(filefull.c_str());
+	if(!phiout) emsg("Cannot output the file '"+filefull+"'");
 	
+	cout << "'" << file << "' gives the time variation in phi." << endl;
+	phiout << "# Gives the time variation in phi (expressed as the number of infected per 1000000 individuals)." << endl;	
+	phiout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
+
+	for(st = 0; st < data.nsettime; st++){
+		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].phi[st]*1000000);
+		stat = getstat(vec);
+	
+		phiout << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+	}
+
 	npsamp = opsamp.size();
 	psampmin = npsamp/4;
 	
@@ -285,11 +312,62 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	
 	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
+	paramav.resize(model.param.size());
 	for(p = 0; p < model.param.size()-1; p++){
 		vec.clear(); for(s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
 		stat = getstat(vec);
-			
+		paramav[p] = atof(stat.mean.c_str());
+		
 		paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
+	}
+	
+	file = "Posterior_distributions.txt";
+	filefull = data.outputdir+"/"+file;
+	ofstream distout(filefull.c_str());
+	if(!distout) emsg("Cannot output the file '"+filefull+"'");
+	
+	cout << "'" << file << "' gives the probability distributions for parameters." << endl;
+	
+  distout << "# Posterior probability distributions for model parameters." << endl;
+	distout << endl;
+
+	paramdist.resize(model.param.size()-1);
+	for(p = 0; p < model.param.size()-1; p++){
+		vec.clear(); for(s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
+		paramdist[p] = getdist(vec);
+	}
+	
+	for(p = 0; p < model.param.size()-1; p++){
+		distout << model.param[p].name << "\t" << "Probability\t";
+	}	
+	distout << endl;
+	
+	for(b = 0; b < BIN; b++){
+		for(p = 0; p < model.param.size()-1; p++){
+			distout << paramdist[p].value[b] << "\t" << paramdist[p].prob[b] << "\t";
+		}
+		distout << endl;
+	}
+			
+				
+	file = "Posterior_Rmap.txt";
+	filefull = data.outputdir+"/"+file;
+	ofstream Rmapout(filefull.c_str());
+	if(!Rmapout) emsg("Cannot output the file '"+filefull+"'");
+	
+	cout << "'" << file << "' gives the time and spatial variation in R0." << endl;
+	Rmapout << "# Gives the time and spatial variation in R." << endl;	
+	Rmapout << "# Area, Day: ";
+	for(st = 0; st < data.nsettime; st++){ Rmapout << (st+1); if(st < data.nsettime-1) Rmapout << ", ";}
+	Rmapout << endl;
+	
+	model.setup(paramav);
+	areaav = 0; for(c = 0; c < data.narea; c++)	areaav +=  model.areafac[c]/ data.narea;
+
+	for(c = 0; c < data.narea; c++){
+		Rmapout << data.area[c].code;
+		for(st = 0; st < data.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
+		Rmapout << endl;
 	}
 	
 	if(data.mode != MODE_SIM){
@@ -301,18 +379,19 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	}
 }
 
-void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file)
+void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin)
 {
-	unsigned int p, inp, s, nopsamp, opsampmin, N, M, nmax, nmin;
+	unsigned int p, inp, s, npsamp, psampmin, N, M, nmax, nmin, b;
 	double W, B, valav, varr, muav;
 	string GR;
 	vector <double> vec, mu, vari;
 	STAT stat;
-		
+	vector <DIST> paramdist;
+			
 	ofstream paramout(file.c_str());
 	if(!paramout) emsg("Cannot output the file '"+file+"'");
 	
-	cout << "'" << file << "' gives the model parameters combining the input trace files." << endl;
+	cout << endl << "'" << file << "' gives the model parameters combining the input trace files." << endl;
 	paramout << "# Posterior distributions for model parameters." << endl;
 	paramout << "# For convergence ESS should be greater than 200 and PSRF should be between 0.9 and 1.1." << endl;
 	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, effective sample size (ESS), potential scale reduction factor (PSRF) otherwise known as the Gelman-Rubin convergence diagnostic." << endl;
@@ -321,9 +400,17 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 	M = vals.size();
 	nmax = large;
 	for(inp = 0; inp < M; inp++) if(vals[inp][0].size() < nmax) nmax = vals[inp][0].size();
-	nmin = nmax/4;
+
+	if(burnin != UNSET){
+		if(burnin >= nmax) emsg("The burnin bust be greater than the number of samples.");
+		nmin = burnin;
+	}
+	else nmin = nmax/4;
+	
 	N = nmax-nmin; 
 		
+	paramdist.resize(paramname.size());
+			
 	mu.resize(M); vari.resize(M);
 	for(p = 0; p < paramname.size(); p++){
 		GR = "---";
@@ -344,13 +431,40 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 	
 		vec.clear(); 
 		for(inp = 0; inp < M; inp++){
-			nopsamp = vals[inp][p].size();
-			opsampmin = nopsamp/4;
-			for(s = opsampmin; s < nopsamp; s++) vec.push_back(vals[inp][p][s]);
+			npsamp = vals[inp][p].size();
+			if(burnin != UNSET){
+				if(burnin >= npsamp) emsg("The burnin bust be greater than the number of samples.");
+				psampmin = burnin;
+			}
+			else psampmin = npsamp/4;
+			for(s = psampmin; s < npsamp; s++) vec.push_back(vals[inp][p][s]);
 		}
+		paramdist[p] = getdist(vec);
 		stat = getstat(vec);
-			
+				
 		paramout << paramname[p]  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << " " << GR << endl; 
+	}
+	
+	if(distfile != ""){
+		ofstream distout(distfile.c_str());
+		if(!distout) emsg("Cannot output the file '"+distfile+"'");
+		
+		cout << "'" << distfile << "' gives the probability distributions for parameters." << endl;
+		
+		distout << "# Posterior probability distributions for model parameters." << endl;
+		distout << endl;
+
+		for(p = 0; p < paramname.size(); p++){
+			distout << paramname[p] << "\t" << "Probability\t";
+		}	
+		distout << endl;
+		
+		for(b = 0; b < BIN; b++){
+			for(p = 0; p < paramname.size(); p++){
+			distout << paramdist[p].value[b] << "\t" << paramdist[p].prob[b] << "\t";
+			}
+			distout << endl;
+		}				
 	}
 }
 	
@@ -516,7 +630,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 }
 
 /// Calculates diagnostic statistics
-STAT getstat(vector <double> &vec)                           
+static STAT getstat(vector <double> &vec)                           
 {
 	unsigned int n, i, d;
 	double sum, sum2, var, sd, a, cor, f;
@@ -565,4 +679,45 @@ STAT getstat(vector <double> &vec)
 	}
 	
 	return stat;
+}
+
+/// Gets the probability distributions for a given set of samples
+static DIST getdist(vector <double> &vec)
+{
+	unsigned int i, b;
+	double min, max, d;
+	DIST dist;
+	vector <unsigned int> bin;
+	
+	min = large; max = -large;	
+	for(i = 0; i < vec.size(); i++){
+		if(vec[i] < min) min = vec[i];
+		if(vec[i] > max) max = vec[i];
+	}
+	
+	dist.value.resize(BIN);
+	dist.prob.resize(BIN);
+	
+	if(min == max){
+		for(b = 0; b < BIN; b++){ dist.value[b] = "---"; dist.prob[b] = "---";} 
+	}
+	else{
+		d = max-min;
+		min -= 0.2*d; max += 0.2*d; 
+	
+		bin.resize(BIN);
+		for(b = 0; b < BIN; b++) bin[b] = 0;
+		
+		for(i = 0; i < vec.size(); i++){
+			b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsg("Output: EC76");
+			bin[b]++;
+		}
+
+		for(b = 0; b < BIN; b++){ 
+			dist.value[b] = to_string(min+(b+0.5)*(max-min)/BIN); 
+			dist.prob[b] = to_string(double(bin[b])/vec.size());
+		} 
+	}
+	
+	return dist;
 }

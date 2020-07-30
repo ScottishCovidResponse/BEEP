@@ -1,61 +1,12 @@
 /*
 Load mpi: module load mpi/openmpi-x86_64
+
 Compile using: make
 
-Simulation:  
- ./beepmbp inputfile="examples/sim.toml"        
- 
- ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" mode="sim"
- 
- Multiple simulations
- ./beepmbp inputfile="examples/infMSOA_noage.toml" mode="multisim" nsamp=10
+Simulation:  ./beepmbp inputfile="examples/sim.toml"        
 
- 
-Inference:    
-mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
-mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
-
- ./beepmbp inputfile="examples/infregion.toml" nsamp=10
-
-nohup mpirun -n 10 ./beepmbp inputfile="examples/inf.toml" outputdir="a" seed=10 nchain=10 nsamp=1000&
-
-
-./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=1
-./beepmbp inputfile="examples/infOA_noage.toml" nchain=1
-mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=10000
-
-mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=200
-
-mpirun -n 2 ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=200
-
-nohup mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/infMSOA.toml" nchain=2 nsamp=100
-
-mpirun -n 20 ./beepmbp inputfile="examples/infMSOA.toml" nchain=20 nsamp=10000
-nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=20 nsamp=20000 > outp.txt
-
-
-nohup mpirun -n 20 ./beepmbp inputfile="examples/infMSOA_noage_sim.toml" nchain=20 nsamp=20000 
-
-Combine trace plots:
- ./beepmbp mode="combinetrace" dirs="a" output="para.txt"
+Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 */
-
-
-// nohup mpirun -n 5 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/infMSOA_noage.toml" nchain=5 nsamp=20000 outputdir="Output2" > wo.txt&
-
-// make -j 10
-/*
- Commands for running on DiRAC:
- ./submit-csd3 --groups 65536 --seed 1 --samples 10 --nprocs 32 --nnode 1  --walltime 1:00:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test
- 
- dos2unix submit-csd3
- squeue -u dc-pool1
- scancel <jobid>
- mybalance
-*/
-// sed -i 's/\r$//g' gitversion.sh    gets rid of \r
-// sed -i 's/\r$//g' convert_sim.sh    gets rid of \r
-
 
 #include <iostream>
 #include <sstream>
@@ -144,6 +95,49 @@ int lookup_int_parameter(const map<string,string> &params,
 		cout << "  " << key << " = " << val << endl;
 	return val;
 }
+
+double lookup_double_parameter(const map<string,string> &params,
+												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
+												 const string &key, bool verbose, int def=-1)
+{
+	double val;
+	auto val_it = params.find(key);
+	if (val_it != params.end()) {
+		const std::string& valstr = val_it->second;
+		try {
+			size_t idx;
+			val = stof(valstr,&idx);
+			if (idx != valstr.length()) {
+				std::ostringstream oss;
+				oss << "Should be number, found '"<< valstr;
+				throw std::invalid_argument(oss.str());
+			}
+		} catch (const std::exception& e) {
+			std::ostringstream oss;
+			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
+			// Add exception description if it's informative
+			std::string what = e.what();
+			if (what == "stoi") {
+				if (valstr == "")
+					oss << "Should be number, found no value\n";
+			} else {
+				oss << what;
+			}
+			emsg(oss.str());
+		}
+	} else {
+		if (tomldata.contains(key)) {
+			val = toml::find<double>(tomldata,key);
+		} else {
+			val = def;
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
+		}
+	}
+	if (verbose)
+		cout << "  " << key << " = " << val << endl;
+	return val;
+}
+
 
 vector<string> string_split(const string &s)
 {
@@ -284,7 +278,7 @@ int main(int argc, char** argv)
 	#endif
 
 	if (core == 0) {
-		cout << "BEEPmbp version " << gitversion() << endl;
+		//cout << "BEEPmbp version " << gitversion() << endl;
 	}
 	
 	DATA data;    // The following file names will need to be read in by the interface:
@@ -292,6 +286,8 @@ int main(int argc, char** argv)
 		
 	data.outputdir="Output";                // The default output directory
 	data.threshold=UNSET;
+	data.invTmin=0;                         // This default choice 
+	data.invTmax=0.25;  
 
 	// A list of all supported parameters (please keep in lexicographic order)
 	vector<string>  definedparams {
@@ -301,15 +297,19 @@ int main(int argc, char** argv)
 		"ages",
 		"areas",
 		"betaspline",
+		"burnin",
 		"comps",
 		"covars",
 		"datadir",
 		"democats",
+		"distribution",
 		"end",
 		"genQ",
 		"genQoutput",
 		"geomix",
 		"infmax",
+		"invTmin",
+		"invTmax",
 		"dirs",
 		"inputfile",
 		"margdata",
@@ -344,13 +344,17 @@ int main(int argc, char** argv)
 		if(cmdlineparams["mode"] == "combinetrace"){
 			if (cmdlineparams.count("dirs") == 0) emsg("Must set the 'dirs' property");
 			vector <string> dirs;
+			string output, distfile="";
+			unsigned int burnin=UNSET;
 			dirs = split(cmdlineparams["dirs"],',');
 			
-			if (cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
+			if(cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
 		
-			string output;
+			if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
+			if(cmdlineparams.count("burnin") == 1) burnin = atoi(cmdlineparams["burnin"].c_str());
+		
 			output = cmdlineparams["output"];
-			data.combinetrace(dirs,output);
+			data.combinetrace(dirs,output,distfile,burnin);
 			return 0;
 		}
 	}
@@ -431,6 +435,7 @@ int main(int argc, char** argv)
 		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
 	}
 	
+	model.infmax = large;
 	if(mode == MODE_INF){
 		// infmax
 		if(tomldata.contains("infmax")) {
@@ -493,9 +498,19 @@ int main(int argc, char** argv)
 	// threshold
 	if(tomldata.contains("threshold")){
 		data.threshold = lookup_int_parameter(cmdlineparams, tomldata, "threshold", param_verbose);
-		data.thres_h = log(1.0/(data.threshold + 0.5*sqrt(2*M_PI*minvar*varfac)));
+		data.thres_h = log(1.0/(data.threshold + 0.5*sqrt(2*M_PI*minvar)));
 	}
 
+	// invTmin
+	if(tomldata.contains("invTmin")){
+		data.invTmin = lookup_double_parameter(cmdlineparams, tomldata, "invTmin", param_verbose);
+	}
+	
+	// invTmax
+	if(tomldata.contains("invTmax")){
+		data.invTmax = lookup_double_parameter(cmdlineparams, tomldata, "invTmax", param_verbose);
+	}
+	
 	// End of parameters
 	if (param_verbose)
 		cout << endl;
@@ -695,7 +710,7 @@ int main(int argc, char** argv)
 			
 			if(!Q.contains("name")) emsgroot("'name' must be specified in 'Q'.");
 			const auto name = toml::find<std::string>(Q,"name");
-			
+		
 			data.addQtensor(timep,comp,name);
 		}
 	}
@@ -882,38 +897,6 @@ int main(int argc, char** argv)
 	
 	if(core == 0){
 		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
-		if(mode == MODE_SIM){
-			cout << double(timers.timesim)/CLOCKS_PER_SEC << " Simulation time (seconds)" << endl;
-		}
-		else{
-			cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-			cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-			cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-			cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-			cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
-			
-			cout << "ac\n";
-				cout << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-		cout << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-		cout << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-		cout << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-		cout << double(timers.timembpconRtot)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
-		cout << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
-		cout << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-		cout << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
-		cout << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
-		cout << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
-		cout << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
-		cout << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
-		cout << double(timers.timebetaphiinit)/CLOCKS_PER_SEC << " Betaphiinit (seconds)" << endl;		
-		cout << double(timers.timebetaphi)/CLOCKS_PER_SEC << " Betaphi (seconds)" << endl;	
-		cout << double(timers.timecovarinit)/CLOCKS_PER_SEC << " Covarinit (seconds)" << endl;
-		cout << double(timers.timecovar)/CLOCKS_PER_SEC << " Covar (seconds)" << endl;
-		cout << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		cout << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;		
-				cout << double(timers.timeswap)/CLOCKS_PER_SEC << " Swap (seconds)" << endl;	
-				cout << double(timers.timeoutput)/CLOCKS_PER_SEC << " Output (seconds)" << endl;	
-		}
 	}
 	
 	#ifdef USE_MPI

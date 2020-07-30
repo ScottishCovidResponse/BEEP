@@ -101,7 +101,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 }
 
 /// The contribution from a single measurement 
-double singobs(DATA &data, unsigned int mean, unsigned int val, double fac)
+double singobs(DATA &data, unsigned int mean, unsigned int val)
 {
 	double var;
 	
@@ -110,12 +110,11 @@ double singobs(DATA &data, unsigned int mean, unsigned int val, double fac)
 	case THRESH:                // The case in which there is a threshold applied to the observation
 		if(val <= data.threshold) return data.thres_h;
 		else{
-			var = minvar*fac;
+			var = minvar;
 			return data.thres_h - double((val-data.threshold)*(val-data.threshold))/(2*var);
 		}
 	default:                    // A measurement is made
 		var = mean; if(var < minvar) var = minvar;
-		var *= fac; //cout << val << " " << mean << "k\n"; if(val != mean) emsg("PP");
 		return normalprob(val,mean,var);
 	}
 }
@@ -134,7 +133,7 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 	for(td = 0; td < meas.transnum.size(); td++){                                   // Incorporates transition observations
 		for(row = 0; row < meas.transnum[td].size(); row++){
 			for(r = 0; r < meas.transnum[td][row].size(); r++){
-				L += singobs(data,data.transdata[td].num[r][row],meas.transnum[td][row][r],varfac);
+				L += singobs(data,data.transdata[td].num[r][row],meas.transnum[td][row][r]);
 			}
 		}
 	}
@@ -142,7 +141,7 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 	for(pd = 0; pd < meas.popnum.size(); pd++){                                   // Incorporates population observations
 		for(row = 0; row < meas.popnum[pd].size(); row++){
 			for(r = 0; r < meas.popnum[pd][row].size(); r++){
-				L += singobs(data,data.popdata[pd].num[r][row],meas.popnum[pd][row][r],varfac);
+				L += singobs(data,data.popdata[pd].num[r][row],meas.popnum[pd][row][r]);
 			}
 		}
 	}
@@ -155,7 +154,6 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 				val = meas.margnum[md][row][r];
 				mean = data.margdata[md].percent[r][row]*sum/100.0;
 				var = mean; if(var < minvar) var = minvar;
-				var *= varfac;
 				L += normalprob(val,mean,var);
 			}
 		}

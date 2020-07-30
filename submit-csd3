@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Usage: ./submit-csd3 --groups 65536 --seed 0 --samples 10 --nprocs 32 --nnodes 1 --walltime 1:00:00 --dir /path/to/run/dir
-# Usage: ./submit-csd3 --inputfile "examples/infMSOA_noage.toml" --seed 0 --samples 10 --nprocs 32 --nnodes 1 --walltime 0:01:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/test1
+
+
+# Usage: ./submit-csd3 --inputfile  "examples/infregion_sim.toml" --seed 10 --samples 10 --invTmin 0.0 --invTmax 1.0 --nprocs 32 --nnodes 1 --walltime 0:01:00 --dir ~/rds/rds-dirac-dc003/dc-pool1/Output1
 
 # dos2unix submit-csd3 
 
@@ -12,6 +14,8 @@ set -u
 inputfile="examples/inf.toml"
 seed=0
 samples=1000
+invTmin=0.0
+invTmax=1.0
 nprocs=32
 nnodes=1
 walltime=1:00:00
@@ -25,6 +29,12 @@ while [ $# -gt 0 ]; do
         shift 2
     elif [ $1 == "--samples" ]; then
         samples=$2
+        shift 2
+	  elif [ $1 == "--invTmin" ]; then
+        invTmin=$2
+        shift 2
+		elif [ $1 == "--invTmax" ]; then
+        invTmax=$2
         shift 2
     elif [ $1 == "--nprocs" ]; then
         nprocs=$2
@@ -55,10 +65,12 @@ cp -a ./beepmbp $dir
 mkdir $dir/examples
 
 mkdir $dir/examples/Data_ScotlandMSOA
+#mkdir $dir/examples/Data_ScotlandRegion
 
 cp -a $inputfile $dir/$inputfile 
 
 cp -a ./examples/Data_ScotlandMSOA/* $dir/examples/Data_ScotlandMSOA/
+#cp -a ./examples/Data_ScotlandRegion/* $dir/examples/Data_ScotlandRegion/
  
 cat >$dir/submit.sh <<EOF
 #!/bin/bash
@@ -96,8 +108,7 @@ echo "================="
 echo
 #mpirun -n $nprocs ./run mode=mbp model=irish area=1024 nchain=$nprocs nsamp=1000 period=16 transdata=I,H,reg,cases.txt transdata=H,D,all,deaths.txt housedata=house.txt outputdir=Output
 
-mpirun -n $nprocs ./beepmbp inputfile=$inputfile seed=$seed nchain=$nprocs nsamp=$samples 
-
+mpirun -n $nprocs ./beepmbp inputfile=$inputfile seed=$seed invTmin=$invTmin invTmax=$invTmax nchain=$nprocs nsamp=$samples 
 EOF
 
 cd $dir
