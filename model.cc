@@ -21,7 +21,7 @@ MODEL::MODEL(DATA &data) : data(data)
 /// Defines the compartmental model
 void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* popsize*/, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
 {
-	unsigned int p, c, j, fi, tra, a;
+	unsigned int p, c, j, fi, tra, a, th, r;
 	SPLINEP spl;
 	PRIORCOMP pricomp;
 
@@ -81,6 +81,35 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		}
 		else{ emsg("The input file must contain 'priors'.");}
 	}
+	
+	regioneffect = 0;
+	sigma_param = UNSET;
+	for(th = 0; th < param.size(); th++){
+		if(param[th].name == "regeff_sigma"){
+			param[th].used = 1;
+			
+			regioneffect = 1;
+			sigma_param = th;	
+			
+			regioneff_param.resize(data.nregion);
+			for(r = 0; r < data.nregion; r++){
+				regioneff_param[r] = param.size();
+				stringstream ss; ss << "reff_" << data.region[r].code;
+				addparam(ss.str(),-large,large);
+				param[param.size()-1].used = 1;
+			}
+		}
+	}
+		
+	for(th = 0; th < param.size(); th++){
+		if(param[th].name == "logbeta"){
+			param[th].used = 1;
+			logbeta_param = th;
+			break;
+		}
+	}
+	if(th == param.size()) emsg("A 'logbeta' parameter must be specified");
+	
 	addparam("zero",tiny,tiny);
 
 	if(tomldata.contains("comps")) {
@@ -188,7 +217,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 		}
 	}
-
+			
 	if(tomldata.contains("betaspline")) {
 		const auto bespin = toml::find(tomldata,"betaspline");
 		for(j = 0; j < bespin.size(); j++){
@@ -409,37 +438,17 @@ void MODEL::addQ()
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
 void MODEL::priorsamp()
 {
-	unsigned int th;
+	unsigned int th, r;
 
 	for(th = 0; th < param.size(); th++){	
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 	
-//	paramval[1] = 0.09;
+	if(regioneffect == 1){
+		for(r = 0; r < data.nregion; r++) paramval[regioneff_param[r]] = normal(0,paramval[sigma_param]);
+	}
 	
-//	for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
-	/*
-	paramval[0] = 0.35;
-paramval[1] = 0.06;
-paramval[2] = 2.9;
-paramval[3] = 4.5;
-paramval[4] = 0.533;
-paramval[5] = 8;
-paramval[6] = 1.5;
-paramval[7] = 5;
-paramval[8] = 20;
-paramval[9] = 0.5;
-paramval[10] = 20;
-paramval[11] = 0.5;
-paramval[12] = 20;
-paramval[13] = 0.5;
-paramval[14] = 0.75;
-paramval[15] = 0.5;
-paramval[16] = 0.12;
-paramval[17] = 0.33;
-paramval[18] = 0.2;
-paramval[19] = 1e-08;
-*/
+	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 }
 
 /// Gets a parameter value
@@ -464,6 +473,8 @@ void MODEL::addcomp(string name, double infectivity)
 	COMP co;
 	co.name = name;
 	co.infectivity = infectivity;
+	co.transtimep = UNSET;
+
 	comp.push_back(co);	
 }
 
@@ -517,8 +528,8 @@ void MODEL::addtrans(string from, string to, string prpar, unsigned int type, st
 	}
 	
 	tr.type = type;
-	if(param1 != "") tr.param1 = findparam(param1);	
-	if(param2 != "") tr.param2 = findparam(param2);
+	if(param1 != "") tr.param1 = findparam(param1);	else tr.param1 = UNSET;
+	if(param2 != "") tr.param2 = findparam(param2); else tr.param2 = UNSET;
 	
 	trans.push_back(tr);
 }
@@ -677,7 +688,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		
 		case GAMMA_DIST:
 			mean = paramval[trans[tra].param1]; sd = paramval[trans[tra].param2]*mean;
-			dt = gammasamp(mean*mean/(sd*sd),mean/sd*sd);
+			dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
 		case LOGNORM_DIST:
@@ -831,7 +842,11 @@ void MODEL::setarea()
 	
 	areafac.resize(data.narea);
 	for(c = 0; c < data.narea; c++){
-		sum = 0; for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
+		sum = paramval[logbeta_param];
+		for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
+		
+		if(regioneffect == 1) sum += paramval[regioneff_param[data.area[c].region]];
+		
 		areafac[c] = exp(sum);
 	}
 }
@@ -870,16 +885,27 @@ void MODEL::checkdata()
 /// Calculates the prior probability
 double MODEL::prior()
 {
-	unsigned int pc, a, c;
-	double Pr, prob;
+	unsigned int r;
+	double Pr, sd;
 	
 	Pr = 0;
+	/*
+	unsigned int pc, a, c;
+	double prob;
 	if(priorcomps.size() > 0){
 		calcprobin();
 		for(pc = 0; pc < priorcomps.size(); pc++){
 			c = priorcomps[pc].comp;
 			prob = 0; for(a = 0; a < data.nage; a++) prob += data.agedist[a]*comp[c].probin[a];
 			Pr += normalprob(prob,priorcomps[pc].value,priorcomps[pc].sd*priorcomps[pc].sd);
+		}
+	}
+	*/
+	
+	if(regioneffect == 1){
+		sd = paramval[sigma_param];
+		for(r = 0; r < data.nregion; r++){
+			Pr += normalprob(paramval[regioneff_param[r]],0,sd*sd);
 		}
 	}
 	

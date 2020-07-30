@@ -32,7 +32,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 	switch(data.mode){
 	case MODE_SIM:       // Performs a single simulation 
 		{
-			MBPCHAIN mbpchain(data,model,poptree,1,0);
+			MBPCHAIN mbpchain(data,model,poptree,0);
 			proportions(data,model,mbpchain.indevi);
 			outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
 		}
@@ -44,7 +44,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 		
 		for(s = 0; s < nsamp; s++){
 			cout << "Simulating sample " << (s+1) << endl;
-            MBPCHAIN mbpchain(data,model,poptree,1,0);
+      MBPCHAIN mbpchain(data,model,poptree,0);
 			
 			sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
 			model.setup(mbpchain.paramval);

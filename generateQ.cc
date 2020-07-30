@@ -84,8 +84,8 @@ void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &are
 		
 	generateQten(M,N_all,genQ.flowall,genQ,area);      
 	
-	//generateQten(I,N_home,genQ.localhome,genQ,area);      
-	generateQten(M,N_all,genQ.localhome,genQ,area);      
+	generateQten(I,N_home,genQ.localhome,genQ,area);      
+	//generateQten(M,N_all,genQ.localhome,genQ,area);      
 
 	cout << endl;
 }

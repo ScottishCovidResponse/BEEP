@@ -17,14 +17,16 @@ const unsigned int TFORM_NUM = 0, TFORM_YMD = 1;                 // Different ty
 
 const double vtiny = 0.00000000000000001;                        // Used to represent a very tiny number
 const double tiny = 0.00000001;                                  // Used to represent a tiny number
-const double large = 10000000;                                    // Used to represent a big number
+const double large = 10000000;                                   // Used to represent a big number
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 const unsigned int THRESH = 999999998;                           // Represents a number is under the threshold set
 const unsigned int UNKNOWN = 999999997;                          // Represents a number is unknown
 const unsigned int ADD = 999999996;                              // Used for summing posterior plots
 
 const double minvar = 5; 																				 // The minimum variance for the observation model
-const double varfac = 4;                                         // A factor which relaxes the observation model
+const double Tpower = 4;                                         // The power used for the temerature progression
+
+const unsigned int quenchpl = 0;                                 // Set to 1 if performing a quench plot
 
 const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
 const unsigned int duplicate = 0;                                // Set to one to duplicate chains (this is used as a diagnostic check)
@@ -34,6 +36,7 @@ const unsigned int chainmax = 10000;                             // The maximum 
 
 const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
 
-
+const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions
+	
 const unsigned int BOTH=0, PONLY=1, NOT=2;                       // Use to classify particles in MBPs
 #endif

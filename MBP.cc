@@ -22,44 +22,45 @@ using namespace std;
 static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
-static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
+static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain, unsigned int samp, unsigned int burnin);
 static double calcME();
 
 static MBPCHAIN* mbpchain[chainmax]; 
 static vector <vector <double> > Listore;
 static vector <double> invTstore;
-	
+static vector <double> nac_swap;
+
+ofstream quenchplot;
+
 /// Performs the multi-temperature MBP algorithm	
 void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain, enum proposalsmethod propmethod)
 {
-	double invTmax = 1, invTmin = 0.1;
-
 	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
-	unsigned int samp, burnin = nsamp/4, quench = nsamp/5;
+	unsigned int samp, burnin = nsamp/4, quench = nsamp/4;
 	long time, timeprop=0, ntimeprop=0;
-	double invT, timeloop=0.1, K;
+	double timeloop=0.1, pmin, pmax, kappa, ppf, ppeff, fac;
 	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
 	vector <PARAMSAMP> psamp;
+
+	pmax = 1-pow(data.invTmin,1.0/Tpower);
+	pmin = 1-pow(data.invTmax,1.0/Tpower);
 	
-	K = nchaintot-1; while(pow((K-(nchaintot-1))/K,5) < invTmin) K += 0.1;
-
 	for(p = 0; p < nchain; p++){
-		
 		pp = core*nchain+p;
-		if(nchaintot == 1 || duplicate == 1) invT = invTmax;
-		else invT = pow((K-pp)/K,5);
-
-		mbpchain[p] = new MBPCHAIN(data,model,poptree,invT,pp);
+		mbpchain[p] = new MBPCHAIN(data,model,poptree,pp);
 	}
 
 	if(core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
-			if(nchaintot == 1 || duplicate == 1) invT = invTmax;
-			else invT = pow((K-pp)/K,5);
-			invTstore[pp] = invT;
+			kappa = double(pp)/(nchaintot-1);
+			if(nchaintot == 1 || duplicate == 1) invTstore[pp] = data.invTmax;
+			else invTstore[pp] = pow(1-(pmin+kappa*(pmax-pmin)),Tpower);
 		}
+		
+		nac_swap.resize(nchaintot);
+		for(pp = 0; pp < nchaintot; pp++) nac_swap[pp] = 0;
 	}
 
 	if(checkon == 1){
@@ -70,13 +71,27 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	
 	if(core == 0){ outputinit(data,model); outputLiinit(data,ncore*nchain);}
 
+	if(quenchpl == 1){ quenchplot.open((data.outputdir+"/quenchplot.txt").c_str());}
+	
 	for(samp = 0; samp < nsamp; samp++){	
 		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 	
 		for(p = 0; p < nchain; p++){
-			if(samp < quench) mbpchain[p]->invT = (double(samp)/quench)*mbpchain[p]->invTtrue;
-			else mbpchain[p]->invT = mbpchain[p]->invTtrue;
-			//mbpchain[p]->invT = mbpchain[p]->invTtrue;
+			pp = mbpchain[p]->ch;
+		
+			if(nchaintot == 1 || duplicate == 1) mbpchain[p]->invT = data.invTmax;
+			else{
+				if(samp < quench) fac = double(samp)/quench;
+				else fac = 1;
+			
+				kappa = double(pp)/(nchaintot-1);
+				ppf = pmin+kappa*(pmax-pmin);
+				ppeff = 1-fac*(1-ppf);	
+			
+				mbpchain[p]->invT = pow(1-ppeff,Tpower);
+			}
+
+			if(quenchpl == 1) mbpchain[p]->invT = exp(-10+12*double(samp)/nsamp);
 		}
 			
 		time = clock();
@@ -105,9 +120,6 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		case proposalsmethod::fixedtime:
 			do{                         // Does proposals for timeloop seconds (on average 20 proposals)
 				p = int(ran()*nchain);
-				//unsigned int thbeta = 3;
-				//if(ran() < 0.7) th = (unsigned int)(ran()*thbeta);
-				//else th = thbeta + (unsigned int)(ran()*(model.param.size()-thbeta));
 				th = (unsigned int)(ran()*model.param.size());
 				if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
 			}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
@@ -124,7 +136,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 	
 		timers.timewait += clock();
 
-		// This part dynamically adjusts timeloop so that approximately 20 proposals are performed per swap
+		// This part dynamically swadjusts timeloop so that approximately 20 proposals are performed per swap
 		MPI_Gather(&timeprop,1,MPI_LONG,timeproptot,1,MPI_LONG,0,MPI_COMM_WORLD); 
 		MPI_Gather(&ntimeprop,1,MPI_LONG,ntimeproptot,1,MPI_LONG,0,MPI_COMM_WORLD);
 		if(core == 0){
@@ -138,12 +150,18 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		if(duplicate == 0) swap(model,core,ncore,nchain);
+		if(duplicate == 0) swap(model,core,ncore,nchain,samp,burnin);
 		
 		if(samp%1 == 0) MBPoutput_param(data,model,psamp,core,ncore,nchain);
 		if(samp%5 == 0) MBPoutput_meas(data,model,poptree,opsamp,core,ncore,nchain);
 		
-		if(samp == nsamp-1 || (samp != 0 && samp%100 == 0)){
+		if(core == 0 && quenchpl == 1){ 
+			quenchplot << mbpchain[0]->invT;
+			for(p = 0; p < mbpchain[0]->paramval.size(); p++) quenchplot << "\t" << mbpchain[0]->paramval[p]; 
+			quenchplot << endl;
+		}	
+	
+		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){
 			if(core == 0){
 				outputresults(data,model,psamp,opsamp);
@@ -159,20 +177,19 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 
-static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain)
+static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain, unsigned int samp, unsigned int burnin)
 {
-	assert(ncore > 0);
-	assert(core < ncore);
-	assert(nchain > 0);
-	
-	unsigned int p, p1, p2, th, tempi;
+    assert(ncore > 0);
+    assert(core < ncore);
+    assert(nchain > 0);
+
+    unsigned int p, p1, p2, th, tempi, chs;
 	unsigned int nparam = model.param.size(), nchaintot = nchain*ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
 	double temp, al;
 	float tempf;
 	long templ, loop, loopmax = nchaintot*nchaintot;
 	double Li[nchain], Litot[nchaintot];
 	double invT[nchain], invTtot[nchaintot];		
-	double invTtrue[nchain], invTtruetot[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
 	long timeprop[nchain], timeproptot[nchaintot];
 	unsigned int ntr[nchainparam], ntrtot[nparamtot];
@@ -190,7 +207,6 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	for(p = 0; p < nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
 		invT[p] = mbpchain[p]->invT; 
-		invTtrue[p] = mbpchain[p]->invTtrue; 
 		ch[p] = mbpchain[p]->ch;
 		timeprop[p] = mbpchain[p]->timeprop;
 		for(th = 0; th < nparam; th++){
@@ -209,7 +225,6 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 		
 	MPI_Gather(Li,nchain,MPI_DOUBLE,Litot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(invT,nchain,MPI_DOUBLE,invTtot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(invTtrue,nchain,MPI_DOUBLE,invTtruetot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Gather(timeprop,nchain,MPI_LONG,timeproptot,nchain,MPI_LONG,0,MPI_COMM_WORLD);
 	MPI_Gather(ntr,nchainparam,MPI_UNSIGNED,ntrtot,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -229,8 +244,12 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 				al = exp((invTtot[p1]-invTtot[p2])*(Litot[p2]-Litot[p1]));
 				
 				if(ran() < al){
+					if(samp >= burnin){
+						chs = chtot[p1]; if(chtot[p2] < chs) chs = chtot[p2];
+						nac_swap[chs]++;
+					}
+					
 					temp = invTtot[p1]; invTtot[p1] = invTtot[p2]; invTtot[p2] = temp;
-					temp = invTtruetot[p1]; invTtruetot[p1] = invTtruetot[p2]; invTtruetot[p2] = temp;
 					tempi = chtot[p1]; chtot[p1] = chtot[p2]; chtot[p2] = tempi;
 					templ = timeproptot[p1]; timeproptot[p1] = timeproptot[p2]; timeproptot[p2] = templ;
 					for(th = 0; th < nparam; th++){
@@ -253,7 +272,6 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	}
 	
 	MPI_Scatter(invTtot,nchain,MPI_DOUBLE,invT,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Scatter(invTtruetot,nchain,MPI_DOUBLE,invTtrue,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Scatter(chtot,nchain,MPI_UNSIGNED,ch,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Scatter(timeproptot,nchain,MPI_LONG,timeprop,nchain,MPI_LONG,0,MPI_COMM_WORLD);
 	MPI_Scatter(ntrtot,nchainparam,MPI_UNSIGNED,ntr,nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -268,7 +286,6 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 
 	for(p = 0; p < nchain; p++){ 
 		mbpchain[p]->invT = invT[p]; 
-		mbpchain[p]->invTtrue = invTtrue[p]; 
 		mbpchain[p]->ch = ch[p];
 		mbpchain[p]->timeprop = timeprop[p];
 		for(th = 0; th < nparam; th++){
@@ -411,6 +428,7 @@ static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <S
 			sample.meas = getmeas(data,model,poptree,mbpchain[ppost]->trevi,mbpchain[ppost]->indevi);
 			model.setup(mbpchain[ppost]->paramval);
 			sample.R0 = model.R0calc();
+			sample.phi = model.phi; 
 		}
 		else{
 			MPI_Status status;
@@ -422,6 +440,7 @@ static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <S
 			unpack(sample.meas.popnum);
 			unpack(sample.meas.margnum);
 			unpack(sample.R0);
+			unpack(sample.phi);
 		}
 		opsamp.push_back(sample);
 	}
@@ -438,6 +457,7 @@ static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <S
 			pack(meas.popnum);
 			pack(meas.margnum);
 			pack(R0);
+			pack(model.phi);
 			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
@@ -538,6 +558,11 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 			diag << endl << endl;
 		}
 		
+		diag << "Swaping with a chain at lower inverse temperature" << endl;
+		for(c = 0; c < nchaintot; c++){
+			diag << "Chain " << c << ": " << nac_swap[c] << endl; 
+		}
+				
 		timings << endl << "Timings for different parts of the algorithm:" << endl;
 		timings << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
 		timings << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;

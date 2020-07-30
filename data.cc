@@ -167,7 +167,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		}
 		narea = area.size();
 		
-		if(1 == 1){  // Averages covariates across regions
+		if(1 == 0){  // Averages covariates across regions
 			vector <double> av, nav;
 			av.resize(region.size()); nav.resize(region.size());
 			for(j = 0; j < ncovar; j++){  
@@ -186,7 +186,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 					else area[c].covar[j] = av[r]/nav[r];
 				}
 				
-				for(r = 0; r < region.size(); r++) cout << region[r].name << " " << av[r]/nav[r] << " average density\n";
+				for(r = 0; r < region.size(); r++) cout << region[r].name << " " << av[r]/nav[r] << " average density" << endl;
 			}
 		}
 		
@@ -364,6 +364,7 @@ void DATA::addQtensor(string timep, string comp, string name)
 	qten.timep = tp;
 	qten.comp = comp;
 	qten.name = name;
+	qten.Qtenref = UNSET;
 	Q.push_back(qten);
 }
 
@@ -623,6 +624,7 @@ void DATA::addcovar(string name, string param, string func)
 	cov.name = name;
 	cov.param = param;
 	cov.func = func;
+	cov.col = UNSET;
 	
 	covar.push_back(cov);
 	ncovar = covar.size();
@@ -704,12 +706,11 @@ string DATA::getdate(unsigned int t)
 	}
 	
 	return ss.str();
-	
 }
 
 
 // This function combines results from different trace files to generate overall statistics
-void DATA::combinetrace(vector <string> inputdirs, string output)
+void DATA::combinetrace(vector <string> inputdirs, string output, string distfile, unsigned int burnin)
 {
 	unsigned int inp, i, row, th;
 	double v;
@@ -737,10 +738,9 @@ void DATA::combinetrace(vector <string> inputdirs, string output)
 				vals[inp][th].push_back(v);
 			}
 		}
-		cout <<  "Loading trace.txt from '" << inputdirs[inp] << "'." << endl;
 	}
 	
-	outputcombinedtrace(paramname,vals,output);
+	outputcombinedtrace(paramname,vals,output,distfile,burnin);
 }
 
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}

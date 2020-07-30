@@ -12,24 +12,26 @@ using namespace std;
 class MBPCHAIN                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
-	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, double invTstart, unsigned int chstart);
+	MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart);
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
 	double Levi;         																	// The latent process likelihood
 	double Pri; 																				  // The prior probability
 	
-	double invTtrue;                                         // The inverse temperature 
 	double invT;                                          // The inverse temperature
 	
 	vector <float> paramjump;                             // The size of jumps in parameter space
 	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
-	
+
 	float numaddrem;                                      // The size of adding and removing events
 	unsigned int ntr_addrem, nac_addrem;    
 	
 	vector <float> paramjumpxi;                           // The size of jumps in parameter space (fixed event sequence)
 	vector <unsigned int> ntrxi, nacxi;                   // The number of jumps tried and accepted
+
+	float logbetajump;                                    // Used for jumping in logbetajump
+	float sigmajump;                                      // Used for jumping in sigma
 	
 	vector < vector <short> > indmap;										  // A map which is used for fast update in updatedQmap 
 	
@@ -107,7 +109,10 @@ class MBPCHAIN                                          // Stores all the things
 		void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
 		void calcQmapp();
 		void betaphi_prop( unsigned int samp, unsigned int burnin);
-		void covar_prop(unsigned int samp, unsigned int burnin);
+		void area_prop(unsigned int samp, unsigned int burnin);
+		void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
+		void fixarea_prop(unsigned int samp, unsigned int burnin);
+		
 		void addrem_prop(unsigned int samp, unsigned int burnin);
 };
 #endif
