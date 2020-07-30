@@ -19,22 +19,44 @@ BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals)
 
 Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC) approach. This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
+## Requirements
+
+You need to have MPI installed to run this code.
+
 ## Performing analysis
 
-Compilation: make
+To compile the code, from the repository directory:
+```
+make
+```
+The code uses mpicxx to compile, so this must be available on your PATH.
 
-Simulation:  ./beepmbp inputfile="examples/sim.toml" 
+To run a simulation using demographic data from examples/Data_example
+and a fixed set of epidemic parameters:
 
-Inference:   mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2
-(nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
+```
+./beepmbp inputfile="examples/sim.toml" outputdir="OutputSim"
+```
 
-The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with an simple test dataset.
- 
-# INPUTS:
+The output appears in OutputSim.
 
-Here is a description of the various commands used in the TOML files:
+To run inference on simulated data provided in examples/Data_example:
 
-DETAILS
+```
+mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 outputdir="OutputInf"
+```
+
+(Note: if you use the same outputdir for inference as simulation,
+inference will be performed on the data produced by the simulation,
+not the example data.)
+
+The input TOML file provides details of simulation or inference and contains all the information BEEPmbp needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the "examples" directory, along with a simple test dataset.
+
+# Inputs
+
+Here is a description of the various parameters used in the input TOML files:
+
+## General
 
 **mode** - Defines how the code operates:
 		"sim" generates simulated data.
@@ -52,7 +74,7 @@ DETAILS
 
 **outputdir** - Gives the name of the output directory (optional).
 
-THE MODEL
+## The model
 
 Note, for examples of how these commands are used, see 'inf.toml'.
 
@@ -76,9 +98,9 @@ Note, for examples of how these commands are used, see 'inf.toml'.
 
 **timep** - Used to define discrete time periods (e.g. before and after lockdown).
 
-THE DATA 
+## The data
 
-**datadir** - The data directory.
+**datadir** - The data input directory.
 
 **regions** - Filename for a table giving data regions.
 
@@ -87,7 +109,7 @@ THE DATA
 **genQ** - Sets whether spatial and age mixing matrices are used to derive the Q tensors for the model.
 
 **geomix** - Filename for a table informing the matrix of contacts between different areas.
- 
+
 **agemix** - Filename for a matrix giving the contact rates between different age groups.
 
 **genQoutput** - Filenames for the derived Q tensors.
@@ -103,37 +125,48 @@ THE DATA
 **margdata** - Allows for marginalised distributions to be added (e.g. the percentage of overall cases in different age categories).
 
 
-Note, all the single variable quantities in the TOML file can be overridden using equivalent command line definitions.
+Note: all the single variable quantities in the TOML file can be overridden using equivalent command line definitions.
 
-For example: mpirun -n 1 ./beepmbp inputfile="inf.toml" nsamp=10000 
+For example:
+```
+mpirun -n 1 ./beepmbp inputfile="inf.toml" nsamp=10000 
+```
 
-generate 10000 samples (irrespective of the definition given in "inf.toml").
+will generate 10000 samples (irrespective of the definition given in "inf.toml").
 	
-# OUTPUTS:
+# Outputs
 
-Simulation - This creates the specified 'transdata', 'popdata' and/or 'margdata' files in the output directory.
+## Simulation
 
-Inference - The output directory contains posterior information (with means and 90% credible intervals) for:
-1) Plots for the transitions corresponding to the 'transdata', 'popdata' and/or 'margdata' files.
-2) "Posterior_R0.txt", which gives posterior plots time variation in R0.
-3) "Posterior_parameter.txt", which gives information about parameters.
-4) "trace.txt", which gives trace plots for different models.
-5) "traceLi.txt", which gives trace plots for the likelihoods on different chains.
-6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
+This creates the specified 'transdata', 'popdata' and/or 'margdata' files in the output directory.
 
-Diagnostic checks - Two types of checks can be performed to ensure that the results obtained are reliable:
-1) Estimates for the effective sample size in "Posterior_parameter.txt". These should exceed 200 for all parameters if the number of samples is sufficiently large. If this is not the case it indicates that MCMC should be run with more samples (see the 'nsamp' option in the input TOML file).
-2) Results from different runs can be combined to ensure that they all converge on the same posterior distribution (if the likelihood exhibits significant multimodality then under some circumstances different runs can converge on different solutions rendering the results questionable). This is achieved by running BEEPmbp in 'combinetrace' mode. For example, if two sets of inference results using different seeds have been placed into directories 'OutputA' and 'OutputB', the following command:
+## Inference
 
-./beepmbp mode="combinetrace" dirs="OutputA,OutputB" output="parameter_combined.txt"
+The output directory contains posterior information (with means and 90% credible intervals) for:
+
+1. Plots for the transitions corresponding to the 'transdata', 'popdata' and/or 'margdata' files.
+2. "Posterior_R0.txt", which gives posterior plots time variation in R0.
+3. "Posterior_parameter.txt", which gives information about parameters.
+4. "trace.txt", which gives trace plots for different models.
+5. "traceLi.txt", which gives trace plots for the likelihoods on different chains.
+6. "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
+
+Diagnostic checks: two types of checks can be performed to ensure that the results obtained are reliable:
+
+1. Estimates for the effective sample size in "Posterior_parameter.txt". These should exceed 200 for all parameters if the number of samples is sufficiently large. If this is not the case it indicates that MCMC should be run with more samples (see the 'nsamp' option in the input TOML file).
+2. Results from different runs can be combined to ensure that they all converge on the same posterior distribution (if the likelihood exhibits significant multimodality then under some circumstances different runs can converge on different solutions rendering the results questionable). This is achieved by running BEEPmbp in 'combinetrace' mode. For example, if two sets of inference results using different seeds have been placed into directories 'OutputA' and 'OutputB', the following command:
+   ```
+   ./beepmbp mode="combinetrace" dirs="OutputA,OutputB" output="parameter_combined.txt"
+   ```
 
 generates a file combining the two sets of samples along with Gelman–Rubin convergence diagnostic results that test for convergence across runs.
 
 # Development
 
 - [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
+  
   - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
-- Currently work on feature branches and then merge into master
+- Work on feature branches and then create a PR for merge into dev branch
 - Continuous integration is implemented using Github Actions,
   controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
   a branch is pushed to Github, the workflow is run on that
@@ -160,3 +193,13 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
   git add tests/*/refdata
   git commit -m "Regenerate test reference data"
   ```
+  The tests pass on every Linux platform we have run on, but runs on macOS give sufficiently different results that they fail. See
+  [#628](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628).
+- Code tests (unit tests, and other tests which might not be considered unit tests) can be run with
+  ```
+  make codetest
+  ```
+
+  There are currently only example tests implemented (1% coverage as of 30-Jul-2020). Coverage is reported in the build logs accessible from the [GitHub Actions Page (dev
+  branch)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).
+
