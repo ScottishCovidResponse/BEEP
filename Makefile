@@ -92,6 +92,10 @@ codetest: $(TEST_EXEC)
 test-update:
 	set -e; for test in tests/*; do external/regtests/bin/store-regression-test-results regression_test_results/$${test##*/} tests/$${test##*/}; done
 
+.PHONY : test-commit
+test-commit:
+	set -e; git add tests/*/refdata && git commit -m "Update test reference data"
+
 .PHONY : coverage
 coverage :
 	gcovr --object-directory $(BUILD_DIR) --exclude toml11 --exclude codetests --exclude catch.hpp --print-summary $(GCOVRFLAGS)
