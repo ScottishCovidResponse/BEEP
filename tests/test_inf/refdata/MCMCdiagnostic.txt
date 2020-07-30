@@ -1,9 +1,9 @@
 -------- Chain: 0 ----------
 
-invT: 1  Liav: -972.39  
+invT: 1  Liav: -5197.66  
 MBP Accept: 
-beta0: --- 
-beta1: 1 jump:0.0342262, 
+beta0: 0 jump:0.130291, 
+beta1: 0 jump:0.0576602, 
 phi: --- 
 muE: --- 
 cvE: --- 
@@ -23,13 +23,13 @@ probHD_A: ---
 probHD_E: --- 
 sus_adult: --- 
 sus_elderly: --- 
-den_slope: 0 jump:0.0525293, 
+den_slope: 1 jump:0.0229252, 
 zero: --- 
 
 Standard Accept: 
-beta0: 0.75 jump:0.0208055, 
-beta1: 0.75 jump:0.00684523, 
-phi: 0.5 jump:0.104731, 
+beta0: 0.25 jump:0.0260582, 
+beta1: 0.25 jump:0.011532, 
+phi: 0.75 jump:1.5895, 
 muE: --- 
 cvE: --- 
 tA: --- 
@@ -48,9 +48,9 @@ probHD_A: ---
 probHD_E: --- 
 sus_adult: --- 
 sus_elderly: --- 
-den_slope: 1 jump:0.0105059, 
+den_slope: 1 jump:0.00458504, 
 zero: --- 
 
 Add / remove infected: 
-0.5 num:20, 
+0 num:20, 
 
