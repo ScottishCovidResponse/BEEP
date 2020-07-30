@@ -350,6 +350,9 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 
 	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
 
+#else
+	file = file;
+	N = N;
 #endif
 
 	return mat;
@@ -423,7 +426,8 @@ TABLE loadarrayfromdatapipeline(string file)
 	tab.nrow = tab.ele.size();
 
 	cout << "Loaded array " << file << " from data pipeline" << endl;
-
+#else
+	file = file;
 #endif
 
 	return tab;
