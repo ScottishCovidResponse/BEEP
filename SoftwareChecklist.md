@@ -6,15 +6,15 @@ This checklist is part of ongoing work on a model scoresheet for SCRC models. It
 
 ### Model / software name
 
-> Model / software name here
+> BEEPmbp
 
 ### Date
 
-> Date here
+> 30-Jul-2020
 
 ### Version identifier
 
-> Version identifier here
+> 1f325cb
 
 ## Overall statement
 
@@ -24,9 +24,9 @@ This is your overall judgement on the level of confidence based on all the aspec
 
 > - [ ] Yes
 > - [ ] Yes, with caveats
-> - [ ] No
+> - [X] No
 >
-> Overall statement here
+> The model has been undergoing heavy feature development over the past few weeks, and is now starting to stabilise, with improvements to the inference algorithm. Due to the need for urgent and wide-ranging development by the model owner, it has not been possible to attempt large-scale code cleanup, refactoring, and implementation of units tests due to the problem of conflicts, and this will be necessary to gain confidence in the quality of the software. The software is not yet integrated in the data pipeline.
 
 ## Checklist
 
@@ -41,10 +41,10 @@ Additionally, for each question please explain the situation and include any rel
 - Is there up-to-date documentation which explains precisely how to run the code to reproduce existing results? 
 
 > - [ ] Sufficiently addressed
-> - [ ] Some work remaining or caveats
+> - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> Response here
+> Version information is recorded in the log file, and will be recorded in the data pipeline. Input parameters are recorded in the log file.  Dependencies are handled as submodules, so are included in the git hash of the main repository.  Random seeds are specified in the parameter file. However, the decision of how many proposals to run on each process is made based on timings, and hence runs cannot be exactly reproduced. There is an alternative reproducible method implemented (propsmethod=fixed), but it is expected to be very inefficient. We [plan](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/602) to store the number of proposals run at each step so that it can be replayed for exact reproduction of an efficient run, but this is not yet implemented.
 
 ### Are there appropriate tests?  (And are they automated?)
 
@@ -56,9 +56,9 @@ Additionally, for each question please explain the situation and include any rel
 
 > - [ ] Sufficiently addressed
 > - [ ] Some work remaining or caveats
-> - [ ] Needs to be addressed
+> - [X] Needs to be addressed
 > 
-> Response here
+> There is a regression test framework which catches inadvertent changes to the results. Coverage of the regression test framework is ~80%. We have a unit test framework. Both types of tests are run [regularly in CI](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).  The [README](README.md) describes how to run the tests.  However, there are minimal [unit tests](codetests), as the important parts of the code do not currently lend themselves to unit testing. This will require some refactoring to fix.
 
 ### Are the scientific results of runs robust to different ways of running the code?
 
@@ -70,10 +70,10 @@ Additionally, for each question please explain the situation and include any rel
 (We don't require bitwise identical results here, but the broad conclusions after looking at the results of the test case should be the same.) 
 
 > - [ ] Sufficiently addressed
-> - [ ] Some work remaining or caveats
+> - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> Response here
+> We have tested on several compilers in macOS and Linux, and find broadly the same results. Regression tests are passed (bitwise identical results of ASCII output files, with default (6 digit) floating point precision output) on both Clang and GCC on Linux, but [not on macOS](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628) in either. We have not yet investigated the root cause of the differences on macOS. Further testing of optimisation/debug flags needs to be performed.
 
 ### Has any sort of automated code checking been applied?
 
@@ -81,10 +81,10 @@ Additionally, for each question please explain the situation and include any rel
 - If there are possible issues reported by such a tool, have they all been either fixed or understood to not be important?
 
 > - [ ] Sufficiently addressed
-> - [ ] Some work remaining or caveats
+> - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> Response here
+> We enable all compiler warnings with GCC and use Clang Static Analyzer. There is presently one minor warning which will be fixed.  We have integrated CODACY and get a B grade. There are 111 total issues, 97 of which are for code style, 6 are "error prone" code patterns, 8 are for performance.  The "error-prone" warnings need to be [fixed](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/702), and this is being worked on.
 
 ### Is the code clean, generally understandable and readable and written according to good software engineering principles?
 
@@ -94,9 +94,9 @@ Additionally, for each question please explain the situation and include any rel
 
 > - [ ] Sufficiently addressed
 > - [ ] Some work remaining or caveats
-> - [ ] Needs to be addressed
+> - [X] Needs to be addressed
 > 
-> Response here
+> Code has been split into classes, but all member variables are public (i.e. poor encapsulation). Functions are generally not too long. There are minimal or no global variables. Addressing the public member variables is a high priority.
 
 ### Is there sufficient documentation?
 
@@ -108,9 +108,9 @@ Additionally, for each question please explain the situation and include any rel
 
 > - [ ] Sufficiently addressed
 > - [ ] Some work remaining or caveats
-> - [ ] Needs to be addressed
+> - [X] Needs to be addressed
 > 
-> Response here
+> There is a README which explains how to run the code. The input files contain a lot of detail but each parameter has a comment next to it. There is a Doxygen configuration file, but Doxygen is not run automatically in CI. The code has reasonable Doxygen comments.  There is little other developer documentation beyond describing how to run tests etc.  There is no algorithm documentation. The existing documentation is up-to-date (TODO: check this).
 
 ### Is there suitable collaboration infrastructure?
 
@@ -120,18 +120,18 @@ Additionally, for each question please explain the situation and include any rel
 - Are there contribution guidelines?
 
 > - [ ] Sufficiently addressed
-> - [ ] Some work remaining or caveats
+> - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> Response here
+> The code is stored in a GitHub repository, and the issue tracker and pull requests are used as part of development, though not for the main work by the model owner.  No [licence file or contribution guidelines](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/560) have been added yet.
 
 ### Are software dependencies listed and of appropriate quality?
 
-> - [ ] Sufficiently addressed
+> - [X] Sufficiently addressed
 > - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> Response here
+> The only external dependency is MPI, a standard interface, and implementations are usually of high quality. The code does not depend on a specific implementation.
 
 ### Is input and output data handled carefully?
 
@@ -140,6 +140,7 @@ Additionally, for each question please explain the situation and include any rel
 
 > - [ ] Sufficiently addressed
 > - [ ] Some work remaining or caveats
-> - [ ] Needs to be addressed
+> - [X] Needs to be addressed
 > 
-> Response here
+> The code is not yet using the data pipeline ([#366](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/366) and [#367](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/367)). All parameters are specified in the input file, not the source code.
+
