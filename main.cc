@@ -31,6 +31,11 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "MBP.hh"
 #include "consts.hh"
 
+#ifdef USE_DATA_PIPELINE
+#include "pybind11/embed.h"
+#include "datapipeline.hh"
+#endif
+
 using namespace std;
 
 string lookup_string_parameter(const map<string,string> &params,
@@ -281,7 +286,24 @@ int main(int argc, char** argv)
 		//cout << "BEEPmbp version " << gitversion() << endl;
 	}
 	
+
+#ifdef USE_DATA_PIPELINE
+	pybind11::scoped_interpreter guard{};
+
+	using namespace pybind11::literals;
+
+  pybind11::module::import("logging").attr("basicConfig")("level"_a="DEBUG", "format"_a="%(asctime)s %(filename)s:%(lineno)s %(levelname)s - %(message)s");
+
+	// TODO: get the path to the config file from the options
+ 	DataPipeline *dp = new DataPipeline(
+		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
+		gitversion());
+
+	DATA data(dp);    // The following file names will need to be read in by the interface:
+#else
 	DATA data;    // The following file names will need to be read in by the interface:
+#endif
+
 	MODEL model(data);
 		
 	data.outputdir="Output";                // The default output directory
@@ -899,6 +921,10 @@ int main(int argc, char** argv)
 		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
 	}
 	
+#ifdef USE_DATA_PIPELINE
+	delete dp;
+#endif
+
 	#ifdef USE_MPI
 	MPI_Finalize();
 	#endif

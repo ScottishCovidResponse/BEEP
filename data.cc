@@ -17,6 +17,11 @@ using namespace std;
 #include "generateQ.hh"
 #include "output.hh"
 
+#ifdef USE_DATA_PIPELINE
+#include "datapipeline.hh"
+#include "table.hh"
+#endif
+
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 {
@@ -278,7 +283,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			}
 		}
 		
-		generateQ(nage,datadir,genQ,area); 
+		generateQ(nage,datadir,genQ,area,datapipeline);
 	}
 
 	if(ncore > 1) copydata(core);
@@ -368,8 +373,45 @@ void DATA::addQtensor(string timep, string comp, string name)
 	Q.push_back(qten);
 }
 
-/// Loads a table from a file (if dir is specified then this directory is used
-TABLE DATA::loadtable(string file, string dir)
+/// Loads a table from the data pipeline
+TABLE DATA::loadtablefromdatapipeline(string file)
+{
+	TABLE tab;
+#ifdef USE_DATA_PIPELINE
+	Table dptable = datapipeline->read_table(file,"default");
+
+	tab.file = filebasename(file);
+	tab.heading = dptable.get_column_names();
+	tab.ncol = tab.heading.size();
+	
+	vector<vector<string>> cols;
+	
+	// Load each column as a string into cols
+	for (size_t j = 0; j < tab.ncol; j++) {
+		cols.push_back(dptable.get_column_as_string(tab.heading.at(j)));
+	}
+
+	for (size_t i = 0; i < dptable.get_column_size(); i++) {
+		vector<string> vec;
+
+		for (size_t j = 0; j < tab.ncol; j++) {
+			vec.push_back(cols.at(j).at(i));
+		}
+		tab.ele.push_back(vec);
+	}
+
+	tab.nrow = tab.ele.size();
+
+	cout << "Loaded table " << file << " from data pipeline" << endl;
+#else
+	emsg("loadtablefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+#endif
+
+	return tab;
+}
+
+/// Loads a table from a file
+TABLE DATA::loadtablefromfile(string file, string dir)
 {
 	TABLE tab;
 	string line, st;
@@ -393,7 +435,7 @@ TABLE DATA::loadtable(string file, string dir)
 		}
 	}
 	
-	cout << "Loaded " << used_file << endl;
+	cout << "Loaded table " << file << " from file " << used_file << endl;
 
 	tab.file = file;
 	
@@ -425,6 +467,16 @@ TABLE DATA::loadtable(string file, string dir)
 	tab.nrow = tab.ele.size();
 	
 	return tab;
+}
+
+/// Loads a table from a file (if dir is specified then this directory is used
+TABLE DATA::loadtable(string file, string dir)
+{
+	if (stringhasending(file, ".txt")) {
+		return loadtablefromfile(file, dir);
+	} else {
+		return loadtablefromdatapipeline(file);
+	}
 }
 
 /// Creates a new column by adding together existing columns		

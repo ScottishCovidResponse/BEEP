@@ -150,14 +150,18 @@ private:
 	vector <AREA> &area;
 };
 
+class DataPipeline;
+
 class DATA
 {
 	public:
 	
-	DATA() : compX(area), compY(area)
+	DATA(DataPipeline *dp=0) : compX(area), compY(area)
 	{
+		datapipeline = dp;
 	}
 
+	DataPipeline *datapipeline;             // DataPipeline object
 	unsigned int mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
@@ -239,6 +243,9 @@ private:
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file, string dir="");
+	TABLE loadtablefromdatapipeline(string file);
+	TABLE loadtablefromfile(string file, string dir);
+
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
 	unsigned int findcol(TABLE &tab, string name);

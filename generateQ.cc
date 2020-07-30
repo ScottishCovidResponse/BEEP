@@ -21,6 +21,11 @@ using namespace std;
 #include "generateQ.hh"
 #include "utils.hh"
 
+#ifdef USE_DATA_PIPELINE
+#include "datapipeline.hh"
+#include "array.hh"
+#endif
+
 unsigned int nage;                         // The number of age categories used 
 //const short normon = 1;                    // Determines if matrix normalised
 //const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
@@ -38,44 +43,50 @@ struct SPARSEMATRIX {                      // Loads a matrix
 };
 
 TABLE loadtable(string file, string head);
+TABLE loadarray(string file, string dir);
 unsigned int findcol(TABLE &tab, string name);
 vector <AREA> loadarea(TABLE tab);
 MATRIX matfromtable(TABLE tab, unsigned int N);
-SPARSEMATRIX loadsparse(string file, unsigned int N);
+SPARSEMATRIX loadsparse(string file, string dir, unsigned int N);
 SPARSEMATRIX identity(unsigned int N);
 void plotmat(MATRIX mat, string title);
 void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area);
+TABLE loadarrayfromdatapipeline(string file);
 
 string strip(string line);
 
+DataPipeline *datapipeline;             // DataPipeline object
 
-void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area)
+void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area,
+							 DataPipeline *dp)
 {
 	TABLE tab;
 	MATRIX N_all, N_home, N_other, N_school, N_work;
 	SPARSEMATRIX M, I;
 
+	datapipeline = dp;
+
 	cout << "Generating Q tensors." << endl;
 	
-	tab = loadtable(datadir+"/"+genQ.Nall,"nohead");        // Loads age stratified mixing matrices for different activities
+	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
 	N_all = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nhome,"nohead");
+	tab = loadarray(genQ.Nhome, datadir);
 	N_home = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nother,"nohead");
+	tab = loadarray(genQ.Nother, datadir);
 	N_other = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nschool,"nohead");
+	tab = loadarray(genQ.Nschool, datadir);
 	N_school = matfromtable(tab,nage);
 	
-	tab = loadtable(datadir+"/"+genQ.Nwork,"nohead");
+	tab = loadarray(genQ.Nwork, datadir);
 	N_work = matfromtable(tab,nage);
 
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
 	
-	M = loadsparse(datadir+"/"+genQ.M,area.size());
+	M = loadsparse(genQ.M,datadir,area.size());
 	
 	I = identity(area.size());                                 // Generates the identity matrix
 	
@@ -285,7 +296,62 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 }
 
 /// Uses 'from' and 'to' columns to generate a sparse matrix
-SPARSEMATRIX loadsparse(string file, unsigned int N)
+SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
+{
+	SPARSEMATRIX mat;
+#ifdef USE_DATA_PIPELINE
+
+	unsigned int a1, a2;
+	double v;
+	string line;
+	
+	mat.N = N;	
+
+	Table  dptable = datapipeline->read_table(file, "default");
+
+	int nrows = dptable.get_column_size();
+	
+	vector<long> area1 = dptable.get_column<long>("area1");
+	vector<long> area2 = dptable.get_column<long>("area2");
+	vector<double> contact = dptable.get_column<double>("contact");
+
+	for (int i = 0; i < nrows; i++) {
+		a1 = area1.at(i);
+		a2 = area2.at(i);
+		v = contact.at(i);
+		mat.i.push_back(a1);
+		mat.j.push_back(a2);
+		if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+		mat.val.push_back(v);
+	}
+
+	// Array<double> dparray = datapipeline->read_array(file,"default");
+	// vector<int>   dims = dparray.size();
+
+	// for (int i = 0; i < dims.at(0); i++) {
+	// 	a1 = dparray(i,0);
+	// 	a2 = dparray(i,1);
+	// 	v = dparray(i,2);
+	// 	mat.i.push_back(a1);
+	// 	mat.j.push_back(a2);
+	// 	if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+	// 	mat.val.push_back(v);
+
+	// }
+
+	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
+
+#else
+	N = N;
+	emsg("loadsparsefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+#endif
+
+	return mat;
+}
+
+
+/// Uses 'from' and 'to' columns to generate a sparse matrix
+SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
 {
 	unsigned int a1, a2;
 	double v;
@@ -309,8 +375,67 @@ SPARSEMATRIX loadsparse(string file, unsigned int N)
 		mat.val.push_back(v);
 	}while(1 == 1);
 
+	cout << "Loaded sparse matrix " << file << " from file" << endl;
+
 	return mat;
 }
+
+/// Uses 'from' and 'to' columns to generate a sparse matrix
+SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
+{
+	if (stringhasending(file, ".txt")) {
+		return loadsparsefromfile(dir+"/"+file, N);
+	} else {
+		return loadsparsefromdatapipeline(file, N);
+	}
+}
+
+/// Loads a table from the data pipeline
+TABLE loadarrayfromdatapipeline(string file)
+{
+	TABLE tab;
+
+#ifdef USE_DATA_PIPELINE
+
+	Array<double> dparray = datapipeline->read_array(file,"default");
+	vector<int>   dims = dparray.size();
+
+
+	tab.file = file;
+//	tab.heading = ????;
+	tab.ncol = dims.at(1);
+	
+	for (size_t i = 0; i < dims.at(0); i++) {
+		vector<string> vec;
+
+		for (size_t j = 0; j < dims.at(1); j++) {
+			vec.push_back(to_string(dparray(i,j)));
+		}
+		tab.ele.push_back(vec);
+	}
+
+	tab.nrow = tab.ele.size();
+
+	cout << "Loaded array " << file << " from data pipeline" << endl;
+#else
+	emsg("loadarrayfromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+#endif
+
+	return tab;
+}
+
+
+/// Loads a table from a file
+TABLE loadarray(string file, string dir)
+{
+	if (stringhasending(file, ".txt")) {
+		return loadtable(dir+"/"+file, "nohead");
+	} else {
+		return loadarrayfromdatapipeline(file);
+	}
+}
+
+
 
 /// Loads a table from a file
 TABLE loadtable(string file, string head)
@@ -353,6 +478,8 @@ TABLE loadtable(string file, string head)
 	}while(1 == 1);
 	tab.nrow = tab.ele.size();
 	
+	cout << "Loaded array " << file << " from file " << file << endl;
+
 	return tab;
 }
 
