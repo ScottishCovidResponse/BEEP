@@ -1,3 +1,0 @@
-data_directory: ../temporary_data
-fail_on_hash_mismatch: False
-run_id : "imported"
