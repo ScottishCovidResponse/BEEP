@@ -300,8 +300,9 @@ int main(int argc, char** argv)
 
   pybind11::module::import("logging").attr("basicConfig")("level"_a="DEBUG", "format"_a="%(asctime)s %(filename)s:%(lineno)s %(levelname)s - %(message)s");
 
+	// TODO: get the path to the config file from the options
  	DataPipeline *dp = new DataPipeline(
-		"dpexportconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
+		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
 	DATA data(dp);    // The following file names will need to be read in by the interface:
