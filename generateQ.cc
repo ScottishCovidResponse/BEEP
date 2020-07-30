@@ -22,8 +22,8 @@ using namespace std;
 #include "utils.hh"
 
 unsigned int nage;                         // The number of age categories used 
-const short normon = 1;                    // Determines if matrix normalised
-const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
+//const short normon = 1;                    // Determines if matrix normalised
+//const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
 
 struct MATRIX {                            // Loads a matrix
 	unsigned int N;													 // The size of the matrix
