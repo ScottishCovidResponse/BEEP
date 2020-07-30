@@ -49,7 +49,7 @@ jobs:
 
     - name: Run Clang Static Analyzer
       run: |
-        scan-build --use-c++ mpicxx -o buildhtml make -B -e -j 4 --output-sync CPPFLAGS_EXTRA="-I/usr/include/mpich"
+        scan-build-10 --use-c++ mpicxx -o buildhtml make -B -e -j 4 --output-sync CPPFLAGS_EXTRA="-I/usr/include/mpich"
 
 
   analyse:
