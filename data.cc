@@ -468,19 +468,10 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 	return tab;
 }
 
-static bool hasEnding (std::string const &fullString, std::string const &ending)
-{
-	if (fullString.length() >= ending.length()) {
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-	} else {
-		return false;
-	}
-}
-
 /// Loads a table from a file (if dir is specified then this directory is used
 TABLE DATA::loadtable(string file, string dir)
 {
-	if (hasEnding(file, ".txt")) {
+	if (stringhasending(file, ".txt")) {
 		return loadtablefromfile(file, dir);
 	} else {
 		return loadtablefromdatapipeline(file);

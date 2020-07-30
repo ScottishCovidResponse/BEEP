@@ -295,15 +295,6 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 	return mat;
 }
 
-static bool hasEnding (std::string const &fullString, std::string const &ending)
-{
-	if (fullString.length() >= ending.length()) {
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-	} else {
-		return false;
-	}
-}
-
 /// Uses 'from' and 'to' columns to generate a sparse matrix
 SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 {
@@ -392,7 +383,7 @@ SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
 /// Uses 'from' and 'to' columns to generate a sparse matrix
 SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
 {
-	if (hasEnding(file, ".txt")) {
+	if (stringhasending(file, ".txt")) {
 		return loadsparsefromfile(dir+"/"+file, N);
 	} else {
 		return loadsparsefromdatapipeline(file, N);
@@ -437,7 +428,7 @@ TABLE loadarrayfromdatapipeline(string file)
 /// Loads a table from a file
 TABLE loadarray(string file, string dir)
 {
-	if (hasEnding(file, ".txt")) {
+	if (stringhasending(file, ".txt")) {
 		return loadtable(dir+"/"+file, "nohead");
 	} else {
 		return loadarrayfromdatapipeline(file);
