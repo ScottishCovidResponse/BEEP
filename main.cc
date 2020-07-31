@@ -132,7 +132,8 @@ double lookup_double_parameter(const map<string,string> &params,
 		}
 	} else {
 		if (tomldata.contains(key)) {
-			val = toml::find<double>(tomldata,key);
+			const auto val_temp = toml::find(tomldata,key);
+			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
 		} else {
 			val = def;
 			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");

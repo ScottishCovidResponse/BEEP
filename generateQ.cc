@@ -426,8 +426,6 @@ TABLE loadarray(string file, string dir)
 	}
 }
 
-
-
 /// Loads a table from a file
 TABLE loadtable(string file, string head)
 {

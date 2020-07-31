@@ -39,7 +39,8 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				name = toml::find<std::string>(params,"name");
 				
 				if(!params.contains("value")) emsg("The quantity 'params' must contain a 'value' definition.");
-				value = toml::find<double>(params,"value");
+				const auto value_temp = toml::find(params,"value");
+			  if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
 				
 				addparam(name,value,value);
 			}
@@ -59,7 +60,9 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				name = toml::find<std::string>(params,"name");
 
 				if(params.contains("value")){
-					value = toml::find<double>(params,"value");
+					const auto value_temp = toml::find(params,"value");
+					if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
+			
 					addparam(name,value,value);
 				}
 				else{
@@ -68,11 +71,15 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 					string type = toml::find<std::string>(params,"type");
 					if(type == "uniform"){
 						if(!params.contains("min")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'min' definition.");
-						double min = toml::find<double>(params,"min");
-				
+						double min;
+						const auto min_temp = toml::find(params,"min");
+						if(min_temp.is_floating()) min = min_temp.as_floating(); else min = min_temp.as_integer();	
+			
 						if(!params.contains("max")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'max' definition.");
-						double max = toml::find<double>(params,"max");
-				
+						double max;
+						const auto max_temp = toml::find(params,"max");
+						if(max_temp.is_floating()) max = max_temp.as_floating(); else max = max_temp.as_integer();	
+			
 						addparam(name,min,max);
 					}
 					else emsg("In 'priors', the prior type '"+type+"' is not recognised.");
@@ -118,13 +125,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		
 		const auto compsin = toml::find(tomldata,"comps");
 		for(j = 0; j < compsin.size(); j++){
-			const auto comps = toml::find(compsin,j);
+			//const auto comps = toml::find(compsin,j);
+		const toml::value comps = toml::find(compsin,j);
 			if(!comps.contains("name")) emsg("Compartments in 'comps' must contain a 'name' definition.");
 
 			name = toml::find<std::string>(comps,"name");
 			if(!comps.contains("inf")) emsg("The compartment 'name' must contain an 'inf' definition.");
-			inf = toml::find<double>(comps,"inf");
-
+			
+			const auto inf_temp = toml::find(comps,"inf");
+			if(inf_temp.is_floating()) inf = inf_temp.as_floating(); else inf = inf_temp.as_integer();	
+																							 
 			addcomp(name,inf); 
 		}
 	}
@@ -207,11 +217,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				pricomp.comp = c;
 				
 				if(!prcomp.contains("value")) emsg("'priorcomps' must contain a 'value' definition.");
-				double val = toml::find<double>(prcomp,"value");
+				double val;
+				const auto val_temp = toml::find(prcomp,"inf");
+			  if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
+		
 				pricomp.value = val;
 				
 				if(!prcomp.contains("sd")) emsg("'priorcomps' must contain a 'sd' standard deviation definition.");
-				double sd = toml::find<double>(prcomp,"sd");
+				double sd;
+				const auto sd_temp = toml::find(prcomp,"sd");
+			  if(sd_temp.is_floating()) sd = sd_temp.as_floating(); else sd = sd_temp.as_integer();	
 				pricomp.sd = sd;
 		
 				priorcomps.push_back(pricomp);
