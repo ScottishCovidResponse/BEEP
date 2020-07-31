@@ -1005,7 +1005,7 @@ vector <double> MODEL::R0calc()
 				case EXP_DIST: dt = paramval[trans[tra].param1]; break;
 				case GAMMA_DIST: dt = paramval[trans[tra].param1]; break;
 				case LOGNORM_DIST: dt = paramval[trans[tra].param1]; break;
-				default: dt=0; emsgEC("MODEL",9); break;
+				default: emsgEC("MODEL",9); break;
 				}	
 				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
 				else comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt*comp[c].prob[a][k];
