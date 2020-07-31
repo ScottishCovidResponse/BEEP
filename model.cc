@@ -35,10 +35,10 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			const auto paramsin = toml::find(tomldata,"params");
 			for(j = 0; j < paramsin.size(); j++){
 				const auto params = toml::find(paramsin,j);
-				if(!params.contains("name")) emsg("Parameter must contain a 'name' definition.");
+				if(!params.contains("name")) emsg("The quantity 'params' must contain a 'name' definition.");
 				name = toml::find<std::string>(params,"name");
 				
-				if(!params.contains("value")) emsg("Parameter must contain a 'value' definition.");
+				if(!params.contains("value")) emsg("The quantity 'params' must contain a 'value' definition.");
 				value = toml::find<double>(params,"value");
 				
 				addparam(name,value,value);
@@ -55,7 +55,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			const auto paramsin = toml::find(tomldata,"priors");
 			for(j = 0; j < paramsin.size(); j++){
 				const auto params = toml::find(paramsin,j);
-				if(!params.contains("name")) emsg("Parameter must contain a 'name' definition.");
+				if(!params.contains("name")) emsg("The quantity 'priors' must contain a 'name' definition.");
 				name = toml::find<std::string>(params,"name");
 
 				if(params.contains("value")){
@@ -63,23 +63,23 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 					addparam(name,value,value);
 				}
 				else{
-					if(!params.contains("type")) emsg("The prior must have a 'value' or a 'type'");
+					if(!params.contains("type")) emsg("The prior '"+name+"' must have a 'value' or a 'type'");
 					
 					string type = toml::find<std::string>(params,"type");
 					if(type == "uniform"){
-						if(!params.contains("min")) emsg("A uniform prior must contain a 'min' definition.");
+						if(!params.contains("min")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'min' definition.");
 						double min = toml::find<double>(params,"min");
 				
-						if(!params.contains("max")) emsg("A uniform prior must contain a 'max' definition.");
+						if(!params.contains("max")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'max' definition.");
 						double max = toml::find<double>(params,"max");
 				
 						addparam(name,min,max);
 					}
-					else emsg("The prior type '"+type+"' is not recognised.");
+					else emsg("In 'priors', the prior type '"+type+"' is not recognised.");
 				}
 			}
 		}
-		else{ emsg("The input file must contain 'priors'.");}
+		else{ emsg("The input file must contain quantity 'priors'.");}
 	}
 	
 	regioneffect = 0;
@@ -108,7 +108,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			break;
 		}
 	}
-	if(th == param.size()) emsg("A 'logbeta' parameter must be specified");
+	if(th == param.size()) emsg("In the input TOML file a 'logbeta' parameter must be specified");
 	
 	addparam("zero",tiny,tiny);
 
@@ -119,16 +119,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		const auto compsin = toml::find(tomldata,"comps");
 		for(j = 0; j < compsin.size(); j++){
 			const auto comps = toml::find(compsin,j);
-			if(!comps.contains("name")) emsg("Compartment must contain a 'name' definition.");
+			if(!comps.contains("name")) emsg("Compartments in 'comps' must contain a 'name' definition.");
 
 			name = toml::find<std::string>(comps,"name");
-			if(!comps.contains("inf")) emsg("Compartment must contain an 'inf' definition.");
+			if(!comps.contains("inf")) emsg("The compartment 'name' must contain an 'inf' definition.");
 			inf = toml::find<double>(comps,"inf");
 
 			addcomp(name,inf); 
 		}
 	}
-	else{ emsg("The input file must contain compartment definition through 'comps'");}
+	else{ emsg("The input file must contain compartment definitions through 'comps'");}
 
 	if(tomldata.contains("trans")){
 		string dist, mean="", cv="";
@@ -138,13 +138,14 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		for(j = 0; j < transin.size(); j++){
 			const auto trans = toml::find(transin,j);
 			
-			if(!trans.contains("from")) emsg("Transition must contain a 'from' definition.");
+			if(!trans.contains("from")) emsg("Transition specified in 'trans' must contain a 'from' definition.");
 			const auto from = toml::find<std::string>(trans, "from");
 			
-			if(!trans.contains("to")) emsg("Transition must contain a 'to' definition.");
+			if(!trans.contains("to")) emsg("Transition specified in 'trans' must contain a 'to' definition.");
 			const auto to = toml::find<std::string>(trans, "to");
 		
-			if(!trans.contains("dist")) emsg("'dist' must be set in the transitions in 'trans'");
+			string name = from+"→"+to;
+			if(!trans.contains("dist")) emsg("For the '"+name+"' transition the 'dist' distribution must be set.");
 			
 			const auto dist = toml::find<std::string>(trans, "dist");
 			
@@ -156,29 +157,29 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			
 			if(dist == "exp"){
 				distval = EXP_DIST;
-				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
+				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 			}
 			
 			if(dist == "lognorm"){
 				distval = LOGNORM_DIST;
-				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
+				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
-				if(!trans.contains("cv")) emsg("Transition distribution must contain an 'cv' definition.");
+				if(!trans.contains("cv")) emsg("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
 				cv = toml::find<std::string>(trans, "cv");
 			}
 			
 			if(dist == "gamma"){
 				distval = GAMMA_DIST;
-				if(!trans.contains("mean")) emsg("Transition distribution must contain a 'mean' definition.");
+				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
-				if(!trans.contains("cv")) emsg("Transition distribution must contain an 'cv' definition.");
+				if(!trans.contains("cv")) emsg("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
 				cv = toml::find<std::string>(trans, "cv");
 			}
 			
-			if(distval == UNSET) emsg("Distribution '"+dist+"' not recognised.");
+			if(distval == UNSET) emsg("For the '"+name+"' transition the distribution '"+dist+"' is not recognised.");
 			
 			if(trans.contains("prob")) {
 				const auto prob = toml::find<std::string>(trans, "prob");
@@ -189,7 +190,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 		}
 	}
-	else{ emsg("The input file must contain transition definitions through 'trans'.");}
+	else{ emsg("The input file must contain transition definitions through the 'trans' quantity.");}
 
 	if(data.mode == MODE_INF){
 		if(tomldata.contains("priorcomps")){
@@ -209,7 +210,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 				double val = toml::find<double>(prcomp,"value");
 				pricomp.value = val;
 				
-				if(!prcomp.contains("sd")) emsg("'priorcomps' must contain a 'sd' definition.");
+				if(!prcomp.contains("sd")) emsg("'priorcomps' must contain a 'sd' standard deviation definition.");
 				double sd = toml::find<double>(prcomp,"sd");
 				pricomp.sd = sd;
 		
@@ -223,16 +224,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		for(j = 0; j < bespin.size(); j++){
 			const auto besp = toml::find(bespin,j);
 			
-			if(!besp.contains("param")) emsg("Beta spline definition must contain a 'param' definition.");
+			if(!besp.contains("param")) emsg("The 'betaspline' definition must contain a 'param' definition.");
 			const auto name = toml::find<std::string>(besp,"param");
 			
-			if(!besp.contains("time")) emsg("Beta spline definition must contain a 'time' definition.");
+			if(!besp.contains("time")) emsg("The 'betaspline' definition must contain a 'time' definition.");
 			const auto timstr = toml::find<string>(besp,"time");
 			int tim = data.gettime(timstr) - data.start;
 			
-			if(j == 0 && tim != 0) emsg("The first beta spline point must be at t=0.");
-			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last beta spline point must be at t=period.");
-			if(tim < 0 || tim > (int)data.period) emsg("The beta spline points must be within the time period.");
+			if(j == 0 && tim != 0) emsg("The first point in 'betaspline' must be at the 'start' time.");
+			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last 'betaspline' point must be at the 'end' time.");
+			if(tim < 0 || tim > (int)data.period) emsg("The 'betaspline' points must be within the time period set for the simulation/inference.");
 			
 			spl.t = tim;
 			spl.param = findparam(name);
@@ -245,16 +246,16 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		for(j = 0; j < bespin.size(); j++){
 			const auto besp = toml::find(bespin,j);
 			
-			if(!besp.contains("param")) emsg("Phi spline definition must contain a 'param' definition.");
+			if(!besp.contains("param")) emsg("The 'phispline' quantity must contain a 'param' definition.");
 			const auto name = toml::find<std::string>(besp,"param");
 			
-			if(!besp.contains("time")) emsg("Phi spline definition must contain a 'time' definition.");
+			if(!besp.contains("time")) emsg("The 'phispline' quantity must contain a 'time' definition.");
 			const auto timstr = toml::find<string>(besp,"time");
 			int tim = data.gettime(timstr) - data.start;
 			
-			if(j == 0 && tim != 0) emsg("The first phi spline point must be at t=0.");
-			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last phi spline point must be at t=period.");
-			if(tim < 0 || tim > (int)data.period) emsg("The phi spline points must be within the time period.");
+			if(j == 0 && tim != 0) emsg("The first 'phispline' point must be at the 'start' time.");
+			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last 'phispline' point must be at the 'end' time.");
+			if(tim < 0 || tim > (int)data.period) emsg("The 'phispline' points must be within the time period set by simulation/inference.");
 			
 			spl.t = tim;
 			spl.param = findparam(name);
@@ -274,7 +275,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	}
 
 	for(p = 0; p < param.size(); p++){
-		if(param[p].used == 0) emsg("Parameter '"+param[p].name+"' not in the model.");
+		if(param[p].used == 0) emsg("The [arameter '"+param[p].name+"' is not used in the model.");
 	}
 
 	ntr = 0; nac = 0;
@@ -400,7 +401,7 @@ void MODEL::addQ()
 	
 	for(q = 0; q < data.Q.size(); q++){
 		for(c = 0; c < comp.size(); c++) if(data.Q[q].comp == comp[c].name) break;
-		if(c == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
+		if(c == comp.size()) emsg("The compartment '"+data.Q[q].comp+"' in '"+data.Q[q].name+"' is not recognised.");
 	}
 	
 	dq.q.resize(2); dq.fac.resize(2);
@@ -463,7 +464,7 @@ double MODEL::getinfectivity(string name)
 	unsigned int c;
 
 	c = 0; while(c < comp.size() && comp[c].name != name) c++;
-	if(c == comp.size()) emsg("Cannot find compartment '"+name+"'");
+	if(c == comp.size()) emsg("Cannot find the compartment '"+name+"'");
 	return comp[c].infectivity;
 }
 
@@ -484,7 +485,7 @@ unsigned int MODEL::findparam(string name)
 	unsigned int p, pmax;
 	
 	p = 0; pmax = param.size(); while(p < pmax && name != param[p].name) p++;
-	if(p == pmax) emsg("Cannot find parameter '"+name+"'");	
+	if(p == pmax) emsg("Cannot find the parameter '"+name+"'");	
 	param[p].used = 1;
 	
 	return p;
@@ -508,20 +509,20 @@ void MODEL::addtrans(string from, string to, string prpar, unsigned int type, st
 	TRANS tr;
 	
 	c = 0; cmax = comp.size(); while(c < cmax && from != comp[c].name) c++;
-	if(c == cmax) emsg("Cannot find compartment");
+	if(c == cmax) emsg("Cannot find the 'from' compartment '"+from+"' for the transition");
 	tr.from = c;	
 	
 	if(from != to){ tr.istimep = 0; comp[c].trans.push_back(trans.size());}
 	else{ tr.istimep = 1; comp[c].transtimep = trans.size();}
 		
 	c = 0; cmax = comp.size(); while(c < cmax && to != comp[c].name) c++;
-	if(c == cmax) emsg("Cannot find compartment");	
+	if(c == cmax) emsg("Cannot find the 'to' compartment '"+to+"' for the transition");	
 	tr.to = c;
 	
 	if(prpar != ""){
 		vector <string> probparam = split(prpar,',');
 	
-		if(probparam.size() != data.nage) emsg("Wrong number of parameters in expression '"+prpar+"'.");
+		if(probparam.size() != data.nage) emsg("For the transition '"+from+"→"+to+"' the number of parameters in expression '"+prpar+"' should equal the number of age groups.");
 		for(j = 0; j < probparam.size(); j++){
 			tr.probparam.push_back(findparam(probparam[j]));
 		}
@@ -630,7 +631,7 @@ unsigned int MODEL::settransprob()
 				
 				sum = 0;
 				for(k = 0; k < kmax-1; k++){
-					p = trans[comp[c].trans[k]].probparam[a]; if(p == UNSET) emsg("model: EC1a");		
+					p = trans[comp[c].trans[k]].probparam[a]; if(p == UNSET) emsgEC("model",1);		
 					prob = paramval[p]; comp[c].prob[a][k] = prob; sum += prob; if(prob < 0) return 1;
 				} 
 				prob = 1-sum; comp[c].prob[a][kmax-1] = prob; if(prob < 0) return 1;
@@ -677,7 +678,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		if(kmax == 1) tra = comp[c].trans[0];
 		else{
 			z = ran(); k = 0; while(k < kmax && z > comp[c].probsum[a][k]) k++;
-			if(k == kmax) emsg("Model: EC3");
+			if(k == kmax) emsgEC("Model",2);
 			tra = comp[c].trans[k];
 		}
 		
@@ -697,7 +698,7 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 			dt = exp(normal(mean,sd));
 			break;
 			
-		default: emsg("MODEL: EC2b"); break;
+		default: emsgEC("MODEL",3); break;
 		}
 
 		if(dt < tiny) dt = tiny;
@@ -749,7 +750,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			
 			if(kmax > 1){
 				k = 0; while(k < kmax && tra != comp[c].trans[k]) k++;
-				if(k == kmax) emsg("model: EC32");
+				if(k == kmax) emsgEC("model",4);
 				
 				if(comp[c].probp[a][k] < comp[c].probi[a][k]){  // Looks at switching to another branch
 					if(ran() < 1 - comp[c].probp[a][k]/comp[c].probi[a][k]){
@@ -761,7 +762,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 						}
 						
 						z = ran()*sum; k = 0; while(k < kmax && z > sumst[k]) k++;
-						if(k == kmax) emsg("Model: EC12");
+						if(k == kmax) emsgEC("Model",5);
 						tra = comp[c].trans[k];
 					}
 				}	
@@ -774,7 +775,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 				break;
 			
 			case GAMMA_DIST:
-				emsg("model: EC9");
+				emsgEC("model",6);
 				break;
 				
 			case LOGNORM_DIST:
@@ -792,7 +793,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 				break;
 				
 			default:
-				emsg("MODEL: EC2b");
+				emsgEC("Model",7);
 				break;
 			}
 	
@@ -960,7 +961,7 @@ void MODEL::calcprobin()
 			c = trans[comp[c].trans[k]].to;		
 		}while(1 == 1);
 		
-		if(cst.size() > 0 || kst.size() > 0 || probst.size() > 0) emsg("Model: EC54");
+		if(cst.size() > 0 || kst.size() > 0 || probst.size() > 0) emsgEC("Model",8);
 	}
 }
 
@@ -989,9 +990,7 @@ vector <double> MODEL::R0calc()
 				case EXP_DIST: dt = paramval[trans[tra].param1]; break;
 				case GAMMA_DIST: dt = paramval[trans[tra].param1]; break;
 				case LOGNORM_DIST: dt = paramval[trans[tra].param1]; break;
-				default:
-					//dt=0;
-					emsg("MODEL: EC56"); break;
+				default: dt=0; emsgEC("MODEL",9); break;
 				}	
 				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
 				else comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt*comp[c].prob[a][k];
@@ -1007,7 +1006,7 @@ vector <double> MODEL::R0calc()
 		qt = data.Q[q].Qtenref;
 		
 		for(co = 0; co < comp.size(); co++) if(data.Q[q].comp == comp[co].name) break;
-		if(co == comp.size()) emsg( "Compartment "+data.Q[q].comp+" not recognised.");
+		if(co == comp.size()) emsg("Compartment '"+data.Q[q].comp+"' in '"+data.Q[q].name+"' not recognised.");
 		
 		for(c = 0; c < data.narea; c++){
 			for(a = 0; a < data.nage; a++){
@@ -1073,7 +1072,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				trans[tra].num[a]++;
 	
 				dt = indev[i][e].t-t;
-				if(dt == 0) emsg("Model: EC78");
+				if(dt == 0) emsgEC("Model",10);
 				t += dt;
 				
 				trans[tra].numvisittot++;
@@ -1087,7 +1086,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 	
 	Li_dt = likelihood_dt(paramv);
 	Li_prob = likelihood_prob();
-	paramval = paramv; if(settransprob() == 1) emsg("Model: EC32");
+	paramval = paramv; if(settransprob() == 1) emsgEC("Model",11);
 	
 	for(loop = 0; loop < loopmax; loop++){
 		for(th = 0; th < param.size(); th++){
@@ -1129,11 +1128,11 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 		}
 	}
 	
-	paramval = paramv; if(settransprob() == 1) emsg("Model: EC32");
+	paramval = paramv; if(settransprob() == 1) emsgEC("Model",12);
 		
 	if(checkon == 1){
-		dd = likelihood_dt(paramv)-Li_dt; if(dd*dd > tiny) emsg("Model: EC45");
-		dd = likelihood_prob()-Li_prob; if(dd*dd > tiny) emsg("Model: EC46");
+		dd = likelihood_dt(paramv)-Li_dt; if(dd*dd > tiny) emsgEC("Model",13);
+		dd = likelihood_prob()-Li_prob; if(dd*dd > tiny) emsgEC("Model",14);
 	}
 	
 	timers.timecompparam += clock();
@@ -1187,7 +1186,7 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 			
 			double ss = 0; for(j = 0; j < jmax; j++) ss += trans[tra].dtlist[j];
 			for(j = 0; j < jmax; j++){
-				if(trans[tra].dtlist[j] == 0) emsg("Time zero");
+				if(trans[tra].dtlist[j] == 0) emsgEC("Model",15);
 				L += lognormprob(trans[tra].dtlist[j],mean,sd*sd);
 			}
 			break;

@@ -85,22 +85,14 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		file = areadatafile;
 		tab = loadtable(file);
 		
-		for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == "age0-14") break;
-		if(c < tab.ncol){
+		// If onle one age group then combines all columns with "age" to generate an "all" column
+		if(nage == 1){
 			vector <unsigned int> agecols;
-			agecols.push_back(findcol(tab,"age0-14"));
-			agecols.push_back(findcol(tab,"age15-44"));
-			agecols.push_back(findcol(tab,"age45-64"));
-			agecols.push_back(findcol(tab,"age65+"));	
-			table_createcol("all",agecols,tab);
-		}
-		
-		for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == "age0-19") break;
-		if(c < tab.ncol){
-			vector <unsigned int> agecols;
-			agecols.push_back(findcol(tab,"age0-19"));
-			agecols.push_back(findcol(tab,"age20-64"));
-			agecols.push_back(findcol(tab,"age65+"));	
+			for(unsigned int col = 0; col < tab.heading.size(); col++){
+				if(tab.heading[col].length() > 3){
+					if(tab.heading[col].substr(0,3) == "age") agecols.push_back(col);
+				}
+			}
 			table_createcol("all",agecols,tab);
 		}
 		
@@ -123,7 +115,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	
 			regcode = tab.ele[row][regcol];
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
-			if(r == nregion) emsg("Region code not recognised: "+regcode);
+			if(r == nregion) emsg("In file '"+areadatafile+"' the region code '"+regcode+"' is not recognised.");
 			are.region = r;
 					
 			are.covar.resize(ncovar);
@@ -134,12 +126,12 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			
 				if(covar[j].func == "log"){
 					if(v == 0) v = 0.01;
-					if(v <= 0) emsg("Log transformed quantities must be positive.");
+					if(v <= 0) emsg("In file '"+areadatafile+"' the log transformed quantities from 'covar' must be positive.");
 					are.covar[j] = log(v);
 				}
 				else{
 					if(covar[j].func == "linear") are.covar[j] = v;
-					else emsg("The functional relationship '"+covar[j].func+"' is not recognised.");
+					else emsg("n file '"+areadatafile+"' the functional relationship '"+covar[j].func+"' is not recognised.");
 				}
 			}
 			
@@ -236,7 +228,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				transdata[td].rows = tab.nrow;
 				
 				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > period){
-					emsg("The file '"+file+"' has more data than will fit in the time period.");
+					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
@@ -259,7 +251,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				popdata[pd].rows = tab.nrow;
 				
 				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > period){
-					emsg("The file '"+file+"' has more data than will fit in the time period.");
+					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
@@ -291,7 +283,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	vec.resize(nage);                                                 // Reads in Q tensors
 	for(q = 0; q < Q.size(); q++){
 		j = 0; while(j < genQ.Qten.size() && genQ.Qten[j].name != Q[q].name) j++;
-		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+Q[q].name+"'.");
+		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+Q[q].name+"' in the input TOML file.");
 		Q[q].Qtenref = j;
 	}
 		
@@ -338,7 +330,7 @@ unsigned int DATA::getint(string st, string file)
 		else{
 			if(st == "*"){
 				i = THRESH;
-				if(threshold == UNSET) emsg("If 'NA' is used, there must be a threshold set with the 'threshold' command.");
+				if(threshold == UNSET) emsg("Since 'NA' is used in file '"+file+"', there must be a threshold set with the 'threshold' command in the input TOML file.");
 			}
 			else emsg("In file '"+file+"' the quantity '"+st+"' is not a number");
 		}
@@ -364,7 +356,7 @@ void DATA::addQtensor(string timep, string comp, string name)
 	QTENSOR qten;
 	
 	tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
-	if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period");
+	if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
 	
 	qten.timep = tp;
 	qten.comp = comp;
@@ -402,9 +394,9 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 
 	tab.nrow = tab.ele.size();
 
-	cout << "Loaded table " << file << " from data pipeline" << endl;
+	cout << "Loaded table '" << file << "' from data pipeline" << endl;
 #else
-	emsg("loadtablefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+	emsg("loadtablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;
@@ -460,7 +452,7 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 			vec.push_back(st);
 			if(ss.eof()) break;
 		}while(1 == 1);
-		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all have the same length.");
+		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all share the same number of columns.");
 		
 		tab.ele.push_back(vec);
 	}while(1 == 1);
@@ -506,7 +498,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 				for(i = 1; i < tab.ncol; i++){
 					num1 = getint(tab.ele[row-1][i],tab.file);
 					num2 = getint(tab.ele[row][i],tab.file);
-					if(num1 == THRESH || num2 == THRESH || num1 == UNKNOWN || num2 == UNKNOWN) emsg("not done yet");
+					if(num1 == THRESH || num2 == THRESH || num1 == UNKNOWN || num2 == UNKNOWN) emsg("In the file '"+tab.file+"', amalgamation of data with unknown values is not possible.");
 					tab.ele[row-1][i] = to_string(num1+num2);
 				}				
 			}
@@ -519,7 +511,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 			row++;
 		}
 	}
-	if(tab.nrow == 0) emsg("The file '"+tab.file+"' does not contain any informations.");
+	if(tab.nrow == 0) emsg("The file '"+tab.file+"' does not contain any information.");
 	
 	if(type=="trans"){                         // Removes the last line if incomplete
 		if(gettime(tab.ele[tab.nrow-1][0]) > end-units){
@@ -610,7 +602,7 @@ void DATA::copydata(unsigned int core)
 		for(k = 0; k < kmax; k++){
 			unpack(genQ.Qten[k].name);
 		}
-		if(si != packsize()) emsg("Data: EC9");
+		if(si != packsize()) emsgEC("Data",1);
 	}
 
 	for(k = 0; k < genQ.Qten.size(); k++){                                                   // Copies the Q matrices
@@ -646,7 +638,7 @@ void DATA::copydata(unsigned int core)
 					unpack(genQ.Qten[k].tof[v],genQ.Qten[k].ntof[v]);
 					unpack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
 				}
-				if(si != packsize()) emsg("Data: EC9");
+				if(si != packsize()) emsgEC("Data",2);
 			}
 	
 			vmin = vmax;
@@ -709,7 +701,7 @@ unsigned int DATA::gettime(string st)
 	switch(tform){
 	case TFORM_NUM:
 		t = atoi(buf);
-		if(std::isnan(t)) emsg("Time '"+st+"' is not a number");
+		if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
 		break;
 
 	case TFORM_YMD:
@@ -719,13 +711,13 @@ unsigned int DATA::gettime(string st)
 			t = tt/(60*60*24);
 		}
 		else{ 
-			emsg("'"+st+"' not regonised as Year-Month-Day format.");
+			emsg("'"+st+"' is not regonised as Year-Month-Day format.");
 			t = 0;
 		}
 		break;
 		
 	default:
-		emsg("Do not recognise time format");
+		emsg("The time format is not recognised.");
 		t = 0;
 		break;
 	}
@@ -778,15 +770,15 @@ void DATA::combinetrace(vector <string> inputdirs, string output, string distfil
 			if(tab.heading[i] == "zero") break;
 			if(inp == 0) paramname.push_back(tab.heading[i]);
 			else{
-				if(i-1 >= paramname.size()) emsg("The columns in the input files do not match up.");
-				if(paramname[i-1] != tab.heading[i]) emsg("The headings in the input files do not match up.");
+				if(i-1 >= paramname.size()) emsg("The columns in the input trace files do not match up.");
+				if(paramname[i-1] != tab.heading[i]) emsg("The headings in the input trace files do not match up.");
 			}
 		}
 		vals[inp].resize(paramname.size());
 		
 		for(th = 0; th < paramname.size(); th++){
 			for(row = 0; row < tab.nrow; row++){
-				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("'"+tab.ele[row][th]+"' is not a number.");
+				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("In file '"+inputdirs[inp]+"\trace.txt' the quantity '"+tab.ele[row][th]+"' is not a number.");
 				vals[inp][th].push_back(v);
 			}
 		}

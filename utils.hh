@@ -17,6 +17,7 @@ using namespace std;
 /// @cond EMSG
 [[ noreturn ]] void emsg(string msg);
 [[ noreturn ]] void emsgroot(string msg);
+[[ noreturn ]] void emsgEC(string section, unsigned int ec);
 /// @endcond
 
 double ran();

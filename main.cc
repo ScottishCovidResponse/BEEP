@@ -375,16 +375,19 @@ int main(int argc, char** argv)
 	
 	if (cmdlineparams.count("mode") == 1) {
 		if(cmdlineparams["mode"] == "combinetrace"){
-			if (cmdlineparams.count("dirs") == 0) emsg("Must set the 'dirs' property");
+			if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
 			vector <string> dirs;
 			string output, distfile="";
 			unsigned int burnin=UNSET;
 			dirs = split(cmdlineparams["dirs"],',');
 			
-			if(cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
+			if(cmdlineparams.count("output") == 0) emsg("When using the 'combinetrace' mode, you must set the 'output' property");
 		
 			if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
-			if(cmdlineparams.count("burnin") == 1) burnin = atoi(cmdlineparams["burnin"].c_str());
+			if(cmdlineparams.count("burnin") == 1){
+				burnin = atoi(cmdlineparams["burnin"].c_str());
+				if(std::isnan(burnin)) emsg("The 'burnin' property must be an integer."); 
+			}
 		
 			output = cmdlineparams["output"];
 			data.combinetrace(dirs,output,distfile,burnin);

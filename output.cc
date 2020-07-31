@@ -115,7 +115,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	case POP_DATA: name = data.popdata[d].file; break;
 	case TRANS_DATA: name = data.transdata[d].file; break;
 	case MARG_DATA: name = data.margdata[d].file; break;
-	default: emsg("Output: EC10"); break;
+	default: emsgEC("Output",1); break;
 	}
 	
 	name = filebasename(name); // TODO: think about this
@@ -165,7 +165,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		
 	switch(r){
 	case UNSET: rrmin = 0; rrmax = 1; break;
-	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsg("Output: EC64"); break;
+	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsgEC("Output",2); break;
 	default: rrmin = r; rrmax = r+1; break;
 	}
 
@@ -404,7 +404,7 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 	for(inp = 0; inp < M; inp++) if(vals[inp][0].size() < nmax) nmax = vals[inp][0].size();
 
 	if(burnin != UNSET){
-		if(burnin >= nmax) emsg("The burnin bust be greater than the number of samples.");
+		if(burnin >= nmax) emsg("The 'burnin' period must be greater than the number of samples.");
 		nmin = burnin;
 	}
 	else nmin = nmax/4;
@@ -435,7 +435,7 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 		for(inp = 0; inp < M; inp++){
 			npsamp = vals[inp][p].size();
 			if(burnin != UNSET){
-				if(burnin >= npsamp) emsg("The burnin bust be greater than the number of samples.");
+				if(burnin >= npsamp) emsg("The 'burnin' period must be greater than the number of samples.");
 				psampmin = burnin;
 			}
 			else psampmin = npsamp/4;
@@ -711,7 +711,7 @@ static DIST getdist(vector <double> &vec)
 		for(b = 0; b < BIN; b++) bin[b] = 0;
 		
 		for(i = 0; i < vec.size(); i++){
-			b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsg("Output: EC76");
+			b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
 			bin[b]++;
 		}
 

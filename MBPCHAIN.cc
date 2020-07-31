@@ -20,7 +20,7 @@ using namespace std;
 
 MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
 {
-	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=1000;
+	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;
 	vector <double> paramvalinit;
 
@@ -80,7 +80,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 		loop++;
 	}while(loop < loopmax);                          // Checks not too many infected (based on prior)
 
-	if(loop == loopmax) emsg("Cannot find initial state with number of events under infmax");
+	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 	
 	trevi = trevp;
 	Qmapi = Qmapp;	
@@ -90,7 +90,6 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	if(data.mode != MODE_INF) return;
 	
 	Li = Lobs(data,model,poptree,trevi,indevi);
-	//emsg("P");
 	Pri = model.prior();
 
 	setQmapi(1);
@@ -175,7 +174,7 @@ unsigned int MBPCHAIN::mbp()
 
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -tiny) emsg("MBPchain: EC31");
+			if(val < -tiny) emsgEC("MBPchain",1);
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -267,8 +266,8 @@ void MBPCHAIN::setQmapi(unsigned int check)
 		for(v = 0; v < data.narage; v++){
 			val = dQmap[v];
 			if(check == 1){
-				if(val < -tiny) emsg("MBPchain: EC17a");
-				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsg("MBPchain: EC17b");
+				if(val < -tiny) emsgEC("MBPchain",2);
+				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsgEC("MBPchain",3);
 			}
 			if(val < 0){ val = 0; dQmap[v] = 0;}	
 			
@@ -338,7 +337,7 @@ void MBPCHAIN::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
-		if(std::isnan(sum)) emsg("nan here");
+		if(std::isnan(sum)) emsgEC("MBPchain",4);
 		Rtot[l][c] = sum;
 	}
 	
@@ -409,8 +408,8 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 
 	if(checkon == 1){
 		model.setup(paramval);
-		dd = Li - Lobs(data,model,poptree,trevi,indevi); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC34");
-		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC35");
+		dd = Li - Lobs(data,model,poptree,trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",5);
+		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",6);
 	}
 	
 	timers.timembpprop += clock();
@@ -463,7 +462,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 	l = indlistref[i];   // Removes the exisiting entry
 	switch(stat[i]){
   case BOTH:
-		if(indbothlist[w][l] != i) emsg("MBPchain: EC43b");
+		if(indbothlist[w][l] != i) emsgEC("MBPchain",7);
 		n = indbothlist[w].size();
 		if(l < n-1){
 			indbothlist[w][l] = indbothlist[w][n-1];
@@ -474,7 +473,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		break;
 		
 	case PONLY:
-		if(indponlylist[w][l] != i) emsg("MBPchain: EC44");
+		if(indponlylist[w][l] != i) emsgEC("MBPchain",8);
 		n = indponlylist[w].size();
 		if(l < n-1){
 			indponlylist[w][l] = indponlylist[w][n-1];
@@ -485,7 +484,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		break;
 		
 	case NOT:
-		if(indnotlist[w][l] != i) emsg("MBPchain: EC44");
+		if(indnotlist[w][l] != i) emsgEC("MBPchain",9);
 		n = indnotlist[w].size();
 		if(l < n-1){
 			indnotlist[w][l] = indnotlist[w][n-1];
@@ -495,7 +494,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindnotlist[w]--;
 		break;
 	
-	default: emsg("MBPChain EC46"); break;
+	default: emsgEC("MBPChain",10); break;
 	}
 
 	stat[i] = st;
@@ -518,7 +517,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindbothlist[w]++;
 		break;
 		
-	default: emsg("MBPChain EC47"); break;
+	default: emsgEC("MBPChain",11); break;
 	}
 	
 	if(updateR == 1){
@@ -685,7 +684,7 @@ unsigned int MBPCHAIN::nextinfection()
 		}
 		
 		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
-		if(j == jmax) emsg("MBPchain: EC15");
+		if(j == jmax) emsgEC("MBPchain",12);
 		
 		c = lev[l].node[c].child[j];
 		l++;
@@ -713,16 +712,16 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 	}
 
 	z = ran()*sum; dp = 0; while(dp < dpmax && z > sumst[dp]) dp++; 
-	if(dp == dpmax) emsg("MBPchain: EC56");
+	if(dp == dpmax) emsgEC("MBPchain",13);
 	
 	w = c*dpmax + dp;                  // Next select when individuals in the initial and proposed states are susceptible
 	dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 	if(ran() < dlam/(dlam + nindponlylist[w]*lamp[w])){ // Both suscetible
-		n = indbothlist[w].size(); if(n == 0) emsg("MBPchain: EC43");
+		n = indbothlist[w].size(); if(n == 0) emsgEC("MBPchain",14);
 		i = indbothlist[w][(unsigned int)(ran()*n)];
 	}
 	else{                                       // Only proposed state susceptible
-		n = indponlylist[w].size(); if(n == 0) emsg("MBPchain: EC44b");
+		n = indponlylist[w].size(); if(n == 0) emsgEC("MBPchain",15);
 		i = indponlylist[w][(unsigned int)(ran()*n)];
 	}
 	
@@ -743,10 +742,10 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 	for(j = 0; j < xp.size(); j++){ // Checks order
 		i = xp[j].ind; e = xp[j].e;
 		// Unsigned quantities always >= 0
-		if( /* i < 0 || */ i >= indevp.size()) emsg("MBPchain: EC57");
-		if( /* e < 0 || */ e >= indevp[i].size()) emsg("MBPchain: EC58");
+		if( /* i < 0 || */ i >= indevp.size()) emsgEC("MBPchain",16);
+		if( /* e < 0 || */ e >= indevp[i].size()) emsgEC("MBPchain",17);
 		if(j < xp.size()-1){
-			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsg("MBPchain: EC59");
+			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsgEC("MBPchain",18);
 		}
 	}
 
@@ -755,22 +754,22 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		if(emax > 0){
 			c = 0; tt = 0;
 			for(e = 0; e < emax; e++){
-				ttt = indevp[i][e].t; if(ttt <= tt){ model.oe("here",indevp[i]); emsg("MBPchain: EC70");}
+				ttt = indevp[i][e].t; if(ttt <= tt){ model.oe("here",indevp[i]); emsgEC("MBPchain",19);}
 				tra = indevp[i][e].trans;
-				if(trans[tra].from != c) emsg("MBPchain: EC71");
+				if(trans[tra].from != c) emsgEC("MBPchain",20);
 				c = trans[tra].to; tt = ttt;
 			}
-			if(comp[c].trans.size() != 0) emsg("MBPchain: EC72");
+			if(comp[c].trans.size() != 0) emsgEC("MBPchain",21);
 			
 			for(timep = 0; timep < model.ntimeperiod; timep++){
 				tt = model.timeperiod[timep].tend;
 				if(tt > indevp[i][0].t && tt < indevp[i][emax-1].t){
 					for(e = 0; e < emax; e++) if(indevp[i][e].t == tt) break;
 					if(timep <  model.ntimeperiod-1){
-						if(e == emax) emsg("MBPchain: EC73");
+						if(e == emax) emsgEC("MBPchain",22);
 					}
 					else{
-						if(e != emax) emsg("MBPchain: EC73b");
+						if(e != emax) emsgEC("MBPchain",23);
 					}
 				}
 			}
@@ -780,22 +779,22 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 	for(i = 0; i < data.popsize; i++){    // Checks stat is correct
 	  w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
-		if(nindbothlist[w] != indbothlist[w].size()) emsg("MBPchain: EC22");
-		if(nindponlylist[w] != indponlylist[w].size()) emsg("MBPchain: EC22");
-		if(nindnotlist[w] != indnotlist[w].size()) emsg("MBPchain: EC22");
+		if(nindbothlist[w] != indbothlist[w].size()) emsgEC("MBPchain",24);
+		if(nindponlylist[w] != indponlylist[w].size()) emsgEC("MBPchain",25);
+		if(nindnotlist[w] != indnotlist[w].size()) emsgEC("MBPchain",26);
 		
 		if((indevi[i].size() == 0 || t < indevi[i][0].t) && indevp[i].size() == 0){
-			if(stat[i] != BOTH) emsg("MBPchain: EC22");
-			if(indbothlist[w][indlistref[i]] != i) emsg("MBPchain: EC23");
+			if(stat[i] != BOTH) emsgEC("MBPchain",27);
+			if(indbothlist[w][indlistref[i]] != i) emsgEC("MBPchain",28);
 		}
 		else{
 			if((indevi[i].size() != 0 && t >= indevi[i][0].t) && indevp[i].size() == 0){
-				if(stat[i] != PONLY) emsg("MBPchain: EC24");
-				if(indponlylist[w][indlistref[i]] != i) emsg("MBPchain: EC25");
+				if(stat[i] != PONLY) emsgEC("MBPchain",29);
+				if(indponlylist[w][indlistref[i]] != i) emsgEC("MBPchain",30);
 			}
 			else{
-				if(stat[i] != NOT) emsg("MBPchain: EC26");
-				if(indnotlist[w][indlistref[i]] != i) emsg("MBPchain: EC27");
+				if(stat[i] != NOT) emsgEC("MBPchain",31);
+				if(indnotlist[w][indlistref[i]] != i) emsgEC("MBPchain",32);
 			}
 		}
 	}
@@ -807,19 +806,19 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		sum = 0; dp = 0; v = c*data.nage; 
 		for(w = wmin; w < wmax; w++){
 			a = data.democatpos[dp][0];
-			dd = lami[w] - model.susi[dp]*(betai*model.areafaci[c]*Qmapi[sett][v+a] + phii); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC67");
-			dd = lamp[w] - model.susp[dp]*(betap*model.areafacp[c]*Qmapp[sett][v+a] + phip); if(sqrt(dd*dd) > tiny) emsg("MBPchain: EC68");
+			dd = lami[w] - model.susi[dp]*(betai*model.areafaci[c]*Qmapi[sett][v+a] + phii); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",33);
+			dd = lamp[w] - model.susp[dp]*(betap*model.areafacp[c]*Qmapp[sett][v+a] + phip); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",34);
 	
 			dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
-		dd = Rtot[l][c] - sum; if(sqrt(dd*dd) > tiny){ emsg("MBPchain: EC69");}
+		dd = Rtot[l][c] - sum; if(sqrt(dd*dd) > tiny){ emsgEC("MBPchain",35);}
 	}
 	
 	for(i = 0; i < data.popsize; i++){
 		for(tra = 0; tra < model.trans.size(); tra++){
-			if(indmap[i][tra] != 0) emsg("MBPchain: EC65");
+			if(indmap[i][tra] != 0) emsgEC("MBPchain",36);
 		}
 	}
 }
@@ -832,10 +831,10 @@ void MBPCHAIN::check_addrem()
 	
 	for(j = 0; j < xi.size(); j++){
 		i = xi[j].ind; e = xi[j].e;
-		if(i >= indevi.size()) emsg("MBPchain: EC57");
-		if(e >= indevi[i].size()) emsg("MBPchain: EC58");
+		if(i >= indevi.size()) emsgEC("MBPchain",37);
+		if(e >= indevi[i].size()) emsgEC("MBPchain",38);
 		if(j < xi.size()-1){
-			if(indevi[i][e].t > indevi[xi[j+1].ind][xi[j+1].e].t) emsg("MBPchain: EC59");
+			if(indevi[i][e].t > indevi[xi[j+1].ind][xi[j+1].e].t) emsgEC("MBPchain",39);
 		}
 	}
 
@@ -848,15 +847,15 @@ void MBPCHAIN::check_addrem()
 			for(e = 0; e < indevi[i].size(); e++) done[i][e] = 0;
 		}
 	}
-	if(num != xi.size()) emsg("MBPchain: EC60");
+	if(num != xi.size()) emsgEC("MBPchain",40);
 
 	for(sett = 0; sett < data.nsettime; sett++){
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
-			if(e >= indevi[i].size()) emsg("MBPchain: EC61");
+			if(e >= indevi[i].size()) emsgEC("MBPchain",41);
 			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period); 
-			if(se != sett) emsg("MBPchain: EC62");
-			if(done[i][e] != 0) emsg("MBPchain: EC62");
+			if(se != sett) emsgEC("MBPchain",42);
+			if(done[i][e] != 0) emsgEC("MBPchain",43);
 			done[i][e] = 1;
 		}
 	}
@@ -864,10 +863,10 @@ void MBPCHAIN::check_addrem()
 	for(i = 0; i < indevi.size(); i++){
 		for(e = 0; e < indevi[i].size(); e++){
 			if(indevi[i][e].t < data.period){
-				if(done[i][e] != 1) emsg("MBPchain: EC63");
+				if(done[i][e] != 1) emsgEC("MBPchain",44);
 			}
 			else{
-				if(done[i][e] != 0) emsg("MBPchain: EC64");
+				if(done[i][e] != 0) emsgEC("MBPchain",45);
 			}
 		}
 	}
@@ -904,7 +903,7 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 				w = c*data.ndemocatpos + dp;
 				v = c*data.nage + data.democatpos[dp][0];
 				lami[w] = model.sus[dp]*(fac*Qmap[sett][v] + phi);		
-				if(lami[w] < 0) emsg("n");
+				if(lami[w] < 0) emsgEC("MBPchain",46);
 				
 				L -= lami[w]*popw[w]*(tmax-t);
 			}
@@ -921,7 +920,7 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 			c = data.ind[i].area;
 			w = c*data.ndemocatpos + data.ind[i].dp;
 			L += log(lami[w]);
-			if(std::isnan(L)) emsg("MBPchain: EC87");
+			if(std::isnan(L)) emsgEC("MBPchain",47);
 			popw[w]--;
 			n++;
 			
@@ -944,7 +943,7 @@ void MBPCHAIN::calcQmapp()
 	for(sett = 0; sett < data.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -tiny){ emsg("MBPchain: EC31b");}
+			if(val < -tiny){ emsgEC("MBPchain",48);}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -973,16 +972,16 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 		if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 		timers.timeparam += clock();
 			
-		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24b");}
+		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",49);}
 
 		timers.timeaddrem -= clock();
 		if(loop%2 == 0) addrem_prop(samp,burnin);
 		timers.timeaddrem += clock();
 		
-		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24c");}
+		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",50);}
 	}
 	
-	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsg("MBPchain: EC24d");}}
+	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("MBPchain",51);}}
 
 	timers.timestandard += clock();
 }
@@ -1102,7 +1101,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 						for(j = 0; j < jmax; j++){
 							Levp += lc[sett][j].num*log(lc[sett][j].betafac*beta + lc[sett][j].phifac*phi);
 						}
-						if(std::isnan(Levp)) emsg("MBPchain: EC77b");
+						if(std::isnan(Levp)) emsgEC("MBPchain",52);
 					}
 					al = exp(Levp-Levi);
 				}
@@ -1241,7 +1240,7 @@ void MBPCHAIN::area_prop2(unsigned int samp, unsigned int burnin, unsigned int t
 			kmax = mult[c].size();
 			for(k = 0; k < kmax; k++) Levp += log(mult[c][k]*fac + add[c][k]);
 		}
-		if(std::isnan(Levp)) emsg("MBPchain: EC77b");
+		if(std::isnan(Levp)) emsgEC("MBPchain",53);
 	
 	  Prp = model.prior();
 		al = exp(Prp-Pri + Levp-Levi);
@@ -1317,7 +1316,7 @@ void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 
 	for(i = 0; i < x.size(); i++){
 		evreft.ind = x[i].ind; evreft.e = x[i].e;
-		if(indev[x[i].ind].size() == 0) emsg("MBPchain: EC87");
+		if(indev[x[i].ind].size() == 0) emsgEC("MBPchain",54);
 		
 		evreft.t = indev[x[i].ind][x[i].e].t;
 		xt.push_back(evreft);	
@@ -1338,7 +1337,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	
 	model.setup(paramval);
 		
-	if(checkon == 1){ dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsg("MBPchain: EC24");}
+	if(checkon == 1){ dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",55);}
 
 	probif = 0; probfi = 0;
 	
@@ -1357,7 +1356,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 		for(j = 0; j < numaddrem; j++){
 			if(xp.size() >= model.infmax){ resetlists(); return;}
 			
-			sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsg("MBPchain: EC32a");
+			sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsgEC("MBPchain",56);
 			z = ran()*sumtot;
 			
 			k = 0; dk = data.nsettardp/10; if(dk == 0) dk = 1;
@@ -1367,11 +1366,11 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 				if(k >= dk) k -= dk;
 				dk /= 10; if(dk == 0) dk = 1;
 			}while(1 == 1);
-			if(k >= data.nsettardp) emsg("MBPchain: EC32b");
+			if(k >= data.nsettardp) emsgEC("MBPchain",57);
 		
 			if(k > 0){
-				if(k >= lamsum.size()) emsg("MBPchain: EC32c");
-				if(!(z < lamsum[k] && z > lamsum[k-1])) emsg("MBPchain: EC33");
+				if(k >= lamsum.size()) emsgEC("MBPchain",58);
+				if(!(z < lamsum[k] && z > lamsum[k-1])) emsgEC("MBPchain",59);
 			}
 			
 			probif += log(lam[k]/sumtot);
