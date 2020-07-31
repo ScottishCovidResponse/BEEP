@@ -1,11 +1,4 @@
 // This code is used to generate the Q tensor from the census flow data and age mixing matrices.
-// This Q tensor is then used as an input into the full code.
-
-// Compile: g++ generateQ.cc -O3
-// Run: ./a.out "Name of data directory" 
-
-// E.g. ./a.out Data_ScotlandMSOA   
-// E.g. ./a.out Data_example
 
 #include <iostream>
 #include <sstream>
@@ -27,8 +20,6 @@ using namespace std;
 #endif
 
 unsigned int nage;                         // The number of age categories used 
-//const short normon = 1;                    // Determines if matrix normalised
-//const short symetric = 1;                  // Set to 1 if Q matrix symetric in area
 
 struct MATRIX {                            // Loads a matrix
 	unsigned int N;													 // The size of the matrix
@@ -140,7 +131,7 @@ vector <AREA> loadarea(TABLE tab)
 		agecol.push_back(findcol(tab,"age65+"));
 		break;
 	
-	default: emsg("nage not recognised"); break;	
+	default: emsg("The number of age categories 'nage' is not recognised"); break;	
 	}
 	
 	for(c = 0; c < tab.nrow; c++){
@@ -270,10 +261,10 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 	  div.push_back(0); div.push_back(3); div.push_back(9); div.push_back(13); div.push_back(16);
 		break;
 		
-	default: emsg("nage not recognised"); break;
+	default: emsg("The number of age categories is not recognised"); break;
 	}
 
-	if(tab.nrow != 16 || tab.ncol != 16) emsg("Table size not right");
+	if(tab.nrow != 16 || tab.ncol != 16) emsg("For the file '"+tab.file+"' the table size is not right");
 	
 	mat.N = N;
 	mat.ele.resize(N);
@@ -284,7 +275,7 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 			for(jj = div[j]; jj < div[j+1]; jj++){
 				for(ii = div[i]; ii < div[i+1]; ii++){
 					val = atof(tab.ele[jj][ii].c_str());
-					if(std::isnan(val)) emsg("Not a number!");
+					if(std::isnan(val)) emsg("For the file '"+tab.file+"' the value '"+to_string(val)+"' is not a number.");
 					sum += val;
 				}
 			}
@@ -321,7 +312,7 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 		v = contact.at(i);
 		mat.i.push_back(a1);
 		mat.j.push_back(a2);
-		if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+		if(std::isnan(v)) emsg("The value '"+v+"' in file '"+file+"' is not a number.");
 		mat.val.push_back(v);
 	}
 
@@ -343,7 +334,7 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 
 #else
 	N = N;
-	emsg("loadsparsefromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+	emsg("loadsparsefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in.");
 #endif
 
 	return mat;
@@ -371,7 +362,7 @@ SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
 		ss >> a1 >> a2 >> v;
 		mat.i.push_back(a1);
 		mat.j.push_back(a2);
-		if(std::isnan(v)) emsg("Value in file '"+file+"' is not a number");
+		if(std::isnan(v)) emsg("The value '"+to_string(v)+"' in file '"+file+"' is not a number");
 		mat.val.push_back(v);
 	}while(1 == 1);
 
@@ -418,7 +409,7 @@ TABLE loadarrayfromdatapipeline(string file)
 
 	cout << "Loaded array " << file << " from data pipeline" << endl;
 #else
-	emsg("loadarrayfromdatapipeline for "+file+" cannot be called as data pipeline is not compiled in");
+	emsg("loadarrayfromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;
@@ -435,8 +426,6 @@ TABLE loadarray(string file, string dir)
 	}
 }
 
-
-
 /// Loads a table from a file
 TABLE loadtable(string file, string head)
 {
@@ -446,6 +435,8 @@ TABLE loadtable(string file, string head)
 	
 	ifstream in(file.c_str());                             // Loads information about areas
 	if(!in) emsg("Cannot open the file '"+file+"'");
+		
+	tab.file = file;
 		
 	if(head == "head"){	
 		getline(in,line);
@@ -472,7 +463,7 @@ TABLE loadtable(string file, string head)
 		}while(1 == 1);
 		
 		if(tab.ele.size() == 0 && head == "nohead") tab.ncol = vec.size();
-		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all have the same length.");
+		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all share the same number of columns.");
 		
 		tab.ele.push_back(vec);
 	}while(1 == 1);
@@ -489,7 +480,7 @@ unsigned int findcol(TABLE &tab, string name)
 	unsigned int c;
 	
 	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
-	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"'.");
+	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"' in file '"+tab.file+"'.");
 	return c;
 }		
 

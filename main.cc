@@ -132,7 +132,8 @@ double lookup_double_parameter(const map<string,string> &params,
 		}
 	} else {
 		if (tomldata.contains(key)) {
-			val = toml::find<double>(tomldata,key);
+			const auto val_temp = toml::find(tomldata,key);
+			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
 		} else {
 			val = def;
 			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
@@ -220,10 +221,21 @@ void check_for_undefined_parameters(vector<string> allowed, vector<string> given
 map<string,string> get_command_line_params(int argc, char *argv[])
 {
 	map<string,string> cmdlineparams;
-
-	// Store the parameters passed on the command line in cmdlineparams
-	for(int op = 1; op < argc; op++){ // Goes the various input options
+	
+	vector <string> commandlist;
+	
+	for(int op = 1; op < argc; op++){ 
 		string str = string(argv[op]);
+		unsigned int n = commandlist.size();
+		if(n > 0 && (str.substr(0,1) == "=" || commandlist[n-1].substr(commandlist[n-1].length()-1,1) == "=")) commandlist[n-1] += str;
+		else{
+			commandlist.push_back(str);
+		}
+	}
+	
+	// Store the parameters passed on the command line in cmdlineparams
+	for(unsigned int op = 0; op < commandlist.size(); op++){ // Goes the various input options
+		string str = commandlist[op];
 		int j = 0; int jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 
@@ -232,7 +244,7 @@ map<string,string> get_command_line_params(int argc, char *argv[])
 		
 		string command = str.substr(0,j);
 		string value = str.substr(j+1,jmax-(j+1));
-
+		
 		if (cmdlineparams.count(command) == 0) {
 			cmdlineparams[command] = value;
 		} else {
@@ -283,7 +295,7 @@ int main(int argc, char** argv)
 	#endif
 
 	if (core == 0) {
-		//cout << "BEEPmbp version " << gitversion() << endl;
+		cout << "BEEPmbp version " << gitversion() << endl;
 	}
 	
 
@@ -364,16 +376,19 @@ int main(int argc, char** argv)
 	
 	if (cmdlineparams.count("mode") == 1) {
 		if(cmdlineparams["mode"] == "combinetrace"){
-			if (cmdlineparams.count("dirs") == 0) emsg("Must set the 'dirs' property");
+			if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
 			vector <string> dirs;
 			string output, distfile="";
 			unsigned int burnin=UNSET;
 			dirs = split(cmdlineparams["dirs"],',');
 			
-			if(cmdlineparams.count("output") == 0) emsg("Must set the 'output' property");
+			if(cmdlineparams.count("output") == 0) emsg("When using the 'combinetrace' mode, you must set the 'output' property");
 		
 			if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
-			if(cmdlineparams.count("burnin") == 1) burnin = atoi(cmdlineparams["burnin"].c_str());
+			if(cmdlineparams.count("burnin") == 1){
+				burnin = atoi(cmdlineparams["burnin"].c_str());
+				if(std::isnan(burnin)) emsg("The 'burnin' property must be an integer."); 
+			}
 		
 			output = cmdlineparams["output"];
 			data.combinetrace(dirs,output,distfile,burnin);

@@ -57,7 +57,7 @@ double normal(float mu, float sd)
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 double gammasamp(double a, double b)
 {
-  if(a < 0 || b < 0) emsg("Part: EC2");
+  if(a < 0 || b < 0) emsgEC("Utils",1);
 
   if(a < 1){
     double u = ran();
@@ -88,13 +88,13 @@ double gammasamp(double a, double b)
 
 double normalprob(double x, double mean, double var)
 {
-  if(var < 0) emsg("Variance must be positive.");
+  if(var < 0) emsgEC("Utile",2);
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
 double gammaprob(double x, double a, double b)                                      // The log of the probability from the gamma distribution
 {
-  if(x < 0 || a < 0 || b < 0) emsg("Gamma function cannot be negative");
+  if(x < 0 || a < 0 || b < 0) emsgEC("Utile",3);
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
 
@@ -103,8 +103,8 @@ double gammaprob(double x, double a, double b)                                  
 double lognormprob(double x, double mean, double var)
 {
 	double val;
-	if(x <= 0) emsg("Log normal must be positive.");
-	if(var < 0) emsg("Variance must be positive."); 
+	if(x <= 0) emsgEC("Utils",4);
+	if(var < 0) emsgEC("Utils",5); 
 	val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
 }
@@ -125,7 +125,14 @@ vector<string> split(const string& s, char delimiter)
 void emsg(string msg)
 {
 	cout << msg << endl;
-	//MPI_Finalize();
+	exit (EXIT_FAILURE);
+}
+
+/// Displays an internal error message
+void emsgEC(string section, unsigned int ec)
+{
+	cout << "Unfortunately BEEPmbp has generated an internal error. We are very sorry about this!" << endl;
+	cout << "The error occurred in '" << section << "' with code '" << ec << "'" << endl;
 	exit (EXIT_FAILURE);
 }
 
@@ -135,7 +142,6 @@ void emsgroot(string msg)
 	int core;
 	MPI_Comm_rank(MPI_COMM_WORLD,&core);
 	if(core == 0) cout << msg << endl;
-	//MPI_Finalize();
 	exit (EXIT_FAILURE);
 }
 /// @endcond

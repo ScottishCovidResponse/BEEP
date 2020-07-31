@@ -90,7 +90,7 @@ void POPTREE::init(DATA &data, unsigned int core)
  
 	level = l+1;
 
-	if(lev[l].node.size() != data.narea) emsg("Poptree: EC10");
+	if(lev[l].node.size() != data.narea) emsgEC("Poptree",1);
 	
 	l = level-2;                                                             // Switches children so the last layer matches order
 	cmax = lev[l].node.size();
@@ -98,7 +98,7 @@ void POPTREE::init(DATA &data, unsigned int core)
 		jmax = lev[l].node[c].child.size();
 		for(j = 0; j < jmax; j++){
 			cc = lev[l].node[c].child[j];
-			if(lev[level-1].node[cc].arearef.size() != 1) emsg("Poptree: EC11");
+			if(lev[level-1].node[cc].arearef.size() != 1) emsgEC("Poptree",2);
 			ccc = lev[level-1].node[cc].arearef[0];
 			lev[l].node[c].child[j] = ccc;
 			lev[level-1].node[ccc].parent = c;

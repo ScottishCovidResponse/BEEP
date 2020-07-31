@@ -368,7 +368,7 @@ static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp,
 		else{
 			MPI_Status status;
 			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
-			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
+			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer is not big enough");
 		
 			packinit();
 			unpack(paramsamp.paramval);
@@ -418,7 +418,7 @@ static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <S
 	
 	if(core == 0){
 		for(p = 0; p < nchaintot; p++){ if(chtot[p] == 0){ ppost = p; break;}}
-		if(p == nchaintot) emsg("MBP: EC5");
+		if(p == nchaintot) emsgEC("MBP",100);
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -433,7 +433,7 @@ static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <S
 		else{
 			MPI_Status status;
 			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
-			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("Buffer not big enough");
+			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer not big enough.");
 		
 			packinit();
 			unpack(sample.meas.transnum);
@@ -522,7 +522,7 @@ static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned 
 
 		for(c = 0; c < nchaintot; c++){
 			cc = 0; while(cc < nchaintot && c != chtot[cc]) cc++;
-			if(cc == nchaintot) emsg("MBP: EC9");			
+			if(cc == nchaintot) emsgEC("MBP",101);			
 		
 			diag << "-------- Chain: " << c << " ----------" << endl << endl;
 			diag << "invT: " << invTstore[c] << "  ";

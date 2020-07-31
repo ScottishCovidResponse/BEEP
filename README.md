@@ -7,15 +7,21 @@
 | dev           | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=dev)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=dev)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=dev) |
 | chrispooley   | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=chrispooley)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=chrispooley)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=chrispooley) |
 
-C. M. Pooley† [1] and Glenn Marion [1]
+C. M. Pooley† [1], I. Hinder [2], R. Bailey [3], R. Williams[4], S. Catterall [1],  A. Doeschl-Wilson [3] and Glenn Marion [1]
 
-[1] Biomathematics and Statistics Scotland, James Clerk Maxwell Building, The King's Buildings, Peter Guthrie Tait Road, Edinburgh, EH9 3FD, UK 
+[1] Biomathematics and Statistics Scotland, James Clerk Maxwell Building, The King's Buildings, Peter Guthrie Tait Road, Edinburgh, EH9 3FD, UK.
+
+[2] The University of Manchester, Oxford Rd, Manchester, M13 9PL, UK.
+
+[3] The Roslin Institute, The University of Edinburgh, Midlothian, EH25 9RG, UK. 
+
+[4] University of Bristol, Queen's Building, University Walk, Clifton BS8 1TR, UK.
 
 † Corresponding author
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly hospitalisations and deaths for Covid-19 patients at a health board level along with national demographic data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease progression. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model Based Proposals) is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is daily hospitalisations and weekly deaths for Covid-19 patients at a health board level along with national demographic data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease progression. 
 
 Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-MCMC) approach. This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
 
@@ -66,7 +72,7 @@ mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 outputdir="OutputIn
 inference will be performed on the data produced by the simulation,
 not the example data.)
 
-You can plot the histogram of samples for beta0, which should be
+You can plot the histogram of samples for f0, which should be
 roughly peaked near to the simulated value (0.3). Increase the number
 of samples (e.g. nsamp=1000) on the command line to improve this.
 
@@ -96,7 +102,11 @@ Here is a description of the various parameters used in the input TOML files:
 
 **nsamp** - The number of samples used for inference (note, burnin is assumed to be a quarter this value).
 
-**outputdir** - Gives the name of the output directory (optional).
+**invTmax** - Sets the inverse temperature of the posterior chain (optional, set to 0.25 by default).  
+
+**invTmin** - Sets the inverse temperature of the prior chain (optional, set to 0.0 by default but can be set to invTmax to speed up inference if model evidence not required). 
+
+**outputdir** - Gives the name of the output directory (optional, set to "Output" by default).
 
 ## The model
 
@@ -169,21 +179,25 @@ This creates the specified 'transdata', 'popdata' and/or 'margdata' files in the
 The output directory contains posterior information (with means and 90% credible intervals) for:
 
 1. Plots for the transitions corresponding to the 'transdata', 'popdata' and/or 'margdata' files.
-2. "Posterior_R0.txt", which gives posterior plots time variation in R0.
-3. "Posterior_parameter.txt", which gives information about parameters.
-4. "trace.txt", which gives trace plots for different models.
-5. "traceLi.txt", which gives trace plots for the likelihoods on different chains.
-6. "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
+2. "Posterior_R0.txt" gives posterior plots for the time variation in the basic reproduction number R0.
+3. "Posterior_Rmap.txt'" gives the basic reproduction number R0 as a function of time for different areas.
+4. "Posterior_phi.txt" gives posterior plots for time variation in the external force of infection (in units of infections per 100000 individuals).
+5. "Posterior_parameter.txt" gives information about parameters.
+6. "Posterior_distributions.txt" gives posterior distributions for parameters (using a binning procedure).
+7. "trace.txt" gives trace plots for different models.
+8. "traceLi.txt" gives trace plots for the likelihoods on different chains.
+9. "MCMCdiagnostic.txt" gives diagnostic information on the MCMC algorithm.
+10. "MCMCdiagnostic_timings.txt", provides information about CPU times for different parts of the algorithm.
 
 Diagnostic checks: two types of checks can be performed to ensure that the results obtained are reliable:
 
 1. Estimates for the effective sample size in "Posterior_parameter.txt". These should exceed 200 for all parameters if the number of samples is sufficiently large. If this is not the case it indicates that MCMC should be run with more samples (see the 'nsamp' option in the input TOML file).
 2. Results from different runs can be combined to ensure that they all converge on the same posterior distribution (if the likelihood exhibits significant multimodality then under some circumstances different runs can converge on different solutions rendering the results questionable). This is achieved by running BEEPmbp in 'combinetrace' mode. For example, if two sets of inference results using different seeds have been placed into directories 'OutputA' and 'OutputB', the following command:
    ```
-   ./beepmbp mode="combinetrace" dirs="OutputA,OutputB" output="parameter_combined.txt"
+   ./beepmbp mode="combinetrace" dirs="OutputA,OutputB" output="parameter_combined.txt" dist="distribution_combined.txt"
    ```
 
-generates a file combining the two sets of samples along with Gelman–Rubin convergence diagnostic results that test for convergence across runs.
+generates a file combining the two sets of samples along with Gelman–Rubin convergence diagnostic results that test for convergence across runs. Optionally parameter distributions can also be generated by setting the 'dist' property. 
 
 # Development
 
