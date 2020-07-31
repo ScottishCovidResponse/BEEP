@@ -10,11 +10,11 @@ This checklist is part of ongoing work on a model scoresheet for SCRC models. It
 
 ### Date
 
-> 30-Jul-2020
+> 31-Jul-2020
 
 ### Version identifier
 
-> 1f325cb
+> ebf714f
 
 ## Overall statement
 
@@ -58,7 +58,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [X] Needs to be addressed
 > 
-> There is a regression test framework which catches inadvertent changes to the results. Coverage of the regression test framework is ~80%. We have a unit test framework. Both types of tests are run [regularly in CI](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).  The [README](README.md) describes how to run the tests.  However, there are minimal [unit tests](codetests), as the important parts of the code do not currently lend themselves to unit testing. This will require some refactoring to fix.
+> There is a regression test framework which catches inadvertent changes to the results. Coverage of the regression test framework is ~80%. We have a unit test framework. Both types of tests are run [regularly in CI](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).  The [README](README.md) describes how to run the tests.  However, there are minimal [unit tests](codetests), as the important parts of the code do not currently lend themselves to unit testing. This will require some refactoring to fix, and unit tests to be [added](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/556).
 
 ### Are the scientific results of runs robust to different ways of running the code?
 
@@ -73,7 +73,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> We have tested on several compilers in macOS and Linux, and find broadly the same results. Regression tests are passed (bitwise identical results of ASCII output files, with default (6 digit) floating point precision output) on both Clang and GCC on Linux, but [not on macOS](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628) in either. We have not yet investigated the root cause of the differences on macOS. Further testing of optimisation/debug flags needs to be performed.
+> We have tested on several compilers in macOS and Linux, and find broadly the same results. Regression tests are passed (bitwise identical results of ASCII output files, with default (6 digit) floating point precision output) on both Clang and GCC on Linux, but [not on macOS](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628) in either. We have not yet investigated the root cause of the differences on macOS. Further testing of optimisation flags needs to be performed.
 
 ### Has any sort of automated code checking been applied?
 
@@ -84,7 +84,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [X] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> We enable all compiler warnings with GCC and use Clang Static Analyzer. There is presently one minor warning which will be fixed.  We have integrated CODACY and get a B grade. There are 111 total issues, 97 of which are for code style, 6 are "error prone" code patterns, 8 are for performance.  The "error-prone" warnings need to be [fixed](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/702), and this is being worked on.
+> We enable all compiler warnings with GCC and use Clang Static Analyzer. There are currently [no warnings](https://github.com/ScottishCovidResponse/BEEPmbp/actions/runs/190447662).  We have integrated CODACY and get a B grade. There are 126 total issues, 107 of which are for code style, 6 are "error prone" code patterns, 13 are for performance.  The "error-prone" warnings need to be [fixed](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/702).
 
 ### Is the code clean, generally understandable and readable and written according to good software engineering principles?
 
@@ -110,7 +110,7 @@ Additionally, for each question please explain the situation and include any rel
 > - [ ] Some work remaining or caveats
 > - [X] Needs to be addressed
 > 
-> There is a README which explains how to run the code. The input files contain a lot of detail but each parameter has a comment next to it. There is a Doxygen configuration file, but Doxygen is not run automatically in CI. The code has reasonable Doxygen comments.  There is little other developer documentation beyond describing how to run tests etc.  There is no algorithm documentation. The existing documentation is up-to-date (TODO: check this).
+> There is a README which explains how to run the code. The example input files contain comments next to each parameter. There is a Doxygen configuration file, but Doxygen is not run automatically in CI. The existing documentation is up-to-date. The code has reasonable Doxygen comments.  There is little other developer documentation beyond describing how to run tests etc.  There is no algorithm documentation. The main outstanding issue is that there is no detailed documentation for how to use the code to do something specific.
 
 ### Is there suitable collaboration infrastructure?
 
@@ -119,11 +119,11 @@ Additionally, for each question please explain the situation and include any rel
 - Is an issue tracker used?
 - Are there contribution guidelines?
 
-> - [ ] Sufficiently addressed
-> - [X] Some work remaining or caveats
+> - [X] Sufficiently addressed
+> - [ ] Some work remaining or caveats
 > - [ ] Needs to be addressed
 > 
-> The code is stored in a GitHub repository, and the issue tracker and pull requests are used as part of development, though not for the main work by the model owner.  No [licence file or contribution guidelines](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/560) have been added yet.
+> The code is stored in a GitHub repository, and the issue tracker and pull requests are used as part of development, though not for the main work by the model owner.  There is a licence and contribution guidelines.
 
 ### Are software dependencies listed and of appropriate quality?
 
