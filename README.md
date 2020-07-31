@@ -10,8 +10,11 @@
 C. M. Pooley† [1], I. Hinder [2], R. Bailey [3], R. Williams[4], S. Catterall [1],  A. Doeschl-Wilson [3] and Glenn Marion [1]
 
 [1] Biomathematics and Statistics Scotland, James Clerk Maxwell Building, The King's Buildings, Peter Guthrie Tait Road, Edinburgh, EH9 3FD, UK.
+
 [2] The University of Manchester, Oxford Rd, Manchester, M13 9PL, UK.
+
 [3] The Roslin Institute, The University of Edinburgh, Midlothian, EH25 9RG, UK. 
+
 [4] University of Bristol, Queen's Building, University Walk, Clifton BS8 1TR, UK.
 
 † Corresponding author
