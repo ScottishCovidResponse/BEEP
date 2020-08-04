@@ -699,12 +699,12 @@ unsigned int DATA::gettime(string st)
 	if(st == "end") return end;
 			
 	switch(tform){
-	case TFORM_NUM:
+	case tform_num:
 		t = atoi(buf);
 		if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
 		break;
 
-	case TFORM_YMD:
+	case tform_ymd:
 		memset(&result, 0, sizeof(result));
 		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
 			time_t tt = mktime(&result);
@@ -737,11 +737,11 @@ string DATA::getdate(unsigned int t)
 	t += start;
 
 	switch(tform){
-	case TFORM_NUM:
+	case tform_num:
 		ss << t;
 		break;
 		
-	case TFORM_YMD:
+	case tform_ymd:
 		tt = (t + 0.5)*(60*60*24);	
 		timeinfo = localtime(&tt);
 		strftime(buffer,80,"%Y-%m-%d",timeinfo);

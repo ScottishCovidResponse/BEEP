@@ -199,19 +199,19 @@ unsigned int MBPCHAIN::mbp()
 				t = txi;
 				i = ev.ind;
 			
-				if(stat[i] == BOTH){
+				if(stat[i] == both_sus){
 					w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
 					al = lamp[w]/lami[w];
 					if(ran() < al){                                    // Keeps the infection event
-						changestat(i,NOT,1);
+						changestat(i,not_sus,1);
 						
 						if(doev == 1) model.mbpmodel(indevi[i],indevp[i]);
 						else indevp[i] = indevi[i];
 						
 						addindev(i,indevp[i],xp,trevp);
 					}
-					else changestat(i,PONLY,1);      // Does not keep the infection event
+					else changestat(i,ponly_sus,1);      // Does not keep the infection event
 				}
 				n++;
 			}
@@ -433,7 +433,7 @@ void MBPCHAIN::setuplists()
 			jmax = data.area[c].ind[dp].size();
 			for(j = 0; j < jmax; j++){
 				i = data.area[c].ind[dp][j];
-				stat[i] = BOTH;
+				stat[i] = both_sus;
 				indlistref[i] = indbothlist[w].size();
 				indbothlist[w].push_back(i);
 			}
@@ -461,7 +461,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 	
 	l = indlistref[i];   // Removes the exisiting entry
 	switch(stat[i]){
-  case BOTH:
+  case both_sus:
 		if(indbothlist[w][l] != i) emsgEC("MBPchain",7);
 		n = indbothlist[w].size();
 		if(l < n-1){
@@ -472,7 +472,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindbothlist[w]--;
 		break;
 		
-	case PONLY:
+	case ponly_sus:
 		if(indponlylist[w][l] != i) emsgEC("MBPchain",8);
 		n = indponlylist[w].size();
 		if(l < n-1){
@@ -483,7 +483,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindponlylist[w]--;
 		break;
 		
-	case NOT:
+	case not_sus:
 		if(indnotlist[w][l] != i) emsgEC("MBPchain",9);
 		n = indnotlist[w].size();
 		if(l < n-1){
@@ -499,19 +499,19 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 
 	stat[i] = st;
 	switch(stat[i]){
-	case PONLY:
+	case ponly_sus:
 		indlistref[i] = indponlylist[w].size();
 		indponlylist[w].push_back(i);
 		nindponlylist[w]++;
 		break;
 		
-	case NOT:
+	case not_sus:
 		indlistref[i] = indnotlist[w].size();
 		indnotlist[w].push_back(i);
 		nindnotlist[w]++;
 		break;
 	
-	case BOTH:
+	case both_sus:
 		indlistref[i] = indbothlist[w].size();
 		indbothlist[w].push_back(i);
 		nindbothlist[w]++;
@@ -543,7 +543,7 @@ void MBPCHAIN::resetlists()
 		jmax = indponlylist[w].size();
 		for(j = 0; j < jmax; j++){
 			i = indponlylist[w][j];
-			stat[i] = BOTH;
+			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
 			nindbothlist[w]++;
@@ -554,7 +554,7 @@ void MBPCHAIN::resetlists()
 		jmax = indnotlist[w].size();
 		for(j = 0; j < jmax; j++){
 			i = indnotlist[w][j];
-			stat[i] = BOTH;
+			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
 			nindbothlist[w]++;
@@ -725,7 +725,7 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 		i = indponlylist[w][(unsigned int)(ran()*n)];
 	}
 	
-	changestat(i,NOT,1);
+	changestat(i,not_sus,1);
 	
 	model.simmodel(indevp[i],i,0,t);
 
@@ -784,16 +784,16 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		if(nindnotlist[w] != indnotlist[w].size()) emsgEC("MBPchain",26);
 		
 		if((indevi[i].size() == 0 || t < indevi[i][0].t) && indevp[i].size() == 0){
-			if(stat[i] != BOTH) emsgEC("MBPchain",27);
+			if(stat[i] != both_sus) emsgEC("MBPchain",27);
 			if(indbothlist[w][indlistref[i]] != i) emsgEC("MBPchain",28);
 		}
 		else{
 			if((indevi[i].size() != 0 && t >= indevi[i][0].t) && indevp[i].size() == 0){
-				if(stat[i] != PONLY) emsgEC("MBPchain",29);
+				if(stat[i] != ponly_sus) emsgEC("MBPchain",29);
 				if(indponlylist[w][indlistref[i]] != i) emsgEC("MBPchain",30);
 			}
 			else{
-				if(stat[i] != NOT) emsgEC("MBPchain",31);
+				if(stat[i] != not_sus) emsgEC("MBPchain",31);
 				if(indnotlist[w][indlistref[i]] != i) emsgEC("MBPchain",32);
 			}
 		}
@@ -1346,7 +1346,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	xp = xi;
 	jmax = xp.size(); for(j = 0; j < jmax; j++) indevp[xp[j].ind] = indevi[xp[j].ind];
 		 
-	for(j = 0; j < xp.size(); j++) changestat(xp[j].ind,NOT,0);
+	for(j = 0; j < xp.size(); j++) changestat(xp[j].ind,not_sus,0);
 	
 	if(ran() < 0.5){  // Adds individuals
 		timers.timembptemp2 -= clock();
@@ -1381,7 +1381,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			i = indbothlist[w][int(ran()*nindbothlist[w])];
 			probif += log(1.0/nindbothlist[w]);
 		
-			changestat(i,NOT,0);
+			changestat(i,not_sus,0);
 			
 			dt = data.settime[sett+1]-data.settime[sett];
 			t = data.settime[sett] + ran()*dt;
@@ -1420,7 +1420,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			xp[l] = xp[xp.size()-1];
 			xp.pop_back();
 			
-			changestat(i,BOTH,0);
+			changestat(i,both_sus,0);
 			
 			probfi += log(1.0/nindbothlist[w]);
 		}

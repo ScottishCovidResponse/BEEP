@@ -499,10 +499,10 @@ int main(int argc, char** argv)
 	}
 	
 	tformat = lookup_string_parameter(cmdlineparams, tomldata, "timeformat", param_verbose);
-	if(tformat == "number"){ data.tform = TFORM_NUM; data.tformat = "time";}
+	if(tformat == "number"){ data.tform = tform_num; data.tformat = "time";}
 	else{ 
 		data.tformat = "date";
-		if(tformat == "year-month-day") data.tform = TFORM_YMD; 
+		if(tformat == "year-month-day") data.tform = tform_ymd; 
 		else emsgroot("Do not recognise time format '"+tformat+"'.");
 	}
 	

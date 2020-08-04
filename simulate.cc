@@ -25,13 +25,13 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 {
 	unsigned int s;
 	vector <SAMPLE> opsamp; 
-    vector <PARAMSAMP> psamp;
+   vector <PARAMSAMP> psamp;
     
 	model.infmax = large;
 		
 	switch(data.mode){
 	case sim:       // Performs a single simulation 
-		{
+	  {
 			MBPCHAIN mbpchain(data,model,poptree,0);
 			proportions(data,model,mbpchain.indevi);
 			outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
@@ -39,20 +39,26 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 		break;
 		
 	case multisim:  // Performs multiple simulations and plots the distribution of results
-		SAMPLE sample;
-		PARAMSAMP paramsamp;
-		
-		for(s = 0; s < nsamp; s++){
-			cout << "Simulating sample " << (s+1) << endl;
-      MBPCHAIN mbpchain(data,model,poptree,0);
+		{
+			SAMPLE sample;
+			PARAMSAMP paramsamp;
 			
-			sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
-			model.setup(mbpchain.paramval);
-			sample.R0 = model.R0calc();
-			paramsamp.paramval =  mbpchain.paramval;
-			opsamp.push_back(sample);
+			for(s = 0; s < nsamp; s++){
+				cout << "Simulating sample " << (s+1) << endl;
+				MBPCHAIN mbpchain(data,model,poptree,0);
+				
+				sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
+				model.setup(mbpchain.paramval);
+				sample.R0 = model.R0calc();
+				paramsamp.paramval =  mbpchain.paramval;
+				opsamp.push_back(sample);
+			}
+			outputresults(data,model,psamp,opsamp);
 		}
-		outputresults(data,model,psamp,opsamp);
+		break;
+		
+	case inf: case combinetrace:
+		emsg("Data mode is not correct");
 		break;
 	}
 }

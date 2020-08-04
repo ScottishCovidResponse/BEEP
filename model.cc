@@ -162,17 +162,17 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			distval = UNSET;
 			
 			if(dist == "infection"){
-				distval = INFECTION;
+				distval = infection_dist;
 			}
 			
 			if(dist == "exp"){
-				distval = EXP_DIST;
+				distval = exp_dist;
 				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 			}
 			
 			if(dist == "lognorm"){
-				distval = LOGNORM_DIST;
+				distval = lognorm_dist;
 				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
@@ -181,7 +181,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 			
 			if(dist == "gamma"){
-				distval = GAMMA_DIST;
+				distval = gamma_dist;
 				if(!trans.contains("mean")) emsg("The '"+name+"' transition must contain a 'mean' definition.");
 				mean = toml::find<std::string>(trans, "mean");
 				
@@ -305,8 +305,8 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	
 	for(tra = 0; tra < trans.size(); tra++){
 		switch(trans[tra].type){
-		case EXP_DIST: param[trans[tra].param1].type = 1; break;
-		case GAMMA_DIST: case LOGNORM_DIST: param[trans[tra].param1].type = 1; param[trans[tra].param2].type = 1; break;
+		case exp_dist: param[trans[tra].param1].type = 1; break;
+		case gamma_dist: case lognorm_dist: param[trans[tra].param1].type = 1; param[trans[tra].param2].type = 1; break;
 		}
 		
 		if(trans[tra].istimep == 0){
@@ -352,17 +352,17 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 			
 			switch(trans[tra].type){
-				case INFECTION: 
+				case infection_dist: 
 					cout << " Infection";
 					break;
-				case EXP_DIST:
+				case exp_dist:
 					cout << " Exponential  mean=" << param[trans[tra].param1].name;
 					break;
-				case GAMMA_DIST:
+				case gamma_dist:
 					cout << " Gamma mean=" << param[trans[tra].param1].name 
 							 << " cv=" << param[trans[tra].param2].name; 
 					break;
-				case LOGNORM_DIST:
+				case lognorm_dist:
 					cout << " Lognormal mean=" << param[trans[tra].param1].name 
 							 << " cv=" << param[trans[tra].param2].name; 
 					break;
@@ -412,7 +412,7 @@ void MODEL::addQ()
 	string compi, compf;
 	DQINFO dq;
 	
-	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"",TIMEP_DIST,"","");  
+	for(c = 0; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"",timep_dist,"","");  
 	
 	for(q = 0; q < data.Q.size(); q++){
 		for(c = 0; c < comp.size(); c++) if(data.Q[q].comp == comp[c].name) break;
@@ -698,16 +698,16 @@ void MODEL::simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, doubl
 		}
 		
 		switch(trans[tra].type){
-		case EXP_DIST:
+		case exp_dist:
 			dt = -log(ran())*paramval[trans[tra].param1];
 			break;
 		
-		case GAMMA_DIST:
+		case gamma_dist:
 			mean = paramval[trans[tra].param1]; sd = paramval[trans[tra].param2]*mean;
 			dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
-		case LOGNORM_DIST:
+		case lognorm_dist:
 			mean_ns = paramval[trans[tra].param1]; cv_ns = paramval[trans[tra].param2];
 			sd = sqrt(log((1+cv_ns*cv_ns))); mean = log(mean_ns) - sd*sd/2;
 			dt = exp(normal(mean,sd));
@@ -784,16 +784,16 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 			}
 			
 			switch(trans[tra].type){
-			case EXP_DIST:
+			case exp_dist:
 				p = trans[tra].param1;
 				dtnew = dt*paramp[p]/parami[p];
 				break;
 			
-			case GAMMA_DIST:
+			case gamma_dist:
 				emsgEC("model",6);
 				break;
 				
-			case LOGNORM_DIST:
+			case lognorm_dist:
 				p = trans[tra].param1; p2 = trans[tra].param2;
 				
 				mean_nsi = parami[p]; cv_nsi = parami[p2];
@@ -1001,10 +1001,10 @@ vector <double> MODEL::R0calc()
 				tra = comp[c].trans[k];
 				
 				switch(trans[tra].type){
-				case INFECTION: dt = 0; break;
-				case EXP_DIST: dt = paramval[trans[tra].param1]; break;
-				case GAMMA_DIST: dt = paramval[trans[tra].param1]; break;
-				case LOGNORM_DIST: dt = paramval[trans[tra].param1]; break;
+				case infection_dist: dt = 0; break;
+				case exp_dist: dt = paramval[trans[tra].param1]; break;
+				case gamma_dist: dt = paramval[trans[tra].param1]; break;
+				case lognorm_dist: dt = paramval[trans[tra].param1]; break;
 				default: emsgEC("MODEL",9); break;
 				}	
 				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
@@ -1092,8 +1092,8 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				
 				trans[tra].numvisittot++;
 				switch(trans[tra].type){
-				case EXP_DIST: trans[tra].dtsum += dt; break;
-				case GAMMA_DIST: case LOGNORM_DIST: trans[tra].dtlist.push_back(dt); break;
+				case exp_dist: trans[tra].dtsum += dt; break;
+				case gamma_dist: case lognorm_dist: trans[tra].dtlist.push_back(dt); break;
 				}
 			}
 		}
@@ -1183,18 +1183,18 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 	L = 0;
 	for(tra = 0; tra < trans.size(); tra++){
 		switch(trans[tra].type){
-		case EXP_DIST:
+		case exp_dist:
 			r = 1.0/paramv[trans[tra].param1];
 			L += trans[tra].numvisittot*log(r) - r*trans[tra].dtsum;
 			break;
 		
-		case GAMMA_DIST:
+		case gamma_dist:
 			mean = paramv[trans[tra].param1]; sd = paramv[trans[tra].param2]*mean;
 			jmax = trans[tra].dtlist.size();
 			for(j = 0; j < jmax; j++) L += gammaprob(trans[tra].dtlist[j],mean*mean/(sd*sd),mean/(sd*sd));
 			break;
 			
-		case LOGNORM_DIST:
+		case lognorm_dist:
 			mean_ns = paramval[trans[tra].param1]; cv_ns = paramval[trans[tra].param2];
 			sd = sqrt(log(1+cv_ns*cv_ns)); mean = log(mean_ns) - sd*sd/2;
 			jmax = trans[tra].dtlist.size();
@@ -1220,7 +1220,7 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 	L = 0;
 	for(tra = 0; tra < trans.size(); tra++){
 		switch(trans[tra].type){
-		case EXP_DIST:
+		case exp_dist:
 			ri = 1.0/paramvi[trans[tra].param1]; rf = 1.0/paramvf[trans[tra].param1];
 			if(ri != rf){
 				L += trans[tra].numvisittot*log(rf) - rf*trans[tra].dtsum;
@@ -1228,7 +1228,7 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 			}
 			break;
 		
-		case GAMMA_DIST:
+		case gamma_dist:
 			meani = paramvi[trans[tra].param1]; sdi = paramvi[trans[tra].param2]*meani;
 			meanf = paramvf[trans[tra].param1]; sdf = paramvf[trans[tra].param2]*meanf;
 	
@@ -1241,7 +1241,7 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 			}				
 			break;
 			
-		case LOGNORM_DIST:
+		case lognorm_dist:
 			mean_nsi = paramvi[trans[tra].param1]; cv_nsi = paramvi[trans[tra].param2];
 			mean_nsf = paramvf[trans[tra].param1]; cv_nsf = paramvf[trans[tra].param2];
 			if(mean_nsi != mean_nsf || cv_nsi != cv_nsf){

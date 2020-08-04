@@ -112,9 +112,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	opsampmin = nopsamp/4;
 	
 	switch(type){
-	case POP_DATA: name = data.popdata[d].file; break;
-	case TRANS_DATA: name = data.transdata[d].file; break;
-	case MARG_DATA: name = data.margdata[d].file; break;
+	case pop_data: name = data.popdata[d].file; break;
+	case trans_data: name = data.transdata[d].file; break;
+	case marg_data: name = data.margdata[d].file; break;
 	default: emsgEC("Output",1); break;
 	}
 	
@@ -134,19 +134,19 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
 						
 	switch(type){
-	case POP_DATA: 
+	case pop_data: 
 		cout << "'" << file << "' gives the population in '" << data.popdata[d].compstr << "'";
 		dataout << "# The population in '" << data.popdata[d].compstr << "'"; 
 		nrow = data.popdata[d].rows;
 		break;
 		
-	case TRANS_DATA:
+	case trans_data:
 		cout << "'" << file << "' gives numbers of " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		dataout << "# Population in " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		nrow = data.transdata[d].rows;
 		break;
 	
-	case MARG_DATA:
+	case marg_data:
 		dc = data.margdata[d].democat;
 		nrow = data.democat[dc].value.size();
 		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
@@ -165,13 +165,13 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		
 	switch(r){
 	case UNSET: rrmin = 0; rrmax = 1; break;
-	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsgEC("Output",2); break;
+	case ADD: rrmin = 0; rrmax = data.nregion; if(type == marg_data) emsgEC("Output",2); break;
 	default: rrmin = r; rrmax = r+1; break;
 	}
 
 	switch(type){
-	case TRANS_DATA: case POP_DATA: dataout << "# Time from start, " << data.tformat; break;
-	case MARG_DATA: dataout << "category"; break;
+	case trans_data: case pop_data: dataout << "# Time from start, " << data.tformat; break;
+	case marg_data: dataout << "category"; break;
 	}	
 	dataout << ", data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 	for(row = 0; row < nrow; row++){
@@ -180,9 +180,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
 				switch(type){
-				case POP_DATA: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
-				case TRANS_DATA: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
-				case MARG_DATA:
+				case pop_data: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
+				case trans_data: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
+				case marg_data:
 					sum = 0; for(jj = 0; jj < data.democat[dc].value.size(); jj++) sum += opsamp[s].meas.margnum[d][jj][rr];
 					valsum += 100.0*opsamp[s].meas.margnum[d][row][rr]/sum;
 					break;
@@ -193,20 +193,20 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		
 		stat = getstat(vec);
 		switch(type){
-		case POP_DATA: t = data.popdata[d].start+row*data.popdata[d].units; break;
-		case TRANS_DATA: t = data.transdata[d].start+row*data.transdata[d].units; break;
+		case pop_data: t = data.popdata[d].start+row*data.popdata[d].units; break;
+		case trans_data: t = data.transdata[d].start+row*data.transdata[d].units; break;
 		}
-		if(type == MARG_DATA) dataout << data.democat[dc].value[row] << " ";
+		if(type == marg_data) dataout << data.democat[dc].value[row] << " ";
 		else dataout << t << " " << data.getdate(t) << " ";
 		
 		if(data.mode != sim){
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
-				if(type == MARG_DATA) valsum += data.margdata[d].percent[rr][row]; 
+				if(type == marg_data) valsum += data.margdata[d].percent[rr][row]; 
 				else{
 					switch(type){
-					case POP_DATA: jj = data.popdata[d].num[rr][row]; break;
-					case TRANS_DATA: jj = data.transdata[d].num[rr][row]; break;
+					case pop_data: jj = data.popdata[d].num[rr][row]; break;
+					case trans_data: jj = data.transdata[d].num[rr][row]; break;
 					default: jj = 0; break;
 					}
 					switch(jj){
@@ -246,23 +246,23 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	
 	for(d = 0; d < data.transdata.size(); d++){
 		if(data.transdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,TRANS_DATA);
-			outputplot(data,opsamp,d,ADD,TRANS_DATA);
+			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,trans_data);
+			outputplot(data,opsamp,d,ADD,trans_data);
 		}
-		if(data.transdata[d].type == "all") outputplot(data,opsamp,d,UNSET,TRANS_DATA);
+		if(data.transdata[d].type == "all") outputplot(data,opsamp,d,UNSET,trans_data);
 	}
 	
 	for(d = 0; d < data.popdata.size(); d++){
 		if(data.popdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,POP_DATA);
-			outputplot(data,opsamp,d,ADD,POP_DATA);
+			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,pop_data);
+			outputplot(data,opsamp,d,ADD,pop_data);
 		}
-		if(data.popdata[d].type == "all") outputplot(data,opsamp,d,UNSET,POP_DATA);
+		if(data.popdata[d].type == "all") outputplot(data,opsamp,d,UNSET,pop_data);
 	}
 	
 	for(d = 0; d < data.margdata.size(); d++){
-		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,MARG_DATA);}
-		if(data.margdata[d].type == "all") outputplot(data,opsamp,d,UNSET,MARG_DATA);
+		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,marg_data);}
+		if(data.margdata[d].type == "all") outputplot(data,opsamp,d,UNSET,marg_data);
 	}
 		
 	file = "Posterior_R0.txt";
@@ -563,8 +563,8 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		else cout << "." << endl;
 		
 		switch(data.tform){
-		case TFORM_NUM: transout << "time"; break;
-		case TFORM_YMD: transout << "date"; break;
+		case tform_num: transout << "time"; break;
+		case tform_ymd: transout << "date"; break;
 		}
 
 		if(data.transdata[td].type == "reg"){ for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
@@ -588,8 +588,8 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		else cout << "." << endl;
 		
 		switch(data.tform){
-		case TFORM_NUM: popout << "time"; break;
-		case TFORM_YMD: popout << "date"; break;
+		case tform_num: popout << "time"; break;
+		case tform_ymd: popout << "date"; break;
 		}
 		
 		if(data.popdata[pd].type == "reg"){ for(r = 0; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
