@@ -376,7 +376,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 }
 
 /// Sets up the model with a set of parameters
-unsigned int MODEL::setup(vector <double> &paramv)
+unsigned int MODEL::setup(const vector <double> &paramv)
 {
 	paramval = paramv;
 	if(settransprob() == 1) return 1;

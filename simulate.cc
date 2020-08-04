@@ -11,60 +11,55 @@
 
 #include "utils.hh"
 #include "timers.hh"
-#include "MBPCHAIN.hh"
+#include "chain.hh"
 #include "data.hh"
 #include "output.hh"
 #include "obsmodel.hh"
 
 using namespace std;
 
-void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
+
+Simulate::Simulate(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : data(data), model(model), poptree(poptree), mpi(mpi)
+{	
+	nsamp = inputs.find("nsamp",verbose,UNSET);                                             // Sets the number of samples for inference
+	if(mode == multisim){
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+	}
+	
+	model.infmax = large;
+}
 
 /// Simulates data using the MBP algorithm
-void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, Mcmc &mcmc)
+void Simulate::run()
 {
+	Chain chain(data,model,poptree,0);
+	proportions(chain.indevi);
+	outputsimulateddata(data,model,poptree,chain.trevi,chain.indevi,data.outputdir);
+}
+
+void Simulate::multirun()
+{		
 	unsigned int s;
+	SAMPLE sample;
+	PARAMSAMP paramsamp;		
 	vector <SAMPLE> opsamp; 
-   vector <PARAMSAMP> psamp;
-    
-	model.infmax = large;
+  vector <PARAMSAMP> psamp;
+	
+	for(s = 0; s < nsamp; s++){
+		cout << "Simulating sample " << (s+1) << endl;
+		Chain chain(data,model,poptree,0);
 		
-	switch(data.mode){
-	case sim:       // Performs a single simulation 
-	  {
-			MBPCHAIN mbpchain(data,model,poptree,0);
-			proportions(data,model,mbpchain.indevi);
-			outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
-		}
-		break;
-		
-	case multisim:  // Performs multiple simulations and plots the distribution of results
-		{
-			SAMPLE sample;
-			PARAMSAMP paramsamp;
-			
-			for(s = 0; s < mcmc.nsamp; s++){
-				cout << "Simulating sample " << (s+1) << endl;
-				MBPCHAIN mbpchain(data,model,poptree,0);
-				
-				sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
-				model.setup(mbpchain.paramval);
-				sample.R0 = model.R0calc();
-				paramsamp.paramval =  mbpchain.paramval;
-				opsamp.push_back(sample);
-			}
-			outputresults(data,model,psamp,opsamp);
-		}
-		break;
-		
-	case inf: case combinetrace:
-		emsg("Data mode is not correct");
-		break;
+		sample.meas = getmeas(data,model,chain.trevi,chain.indevi);
+		model.setup(chain.paramval);
+		sample.R0 = model.R0calc();
+		paramsamp.paramval = chain.paramval;
+		opsamp.push_back(sample);
 	}
+	outputresults(data,model,psamp,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments
-void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev)
+void Simulate::proportions(const vector< vector <FEV> > &indev)
 {
 	unsigned int ninf, i, c, e, emax, dp;
 	vector <unsigned int> visit;

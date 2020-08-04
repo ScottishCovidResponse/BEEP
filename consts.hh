@@ -29,9 +29,6 @@ const unsigned int quenchpl = 0;                                 // Set to 1 if 
 const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
 const unsigned int duplicate = 0;                                // Set to one to duplicate chains (this is used as a diagnostic check)
 
-const unsigned int partmax = 10000;                              // The maximum number of particles per core (arbitrarily set)
-const unsigned int chainmax = 10000;                             // The maximum number of chains per core (arbitrarily set)
-
 const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
 
 const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions

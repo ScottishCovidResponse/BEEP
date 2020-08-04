@@ -549,7 +549,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	
 	ensuredirectory(dir);
 		
-	meas = getmeas(data,model,poptree,trev,indev);
+	meas = getmeas(data,model,trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(td = 0; td < data.transdata.size(); td++){

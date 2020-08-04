@@ -137,7 +137,7 @@ public:
 	void priorsamp();
 	        
 	void checkdata();
-	unsigned int setup(vector <double> &paramval);
+	unsigned int setup(const vector <double> &paramval);
 	void copyi();
 	void copyp();
 	vector <double> R0calc();

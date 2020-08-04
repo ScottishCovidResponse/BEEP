@@ -39,8 +39,8 @@ endif
 
 # Please keep these in lexicographic order to aid merging
 srcs := \
- MBP.cc \
- MBPCHAIN.cc \
+ mcmc.cc \
+ chain.cc \
  data.cc \
  generateQ.cc \
  gitversion.cc \

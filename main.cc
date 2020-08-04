@@ -29,7 +29,7 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
 #include "inputs.hh"
 #include "simulate.hh"
-#include "MBP.hh"
+#include "mcmc.hh"
 #include "consts.hh"
 
 #ifdef USE_DATA_PIPELINE
@@ -318,8 +318,6 @@ int main(int argc, char** argv)
 		*/
 		return 0;
 	}
-	
-	Mcmc mcmc(inputs,mpi,mode,verbose);
 	
 	bool param_verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
 
@@ -926,12 +924,25 @@ int main(int argc, char** argv)
 	else sran(core*10000+seed);
 	
 	switch(mode){
-	case sim: 	case multisim:
-		simulatedata(data,model,poptree,mcmc);
+	case sim:
+		{
+			Simulate simu(data,model,poptree,mpi,inputs,mode,verbose);
+			simu.run();
+		}
 		break;
-
+	
+	case multisim:
+		{
+			Simulate simu(data,model,poptree,mpi,inputs,mode,verbose);
+			simu.multirun();
+		}
+		break;
+			
 	case inf: 
-		MBP(data,model,poptree,mcmc,mpi,propsmethod);
+		{
+			Mcmc mcmc(data,model,poptree,mpi,inputs,mode,verbose);
+			mcmc.run(propsmethod);
+		}
 		break;
 
 	default: emsgroot("Mode not recognised"); break;
