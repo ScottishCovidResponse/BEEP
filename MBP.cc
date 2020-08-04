@@ -22,7 +22,7 @@ using namespace std;
 static void MBPoutput_param(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPoutput_meas(DATA &data, MODEL &model, POPTREE &poptree, vector <SAMPLE> &opsamp, unsigned int core, unsigned int ncore, unsigned int nchain);
 static void MBPdiagnostic(DATA &data, MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain);
-static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain, unsigned int samp, unsigned int burnin);
+static void swap(MODEL &model, Mpi &mpi, Mcmc &mcmc, unsigned int samp);
 static double calcME();
 
 static MBPCHAIN* mbpchain[chainmax]; 
@@ -33,25 +33,29 @@ static vector <double> nac_swap;
 ofstream quenchplot;
 
 /// Performs the multi-temperature MBP algorithm	
-void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int nchain, enum proposalsmethod propmethod)
+void MBP(DATA &data, MODEL &model, POPTREE &poptree, Mcmc &mcmc, Mpi &mpi, enum proposalsmethod propmethod)
 {
-	unsigned int p, pp, th, nchaintot = ncore*nchain, co;
-	unsigned int samp, burnin = nsamp/4, quench = nsamp/4;
+	unsigned int p, pp, th, nchaintot = mpi.ncore*mcmc.nchain, co;
+	unsigned int samp;
 	long time, timeprop=0, ntimeprop=0;
 	double timeloop=0.1, pmin, pmax, kappa, ppf, ppeff, fac;
-	long timeproptot[ncore], ntimeproptot[ncore], timeproptotsum, ntimeproptotsum;
+	long timeproptot[mpi.ncore], ntimeproptot[mpi.ncore], timeproptotsum, ntimeproptotsum;
 	vector <SAMPLE> opsamp;
 	vector <PARAMSAMP> psamp;
 
+	unsigned int burnin = mcmc.burnin;   // temporary
+	unsigned int quench = mcmc.quench;
+	
+	
 	pmax = 1-pow(data.invTmin,1.0/Tpower);
 	pmin = 1-pow(data.invTmax,1.0/Tpower);
 	
-	for(p = 0; p < nchain; p++){
-		pp = core*nchain+p;
+	for(p = 0; p < mcmc.nchain; p++){
+		pp = mpi.core*mcmc.nchain+p;
 		mbpchain[p] = new MBPCHAIN(data,model,poptree,pp);
 	}
 
-	if(core == 0){
+	if(mpi.core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
 			kappa = double(pp)/(nchaintot-1);
@@ -69,14 +73,14 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 	}
 	
-	if(core == 0){ outputinit(data,model); outputLiinit(data,ncore*nchain);}
+	if(mpi.core == 0){ outputinit(data,model); outputLiinit(data,mpi.ncore*mcmc.nchain);}
 
 	if(quenchpl == 1){ quenchplot.open((data.outputdir+"/quenchplot.txt").c_str());}
 	
-	for(samp = 0; samp < nsamp; samp++){	
-		if(core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
+	for(samp = 0; samp < mcmc.nsamp; samp++){	
+		if(mpi.core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << mcmc.nsamp << endl; 
 	
-		for(p = 0; p < nchain; p++){
+		for(p = 0; p < mcmc.nchain; p++){
 			pp = mbpchain[p]->ch;
 		
 			if(nchaintot == 1 || duplicate == 1) mbpchain[p]->invT = data.invTmax;
@@ -91,17 +95,17 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 				mbpchain[p]->invT = pow(1-ppeff,Tpower);
 			}
 
-			if(quenchpl == 1) mbpchain[p]->invT = exp(-10+12*double(samp)/nsamp);
+			if(quenchpl == 1) mbpchain[p]->invT = exp(-10+12*double(samp)/mcmc.nsamp);
 		}
 			
 		time = clock();
 
-		for(p = 0; p < nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
+		for(p = 0; p < mcmc.nchain; p++) mbpchain[p]->standard_prop(samp,burnin);
 		
 		timeprop -= clock();
 		switch(propmethod){
 		case proposalsmethod::allchainsallparams:
-			for(p = 0; p < nchain; p++){
+			for(p = 0; p < mcmc.nchain; p++){
 				for(th = 0; th < model.param.size(); th++){
 					if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
 				}
@@ -111,7 +115,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		case proposalsmethod::fixednum:
 			short lo; 
 			for(lo = 0; lo < 10; lo++){
-				p = int(ran()*nchain);
+				p = int(ran()*mcmc.nchain);
 				th = (unsigned int)(ran()*model.param.size());
 				if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
 			}
@@ -119,7 +123,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 			
 		case proposalsmethod::fixedtime:
 			do{                         // Does proposals for timeloop seconds (on average 20 proposals)
-				p = int(ran()*nchain);
+				p = int(ran()*mcmc.nchain);
 				th = (unsigned int)(ran()*model.param.size());
 				if(model.param[th].min != model.param[th].max){ mbpchain[p]->proposal(th,samp,burnin); ntimeprop++;}
 			}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
@@ -128,7 +132,7 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		
 		timeprop += clock();
 
-		if(samp%10 == 0){ for(p = 0; p < nchain; p++) mbpchain[p]->setQmapi(0);}  // Recalcualtes Qmapi (numerical)
+		if(samp%10 == 0){ for(p = 0; p < mcmc.nchain; p++) mbpchain[p]->setQmapi(0);}  // Recalcualtes Qmapi (numerical)
 	
 		timers.timewait -= clock();
 		
@@ -139,9 +143,9 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		// This part dynamically swadjusts timeloop so that approximately 20 proposals are performed per swap
 		MPI_Gather(&timeprop,1,MPI_LONG,timeproptot,1,MPI_LONG,0,MPI_COMM_WORLD); 
 		MPI_Gather(&ntimeprop,1,MPI_LONG,ntimeproptot,1,MPI_LONG,0,MPI_COMM_WORLD);
-		if(core == 0){
+		if(mpi.core == 0){
 			timeproptotsum = 0; ntimeproptotsum = 0; 
-			for(co = 0; co < ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
+			for(co = 0; co < mpi.ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
             
 			// Update the time to run only if some proposals have run (otherwise it runs forever)
 			if (ntimeproptotsum > 0 && timeproptotsum > 0) {
@@ -150,41 +154,47 @@ void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigne
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		if(duplicate == 0) swap(model,core,ncore,nchain,samp,burnin);
+		if(duplicate == 0) swap(model,mpi,mcmc,samp);
 		
-		if(samp%1 == 0) MBPoutput_param(data,model,psamp,core,ncore,nchain);
-		if(samp%5 == 0) MBPoutput_meas(data,model,poptree,opsamp,core,ncore,nchain);
+		if(samp%1 == 0) MBPoutput_param(data,model,psamp,mpi.core,mpi.ncore,mcmc.nchain);
+		if(samp%5 == 0) MBPoutput_meas(data,model,poptree,opsamp,mpi.core,mpi.ncore,mcmc.nchain);
 		
-		if(core == 0 && quenchpl == 1){ 
+		if(mpi.core == 0 && quenchpl == 1){ 
 			quenchplot << mbpchain[0]->invT;
 			for(p = 0; p < mbpchain[0]->paramval.size(); p++) quenchplot << "\t" << mbpchain[0]->paramval[p]; 
 			quenchplot << endl;
 		}	
 	
-		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
+		if(samp == mcmc.nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){
-			if(core == 0){
+			if(mpi.core == 0){
 				outputresults(data,model,psamp,opsamp);
 				cout << "Model evidence: " << calcME() << endl;
 			}
-			MBPdiagnostic(data,model,core,ncore,nchain);
+			MBPdiagnostic(data,model,mpi.core,mpi.ncore,mcmc.nchain);
 		}
 	}
 
-	for(p = 0; p < nchain; p++){
+	for(p = 0; p < mcmc.nchain; p++){
 		delete mbpchain[p];
 	}
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 
-static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned int nchain, unsigned int samp, unsigned int burnin)
+static void swap(MODEL &model, Mpi &mpi, Mcmc &mcmc, unsigned int samp)
 {
+		unsigned int nchain = mcmc.nchain, ncore = mpi.ncore;
+	unsigned int burnin = mcmc.burnin;
+unsigned int core = mpi.core;
+
     assert(ncore > 0);
     assert(core < ncore);
     assert(nchain > 0);
 
-    unsigned int p, p1, p2, th, tempi, chs;
-	unsigned int nparam = model.param.size(), nchaintot = nchain*ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
+	
+	
+  unsigned int p, p1, p2, th, tempi, chs;
+	unsigned int nparam = model.param.size(), nchaintot = nchain*mpi.ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*ncore;
 	double temp, al;
 	float tempf;
 	long templ, loop, loopmax = nchaintot*nchaintot;
@@ -204,7 +214,7 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 
 	timers.timeswap -= clock();
 		
-	for(p = 0; p < nchain; p++){ 
+	for(p = 0; p < mcmc.nchain; p++){ 
 		Li[p] = mbpchain[p]->Li; 
 		invT[p] = mbpchain[p]->invT; 
 		ch[p] = mbpchain[p]->ch;
@@ -237,7 +247,7 @@ static void swap(MODEL &model, unsigned int core, unsigned int ncore, unsigned i
 	MPI_Gather(ntr_addrem,nchain,MPI_UNSIGNED,ntr_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Gather(nac_addrem,nchain,MPI_UNSIGNED,nac_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
-	if(core == 0){   // Swaps different chains
+	if(mpi.core == 0){   // Swaps different chains
 		for(loop = 0; loop < loopmax; loop++){
 			p1 = (unsigned int)(ran()*nchaintot); p2 = (unsigned int)(ran()*nchaintot); 
 			if(p1 != p2){

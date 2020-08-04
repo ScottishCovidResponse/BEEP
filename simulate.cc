@@ -21,7 +21,7 @@ using namespace std;
 void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
 
 /// Simulates data using the MBP algorithm
-void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp)
+void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, Mcmc &mcmc)
 {
 	unsigned int s;
 	vector <SAMPLE> opsamp; 
@@ -43,7 +43,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 			SAMPLE sample;
 			PARAMSAMP paramsamp;
 			
-			for(s = 0; s < nsamp; s++){
+			for(s = 0; s < mcmc.nsamp; s++){
 				cout << "Simulating sample " << (s+1) << endl;
 				MBPCHAIN mbpchain(data,model,poptree,0);
 				

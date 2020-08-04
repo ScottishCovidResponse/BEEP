@@ -22,6 +22,40 @@ using namespace std;
 #include "table.hh"
 #endif
 
+Mpi::Mpi(int nco, int co)
+{
+	ncore = nco; core = co;
+}
+
+Mcmc::Mcmc(Inputs &inputs, Mpi &mpi, Mode mode, bool verbose)
+{
+		//if(nsamp == UNSET)
+	
+	nsamp = inputs.find("nsamp",verbose,UNSET);                                             // Sets the number of samples for inference
+	if(nsamp == UNSET){
+		if(mode == inf || mode == multisim) emsgroot("The number of samples must be set");
+		burnin = UNSET;
+		quench = UNSET;
+	}
+	else{
+		burnin = nsamp/4;
+		quench = nsamp/4;
+	}	
+	
+	nchaintot = inputs.find("nchain",verbose,UNSET);                                        // Sets the total number of mcmc chains
+	if(mode == inf){
+		if(nchaintot == UNSET) emsgroot("The number of chains must be set");
+		if(nchaintot%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
+	}
+
+	if(nchaintot == UNSET) nchain = UNSET;
+	else nchain = nchaintot/mpi.ncore;
+	
+	
+	
+}
+
+
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 {

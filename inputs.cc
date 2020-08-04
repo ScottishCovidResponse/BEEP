@@ -14,7 +14,7 @@ using namespace std;
 
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
-	cmdlineparams = get_command_line_params(argc,argv);                          // Loads up the command line parameters
+	set_command_line_params(argc,argv);                          // Loads up the command line parameters
 	
 	// A list of all supported parameters (please keep in lexicographic order)
 	definedparams = {
@@ -66,10 +66,9 @@ Inputs::Inputs(int argc, char** argv, bool verbose)
 	read_toml_file(verbose);
 }
 
-map<string,string> Inputs::get_command_line_params(int argc, char *argv[])
+/// Gets the command line parameters and places them into cmdlineparams
+void Inputs::set_command_line_params(int argc, char *argv[])
 {
-	map<string,string> cmdlineparams;
-	
 	vector <string> commandlist;
 	
 	for(int op = 1; op < argc; op++){ 
@@ -100,10 +99,9 @@ map<string,string> Inputs::get_command_line_params(int argc, char *argv[])
 			cmdlineparams[command] += " " + value;
 		}
 	}
-	return cmdlineparams;
 }
 
-// Read TOML parameters
+/// Reads TOML parameters and places them into tomldata
 void Inputs::read_toml_file(bool verbose)
 {
 	string inputfilename = "/dev/null";
@@ -145,22 +143,65 @@ string Inputs::lookup_string_parameter(const map<string,string> &params,
 {
 	string val;
 	auto val_it = params.find(key);
-	if(val_it != params.end()){
-		val = val_it->second;
-	} 
+	if(val_it != params.end()) val = val_it->second;
 	else{
-		if(tomldata.contains(key)){
-			val = toml::find<string>(tomldata,key);
-		} 
-		else{
-			val = def;
-		}
+		if(tomldata.contains(key)) val = toml::find<string>(tomldata,key);
+		else val = def;
 	}
 
 	if(verbose) cout << "  " << key << " = " << val << endl;
 	
 	return val;
 }
+
+int Inputs::find(const string &key, bool verbose, int def) const
+{
+	int val;
+	auto val_it = cmdlineparams.find(key);
+	if (val_it != cmdlineparams.end()) {
+		const std::string& valstr = val_it->second;
+		try {
+			size_t idx;
+			val = stoi(valstr,&idx);
+			if (idx != valstr.length()) {
+				std::ostringstream oss;
+				oss << "Should be integer, found '"<< valstr;
+				throw std::invalid_argument(oss.str());
+			}
+		} catch (const std::exception& e) {
+			std::ostringstream oss;
+			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
+			// Add exception description if it's informative
+			std::string what = e.what();
+			if (what == "stoi") {
+				if (valstr == "")
+					oss << "Should be integer, found no value\n";
+			} else {
+				oss << what;
+			}
+			emsg(oss.str());
+		}
+	} else {
+		if (tomldata.contains(key)) {
+			val = toml::find<int>(tomldata,key);
+		} else {
+			val = def;
+			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
+		}
+	}
+	if (verbose)
+		cout << "  " << key << " = " << val << endl;
+	return val;
+}
+
+/*
+unsigned int find(string name) const 
+{
+	lookup_int_parameter(cmdlineparams,tomldata,name,verbose);
+}
+//inputs.find("nsamp");
+*/
+
 
 vector<string> Inputs::get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const
 {

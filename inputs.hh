@@ -2,6 +2,8 @@
 #define BEEPMBP__INPUTS_HH
 
 #include <string>
+#include <map>
+
 using namespace std;
 
 #include "consts.hh"
@@ -11,16 +13,17 @@ class Inputs
 {
 public:
 	Inputs(int argc, char** argv, bool verbose);
+	int find(const string &key, bool verbose, int def=-1) const;
 	
 	Mode mode(bool verbose) const;
 	
 private:
-	map<string,string> get_command_line_params(int argc, char *argv[]);   // Gets the command line parameters
+	void set_command_line_params(int argc, char *argv[]);   // Gets the command line parameters
 	void read_toml_file(bool verbose);                                                  // Reads the TOML file                    
 	string lookup_string_parameter(const map<string,string> &params,
 			  												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
 				  											 const string &key, bool verbose, const string &def="") const;
-
+	
 	vector<string> get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const;
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
 

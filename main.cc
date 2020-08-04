@@ -271,13 +271,12 @@ string gitversion();
 
 int main(int argc, char** argv)
 {
-	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
 	
+	int ncore, core;                 // Stores the number of cores and the core of the current process
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
-	int num;
-	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore =num;
-  MPI_Comm_rank(MPI_COMM_WORLD,&num); core =num;
+	MPI_Comm_size(MPI_COMM_WORLD,&ncore);
+  MPI_Comm_rank(MPI_COMM_WORLD,&core);
   #endif
 
 	#ifndef USE_MPI
@@ -285,12 +284,14 @@ int main(int argc, char** argv)
 	core = 0;
 	#endif
 	
+	Mpi mpi(ncore,core);
+	
 	bool verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
 		
 	Inputs inputs(argc,argv,verbose);                 // Loads up the command line arguments
 	
-	unsigned int nsamp=UNSET;                 // The number of samples for inference
-	unsigned int nchain=UNSET;                // The number of chains per core
+	//unsigned int nsamp=UNSET;                 // The number of samples for inference
+	//unsigned int nchain=UNSET;                // The number of chains per core
 	
 	//unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
 	
@@ -318,7 +319,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	
-	
+	Mcmc mcmc(inputs,mpi,mode,verbose);
 	
 	bool param_verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
 
@@ -474,20 +475,13 @@ int main(int argc, char** argv)
 		emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	}
 */
-
-	if(mode == inf){
-		// nchain
-		int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
-		if (nchaintot != UNSET) {
-			if(nchaintot%ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
-			nchain = nchaintot/ncore;
-		}
-	}
 	
+	/*
 	if(mode == multisim || mode == inf){
 		// nsamp
 		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
 	}
+	*/
 	
 	model.infmax = large;
 	if(mode == inf){
@@ -933,13 +927,11 @@ int main(int argc, char** argv)
 	
 	switch(mode){
 	case sim: 	case multisim:
-		simulatedata(data,model,poptree,nsamp);
+		simulatedata(data,model,poptree,mcmc);
 		break;
 
 	case inf: 
-		if(nsamp == UNSET) emsgroot("The number of samples must be set");
-		if(nchain == UNSET) emsgroot("The number of chains must be set");
-		MBP(data,model,poptree,nsamp,core,ncore,nchain,propsmethod);
+		MBP(data,model,poptree,mcmc,mpi,propsmethod);
 		break;
 
 	default: emsgroot("Mode not recognised"); break;

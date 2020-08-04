@@ -10,5 +10,5 @@ enum class proposalsmethod
 	fixedtime
 };
 
-void MBP(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp, unsigned int core, unsigned int ncore, unsigned int npart, enum proposalsmethod propmethod);
+void MBP(DATA &data, MODEL &model, POPTREE &poptree, Mcmc &mcmc, Mpi &mpi, enum proposalsmethod propmethod);
 #endif

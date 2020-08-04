@@ -5,6 +5,7 @@
 
 using namespace std;
 
+#include "inputs.hh"
 #include "consts.hh"
 
 struct QTENSOR {                           // Stores information about a Q tensor
@@ -154,6 +155,33 @@ private:
 };
 
 class DataPipeline;
+
+struct Mpi
+{
+	Mpi(int nco, int co);
+	
+	unsigned int ncore;                      // The number of cores that MPI is using
+	unsigned int core;                       // The core of the current process
+};
+
+struct Mcmc
+{
+	Mcmc(Inputs &inputs, Mpi &mpi, Mode mode, bool verbose);
+	
+	unsigned int nsamp;                      // The number of MCMC samples
+	unsigned int burnin;                     // The number of burnin samples
+	unsigned int quench;                     // The number of samples over which the system is quenched
+	
+	unsigned int nchaintot;                  // The total number of chains (across all MPI processes);
+	unsigned int nchain;                     // The number of chains per core
+	
+};
+
+struct Details
+{
+	
+	
+};
 
 class DATA
 {
