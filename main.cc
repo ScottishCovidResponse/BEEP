@@ -27,6 +27,7 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "model.hh"
 #include "data.hh"
 
+#include "inputs.hh"
 #include "simulate.hh"
 #include "MBP.hh"
 #include "consts.hh"
@@ -38,9 +39,10 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
 using namespace std;
 
+
 string lookup_string_parameter(const map<string,string> &params,
 															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-															 const string &key, bool verbose, const string &def="")
+															 const string &key, bool verbose, const string &def="") // zz
 {
 	string val;
 	auto val_it = params.find(key);
@@ -58,6 +60,7 @@ string lookup_string_parameter(const map<string,string> &params,
 		cout << "  " << key << " = " << val << endl;
 	return val;
 }
+
 
 int lookup_int_parameter(const map<string,string> &params,
 												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
@@ -183,7 +186,7 @@ vector<string> lookup_stringlist_parameter(
 	return val;
 }
 
-vector<string> get_toml_keys(
+vector<string> get_toml_keys( // zz
 	const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data)
 {
 	vector<string> keys;
@@ -195,7 +198,7 @@ vector<string> get_toml_keys(
 }
 
 void check_for_undefined_parameters(vector<string> allowed, vector<string> given,
-																		const string &context)
+																		const string &context) // zz
 {
 	vector<string> undefined;
 
@@ -218,7 +221,7 @@ void check_for_undefined_parameters(vector<string> allowed, vector<string> given
 	}
 }
 
-map<string,string> get_command_line_params(int argc, char *argv[])
+map<string,string> get_command_line_params(int argc, char *argv[])    // zz
 {
 	map<string,string> cmdlineparams;
 	
@@ -269,19 +272,7 @@ string gitversion();
 int main(int argc, char** argv)
 {
 	unsigned int ncore, core;                 // Stores the number of cores and the core of the current process
-	unsigned int nsamp=UNSET;                 // The number of samples for inference
-	unsigned int nchain=UNSET;                // The number of chains per core
 	
-	unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
-	
-	int seed=0;                               // Sets the random seed for simulation
-	
-	unsigned int j, k, d;
-	TRANSDATA transdata;
-	POPDATA popdata;
-	MARGDATA margdata;
-	string str, command, value, tformat, startstr, endstr;
-
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
 	int num;
@@ -293,6 +284,51 @@ int main(int argc, char** argv)
 	ncore = 1;
 	core = 0;
 	#endif
+	
+	bool verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
+		
+	Inputs inputs(argc,argv,verbose);                 // Loads up the command line arguments
+	
+	unsigned int nsamp=UNSET;                 // The number of samples for inference
+	unsigned int nchain=UNSET;                // The number of chains per core
+	
+	//unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
+	
+	Mode mode = inputs.mode(verbose);          // Gets the mode of operation
+	
+	if(mode == combinetrace) {
+		/*
+		if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
+		vector <string> dirs;
+		string output, distfile="";
+		unsigned int burnin=UNSET;
+		dirs = split(cmdlineparams["dirs"],',');
+		
+		if(cmdlineparams.count("output") == 0) emsg("When using the 'combinetrace' mode, you must set the 'output' property");
+	
+		if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
+		if(cmdlineparams.count("burnin") == 1){
+			burnin = atoi(cmdlineparams["burnin"].c_str());
+			if(std::isnan(burnin)) emsg("The 'burnin' property must be an integer."); 
+		}
+	
+		output = cmdlineparams["output"];
+		data.combinetrace(dirs,output,distfile,burnin);
+		*/
+		return 0;
+	}
+	
+	
+	
+	bool param_verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
+
+	int seed=0;                               // Sets the random seed for simulation
+	
+	unsigned int j, k, d;
+	TRANSDATA transdata;
+	POPDATA popdata;
+	MARGDATA margdata;
+	string str, command, value, tformat, startstr, endstr;
 
 	if (core == 0) {
 		cout << "BEEPmbp version " << gitversion() << endl;
@@ -323,7 +359,7 @@ int main(int argc, char** argv)
 	data.invTmin=0;                         // This default choice 
 	data.invTmax=0.25;  
 
-	// A list of all supported parameters (please keep in lexicographic order)
+	// A list of all supported parameters (please keep in lexicographic order)   // zz
 	vector<string>  definedparams {
 		"baseinputfile",
 		"Q",
@@ -371,32 +407,11 @@ int main(int argc, char** argv)
 	};
 	
 	// Read command line parameters
-	map<string,string> cmdlineparams = get_command_line_params(argc, argv);
-	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");
+	map<string,string> cmdlineparams = get_command_line_params(argc, argv); //zz
+	check_for_undefined_parameters(definedparams, keys_of_map(cmdlineparams), "on command line");//zz
 	
-	if (cmdlineparams.count("mode") == 1) {
-		if(cmdlineparams["mode"] == "combinetrace"){
-			if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
-			vector <string> dirs;
-			string output, distfile="";
-			unsigned int burnin=UNSET;
-			dirs = split(cmdlineparams["dirs"],',');
-			
-			if(cmdlineparams.count("output") == 0) emsg("When using the 'combinetrace' mode, you must set the 'output' property");
-		
-			if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
-			if(cmdlineparams.count("burnin") == 1){
-				burnin = atoi(cmdlineparams["burnin"].c_str());
-				if(std::isnan(burnin)) emsg("The 'burnin' property must be an integer."); 
-			}
-		
-			output = cmdlineparams["output"];
-			data.combinetrace(dirs,output,distfile,burnin);
-			return 0;
-		}
-	}
 	
-	// Read TOML parameters
+	// Read TOML parameters    zz
 	string inputfilename = "/dev/null";
 	if (cmdlineparams.count("inputfile") == 1) {
 		inputfilename = cmdlineparams["inputfile"];
@@ -426,7 +441,7 @@ int main(int argc, char** argv)
 		emsg(oss.str());
 	}
 		
-	vector<string>  tomlkeys = get_toml_keys(tomldata);
+	vector<string> tomlkeys = get_toml_keys(tomldata);
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
 	// The code could be simplified by reading the TOML parameters into a
@@ -440,7 +455,7 @@ int main(int argc, char** argv)
 	/ Process parameters
   **********************************************************************************/
 
-	bool param_verbose = (core == 0);
+
 
 	if (param_verbose)
 		cout << endl << "Settings:" << endl;
@@ -450,15 +465,17 @@ int main(int argc, char** argv)
 	// DETAILS
 	
 	// mode
-	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");
+	/*
+	val = lookup_string_parameter(cmdlineparams, tomldata, "mode", param_verbose, "UNSET");     // zz
 	map<string,int>  modemap{{"sim", MODE_SIM}, {"inf", MODE_INF}, {"multisim", MODE_MULTISIM}};
 	if (modemap.count(val) != 0) {
 		mode = modemap[val];
 	} else {
 		emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	}
+*/
 
-	if(mode == MODE_INF){
+	if(mode == inf){
 		// nchain
 		int nchaintot = lookup_int_parameter(cmdlineparams, tomldata, "nchain", param_verbose, UNSET);
 		if (nchaintot != UNSET) {
@@ -467,13 +484,13 @@ int main(int argc, char** argv)
 		}
 	}
 	
-	if(mode == MODE_MULTISIM || mode == MODE_INF){
+	if(mode == multisim || mode == inf){
 		// nsamp
 		nsamp = lookup_int_parameter(cmdlineparams, tomldata, "nsamp", param_verbose);
 	}
 	
 	model.infmax = large;
-	if(mode == MODE_INF){
+	if(mode == inf){
 		// infmax
 		if(tomldata.contains("infmax")) {
 			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
@@ -803,7 +820,7 @@ int main(int argc, char** argv)
 				else emsgroot("Units in 'transdata' not recognised");
 			}
 			
-			if(mode != MODE_INF){
+			if(mode != inf){
 				transdata.rows = (unsigned int)((data.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
@@ -845,7 +862,7 @@ int main(int argc, char** argv)
 				else emsgroot("Units in 'popdata' not recognised");
 			}
 			
-			if(mode != MODE_INF){
+			if(mode != inf){
 				popdata.rows = (unsigned int)((data.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
@@ -891,10 +908,8 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(mode != MODE_INF && ncore != 1) emsgroot("Simulation only requires one core");
+	if(mode != inf && ncore != 1) emsgroot("Simulation only requires one core");
 	
-	if(mode == UNSET) emsgroot("The property 'mode' must be set"); 
- 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	data.readdata(core,ncore,mode);
@@ -917,11 +932,11 @@ int main(int argc, char** argv)
 	else sran(core*10000+seed);
 	
 	switch(mode){
-	case MODE_SIM: 	case MODE_MULTISIM:
+	case sim: 	case multisim:
 		simulatedata(data,model,poptree,nsamp);
 		break;
 
-	case MODE_INF: 
+	case inf: 
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 		if(nchain == UNSET) emsgroot("The number of chains must be set");
 		MBP(data,model,poptree,nsamp,core,ncore,nchain,propsmethod);

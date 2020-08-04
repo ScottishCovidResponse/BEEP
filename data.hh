@@ -2,7 +2,10 @@
 #define BEEPMBP__DATA_HH
 
 #include <string>
+
 using namespace std;
+
+#include "consts.hh"
 
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
@@ -162,7 +165,8 @@ class DATA
 	}
 
 	DataPipeline *datapipeline;             // DataPipeline object
-	unsigned int mode;                       // Stores if doing simulation/inference
+	
+	Mode mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
 	unsigned int fepertime;                  // # fediv per nsettime
@@ -230,7 +234,7 @@ class DATA
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-	void readdata(unsigned int core, unsigned int ncore, unsigned int mod); 
+	void readdata(unsigned int core, unsigned int ncore, Mode mod); 
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);

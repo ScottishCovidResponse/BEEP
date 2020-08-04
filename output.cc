@@ -199,7 +199,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		if(type == MARG_DATA) dataout << data.democat[dc].value[row] << " ";
 		else dataout << t << " " << data.getdate(t) << " ";
 		
-		if(data.mode != MODE_SIM){
+		if(data.mode != sim){
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
 				if(type == MARG_DATA) valsum += data.margdata[d].percent[rr][row]; 
@@ -241,7 +241,7 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	opsampmin = nopsamp/4;
 	
 	cout << endl;
-	if(data.mode == MODE_SIM) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
+	if(data.mode == sim) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
 	else cout << "Posterior outputs in directory '" << data.outputdir << "':" << endl;
 	
 	for(d = 0; d < data.transdata.size(); d++){
@@ -372,11 +372,11 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 		Rmapout << endl;
 	}
 	
-	if(data.mode != MODE_SIM){
+	if(data.mode != sim){
 		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
-	if(data.mode == MODE_INF){
+	if(data.mode == inf){
 		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 }

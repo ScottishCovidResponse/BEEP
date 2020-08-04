@@ -23,7 +23,7 @@ using namespace std;
 #endif
 
 /// Reads in transition and area data
-void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
+void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 {
 	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
@@ -208,7 +208,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
 			 
-		if(mode != MODE_SIM){                                                    // Loads transition data for inference
+		if(mode != sim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
 				tab = loadtable(file);
@@ -233,7 +233,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			}
 		}
 		
-		if(mode != MODE_SIM){                                                    // Loads population data for inference
+		if(mode != sim){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
 				tab = loadtable(file);
@@ -256,7 +256,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			}
 		}
 		
-		if(mode != MODE_SIM){                                                    // Loads marginal data for inference
+		if(mode != sim){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
 				tab = loadtable(file);

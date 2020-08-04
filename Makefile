@@ -44,6 +44,7 @@ srcs := \
  data.cc \
  generateQ.cc \
  gitversion.cc \
+ inputs.cc \
  main.cc \
  model.cc \
  obsmodel.cc \

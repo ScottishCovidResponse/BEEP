@@ -27,7 +27,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
-	if(data.mode == MODE_SIM || data.mode == MODE_MULTISIM){
+	if(data.mode == sim || data.mode == multisim){
 		if(tomldata.contains("params")){
 			string name;
 			double value;
@@ -48,7 +48,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		else{ emsg("The input file must contain parameter values through 'params'.");}
 	}
 
-	if(data.mode == MODE_INF){
+	if(data.mode == inf){
 		if(tomldata.contains("priors")){
 			string name;
 			double value;
@@ -202,7 +202,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	}
 	else{ emsg("The input file must contain transition definitions through the 'trans' quantity.");}
 
-	if(data.mode == MODE_INF){
+	if(data.mode == inf){
 		if(tomldata.contains("priorcomps")){
 			string co;
 		
@@ -318,7 +318,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
-		if(data.mode == MODE_SIM || data.mode == MODE_MULTISIM){
+		if(data.mode == sim || data.mode == multisim){
 			cout << "Parameters:" << endl;
 			for(p = 0; p < param.size()-1; p++){
 				cout << "  " << param[p].name << " = " << param[p].min << endl;
@@ -1005,7 +1005,7 @@ vector <double> MODEL::R0calc()
 				case EXP_DIST: dt = paramval[trans[tra].param1]; break;
 				case GAMMA_DIST: dt = paramval[trans[tra].param1]; break;
 				case LOGNORM_DIST: dt = paramval[trans[tra].param1]; break;
-				default: dt=0; emsgEC("MODEL",9); break;
+				default: emsgEC("MODEL",9); break;
 				}	
 				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
 				else comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt*comp[c].prob[a][k];

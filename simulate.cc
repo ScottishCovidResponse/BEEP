@@ -30,7 +30,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 	model.infmax = large;
 		
 	switch(data.mode){
-	case MODE_SIM:       // Performs a single simulation 
+	case sim:       // Performs a single simulation 
 		{
 			MBPCHAIN mbpchain(data,model,poptree,0);
 			proportions(data,model,mbpchain.indevi);
@@ -38,7 +38,7 @@ void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp
 		}
 		break;
 		
-	case MODE_MULTISIM:  // Performs multiple simulations and plots the distribution of results
+	case multisim:  // Performs multiple simulations and plots the distribution of results
 		SAMPLE sample;
 		PARAMSAMP paramsamp;
 		

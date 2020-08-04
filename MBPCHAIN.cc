@@ -87,7 +87,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	indevi = indevp;
 	xi = xp;
 	
-	if(data.mode != MODE_INF) return;
+	if(data.mode != inf) return;
 	
 	Li = Lobs(data,model,poptree,trevi,indevi);
 	Pri = model.prior();
@@ -163,7 +163,7 @@ unsigned int MBPCHAIN::mbp()
 		
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
-		if(data.mode == MODE_SIM){
+		if(data.mode == sim){
 			cout  << "  Time: " << data.settime[t];
 			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
@@ -625,7 +625,7 @@ void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		}
 	}
 	
-	if(data.mode == MODE_SIM){
+	if(data.mode == sim){
 		jmax = trep.size(); 
 		for(j = 0; j < jmax; j++){
 			tra = indevp[trep[j].ind][trep[j].e].trans;
