@@ -319,9 +319,9 @@ int main(int argc, char** argv)
 		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
-	DATA data(inputs,details,dp);    // The following file names will need to be read in by the interface:
+	DATA data(inputs,details,mpi,dp);    // The following file names will need to be read in by the interface:
 #else
-	DATA data(inputs,details);    // The following file names will need to be read in by the interface:
+	DATA data(inputs,details,mpi);    // The following file names will need to be read in by the interface:
 #endif
 
 
@@ -332,7 +332,7 @@ int main(int argc, char** argv)
 	
 	MODEL model(inputs,details,data);
 		
-	data.load(inputs,model);
+	data.read_data_files(inputs,model,mpi);
 	
 	
 	//data.threshold=UNSET;
@@ -494,155 +494,20 @@ int main(int argc, char** argv)
 	//data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
 	
 	// region data
-	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
+	//data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
 
 	// area data
-	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
+	//data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
 
-	
-	// End of parameters
-	if (param_verbose)
-		cout << endl;
 	
 	// THE MODEL
 	
 	
 	if(verbose) data.print_to_terminal();
 	
-
-	// timep
-	if(tomldata.contains("timep")) {
-		const auto timep = toml::find(tomldata,"timep");
-		for(j = 0; j < timep.size(); j++){
-			const auto tim = toml::find(timep,j);
-			
-			if(!tim.contains("name")) emsgroot("A 'name' must be specified in 'timep'.");
-			const auto name = toml::find<std::string>(tim,"name");
-			
-			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
-			auto tendstr = toml::find<string>(tim,"tend");
-			int tend = details.gettime(tendstr) - details.start;
-			
-			if(tend < 0 || tend > (int)details.period) emsg("Time '"+tendstr+"' is out of range."); 
-			if(j > 0){
-				if(tend < data.timeperiod[j-1].tend) emsg("'timep' is not time ordered.");
-			}
-			
-			if(j == timep.size()-1){
-				if(tend != (int)details.period) emsg("'tend' in 'timep' must finish with the end time.");
-			}
-			data.addtimep(name,tend);
-		}
-	}
-	else emsgroot("Property 'timep' defining time periods must be set.");
-
-	if(verbose){
-		cout << "Time periods defined:" << endl;
-		for(j = 0; j < data.timeperiod.size(); j++){
-			cout << "  ";
-			cout << data.timeperiod[j].name << ": ";
-			if(j == 0) cout << "0"; else cout << data.timeperiod[j-1].tend;
-			cout << " - " <<  data.timeperiod[j].tend << endl;
-		}
-		cout << endl;
-	}
-
-	// genQ
-
-	if(tomldata.contains("agemix")) {
-		const auto agemix = toml::find(tomldata,"agemix");
-		
-		if(!agemix.contains("Nall")) emsgroot("'Nall' must be specified in 'agemix'.");
-		const auto Nall = toml::find<std::string>(agemix,"Nall");
-		data.genQ.Nall = Nall;
-		
-		if(!agemix.contains("Nhome")) emsgroot("'Nhome' must be specified in 'agemix'.");
-		const auto Nhome = toml::find<std::string>(agemix,"Nhome");
-		data.genQ.Nhome = Nhome;
-		
-		if(!agemix.contains("Nother")) emsgroot("'Nother' must be specified in 'agemix'.");
-		const auto Nother = toml::find<std::string>(agemix,"Nother");
-		data.genQ.Nother = Nother;
-		
-		if(!agemix.contains("Nschool")) emsgroot("'Nschool' must be specified in 'agemix'.");
-		const auto Nschool = toml::find<std::string>(agemix,"Nschool");
-		data.genQ.Nschool = Nschool;
-		
-		if(!agemix.contains("Nwork")) emsgroot("'Nwork' must be specified in 'agemix'.");
-		const auto Nwork = toml::find<std::string>(agemix,"Nwork");
-		data.genQ.Nwork = Nwork;
-	}
-	else emsgroot("'agemix' must be specified.");
-
-	if(tomldata.contains("geomix")) {
-		const auto geomix = toml::find(tomldata,"geomix");
-		
-		if(!geomix.contains("M")) emsgroot("'M' must be specified in 'geomix'.");
-		const auto M = toml::find<std::string>(geomix,"M");
-		data.genQ.M = M;
-	}
-	else emsgroot("'geomix' must be specified.");
-	
-	if(tomldata.contains("genQoutput")) {
-		const auto qout = toml::find(tomldata,"genQoutput");
-		
-		if(!qout.contains("localhome")) emsgroot("'localhome' must be specified in 'genQoutput'.");
-		const auto localhome = toml::find<std::string>(qout,"localhome");
-		data.genQ.localhome = localhome;
-
-		if(!qout.contains("flowall")) emsgroot("'flowall' must be specified in 'genQoutput'.");
-		const auto flowall = toml::find<std::string>(qout,"flowall");
-		data.genQ.flowall = flowall;
-	}
-	else emsgroot("'genQoutput' must be specified.");
-	
-	// Q
-	if(tomldata.contains("Q")) {
-		const auto Qlist = toml::find(tomldata,"Q");
-		for(j = 0; j < Qlist.size(); j++){
-			const auto Q = toml::find(Qlist,j);
-			
-			if(!Q.contains("timep")) emsgroot("A 'timep' must be specified in 'Q'.");
-			const auto timep = toml::find<std::string>(Q,"timep");
-			
-			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
-			const auto comp = toml::find<std::string>(Q,"comp");
-			
-			if(!Q.contains("name")) emsgroot("'name' must be specified in 'Q'.");
-			const auto name = toml::find<std::string>(Q,"name");
-		
-			data.addQtensor(timep,comp,name);
-		}
-	}
-	else emsgroot("Property 'timep' defining time periods must be set.");
-	
-	if(verbose){
-		cout << "Q tensors loaded:" << endl;
-		for(j = 0; j < data.Q.size(); j++){
-			cout << "    ";
-			cout << "timep: " << data.timeperiod[data.Q[j].timep].name << "  ";
-			cout << "compartment: " << data.Q[j].comp << "  ";
-			cout << "name: " << data.Q[j].name << "  ";
-			cout << endl;
-		}
-		cout << endl;
-	}
-
-	// THE DATA
-	
-	
-
-
-
-			
-	// margdata
-	
-
-	if(mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
-	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	data.readdata(mpi.core,mpi.ncore);
+	//data.read_data_files(inputs,mpi);
 
 	POPTREE poptree;
 	poptree.init(data,mpi.core);	
@@ -661,12 +526,14 @@ int main(int argc, char** argv)
 	unsigned int seed = inputs.find_int("seed",0);
 	sran(mpi.core*10000+seed);
 	
+	if(mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
+	
 	Obsmodel obsmodel(details,data,model);
 	Output output(details,data,model,obsmodel);
 	
 	switch(mode){
 	case sim:
-		{
+		{		
 			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel,mode,verbose);
 			simu.run();
 		}
@@ -691,15 +558,13 @@ int main(int argc, char** argv)
 	
 	timers.timetot += clock();
 	
-	if(verbose){
-		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
-	}
+	if(verbose) cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
 	
 #ifdef USE_DATA_PIPELINE
 	delete dp;
 #endif
 
-	#ifdef USE_MPI
+#ifdef USE_MPI
 	MPI_Finalize();
-	#endif
+#endif
 }

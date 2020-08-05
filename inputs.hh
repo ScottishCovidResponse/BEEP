@@ -15,6 +15,9 @@ struct POPDATA;
 struct MARGDATA;
 struct DEMOCAT;
 struct COVAR;
+struct TIMEP;
+struct GENQ;
+struct QTENSOR;
 class Details;
 
 class Inputs
@@ -30,13 +33,15 @@ public:
 	vector <MARGDATA> find_margdata(const Details &details, const vector <DEMOCAT> &democat) const;
 	vector <DEMOCAT> find_democat(const Details &details) const;
 	vector <COVAR> find_covar(const Details &details) const;
+	vector <TIMEP> find_timeperiod(const Details &details) const;
+	void find_genQ(GENQ &genQ, const Details &details) const;
+	void find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const;
 
 	Mode mode() const;
 	
 private:
 	void set_command_line_params(int argc, char *argv[]);  
 	void read_toml_file(bool verbose); 
-	
 	vector<string> get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const;
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
 	

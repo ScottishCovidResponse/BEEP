@@ -24,7 +24,7 @@ using namespace std;
 #include "table.hh"
 #endif
 
-DATA::DATA(Inputs &inputs, Details &details, DataPipeline *dp) : compX(area), compY(area), details(details)
+DATA::DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp) : compX(area), compY(area), details(details)
 {
 	datapipeline = dp;
 	
@@ -42,6 +42,10 @@ DATA::DATA(Inputs &inputs, Details &details, DataPipeline *dp) : compX(area), co
 	covar = inputs.find_covar(details);
 	ncovar = covar.size();
 	
+	timeperiod = inputs.find_timeperiod(details);
+	
+	inputs.find_genQ(genQ,details);
+	inputs.find_Q(Q,timeperiod,details);
 }
 
 void DATA::print_to_terminal() const
@@ -53,7 +57,6 @@ void DATA::print_to_terminal() const
 		cout << endl;
 	}	
 	
-
 	cout << "Age categories: " << endl << "  ";
 	for(unsigned int j = 0; j < democat[0].value.size(); j++){
 		if(j != 0) cout << ", ";
@@ -73,22 +76,73 @@ void DATA::print_to_terminal() const
 		}
 		cout << endl;
 	}
+	
+	cout << "Time periods defined:" << endl;
+	for(unsigned int j = 0; j < timeperiod.size(); j++){
+		cout << "  ";
+		cout << timeperiod[j].name << ": ";
+		if(j == 0) cout << "0"; else cout << timeperiod[j-1].tend;
+		cout << " - " <<  timeperiod[j].tend << endl;
+	}
+	cout << endl;
+	
+	cout << "Q tensors loaded:" << endl;
+	for(unsigned int j = 0; j < Q.size(); j++){
+		cout << "    ";
+		cout << "timep: " << timeperiod[Q[j].timep].name << "  ";
+		cout << "compartment: " << Q[j].comp << "  ";
+		cout << "name: " << Q[j].name << "  ";
+		cout << endl;
+	}
+	cout << endl;
 }
 
-void DATA::load(Inputs &inputs, MODEL &model)
+/// Based to the different demographic categories, this calculates all the possible compinations
+void DATA::calc_democatpos()
 {
-	transdata = inputs.find_transdata(details);	                                          // Loads data
+	vector <unsigned int> count;
 	
-	popdata = inputs.find_popdata(details);	                                       
+	count.resize(ndemocat);                                     // Defines all the demographic states
+	for(int dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
 	
-	margdata = inputs.find_margdata(details,democat);	 
-
-	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
+	int fl, dc;
+	do{
+		democatpos.push_back(count);
+		
+		dc = ndemocat-1;
+		do{
+			fl = 0;
+			count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
+		}while(fl == 1 && dc >= 0);
+	}while(dc >= 0);
+	ndemocatpos = democatpos.size();
+	ndemocatposperage = ndemocatpos/nage;
 }
 
+/// Loads the region data file
+void DATA::load_region_file(Inputs &inputs)
+{
+	string file = inputs.find_string("regions","UNSET");
+	if(file == "UNSET") emsgroot("A 'regions' file must be specified");
 	
+	TABLE tab = loadtable(file);
+	
+	unsigned int namecol = findcol(tab,"name");
+	unsigned int codecol = findcol(tab,"code");
+	
+	for(unsigned int row = 0; row < tab.nrow; row++){
+		REGION reg;
+		reg.name = tab.ele[row][namecol];
+		reg.code = tab.ele[row][codecol];
+		region.push_back(reg);
+	}		
+	nregion = region.size();
+	
+	cout << "Region data loaded." << endl;
+}
+
 /// Reads in transition and area data
-void DATA::readdata(unsigned int core, unsigned int ncore)
+void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
 {
 	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
@@ -100,46 +154,27 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	DEMOCAT dem;
 	IND indi;
 	TABLE tab;
-	vector <unsigned int> count;
+	
 	vector <vector <double> > val;
 	vector <double> vec;
 	vector <unsigned int> rcol;
 	
-	cout << ndemocat << " " << nage << " ndemocat\n";
+	transdata = inputs.find_transdata(details);	                                          // Loads data
 	
-	if(core == 0){
-		count.resize(ndemocat);                                     // Defines all the demographic states
-		for(dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
-		
-		do{
-			democatpos.push_back(count);
-			
-			dc = ndemocat-1;
-			do{
-				fl = 0;
-				count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
-			}while(fl == 1 && dc >= 0);
-		}while(dc >= 0);
-		ndemocatpos = democatpos.size();
-		ndemocatposperage = ndemocatpos/nage;
- 
-		tab = loadtable(regiondatafile);
-		namecol = findcol(tab,"name");
-		codecol = findcol(tab,"code");
-		
-		for(row = 0; row < tab.nrow; row++){
-			reg.name = tab.ele[row][namecol];
-			reg.code = tab.ele[row][codecol];
-			region.push_back(reg);
-		}		
-		nregion = region.size();
-		
-		cout << "Region data loaded." << endl;
-		if(checkon == 1){
-			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
-		}
+	popdata = inputs.find_popdata(details);	                                       
 	
-		file = areadatafile;
+	margdata = inputs.find_margdata(details,democat);	 
+
+	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
+
+	
+	if(mpi.core == 0){
+		calc_democatpos();
+
+		load_region_file(inputs);
+	
+		string file = inputs.find_string("areas","UNSET");
+		if(file == "UNSET") emsgroot("A 'areas' file must be specified");
 		tab = loadtable(file);
 		
 		// If onle one age group then combines all columns with "age" to generate an "all" column
@@ -172,23 +207,23 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	
 			regcode = tab.ele[row][regcol];
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
-			if(r == nregion) emsg("In file '"+areadatafile+"' the region code '"+regcode+"' is not recognised.");
+			if(r == nregion) emsg("In file '"+file+"' the region code '"+regcode+"' is not recognised.");
 			are.region = r;
 					
 			are.covar.resize(ncovar);
 			for(j = 0; j < ncovar; j++){
 				st = tab.ele[row][covar[j].col];
 				v = atof(st.c_str());
-				if(std::isnan(are.covar[j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
+				if(std::isnan(are.covar[j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 			
 				if(covar[j].func == "log"){
 					if(v == 0) v = 0.01;
-					if(v <= 0) emsg("In file '"+areadatafile+"' the log transformed quantities from 'covar' must be positive.");
+					if(v <= 0) emsg("In file '"+file+"' the log transformed quantities from 'covar' must be positive.");
 					are.covar[j] = log(v);
 				}
 				else{
 					if(covar[j].func == "linear") are.covar[j] = v;
-					else emsg("n file '"+areadatafile+"' the functional relationship '"+covar[j].func+"' is not recognised.");
+					else emsg("n file '"+file+"' the functional relationship '"+covar[j].func+"' is not recognised.");
 				}
 			}
 			
@@ -199,7 +234,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 				for(j = 0; j < jmax; j++){
 					st = tab.ele[row][democat[d].col[j]];
 					val[d][j] = atof(st.c_str());
-					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
+					if(std::isnan(val[d][j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 				}
 			}
 			
@@ -264,10 +299,10 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 		
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
-			 
+
 		if(details.mode != sim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
-				file = transdata[td].file;
+				file = transdata[td].file; 
 				tab = loadtable(file);
 				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
 				
@@ -277,13 +312,13 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 				
 				transdata[td].num.resize(rcol.size());
 				for(r = 0; r < rcol.size(); r++){
+					
 					transdata[td].num[r].resize(tab.nrow);
 					for(row = 0; row < tab.nrow; row++){	
 						transdata[td].num[r][row] = getint(tab.ele[row][rcol[r]],file);
 					}
 				}
 				transdata[td].rows = tab.nrow;
-				
 				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
@@ -335,7 +370,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 		generateQ(nage,datadir,genQ,area,datapipeline);
 	}
 
-	if(ncore > 1) copydata(core);
+	if(mpi.ncore > 1) copydata(mpi.core);
 	
 	vec.resize(nage);                                                 // Reads in Q tensors
 	for(q = 0; q < Q.size(); q++){
@@ -396,6 +431,7 @@ unsigned int DATA::getint(string st, string file)
 	return i;
 }
 
+/*
 /// Adds a time period
 void DATA::addtimep(string name, double tend)
 {
@@ -405,23 +441,8 @@ void DATA::addtimep(string name, double tend)
 	timep.tend = tend;
 	timeperiod.push_back(timep);
 }
+	*/
 	
-/// Adds a Q tensor
-void DATA::addQtensor(string timep, string comp, string name)
-{
-	unsigned int tp;
-	QTENSOR qten;
-	
-	tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
-	if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
-	
-	qten.timep = tp;
-	qten.comp = comp;
-	qten.name = name;
-	qten.Qtenref = UNSET;
-	Q.push_back(qten);
-}
-
 /// Loads a table from the data pipeline
 TABLE DATA::loadtablefromdatapipeline(string file)
 {

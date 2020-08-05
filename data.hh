@@ -164,7 +164,7 @@ class DATA
 {
 public:
 	
-	DATA(Inputs &inputs, Details &details, DataPipeline *dp=0);
+	DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp=0);
 
 	DataPipeline *datapipeline;             // DataPipeline object
 	
@@ -185,14 +185,15 @@ public:
 	unsigned int ndemocatposperage;          // Demographic states per age group
 	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
 
-	
-	GENQ genQ; 															 // Stores information about generating the Q matrix
+	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 
-	string regiondatafile;                   // File giving information about data regions
-	string areadatafile;                     // File giving information about areas
+	GENQ genQ; 															 // Stores information about generating the Q matrix
+	vector <QTENSOR> Q;                      // Stores the list of Q tensors
 	
- 	unsigned int popsize;                    // The total population size 
- 
+	
+	//string regiondatafile;                   // File giving information about data regions
+	//string areadatafile;                     // File giving information about areas
+	
 	unsigned int nregion;                    // Number of data regions
 	vector <REGION> region;                  // The names of the data regions
 
@@ -201,15 +202,11 @@ public:
 	
 	vector <IND> ind;                        // The individuals in the system
 		
-	
+	unsigned int popsize;                    // The total population size 
+ 
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
-	
-	
-	vector <TIMEP> timeperiod;               // The timings of changes to Q;
-	
-	vector <QTENSOR> Q;                      // Stores the list of Q tensors
-	
+
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
@@ -226,15 +223,19 @@ public:
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-	void readdata(unsigned int core, unsigned int ncore); 
-	void adddemocat(string name, vector <string> &st, vector <string> &params);
-	void addcovar(string name, string param, string func);
-	void addtimep(string name, double tend);
-	void addQtensor(string timep, string comp, string name);
-	void load(Inputs &inputs, MODEL &model);
+
+	//void adddemocat(string name, vector <string> &st, vector <string> &params);
+	//void addcovar(string name, string param, string func);
+	//void addtimep(string name, double tend);
+	//void addQtensor(string timep, string comp, string name);
+	void read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi);
 	void print_to_terminal() const;
 	
 private:
+	void calc_democatpos();
+	
+	void load_region_file(Inputs &inputs);
+	
 	string strip(string line);
 	void copydata(unsigned int core);
 	TABLE loadtable(string file, string dir="");
