@@ -1,5 +1,7 @@
 // Stores details of the simulation / inference
 
+#include <math.h> 
+
 using namespace std;
 
 #include "details.hh"
