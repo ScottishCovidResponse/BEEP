@@ -293,27 +293,6 @@ int main(int argc, char** argv)
 	
 	//unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
 
-	if(mode == combinetrace) {
-		/*
-		if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
-		vector <string> dirs;
-		string output, distfile="";
-		unsigned int burnin=UNSET;
-		dirs = split(cmdlineparams["dirs"],',');
-		
-		if(cmdlineparams.count("output") == 0) emsg("When using the 'combinetrace' mode, you must set the 'output' property");
-	
-		if(cmdlineparams.count("distribution") == 1) distfile = cmdlineparams["distribution"];
-		if(cmdlineparams.count("burnin") == 1){
-			burnin = atoi(cmdlineparams["burnin"].c_str());
-			if(std::isnan(burnin)) emsg("The 'burnin' property must be an integer."); 
-		}
-	
-		output = cmdlineparams["output"];
-		data.combinetrace(dirs,output,distfile,burnin);
-		*/
-		return 0;
-	}
 	
 	bool param_verbose = (mpi.core == 0);         // Paramater which ensure that only core 0 outputs results
 
@@ -343,6 +322,12 @@ int main(int argc, char** argv)
 	DATA data(details);    // The following file names will need to be read in by the interface:
 #endif
 
+
+	if(mode == combinetrace){
+		combinetrace(data,inputs);
+		return 0;
+	}
+	
 	MODEL model(details,data);
 		
 	data.outputdir="Output";                // The default output directory

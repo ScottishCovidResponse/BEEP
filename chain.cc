@@ -18,7 +18,7 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : details(details), data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
+Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : comp(model.comp), lev(poptree.lev), details(details), data(data), model(model), poptree(poptree), trans(model.trans)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;

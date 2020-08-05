@@ -935,6 +935,8 @@ void MODEL::calcprobin()
 	double prob;
 	vector <unsigned int> cst, kst;
 	vector <double> probst;
+	//vector <vector <double> > probin;
+	
 	
 	for(c = 0; c < comp.size(); c++){
 		comp[c].probin.resize(data.nage);

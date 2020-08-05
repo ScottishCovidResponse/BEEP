@@ -79,11 +79,6 @@ class Chain                                          // Stores all the things re
 
 	vector <int> popw;                                    // The population in w
 	
-	Details &details;
-	DATA &data;
-	MODEL &model;
-	POPTREE &poptree;
-	
 	vector <TRANS> &trans;
 	vector <COMP> &comp;
 	vector <LEVEL> &lev;
@@ -93,27 +88,32 @@ class Chain                                          // Stores all the things re
 		void standard_prop(unsigned int samp, unsigned int burnin);
 		void setQmapi(unsigned int check);
 						
-	private:
-		unsigned int mbp();
-		void addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev);
-		unsigned int nextinfection();
-		void addinfc(unsigned int c, double t);
-		void check(unsigned int num, double t, unsigned int sett);
-		void check_addrem();
-		void updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep);
-		void setuplists();
-		void resetlists();
-		void changestat(unsigned int i, unsigned int st, unsigned int updateR);
-		void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
-		double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev);
-		void infsampler(vector< vector<double> > &Qmap);
-		void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
-		void calcQmapp();
-		void betaphi_prop( unsigned int samp, unsigned int burnin);
-		void area_prop(unsigned int samp, unsigned int burnin);
-		void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
-		void fixarea_prop(unsigned int samp, unsigned int burnin);
+private:
+	unsigned int mbp();
+	void addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev);
+	unsigned int nextinfection();
+	void addinfc(unsigned int c, double t);
+	void check(unsigned int num, double t, unsigned int sett);
+	void check_addrem();
+	void updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep);
+	void setuplists();
+	void resetlists();
+	void changestat(unsigned int i, unsigned int st, unsigned int updateR);
+	void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
+	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev);
+	void infsampler(vector< vector<double> > &Qmap);
+	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
+	void calcQmapp();
+	void betaphi_prop( unsigned int samp, unsigned int burnin);
+	void area_prop(unsigned int samp, unsigned int burnin);
+	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
+	void fixarea_prop(unsigned int samp, unsigned int burnin);
+	
+	void addrem_prop(unsigned int samp, unsigned int burnin);
 		
-		void addrem_prop(unsigned int samp, unsigned int burnin);
+	Details &details;
+	DATA &data;
+	MODEL &model;
+	POPTREE &poptree;
 };
 #endif

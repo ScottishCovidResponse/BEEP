@@ -59,6 +59,8 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	vector <double> invTstore;
 	vector <double> nac_swap;
 	
+	Output output(details,data,model);
+	
 	
 	pmax = 1-pow(invTmin,1.0/Tpower);
 	pmin = 1-pow(invTmax,1.0/Tpower);
@@ -87,7 +89,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		}
 	}
 	
-	if(mpi.core == 0){ outputinit(data,model); outputLiinit(data,mpi.ncore*nchain);}
+	if(mpi.core == 0){ output.init(); output.Liinit(mpi.ncore*nchain);}
 
 	if(quenchpl == 1){ quenchplot.open((data.outputdir+"/quenchplot.txt").c_str());}
 	
@@ -170,7 +172,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		
 		if(duplicate == 0) swap(nac_swap,samp);
 		
-		if(samp%1 == 0) output_param(Listore,psamp);
+		if(samp%1 == 0) output_param(output,Listore,psamp);
 		if(samp%5 == 0) output_meas(opsamp);
 		
 		if(mpi.core == 0 && quenchpl == 1){ 
@@ -182,7 +184,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){
 			if(mpi.core == 0){
-				outputresults(details,data,model,psamp,opsamp);
+				output.results(psamp,opsamp);
 				cout << "Model evidence: " << calcME(Listore,invTstore) << endl;
 			}
 			diagnostic(Listore,invTstore,nac_swap);
@@ -336,7 +338,7 @@ double Mcmc::calcME(vector <vector <double> > &Listore,vector <double> &invTstor
 }
 
 /// Ouputs a parameter sample from the MBP algorithm
-void Mcmc::output_param(vector <vector <double> > &Listore, vector <PARAMSAMP> &psamp) const
+void Mcmc::output_param(Output &output, vector <vector <double> > &Listore, vector <PARAMSAMP> &psamp) const
 {
 	unsigned int p, ppost, nchaintot = mpi.ncore*nchain, samp = psamp.size();
 	int siz;
@@ -357,7 +359,7 @@ void Mcmc::output_param(vector <vector <double> > &Listore, vector <PARAMSAMP> &
 			Listore[chtot[p]].push_back(Litot[p]);
 			Liord[chtot[p]] = Litot[p];
 		}
-		outputLi(samp,nchaintot,Liord);
+		output.Li(samp,nchaintot,Liord);
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -383,7 +385,7 @@ void Mcmc::output_param(vector <vector <double> > &Listore, vector <PARAMSAMP> &
 			unpack(ninfplot);
 		}
 	
-		outputtrace(data,model,samp,L,Pr,ninfplot,paramsamp.paramval);
+		output.traceplot(samp,L,Pr,ninfplot,paramsamp.paramval);
 		psamp.push_back(paramsamp);
 	}
 	else{

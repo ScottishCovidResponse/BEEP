@@ -159,7 +159,7 @@ class DataPipeline;
 
 class DATA
 {
-	public:
+public:
 	
 	DATA(Details &details, DataPipeline *dp=0) : compX(area), compY(area), details(details)
 	{
@@ -239,9 +239,8 @@ class DATA
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
 	void addQtensor(string timep, string comp, string name);
-	unsigned int gettime(string st);
-	string getdate(unsigned int t);
-	void combinetrace(vector <string> inputdirs, string output, string distfile, unsigned int burnin);
+	unsigned int gettime(string st) const;
+	string getdate(unsigned int t) const;
 	
 private:
 	string strip(string line);
@@ -261,6 +260,6 @@ private:
 	void convertOAtoM();
 	void convertRegion_M();
 	
-	Details &details;
+	const Details &details;
 };
 #endif

@@ -34,7 +34,9 @@ void Simulate::run()
 {
 	Chain chain(details,data,model,poptree,0);
 	proportions(chain.indevi);
-	outputsimulateddata(data,model,chain.trevi,chain.indevi,data.outputdir);
+	
+	Output output(details,data,model);
+	output.simulateddata(chain.trevi,chain.indevi,data.outputdir);
 }
 
 void Simulate::multirun()
@@ -55,7 +57,8 @@ void Simulate::multirun()
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
 	}
-	outputresults(details,data,model,psamp,opsamp);
+	Output output(details,data,model);
+	output.results(psamp,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments

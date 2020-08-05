@@ -13,14 +13,42 @@ struct PARAMSAMP{                                     // Stores information abou
 	vector <double> paramval;                           // A parameter sample
 };
 
-void outputinit(DATA &data, MODEL &model);
-void outputLiinit(DATA &data, unsigned int nchaintot);
-void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot);
+struct STAT{                                           // Stores statistical information
+	string mean;                                         // The mean
+	string CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
+	string ESS;                                          // The estimated sample size
+};
 
-void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval);
-void outputresults(Details &details, DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp);
-void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period);
-void outputeventsample(DATA &data, vector < vector <FEV> > &fev);
-void outputsimulateddata(DATA &data, MODEL &model, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
-void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin);
+struct DIST{                                          // Stores a probability distribution
+	vector <string> value;
+	vector <string> prob;
+};
+
+class Output
+{
+public:
+	Output(Details &details, DATA &data, MODEL &model);
+	
+	void init();
+	void Liinit(unsigned int nchaintot);
+	void Li(unsigned int samp, unsigned int nchaintot, double *Litot);
+	void plot(string file, vector < vector <FEV> > &xi, double tmin, double period);
+
+	void traceplot(unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval);
+	void results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp);
+	void eventsample(vector < vector <FEV> > &fev);
+	void simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
+	void combinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin);
+
+private:
+	STAT getstat(vector <double> &vec); 
+	DIST getdist(vector <double> &vec);
+	void posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type);
+
+	ofstream trace, traceLi;
+	
+	const Details &details;
+	const DATA &data;
+	MODEL &model;
+};
 #endif

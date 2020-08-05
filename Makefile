@@ -40,6 +40,7 @@ endif
 # Please keep these in lexicographic order to aid merging
 srcs := \
  chain.cc \
+ combinetrace.cc \
  data.cc \
  details.cc \
  generateQ.cc \

@@ -7,7 +7,7 @@
 using namespace std;
 
 /// Gets all measured quantities
-MEAS getmeas(DATA &data, MODEL &model, const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev)
+MEAS getmeas(const DATA &data, MODEL &model, const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev)
 {
 	unsigned int td, pd, md, ti, tf, r, row, sett, c, j, i, tra, d;
 	double sum;
@@ -164,7 +164,7 @@ double Lobs(DATA &data, MODEL &model, const vector < vector <EVREF> > &trev, con
 /// Returns the number of transitions for individuals going down a transition
 /// in different regions over the time range ti - tf
 /// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> getnumtrans(DATA &data, const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
+vector <unsigned int> getnumtrans(const DATA &data, const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
 {
 	unsigned int r, sett, i, j;
 	vector <unsigned int> num;
