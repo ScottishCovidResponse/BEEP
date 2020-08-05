@@ -21,7 +21,7 @@ using namespace std;
 
 Simulate::Simulate(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : data(data), model(model), poptree(poptree), mpi(mpi)
 {	
-	nsamp = inputs.find("nsamp",verbose,UNSET);                                             // Sets the number of samples for inference
+	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(mode == multisim){
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	}
@@ -34,7 +34,7 @@ void Simulate::run()
 {
 	Chain chain(data,model,poptree,0);
 	proportions(chain.indevi);
-	outputsimulateddata(data,model,poptree,chain.trevi,chain.indevi,data.outputdir);
+	outputsimulateddata(data,model,chain.trevi,chain.indevi,data.outputdir);
 }
 
 void Simulate::multirun()

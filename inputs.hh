@@ -13,7 +13,9 @@ class Inputs
 {
 public:
 	Inputs(int argc, char** argv, bool verbose);
-	int find(const string &key, bool verbose, int def=-1) const;
+
+	int find_int(const string &key, int def) const;
+	double find_double(const string &key, double def) const;
 	
 	Mode mode(bool verbose) const;
 	
@@ -33,8 +35,6 @@ private:
 	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Stores information from the TOML file
 
 	vector<string> definedparams;                                                       // Stores all the possible parameters 
-	
-	
 };
 
 #endif

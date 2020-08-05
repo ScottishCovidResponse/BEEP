@@ -20,7 +20,7 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot);
 void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval);
 void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp);
 void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period);
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL &model, POPTREE &poptree);
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
+void outputeventsample(DATA &data, vector < vector <FEV> > &fev);
+void outputsimulateddata(DATA &data, MODEL &model, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
 void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin);
 #endif

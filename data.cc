@@ -22,12 +22,19 @@ using namespace std;
 #include "table.hh"
 #endif
 
-Mpi::Mpi(int nco, int co)
+Mpi::Mpi()
 {
-	ncore = nco; core = co;
+	#ifdef USE_MPI
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore = (unsigned int) num;
+  MPI_Comm_rank(MPI_COMM_WORLD,&num); core = (unsigned int) num;
+	#endif
+	
+	#ifndef USE_MPI
+	ncore = 1;
+	core = 0;
+	#endif
 }
-
-
 
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)

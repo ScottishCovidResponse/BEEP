@@ -36,6 +36,9 @@ private:
 	unsigned int nchaintot;                  // The total number of chains (across all MPI processes);
 	unsigned int nchain;                     // The number of chains per core
 	
+	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
+	
+	
 	DATA &data;
 	MODEL &model;
 	POPTREE &poptree;

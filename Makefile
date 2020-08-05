@@ -39,13 +39,13 @@ endif
 
 # Please keep these in lexicographic order to aid merging
 srcs := \
- mcmc.cc \
  chain.cc \
  data.cc \
  generateQ.cc \
  gitversion.cc \
  inputs.cc \
  main.cc \
+ mcmc.cc \
  model.cc \
  obsmodel.cc \
  output.cc \

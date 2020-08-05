@@ -39,10 +39,9 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
 using namespace std;
 
-
 string lookup_string_parameter(const map<string,string> &params,
 															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-															 const string &key, bool verbose, const string &def="") // zz
+															 const string &key, bool verbose, const string &def="")                        // zz
 {
 	string val;
 	auto val_it = params.find(key);
@@ -106,7 +105,7 @@ int lookup_int_parameter(const map<string,string> &params,
 
 double lookup_double_parameter(const map<string,string> &params,
 												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-												 const string &key, bool verbose, int def=-1)
+												 const string &key, bool verbose, int def=-1) //zz
 {
 	double val;
 	auto val_it = params.find(key);
@@ -271,22 +270,13 @@ string gitversion();
 
 int main(int argc, char** argv)
 {
-	
-	int ncore, core;                 // Stores the number of cores and the core of the current process
 	#ifdef USE_MPI
   MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD,&ncore);
-  MPI_Comm_rank(MPI_COMM_WORLD,&core);
   #endif
 
-	#ifndef USE_MPI
-	ncore = 1;
-	core = 0;
-	#endif
+	Mpi mpi;                                 // Stores mpi information (core and ncore)
 	
-	Mpi mpi(ncore,core);
-	
-	bool verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
+	bool verbose = (mpi.core == 0);            // Paramater which ensure that only core 0 outputs results
 		
 	Inputs inputs(argc,argv,verbose);                 // Loads up the command line arguments
 	
@@ -319,7 +309,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	
-	bool param_verbose = (core == 0);         // Paramater which ensure that only core 0 outputs results
+	bool param_verbose = (mpi.core == 0);         // Paramater which ensure that only core 0 outputs results
 
 	int seed=0;                               // Sets the random seed for simulation
 	
@@ -329,10 +319,7 @@ int main(int argc, char** argv)
 	MARGDATA margdata;
 	string str, command, value, tformat, startstr, endstr;
 
-	if (core == 0) {
-		cout << "BEEPmbp version " << gitversion() << endl;
-	}
-	
+	if(verbose) cout << "BEEPmbp version " << gitversion() << endl;
 
 #ifdef USE_DATA_PIPELINE
 	pybind11::scoped_interpreter guard{};
@@ -355,8 +342,6 @@ int main(int argc, char** argv)
 		
 	data.outputdir="Output";                // The default output directory
 	data.threshold=UNSET;
-	data.invTmin=0;                         // This default choice 
-	data.invTmax=0.25;  
 
 	// A list of all supported parameters (please keep in lexicographic order)   // zz
 	vector<string>  definedparams {
@@ -546,16 +531,6 @@ int main(int argc, char** argv)
 		data.threshold = lookup_int_parameter(cmdlineparams, tomldata, "threshold", param_verbose);
 		data.thres_h = log(1.0/(data.threshold + 0.5*sqrt(2*M_PI*minvar)));
 	}
-
-	// invTmin
-	if(tomldata.contains("invTmin")){
-		data.invTmin = lookup_double_parameter(cmdlineparams, tomldata, "invTmin", param_verbose);
-	}
-	
-	// invTmax
-	if(tomldata.contains("invTmax")){
-		data.invTmax = lookup_double_parameter(cmdlineparams, tomldata, "invTmax", param_verbose);
-	}
 	
 	// End of parameters
 	if (param_verbose)
@@ -582,7 +557,7 @@ int main(int argc, char** argv)
 	}
 	else emsgroot("The 'ages' parameter must be set.");
 	
-	if(core == 0){	
+	if(verbose){	
 		cout << "Age categories: " << endl << "  ";
 		for(j = 0; j < data.democat[0].value.size(); j++){
 			if(j != 0) cout << ", ";
@@ -617,7 +592,7 @@ int main(int argc, char** argv)
 		}
 	}
 	
-	if(core == 0 && data.democat.size() > 1){
+	if(verbose && data.democat.size() > 1){
 		cout << "Demographic categories: " << endl;
 		for(k = 1; k < data.democat.size(); k++){
 			cout << "  ";
@@ -648,7 +623,7 @@ int main(int argc, char** argv)
 			data.addcovar(name,par,func);
 		}
 		
-		if(core == 0){
+		if(verbose){
 			cout << "Area covariates: " << endl;
 			cout << "  ";
 			for(j = 0; j < data.covar.size(); j++) cout << data.covar[j].name << "   param='" << data.covar[j].param << "'" << endl; 
@@ -682,7 +657,7 @@ int main(int argc, char** argv)
 	}
 	else emsgroot("Property 'timep' defining time periods must be set.");
 
-	if(core == 0){
+	if(verbose){
 		cout << "Time periods defined:" << endl;
 		for(j = 0; j < data.timeperiod.size(); j++){
 			cout << "  ";
@@ -762,7 +737,7 @@ int main(int argc, char** argv)
 	}
 	else emsgroot("Property 'timep' defining time periods must be set.");
 	
-	if(core == 0){
+	if(verbose){
 		cout << "Q tensors loaded:" << endl;
 		for(j = 0; j < data.Q.size(); j++){
 			cout << "    ";
@@ -900,20 +875,20 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(mode != inf && ncore != 1) emsgroot("Simulation only requires one core");
+	if(mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	data.readdata(core,ncore,mode);
+	data.readdata(mpi.core,mpi.ncore,mode);
 
 	POPTREE poptree;
-	poptree.init(data,core);	
+	poptree.init(data,mpi.core);	
 
-	model.definemodel(core,data.period,data.popsize,tomldata);
+	model.definemodel(mpi.core,data.period,data.popsize,tomldata);
 	model.addQ();
 	model.checkdata();
 
-	if(core == 0) cout << "Running...." << endl;
+	if(verbose) cout << "Running...." << endl;
 
 	timersinit();
 	timers.timetot = -clock();
@@ -921,7 +896,7 @@ int main(int argc, char** argv)
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if(duplicate == 1) sran(seed);
-	else sran(core*10000+seed);
+	else sran(mpi.core*10000+seed);
 	
 	switch(mode){
 	case sim:
@@ -950,7 +925,7 @@ int main(int argc, char** argv)
 	
 	timers.timetot += clock();
 	
-	if(core == 0){
+	if(verbose){
 		cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
 	}
 	

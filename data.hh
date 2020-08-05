@@ -158,7 +158,7 @@ class DataPipeline;
 
 struct Mpi
 {
-	Mpi(int nco, int co);
+	Mpi();
 	
 	unsigned int ncore;                      // The number of cores that MPI is using
 	unsigned int core;                       // The core of the current process
@@ -193,7 +193,6 @@ class DATA
 	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	double thres_h;                          // The height of the threshold observation model
 
-	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	

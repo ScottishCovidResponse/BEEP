@@ -471,7 +471,7 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 }
 	
 /// Outputs an event sample fev
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model*/, POPTREE & /*poptree*/)
+void outputeventsample(DATA &data, vector < vector <FEV> > &fev)
 {
 	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
@@ -540,7 +540,7 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 }
 
 /// Generates case data based on a simulation using the MBP algorithm
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir)
+void outputsimulateddata(DATA &data, MODEL &model, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir)
 {
 	unsigned int row, r, td, pd, md, d, j, jj;
 	string file, filefull;

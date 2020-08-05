@@ -23,26 +23,26 @@ ofstream quenchplot;
 
 Mcmc::Mcmc(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : data(data), model(model), poptree(poptree), mpi(mpi)
 {
-	nsamp = inputs.find("nsamp",verbose,UNSET);                                             // Sets the number of samples for inference
+	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	
 	burnin = nsamp/4;
 	quench = nsamp/4;	
 	
-	nchaintot = inputs.find("nchain",verbose,UNSET);                                        // Sets the total number of mcmc chains
-	if(mode == inf){
-		if(nchaintot == UNSET) emsgroot("The number of chains must be set");
-		if(nchaintot%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
-	}
+	nchaintot = inputs.find_int("nchain",UNSET);                                        // Sets the total number of mcmc chains
+	if(nchaintot == UNSET) emsgroot("The number of chains must be set");
+	if(nchaintot%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
 
-	if(nchaintot == UNSET) nchain = UNSET;
-	else nchain = nchaintot/mpi.ncore;
+	nchain = nchaintot/mpi.ncore;                                                           // The number of chains per core
+	
+	invTmin = inputs.find_double("invTmin",0);                                             // The temperatures of the prior and posterior chains
+	invTmax = inputs.find_double("invTmax",0.25);       
 	
 	assert(mpi.ncore > 0);
   assert(mpi.core < mpi.ncore);
   assert(nchain > 0);
-	assert(quench > 0);
-	assert(burnin > 0);
+	assert(quench >= 0);
+	assert(burnin >= 0);
 }
 
 /// Runs the multi-temperature MCMC algorithm	
@@ -60,8 +60,8 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	vector <double> nac_swap;
 	
 	
-	pmax = 1-pow(data.invTmin,1.0/Tpower);
-	pmin = 1-pow(data.invTmax,1.0/Tpower);
+	pmax = 1-pow(invTmin,1.0/Tpower);
+	pmin = 1-pow(invTmax,1.0/Tpower);
 	
 	for(p = 0; p < nchain; p++){
 		pp = mpi.core*nchain+p;
@@ -73,7 +73,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
 		for(pp = 0; pp < nchaintot; pp++){
 			kappa = double(pp)/(nchaintot-1);
-			if(nchaintot == 1 || duplicate == 1) invTstore[pp] = data.invTmax;
+			if(nchaintot == 1 || duplicate == 1) invTstore[pp] = invTmax;
 			else invTstore[pp] = pow(1-(pmin+kappa*(pmax-pmin)),Tpower);
 		}
 		
@@ -97,7 +97,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		for(p = 0; p < nchain; p++){
 			pp = chain[p].ch;
 		
-			if(nchaintot == 1 || duplicate == 1) chain[p].invT = data.invTmax;
+			if(nchaintot == 1 || duplicate == 1) chain[p].invT = invTmax;
 			else{
 				if(samp < quench) fac = double(samp)/quench;
 				else fac = 1;

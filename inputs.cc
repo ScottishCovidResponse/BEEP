@@ -154,7 +154,7 @@ string Inputs::lookup_string_parameter(const map<string,string> &params,
 	return val;
 }
 
-int Inputs::find(const string &key, bool verbose, int def) const
+int Inputs::find_int(const string &key, int def) const
 {
 	int val;
 	auto val_it = cmdlineparams.find(key);
@@ -186,22 +186,50 @@ int Inputs::find(const string &key, bool verbose, int def) const
 			val = toml::find<int>(tomldata,key);
 		} else {
 			val = def;
-			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
 		}
 	}
-	if (verbose)
-		cout << "  " << key << " = " << val << endl;
+	
 	return val;
 }
 
-/*
-unsigned int find(string name) const 
+double Inputs::find_double(const string &key, double def) const
 {
-	lookup_int_parameter(cmdlineparams,tomldata,name,verbose);
+	double val;
+	auto val_it = cmdlineparams.find(key);
+	if (val_it != cmdlineparams.end()) {
+		const std::string& valstr = val_it->second;
+		try {
+			size_t idx;
+			val = stof(valstr,&idx);
+			if (idx != valstr.length()) {
+				std::ostringstream oss;
+				oss << "Should be number, found '"<< valstr;
+				throw std::invalid_argument(oss.str());
+			}
+		} catch (const std::exception& e) {
+			std::ostringstream oss;
+			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
+			// Add exception description if it's informative
+			std::string what = e.what();
+			if (what == "stoi") {
+				if (valstr == "")
+					oss << "Should be number, found no value\n";
+			} else {
+				oss << what;
+			}
+			emsg(oss.str());
+		}
+	} else {
+		if (tomldata.contains(key)) {
+			const auto val_temp = toml::find(tomldata,key);
+			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
+		} else {
+			val = def;
+		}
+	}
+	
+	return val;
 }
-//inputs.find("nsamp");
-*/
-
 
 vector<string> Inputs::get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const
 {
