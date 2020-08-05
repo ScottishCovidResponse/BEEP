@@ -27,6 +27,7 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "poptree.hh"
 #include "model.hh"
 #include "output.hh"
+#include "obsmodel.hh"
 
 #include "utils.hh"
 #include "timers.hh"
@@ -305,7 +306,7 @@ int main(int argc, char** argv)
 	TRANSDATA transdata;
 	POPDATA popdata;
 	MARGDATA margdata;
-	string str, command, value, tformat, startstr, endstr;
+	string str, command, value;//, startstr, endstr;
 
 	
 #ifdef USE_DATA_PIPELINE
@@ -320,9 +321,9 @@ int main(int argc, char** argv)
 		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
-	DATA data(details,dp);    // The following file names will need to be read in by the interface:
+	DATA data(inputs,details,dp);    // The following file names will need to be read in by the interface:
 #else
-	DATA data(details);    // The following file names will need to be read in by the interface:
+	DATA data(inputs,details);    // The following file names will need to be read in by the interface:
 #endif
 
 
@@ -333,7 +334,6 @@ int main(int argc, char** argv)
 	
 	MODEL model(details,data);
 		
-	data.outputdir="Output";                // The default output directory
 	data.threshold=UNSET;
 
 	// A list of all supported parameters (please keep in lexicographic order)   // zz
@@ -468,24 +468,18 @@ int main(int argc, char** argv)
 		else emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}
 	
-	tformat = lookup_string_parameter(cmdlineparams, tomldata, "timeformat", param_verbose);
-	if(tformat == "number"){ data.tform = tform_num; data.tformat = "time";}
-	else{ 
-		data.tformat = "date";
-		if(tformat == "year-month-day") data.tform = tform_ymd; 
-		else emsgroot("Do not recognise time format '"+tformat+"'.");
-	}
-	
 	// start
+	/*
 	startstr = lookup_string_parameter(cmdlineparams, tomldata, "start", param_verbose);
-	data.start = data.gettime(startstr);
+	details.start = details.gettime(startstr);
 
 	// end
 	endstr = lookup_string_parameter(cmdlineparams, tomldata, "end", param_verbose);
-	data.end = data.gettime(endstr);
+	data.end = details.gettime(endstr);
 	
 	// sets the period
-	data.period = data.end - data.start;
+	details.period = data.end - details.start;
+*/
 
 	// seed
 	if(tomldata.contains("seed")){
@@ -508,10 +502,10 @@ int main(int argc, char** argv)
 	}
 
 	// outputdir
-	data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
+	//data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
 
 	// data directory
-	data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
+	//data.datadir = lookup_string_parameter(cmdlineparams, tomldata, "datadir", param_verbose, "UNSET");
 	
 	// region data
 	data.regiondatafile = lookup_string_parameter(cmdlineparams, tomldata, "regions", param_verbose, "UNSET");
@@ -635,15 +629,15 @@ int main(int argc, char** argv)
 			
 			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
 			auto tendstr = toml::find<string>(tim,"tend");
-			int tend = data.gettime(tendstr) - data.start;
+			int tend = details.gettime(tendstr) - details.start;
 			
-			if(tend < 0 || tend > (int)data.period) emsg("Time '"+tendstr+"' is out of range."); 
+			if(tend < 0 || tend > (int)details.period) emsg("Time '"+tendstr+"' is out of range."); 
 			if(j > 0){
 				if(tend < data.timeperiod[j-1].tend) emsg("'timep' is not time ordered.");
 			}
 			
 			if(j == timep.size()-1){
-				if(tend != (int)data.period) emsg("'tend' in 'timep' must finish with the end time.");
+				if(tend != (int)details.period) emsg("'tend' in 'timep' must finish with the end time.");
 			}
 			data.addtimep(name,tend);
 		}
@@ -770,7 +764,7 @@ int main(int argc, char** argv)
 
 			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
 			const auto startdata = toml::find<string>(td,"start");
-			transdata.start = data.gettime(startdata)-data.start;
+			transdata.start = details.gettime(startdata)-details.start;
 			
 			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
 			const auto units = toml::find<std::string>(td,"units");
@@ -781,7 +775,7 @@ int main(int argc, char** argv)
 			}
 			
 			if(mode != inf){
-				transdata.rows = (unsigned int)((data.period - transdata.start)/transdata.units);
+				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
@@ -811,7 +805,7 @@ int main(int argc, char** argv)
 
 			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
 			const auto startdata = toml::find<string>(pd,"start");
-			popdata.start = data.gettime(startdata)-data.start;
+			popdata.start = details.gettime(startdata)-details.start;
 			
 			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
 			const auto units = toml::find<std::string>(pd,"units");
@@ -823,7 +817,7 @@ int main(int argc, char** argv)
 			}
 			
 			if(mode != inf){
-				popdata.rows = (unsigned int)((data.period - popdata.start)/popdata.units);
+				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
@@ -877,7 +871,7 @@ int main(int argc, char** argv)
 	POPTREE poptree;
 	poptree.init(data,mpi.core);	
 
-	model.definemodel(mpi.core,data.period,data.popsize,tomldata);
+	model.definemodel(mpi.core,details.period,data.popsize,tomldata);
 	model.addQ();
 	model.checkdata();
 
@@ -891,26 +885,27 @@ int main(int argc, char** argv)
 	if(duplicate == 1) sran(seed);
 	else sran(mpi.core*10000+seed);
 	
-	Output output(details,data,model);
+	Obsmodel obsmodel(details,data,model);
+	Output output(details,data,model,obsmodel);
 	
 	switch(mode){
 	case sim:
 		{
-			Simulate simu(details,data,model,poptree,mpi,inputs,output,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel,mode,verbose);
 			simu.run();
 		}
 		break;
 	
 	case multisim:
 		{
-			Simulate simu(details,data,model,poptree,mpi,inputs,output,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel,mode,verbose);
 			simu.multirun();
 		}
 		break;
 			
 	case inf: 
 		{
-			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,mode,verbose);
+			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,obsmodel,mode,verbose);
 			mcmc.run(propsmethod);
 		}
 		break;

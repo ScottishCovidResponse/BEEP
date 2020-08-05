@@ -24,10 +24,12 @@ struct DIST{                                          // Stores a probability di
 	vector <string> prob;
 };
 
+class Obsmodel;
+
 class Output
 {
 public:
-	Output(Details &details, DATA &data, MODEL &model);
+	Output(Details &details, DATA &data, MODEL &model, Obsmodel &obsmodel);
 	
 	void init();
 	void Liinit(unsigned int nchaintot);
@@ -50,5 +52,6 @@ private:
 	const Details &details;
 	const DATA &data;
 	MODEL &model;
+	Obsmodel &obsmodel;
 };
 #endif

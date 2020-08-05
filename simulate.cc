@@ -19,7 +19,7 @@
 using namespace std;
 
 
-Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output)
+Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(mode == multisim){
@@ -32,11 +32,10 @@ Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree,
 /// Simulates data using the MBP algorithm
 void Simulate::run()
 {
-	Chain chain(details,data,model,poptree,0);
+	Chain chain(details,data,model,poptree,obsmodel,0);
 	proportions(chain.indevi);
 	
-	Output output(details,data,model);
-	output.simulateddata(chain.trevi,chain.indevi,data.outputdir);
+	output.simulateddata(chain.trevi,chain.indevi,details.outputdir);
 }
 
 void Simulate::multirun()
@@ -49,15 +48,14 @@ void Simulate::multirun()
 	
 	for(s = 0; s < nsamp; s++){
 		cout << "Simulating sample " << (s+1) << endl;
-		Chain chain(details,data,model,poptree,0);
+		Chain chain(details,data,model,poptree,obsmodel,0);
 		
-		sample.meas = getmeas(data,model,chain.trevi,chain.indevi);
+		sample.meas = obsmodel.getmeas(chain.trevi,chain.indevi);
 		model.setup(chain.paramval);
 		sample.R0 = model.R0calc();
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
 	}
-	Output output(details,data,model);
 	output.results(psamp,opsamp);
 }
 

@@ -23,6 +23,16 @@ using namespace std;
 #include "table.hh"
 #endif
 
+DATA::DATA(Inputs &inputs, Details &details, DataPipeline *dp) : compX(area), compY(area), details(details)
+{
+	datapipeline = dp;
+	
+	datadir = inputs.find_string("datadir","UNSET");
+	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
+
+}
+	
+	
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore)
 {
@@ -44,9 +54,9 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	fepertime = 10;
 	
 	settpertime = 1;
-	nsettime = settpertime*period;
+	nsettime = settpertime*details.period;
 	settime.resize(nsettime+1);
-	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
+	for(s = 0; s <= nsettime; s++) settime[s] = double(s*details.period)/nsettime;
 			
 	fediv = nsettime*fepertime;
 	
@@ -227,7 +237,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 				}
 				transdata[td].rows = tab.nrow;
 				
-				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > period){
+				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
@@ -250,7 +260,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 				}
 				popdata[pd].rows = tab.nrow;
 				
-				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > period){
+				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
@@ -413,15 +423,15 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 	string used_file;
 	
 	if(dir != ""){
-        used_file =dir+"/"+file;
+    used_file =dir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
 	}
 	else{
-        used_file = outputdir+"/"+file;
+    used_file = details.outputdir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in){
-            used_file = (datadir+"/"+file);
+      used_file = (datadir+"/"+file);
 			in.open(used_file.c_str());
 			if(!in) emsg("Cannot open the file '"+file+"'");
 		}
@@ -492,7 +502,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 	
 	row = 0;
 	while(row < tab.nrow){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		if(tt < t){
 			if(type == "trans" && row > 0){ // In the case of transitions adds up the contributions from other days to make a week 
 				for(i = 1; i < tab.ncol; i++){
@@ -506,7 +516,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 			tab.nrow--;
 		}
 		else{
-			if(tt > t) emsg("In file '"+tab.file+"' there is no observed data at time '"+getdate(t)+"'."); 
+			if(tt > t) emsg("In file '"+tab.file+"' there is no observed data at time '"+details.getdate(t)+"'."); 
 			t += units;
 			row++;
 		}
@@ -514,7 +524,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 	if(tab.nrow == 0) emsg("The file '"+tab.file+"' does not contain any information.");
 	
 	if(type=="trans"){                         // Removes the last line if incomplete
-		if(gettime(tab.ele[tab.nrow-1][0]) > end-units){
+		if(details.gettime(tab.ele[tab.nrow-1][0]) > details.end-units){
 			tab.ele.erase(tab.ele.begin()+tab.nrow-1);
 			tab.nrow--;
 		}
@@ -688,69 +698,6 @@ string DATA::strip(string line)
 	return line;
 }	
 
-/// Gets the time from a string
-unsigned int DATA::gettime(string st) const 
-{
-	unsigned int t;
-	const char *buf = st.c_str();
-	struct tm result;
-			
-	if(st == "start") return start;
-	if(st == "end") return end;
-			
-	switch(tform){
-	case tform_num:
-		t = atoi(buf);
-		if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
-		break;
-
-	case tform_ymd:
-		memset(&result, 0, sizeof(result));
-		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
-			time_t tt = mktime(&result);
-			t = tt/(60*60*24);
-		}
-		else{ 
-			emsg("'"+st+"' is not regonised as Year-Month-Day format.");
-			t = 0;
-		}
-		break;
-		
-	default:
-		emsg("The time format is not recognised.");
-		t = 0;
-		break;
-	}
-
-	return t;	
-}
-
-/// Returns a date from a time
-string DATA::getdate(unsigned int t) const
-{
-	time_t tt;
-	string st;
-	stringstream ss; 
-	char buffer[80];
-  struct tm *timeinfo;
-	
-	t += start;
-
-	switch(tform){
-	case tform_num:
-		ss << t;
-		break;
-		
-	case tform_ymd:
-		tt = (t + 0.5)*(60*60*24);	
-		timeinfo = localtime(&tt);
-		strftime(buffer,80,"%Y-%m-%d",timeinfo);
-		ss << buffer;
-		break;
-	}
-	
-	return ss.str();
-}
 
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
@@ -775,10 +722,10 @@ void DATA::plotrawdata()
 	}
 	
 	tab = loadtable("DailyDeathsConfirmedCovid.txt");
-	ofstream dout(outputdir+"/deathraw.txt");
+	ofstream dout(details.outputdir+"/deathraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
@@ -786,10 +733,10 @@ void DATA::plotrawdata()
 	cout << sum << " Deaths" << endl;
 	
 	tab = loadtable("hospital_admissions_number_per_day.txt");
-	ofstream dout2(outputdir+"/hospadminraw.txt");
+	ofstream dout2(details.outputdir+"/hospadminraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) sum += num;
 		if(num != UNKNOWN) dout2 << tt << " " << num << " " << sum << endl;
@@ -800,17 +747,17 @@ void DATA::plotrawdata()
 		
 
 	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt");
-	ofstream dout3(outputdir+"/nhsothercasesraw.txt");
+	ofstream dout3(details.outputdir+"/nhsothercasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout3 << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
 	}
 	cout << sum << " NHS+other cases" << endl;
 	
-	ofstream poptot(outputdir+"/Htot.txt");
+	ofstream poptot(details.outputdir+"/Htot.txt");
 
 	pd = 0;
 	for(row = 0; row < popdata[pd].rows; row++){
@@ -827,16 +774,16 @@ void DATA::plotrawdata()
 		poptot << popdata[pd].start + row*popdata[pd].units << " "<< sum<< endl;
 	}
 	
-	ofstream recrate(outputdir+"/recrate.txt");
+	ofstream recrate(details.outputdir+"/recrate.txt");
 	for(t = 54; t < 134; t++){
 		recrate << t << " " << " " << Hnum[t] << " " << adm[t] << " " << adm[t] - ( Hnum[t+1] - Hnum[t]) << "\n";
 	}
 	
 	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt");
-	ofstream dout4(outputdir+"/nhsonlycasesraw.txt");
+	ofstream dout4(details.outputdir+"/nhsonlycasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout4 << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
@@ -844,10 +791,10 @@ void DATA::plotrawdata()
 	cout << sum << " NHS cases" << endl;
 	
 	tab = loadtable("HD_NRS.txt");
-	ofstream dout5(outputdir+"/HDraw.txt");
+	ofstream dout5(details.outputdir+"/HDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout5 << tt << " " <<  double(num)/7 << endl;
 		if(num != UNKNOWN) sum += num;
@@ -855,10 +802,10 @@ void DATA::plotrawdata()
 	cout << sum << "HD Deaths" << endl;
 	
 	tab = loadtable("ID_NRS.txt");
-	ofstream dout6(outputdir+"/IDraw.txt");
+	ofstream dout6(details.outputdir+"/IDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout6 << tt << " " << double(num)/7 << endl;
 		if(num != UNKNOWN) sum += num;
@@ -874,7 +821,7 @@ void DATA::plotrawdata()
 	tab = loadtable("hospital_admissions_number_per_day.txt");
 	//sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		t = gettime(tab.ele[row][0]) - start;
+		t = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN){
 			for(j = 0; j < num; j++){
@@ -889,7 +836,7 @@ void DATA::plotrawdata()
 		}
 	}
 	
-	ofstream deathpred(outputdir+"/deathpred.txt");
+	ofstream deathpred(details.outputdir+"/deathpred.txt");
 	for(t = 0; t < tmax; t++){
 		deathpred << t << " " << numst[t] <<  " " << numst2[t] << endl;
 	}
@@ -928,9 +875,9 @@ void DATA::generatedeathdata()
 		
 		if(date.substr(0,4) == "w/c "){
 			date = date.substr(4,date.length()-4);
-			t = gettime(date);
-			if(t >=start){
-				w = (t-start)/7; if(w > nweek) emsg("out");
+			t = details.gettime(date);
+			if(t >=details.start){
+				w = (t-details.start)/7; if(w > nweek) emsg("out");
 						
 				if(sex == "All" && age == "All" && cause == "COVID-19 related"){
 					r = 0; while(r < region.size() && region[r].code != reg) r++;
@@ -955,7 +902,7 @@ void DATA::generatedeathdata()
 	cout << "Total from hospitals: " << sumH << endl;
 	cout << "Total from community: " << sumI << endl;
 
-	file = outputdir+"/D_NRS_reg.txt";
+	file = details.outputdir+"/D_NRS_reg.txt";
 	ofstream deathout(file.c_str());
 	deathout << "date"; for(r = 0; r < region.size(); r++) deathout << "\t" << region[r].code;
 	deathout << endl;
@@ -968,14 +915,14 @@ void DATA::generatedeathdata()
 		deathout << endl;
 	}
 	
-	file = outputdir+"/HD_NRS.txt";
+	file = details.outputdir+"/HD_NRS.txt";
 	ofstream HDout(file.c_str());
 	HDout << "date\tall" << endl;
 	for(w = 0; w < nweek; w++){
 		HDout << linedate[w] << "\t" << HDnum[w] << endl;
 	}
 
-	file = outputdir+"/ID_NRS.txt";
+	file = details.outputdir+"/ID_NRS.txt";
 	ofstream IDout(file.c_str());
 	IDout << "date\tall" << endl;
 	for(w = 0; w < nweek; w++){

@@ -21,7 +21,7 @@ using namespace std;
 
 ofstream quenchplot;
 
-Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output)
+Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
@@ -64,7 +64,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	
 	for(p = 0; p < nchain; p++){
 		pp = mpi.core*nchain+p;
-		Chain ch = Chain(details,data,model,poptree,pp);
+		Chain ch = Chain(details,data,model,poptree,obsmodel,pp);
 		chain.push_back(ch);
 	}
 
@@ -88,7 +88,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	
 	if(mpi.core == 0){ output.init(); output.Liinit(mpi.ncore*nchain);}
 
-	if(quenchpl == 1){ quenchplot.open((data.outputdir+"/quenchplot.txt").c_str());}
+	if(quenchpl == 1){ quenchplot.open((details.outputdir+"/quenchplot.txt").c_str());}
 	
 	for(samp = 0; samp < nsamp; samp++){	
 		if(mpi.core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
@@ -426,7 +426,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp) const
 
 	if(mpi.core == 0){
 		if(ppost < nchain){
-			sample.meas = getmeas(data,model,chain[ppost].trevi,chain[ppost].indevi);
+			sample.meas = obsmodel.getmeas(chain[ppost].trevi,chain[ppost].indevi);
 			model.setup(chain[ppost].paramval);
 			sample.R0 = model.R0calc();
 			sample.phi = model.phi; 
@@ -449,7 +449,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp) const
 		if(mpi.core == ppost/nchain){
 			p = ppost%nchain;
 			
-			meas = getmeas(data,model,chain[p].trevi,chain[p].indevi);
+			meas = obsmodel.getmeas(chain[p].trevi,chain[p].indevi);
 			model.setup(chain[p].paramval);
 			R0 = model.R0calc();
 	
@@ -517,9 +517,9 @@ void Mcmc::diagnostic(vector <vector <double> > &Listore, vector <double> &invTs
 	MPI_Gather(nac_addrem,nchain,MPI_UNSIGNED,nac_addremtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
-		stringstream ss; ss << data.outputdir << "/MCMCdiagnostic.txt";
+		stringstream ss; ss << details.outputdir << "/MCMCdiagnostic.txt";
 		ofstream diag(ss.str().c_str()); 
-		ofstream timings(data.outputdir+"/MCMCdiagnostic_timings.txt"); 
+		ofstream timings(details.outputdir+"/MCMCdiagnostic_timings.txt"); 
 
 		for(c = 0; c < nchaintot; c++){
 			cc = 0; while(cc < nchaintot && c != chtot[cc]) cc++;

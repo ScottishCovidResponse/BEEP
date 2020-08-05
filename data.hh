@@ -161,14 +161,10 @@ class DATA
 {
 public:
 	
-	DATA(Details &details, DataPipeline *dp=0) : compX(area), compY(area), details(details)
-	{
-		datapipeline = dp;
-	}
+	DATA(Inputs &inputs, Details &details, DataPipeline *dp=0);
 
 	DataPipeline *datapipeline;             // DataPipeline object
 	
-	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
 	unsigned int fepertime;                  // # fediv per nsettime
 	unsigned int settpertime;                // # nsettime per unit time
@@ -186,12 +182,7 @@ public:
 	
 	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
 	
-	unsigned int tform;                      // The time format (e.g. times or dates)
-	string tformat;                          // A description of the time format ('time' or 'date').
-	unsigned int start;                      // The start time over which simulation/inference is performed
-	unsigned int end;                        // The start time over which simulation/inference is performed
-	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
-
+	
 	GENQ genQ; 															 // Stores information about generating the Q matrix
 
 	string datadir; 												 // The data directory
@@ -239,8 +230,6 @@ public:
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
 	void addQtensor(string timep, string comp, string name);
-	unsigned int gettime(string st) const;
-	string getdate(unsigned int t) const;
 	
 private:
 	string strip(string line);

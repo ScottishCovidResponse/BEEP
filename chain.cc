@@ -18,7 +18,7 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : comp(model.comp), lev(poptree.lev), details(details), data(data), model(model), poptree(poptree), trans(model.trans)
+Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;
@@ -89,7 +89,7 @@ Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsig
 	
 	if(details.mode != inf) return;
 	
-	Li = Lobs(data,model,trevi,indevi);
+	Li = obsmodel.Lobs(trevi,indevi);
 	Pri = model.prior();
 
 	setQmapi(1);
@@ -245,7 +245,7 @@ void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vec
 	x.push_back(evref);
 	for(e = 0; e < indev.size(); e++){
 		evref.e = e;
-		se = (unsigned int)(data.nsettime*indev[e].t/data.period); 
+		se = (unsigned int)(data.nsettime*indev[e].t/details.period); 
 		if(se < data.nsettime) trev[se].push_back(evref);
 	}
 }
@@ -377,7 +377,7 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 			model.copyp();
 			if(mbp() == 1) al = 0;
 			else{
-				Lp = Lobs(data,model,trevp,indevp);
+				Lp = obsmodel.Lobs(trevp,indevp);
 				Prp = model.prior();
 				
 				al = exp(Prp-Pri + invT*(Lp-Li));		
@@ -408,7 +408,7 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 
 	if(checkon == 1){
 		model.setup(paramval);
-		dd = Li - Lobs(data,model,trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",5);
+		dd = Li - obsmodel.Lobs(trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",5);
 		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsgEC("Chain",6);
 	}
 	
@@ -853,7 +853,7 @@ void Chain::check_addrem()
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
 			if(e >= indevi[i].size()) emsgEC("Chain",41);
-			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period); 
+			se = (unsigned int)(data.nsettime*indevi[i][e].t/details.period); 
 			if(se != sett) emsgEC("Chain",42);
 			if(done[i][e] != 0) emsgEC("Chain",43);
 			done[i][e] = 1;
@@ -862,7 +862,7 @@ void Chain::check_addrem()
 	
 	for(i = 0; i < indevi.size(); i++){
 		for(e = 0; e < indevi[i].size(); e++){
-			if(indevi[i][e].t < data.period){
+			if(indevi[i][e].t < details.period){
 				if(done[i][e] != 1) emsgEC("Chain",44);
 			}
 			else{
@@ -1405,7 +1405,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 			l = int(ran()*xp.size());
 			probif += log(1.0/xp.size());
 			i = xp[l].ind;
-			sett = (unsigned int)(data.nsettime*indevi[i][xp[l].e].t/data.period); 
+			sett = (unsigned int)(data.nsettime*indevi[i][xp[l].e].t/details.period); 
 
 			c = data.ind[i].area;
 			w = c*data.ndemocatpos + data.ind[i].dp;
@@ -1452,7 +1452,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 	timers.timembptemp4 -= clock();
 	Levp = likelihood(Qmapp,xp,indevp);
 	
-	Lp = Lobs(data,model,trevp,indevp);
+	Lp = obsmodel.Lobs(trevp,indevp);
 	timers.timembptemp4 += clock();
 		
 	al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);

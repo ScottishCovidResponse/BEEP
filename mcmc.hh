@@ -13,10 +13,16 @@ enum class proposalsmethod
 	fixedtime
 };
 
+class DATA;
+class MODEL;
+class POPTREE;
+class Output;
+class Obsmodel;
+
 class Mcmc
 {
 public:	
-	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose);
+	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose);
 	
 	void run(enum proposalsmethod propmethod);
 
@@ -44,6 +50,7 @@ private:
 	POPTREE &poptree;
 	Mpi &mpi;
 	Output &output;
+	Obsmodel &obsmodel;
 };
 
 #endif

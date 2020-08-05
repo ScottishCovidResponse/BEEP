@@ -244,11 +244,11 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			
 			if(!besp.contains("time")) emsg("The 'betaspline' definition must contain a 'time' definition.");
 			const auto timstr = toml::find<string>(besp,"time");
-			int tim = data.gettime(timstr) - data.start;
+			int tim = details.gettime(timstr) - details.start;
 			
 			if(j == 0 && tim != 0) emsg("The first point in 'betaspline' must be at the 'start' time.");
-			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last 'betaspline' point must be at the 'end' time.");
-			if(tim < 0 || tim > (int)data.period) emsg("The 'betaspline' points must be within the time period set for the simulation/inference.");
+			if(j == bespin.size()-1 && tim != (int)details.period) emsg("The last 'betaspline' point must be at the 'end' time.");
+			if(tim < 0 || tim > (int)details.period) emsg("The 'betaspline' points must be within the time period set for the simulation/inference.");
 			
 			spl.t = tim;
 			spl.param = findparam(name);
@@ -266,11 +266,11 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			
 			if(!besp.contains("time")) emsg("The 'phispline' quantity must contain a 'time' definition.");
 			const auto timstr = toml::find<string>(besp,"time");
-			int tim = data.gettime(timstr) - data.start;
+			int tim = details.gettime(timstr) - details.start;
 			
 			if(j == 0 && tim != 0) emsg("The first 'phispline' point must be at the 'start' time.");
-			if(j == bespin.size()-1 && tim != (int)data.period) emsg("The last 'phispline' point must be at the 'end' time.");
-			if(tim < 0 || tim > (int)data.period) emsg("The 'phispline' points must be within the time period set by simulation/inference.");
+			if(j == bespin.size()-1 && tim != (int)details.period) emsg("The last 'phispline' point must be at the 'end' time.");
+			if(tim < 0 || tim > (int)details.period) emsg("The 'phispline' points must be within the time period set by simulation/inference.");
 			
 			spl.t = tim;
 			spl.param = findparam(name);
@@ -580,7 +580,7 @@ void MODEL::timevariation()
 		
 		p = 0;
 		for(s = 0; s < data.nsettime; s++){		
-			t = double((s+0.5)*data.period)/data.nsettime;
+			t = double((s+0.5)*details.period)/data.nsettime;
 			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			dt = t-splinet[p];	
@@ -591,7 +591,7 @@ void MODEL::timevariation()
   // This uses a linear spline for beta
 	p = 0;
 	for(s = 0; s < data.nsettime; s++){	
-		t = double((s+0.5)*data.period)/data.nsettime;
+		t = double((s+0.5)*details.period)/data.nsettime;
 		
 		while(p < int(betaspline.size())-1 && t > betaspline[p+1].t) p++;
 		
@@ -602,7 +602,7 @@ void MODEL::timevariation()
 	// This uses a linear spline for phi
 	p = 0;
 	for(s = 0; s < data.nsettime; s++){	
-		t = double((s+0.5)*data.period)/data.nsettime;
+		t = double((s+0.5)*details.period)/data.nsettime;
 		
 		while(p < int(phispline.size())-1 && t > phispline[p+1].t) p++;
 		

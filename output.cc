@@ -17,7 +17,7 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 	
-Output::Output(Details &details, DATA &data, MODEL &model) :  details(details), data(data), model(model)
+Output::Output(Details &details, DATA &data, MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
 }
 	
@@ -26,8 +26,8 @@ void Output::init()
 {
 	unsigned int p, pc;
 	
-	ensuredirectory(data.outputdir);
-	stringstream ss; ss << data.outputdir << "/trace.txt";
+	ensuredirectory(details.outputdir);
+	stringstream ss; ss << details.outputdir << "/trace.txt";
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
@@ -68,8 +68,8 @@ void Output::Liinit(unsigned int nchaintot)
 {
 	unsigned int p;
 	
-	ensuredirectory(data.outputdir);
-	stringstream ss; ss << data.outputdir << "/traceLi.txt";
+	ensuredirectory(details.outputdir);
+	stringstream ss; ss << details.outputdir << "/traceLi.txt";
 
 	traceLi.open(ss.str().c_str());		
 	traceLi << "state";
@@ -117,7 +117,7 @@ void Output::posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	default: file = "Posterior_"+name+"_"+data.region[r].code+".txt"; break;
 	}
 	
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream dataout(filefull.c_str());
 	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
 						
@@ -158,7 +158,7 @@ void Output::posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	}
 
 	switch(type){
-	case trans_data: case pop_data: dataout << "# Time from start, " << data.tformat; break;
+	case trans_data: case pop_data: dataout << "# Time from start, " << details.tformat; break;
 	case marg_data: dataout << "category"; break;
 	}	
 	dataout << ", data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
@@ -185,7 +185,7 @@ void Output::posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		case trans_data: t = data.transdata[d].start+row*data.transdata[d].units; break;
 		}
 		if(type == marg_data) dataout << data.democat[dc].value[row] << " ";
-		else dataout << t << " " << data.getdate(t) << " ";
+		else dataout << t << " " << details.getdate(t) << " ";
 		
 		if(details.mode != sim){
 			valsum = 0;
@@ -223,14 +223,14 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	vector <DIST> paramdist;
 	vector <double> paramav, Rav;
 
-	ensuredirectory(data.outputdir);
+	ensuredirectory(details.outputdir);
 		
 	nopsamp = opsamp.size();
 	opsampmin = nopsamp/4;
 	
 	cout << endl;
-	if(details.mode == sim) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
-	else cout << "Posterior outputs in directory '" << data.outputdir << "':" << endl;
+	if(details.mode == sim) cout << "Outputs in directory '" << details.outputdir << "':" << endl;
+	else cout << "Posterior outputs in directory '" << details.outputdir << "':" << endl;
 	
 	for(d = 0; d < data.transdata.size(); d++){
 		if(data.transdata[d].type == "reg"){
@@ -254,7 +254,7 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	}
 		
 	file = "Posterior_R0.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream R0out(filefull.c_str());
 	if(!R0out) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -268,11 +268,11 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 		stat = getstat(vec);
 		Rav[st] = atof(stat.mean.c_str());
 		
-		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		R0out << (st+0.5)*details.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	file = "Posterior_phi.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream phiout(filefull.c_str());
 	if(!phiout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -284,14 +284,14 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].phi[st]*1000000);
 		stat = getstat(vec);
 	
-		phiout << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		phiout << (st+0.5)*details.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	npsamp = opsamp.size();
 	psampmin = npsamp/4;
 	
 	file = "Posterior_parameters.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream paramout(filefull.c_str());
 	if(!paramout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -312,7 +312,7 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	}
 	
 	file = "Posterior_distributions.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -341,7 +341,7 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 			
 				
 	file = "Posterior_Rmap.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream Rmapout(filefull.c_str());
 	if(!Rmapout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -361,11 +361,11 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	}
 	
 	if(details.mode != sim){
-		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
+		cout << "'" << details.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
 	if(details.mode == inf){
-		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
+		cout << "'" << details.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 }
 
@@ -471,8 +471,8 @@ void Output::eventsample(vector < vector <FEV> > &fev)
 		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
 	}
 	
-	ensuredirectory(data.outputdir);
-	stringstream sst; sst << data.outputdir << "/events.txt";
+	ensuredirectory(details.outputdir);
+	stringstream sst; sst << details.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	if(!evsamp) emsg("Cannot output the file '"+sst.str()+"'");
 	
@@ -537,7 +537,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 	
 	ensuredirectory(dir);
 		
-	meas = getmeas(data,model,trev,indev);
+	meas = obsmodel.getmeas(trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(td = 0; td < data.transdata.size(); td++){
@@ -550,7 +550,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(data.tform){
+		switch(details.tform){
 		case tform_num: transout << "time"; break;
 		case tform_ymd: transout << "date"; break;
 		}
@@ -560,7 +560,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 		transout << endl;
 		
 		for(row = 0; row < data.transdata[td].rows; row++){
-			transout << data.getdate(data.transdata[td].start + row*data.transdata[td].units);
+			transout << details.getdate(data.transdata[td].start + row*data.transdata[td].units);
 			for(r = 0; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
 		}
 	}
@@ -575,7 +575,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 		if(data.popdata[pd].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(data.tform){
+		switch(details.tform){
 		case tform_num: popout << "time"; break;
 		case tform_ymd: popout << "date"; break;
 		}
@@ -585,7 +585,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 		popout << endl;
 		
 		for(row = 0; row < data.popdata[pd].rows; row++){
-			popout << data.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
+			popout << details.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
 			for(r = 0; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
 		}
 	}

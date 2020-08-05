@@ -9,10 +9,12 @@ using namespace std;
 #include "poptree.hh"
 #include "data.hh"
 
+class Obsmodel;
+
 class Chain                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
-	Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart);
+	Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree,	Obsmodel &obsmodel, unsigned int chstart);
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
@@ -115,5 +117,6 @@ private:
 	DATA &data;
 	MODEL &model;
 	POPTREE &poptree;
+	Obsmodel &obsmodel;
 };
 #endif
