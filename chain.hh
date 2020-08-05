@@ -12,7 +12,7 @@ using namespace std;
 class Chain                                          // Stores all the things related to a MBP MCMC chain
 {
 	public:
-	Chain(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart);
+	Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart);
 		
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	double Li; 																						// The observation likelihood for the current state
@@ -79,6 +79,7 @@ class Chain                                          // Stores all the things re
 
 	vector <int> popw;                                    // The population in w
 	
+	Details &details;
 	DATA &data;
 	MODEL &model;
 	POPTREE &poptree;

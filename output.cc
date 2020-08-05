@@ -100,7 +100,7 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 }
 
 /// Outputs a posterior graph
-void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
+void outputplot(Details &details, DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
 {
 	unsigned int j, jmax, row, s, t=0, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
 	double sum, valsum;
@@ -199,7 +199,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		if(type == marg_data) dataout << data.democat[dc].value[row] << " ";
 		else dataout << t << " " << data.getdate(t) << " ";
 		
-		if(data.mode != sim){
+		if(details.mode != sim){
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
 				if(type == marg_data) valsum += data.margdata[d].percent[rr][row]; 
@@ -224,7 +224,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
+void outputresults(Details &details, DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 {      
 	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d, b, c;
 	double areaav;
@@ -241,28 +241,28 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	opsampmin = nopsamp/4;
 	
 	cout << endl;
-	if(data.mode == sim) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
+	if(details.mode == sim) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
 	else cout << "Posterior outputs in directory '" << data.outputdir << "':" << endl;
 	
 	for(d = 0; d < data.transdata.size(); d++){
 		if(data.transdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,trans_data);
-			outputplot(data,opsamp,d,ADD,trans_data);
+			for(r = 0; r < data.nregion; r++) outputplot(details,data,opsamp,d,r,trans_data);
+			outputplot(details,data,opsamp,d,ADD,trans_data);
 		}
-		if(data.transdata[d].type == "all") outputplot(data,opsamp,d,UNSET,trans_data);
+		if(data.transdata[d].type == "all") outputplot(details,data,opsamp,d,UNSET,trans_data);
 	}
 	
 	for(d = 0; d < data.popdata.size(); d++){
 		if(data.popdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,pop_data);
-			outputplot(data,opsamp,d,ADD,pop_data);
+			for(r = 0; r < data.nregion; r++) outputplot(details,data,opsamp,d,r,pop_data);
+			outputplot(details,data,opsamp,d,ADD,pop_data);
 		}
-		if(data.popdata[d].type == "all") outputplot(data,opsamp,d,UNSET,pop_data);
+		if(data.popdata[d].type == "all") outputplot(details,data,opsamp,d,UNSET,pop_data);
 	}
 	
 	for(d = 0; d < data.margdata.size(); d++){
-		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,marg_data);}
-		if(data.margdata[d].type == "all") outputplot(data,opsamp,d,UNSET,marg_data);
+		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(details,data,opsamp,d,r,marg_data);}
+		if(data.margdata[d].type == "all") outputplot(details,data,opsamp,d,UNSET,marg_data);
 	}
 		
 	file = "Posterior_R0.txt";
@@ -372,11 +372,11 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 		Rmapout << endl;
 	}
 	
-	if(data.mode != sim){
+	if(details.mode != sim){
 		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
-	if(data.mode == inf){
+	if(details.mode == inf){
 		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 }

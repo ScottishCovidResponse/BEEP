@@ -137,20 +137,16 @@ void Inputs::read_toml_file(bool verbose)
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 }
 
-string Inputs::lookup_string_parameter(const map<string,string> &params,
-															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-															 const string &key, bool verbose, const string &def) const
+string Inputs::find_string(const string &key, const string &def) const
 {
 	string val;
-	auto val_it = params.find(key);
-	if(val_it != params.end()) val = val_it->second;
+	auto val_it = cmdlineparams.find(key);
+	if(val_it != cmdlineparams.end()) val = val_it->second;
 	else{
 		if(tomldata.contains(key)) val = toml::find<string>(tomldata,key);
 		else val = def;
 	}
 
-	if(verbose) cout << "  " << key << " = " << val << endl;
-	
 	return val;
 }
 
@@ -265,17 +261,15 @@ void Inputs::check_for_undefined_parameters(vector<string> allowed, vector<strin
 }
 
 
-Mode Inputs::mode(bool verbose) const
+Mode Inputs::mode() const
 {
-	string val = lookup_string_parameter(cmdlineparams, tomldata, "mode", verbose, "UNSET");  
+	string val = find_string("mode","UNSET");  
+	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-
 	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"combinetace", combinetrace}};
-	if (modemap.count(val) != 0) {
-		mode = modemap[val];
-	} else {
-		emsgroot("Unrecoginsed value " + val + " for mode parameter");
-	}
+	if (modemap.count(val) != 0) mode = modemap[val];
+	else emsgroot("Unrecoginsed value " + val + " for mode parameter");
+	
 	return mode;
 }

@@ -21,13 +21,15 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "stdlib.h"
 #include "time.h"
 
-#include "utils.hh"
-#include "timers.hh"
+#include "inputs.hh"
+#include "details.hh"
+#include "data.hh"
 #include "poptree.hh"
 #include "model.hh"
-#include "data.hh"
 
-#include "inputs.hh"
+#include "utils.hh"
+#include "timers.hh"
+
 #include "simulate.hh"
 #include "mcmc.hh"
 #include "consts.hh"
@@ -278,15 +280,19 @@ int main(int argc, char** argv)
 	
 	bool verbose = (mpi.core == 0);            // Paramater which ensure that only core 0 outputs results
 		
+	if(verbose) cout << "BEEPmbp version " << gitversion() << endl;
+
 	Inputs inputs(argc,argv,verbose);                 // Loads up the command line arguments
 	
+	
+	Details details(inputs);
+	
+	Mode mode = details.mode;
 	//unsigned int nsamp=UNSET;                 // The number of samples for inference
 	//unsigned int nchain=UNSET;                // The number of chains per core
 	
 	//unsigned int mode=UNSET;                  // Sets the mode of operation (sim/inf)
-	
-	Mode mode = inputs.mode(verbose);          // Gets the mode of operation
-	
+
 	if(mode == combinetrace) {
 		/*
 		if (cmdlineparams.count("dirs") == 0) emsg("When using the 'combinetrace' mode, you must set the 'dirs' property");
@@ -319,8 +325,7 @@ int main(int argc, char** argv)
 	MARGDATA margdata;
 	string str, command, value, tformat, startstr, endstr;
 
-	if(verbose) cout << "BEEPmbp version " << gitversion() << endl;
-
+	
 #ifdef USE_DATA_PIPELINE
 	pybind11::scoped_interpreter guard{};
 
@@ -333,12 +338,12 @@ int main(int argc, char** argv)
 		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
-	DATA data(dp);    // The following file names will need to be read in by the interface:
+	DATA data(details,dp);    // The following file names will need to be read in by the interface:
 #else
-	DATA data;    // The following file names will need to be read in by the interface:
+	DATA data(details);    // The following file names will need to be read in by the interface:
 #endif
 
-	MODEL model(data);
+	MODEL model(details,data);
 		
 	data.outputdir="Output";                // The default output directory
 	data.threshold=UNSET;
@@ -879,7 +884,7 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	data.readdata(mpi.core,mpi.ncore,mode);
+	data.readdata(mpi.core,mpi.ncore);
 
 	POPTREE poptree;
 	poptree.init(data,mpi.core);	
@@ -901,21 +906,21 @@ int main(int argc, char** argv)
 	switch(mode){
 	case sim:
 		{
-			Simulate simu(data,model,poptree,mpi,inputs,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,mode,verbose);
 			simu.run();
 		}
 		break;
 	
 	case multisim:
 		{
-			Simulate simu(data,model,poptree,mpi,inputs,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,mode,verbose);
 			simu.multirun();
 		}
 		break;
 			
 	case inf: 
 		{
-			Mcmc mcmc(data,model,poptree,mpi,inputs,mode,verbose);
+			Mcmc mcmc(details,data,model,poptree,mpi,inputs,mode,verbose);
 			mcmc.run(propsmethod);
 		}
 		break;

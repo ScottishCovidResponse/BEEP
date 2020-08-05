@@ -41,6 +41,7 @@ endif
 srcs := \
  chain.cc \
  data.cc \
+ details.cc \
  generateQ.cc \
  gitversion.cc \
  inputs.cc \

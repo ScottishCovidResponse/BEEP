@@ -16,7 +16,7 @@ enum class proposalsmethod
 class Mcmc
 {
 public:	
-	Mcmc(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);
+	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);
 	
 	void run(enum proposalsmethod propmethod);
 
@@ -38,7 +38,7 @@ private:
 	
 	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
 	
-	
+	Details &details;
 	DATA &data;
 	MODEL &model;
 	POPTREE &poptree;

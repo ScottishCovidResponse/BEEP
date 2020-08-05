@@ -11,7 +11,7 @@ class POPTREE;
 class Simulate
 {
 public:	
-	Simulate(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);	
+	Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);	
 	
 	void run();
 	void multirun();
@@ -21,6 +21,7 @@ private:
 
 	unsigned int nsamp;                                   // The number of simulations 
 	
+	Details &details;
 	DATA &data;
 	MODEL &model;
 	POPTREE &poptree;

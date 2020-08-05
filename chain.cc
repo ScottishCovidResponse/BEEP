@@ -18,7 +18,7 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-Chain::Chain(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
+Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : details(details), data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;
@@ -59,7 +59,7 @@ Chain::Chain(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) :
 	
 	loop = 0;
 	do{
-		//if(data.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
+		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
 		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
 
 		nparam = model.param.size();                   
@@ -87,7 +87,7 @@ Chain::Chain(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) :
 	indevi = indevp;
 	xi = xp;
 	
-	if(data.mode != inf) return;
+	if(details.mode != inf) return;
 	
 	Li = Lobs(data,model,trevi,indevi);
 	Pri = model.prior();
@@ -163,7 +163,7 @@ unsigned int Chain::mbp()
 		
 	t = 0; n = 0;
 	for(sett = 0; sett < data.nsettime; sett++){
-		if(data.mode == sim){
+		if(details.mode == sim){
 			cout  << "  Time: " << data.settime[t];
 			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
@@ -625,7 +625,7 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		}
 	}
 	
-	if(data.mode == sim){
+	if(details.mode == sim){
 		jmax = trep.size(); 
 		for(j = 0; j < jmax; j++){
 			tra = indevp[trep[j].ind][trep[j].e].trans;

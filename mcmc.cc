@@ -21,7 +21,7 @@ using namespace std;
 
 ofstream quenchplot;
 
-Mcmc::Mcmc(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : data(data), model(model), poptree(poptree), mpi(mpi)
+Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
@@ -65,7 +65,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	
 	for(p = 0; p < nchain; p++){
 		pp = mpi.core*nchain+p;
-		Chain ch = Chain(data,model,poptree,pp);
+		Chain ch = Chain(details,data,model,poptree,pp);
 		chain.push_back(ch);
 	}
 
@@ -182,7 +182,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){
 			if(mpi.core == 0){
-				outputresults(data,model,psamp,opsamp);
+				outputresults(details,data,model,psamp,opsamp);
 				cout << "Model evidence: " << calcME(Listore,invTstore) << endl;
 			}
 			diagnostic(Listore,invTstore,nac_swap);

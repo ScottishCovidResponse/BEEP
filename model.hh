@@ -84,7 +84,7 @@ struct SPLINEP{                            // Stores information about a spline 
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(DATA &data);
+	MODEL(Details &details, DATA &data);
 
 	vector <double> beta;                    // The value for beta at the various times
 	vector <SPLINEP> betaspline;             // The spline used to define beta
@@ -125,8 +125,6 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	DATA &data;
-	
 	double getparam(string name);
 	double getinfectivity(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
@@ -160,5 +158,10 @@ private:
 	double likelihood_prob();
 	double likelihood_dt(vector <double> &paramv);
 	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
+
+
+	Details &details;
+	DATA &data;
+	
 };
 #endif

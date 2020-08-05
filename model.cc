@@ -14,7 +14,7 @@
 
 using namespace std;
 
-MODEL::MODEL(DATA &data) : data(data)
+MODEL::MODEL(Details &details, DATA &data) : details(details), data(data)
 {
 }
 
@@ -27,7 +27,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
-	if(data.mode == sim || data.mode == multisim){
+	if(details.mode == sim || details.mode == multisim){
 		if(tomldata.contains("params")){
 			string name;
 			double value;
@@ -48,7 +48,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 		else{ emsg("The input file must contain parameter values through 'params'.");}
 	}
 
-	if(data.mode == inf){
+	if(details.mode == inf){
 		if(tomldata.contains("priors")){
 			string name;
 			double value;
@@ -202,7 +202,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	}
 	else{ emsg("The input file must contain transition definitions through the 'trans' quantity.");}
 
-	if(data.mode == inf){
+	if(details.mode == inf){
 		if(tomldata.contains("priorcomps")){
 			string co;
 		
@@ -318,7 +318,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	
 	if(core == 0){
 		cout << endl;                                               // Outputs a summary of the model
-		if(data.mode == sim || data.mode == multisim){
+		if(details.mode == sim || details.mode == multisim){
 			cout << "Parameters:" << endl;
 			for(p = 0; p < param.size()-1; p++){
 				cout << "  " << param[p].name << " = " << param[p].min << endl;

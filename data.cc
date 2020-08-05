@@ -16,28 +16,15 @@ using namespace std;
 #include "pack.hh"
 #include "generateQ.hh"
 #include "output.hh"
+#include "details.hh"
 
 #ifdef USE_DATA_PIPELINE
 #include "datapipeline.hh"
 #include "table.hh"
 #endif
 
-Mpi::Mpi()
-{
-	#ifdef USE_MPI
-	int num;
-	MPI_Comm_size(MPI_COMM_WORLD,&num); ncore = (unsigned int) num;
-  MPI_Comm_rank(MPI_COMM_WORLD,&num); core = (unsigned int) num;
-	#endif
-	
-	#ifndef USE_MPI
-	ncore = 1;
-	core = 0;
-	#endif
-}
-
 /// Reads in transition and area data
-void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
+void DATA::readdata(unsigned int core, unsigned int ncore)
 {
 	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
 	unsigned int namecol, codecol, xcol, ycol, regcol;
@@ -54,7 +41,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 	vector <double> vec;
 	vector <unsigned int> rcol;
 	
-	mode = mod;
 	fepertime = 10;
 	
 	settpertime = 1;
@@ -222,7 +208,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
 			 
-		if(mode != sim){                                                    // Loads transition data for inference
+		if(details.mode != sim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file;
 				tab = loadtable(file);
@@ -247,7 +233,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 			}
 		}
 		
-		if(mode != sim){                                                    // Loads population data for inference
+		if(details.mode != sim){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
 				tab = loadtable(file);
@@ -270,7 +256,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, Mode mod)
 			}
 		}
 		
-		if(mode != sim){                                                    // Loads marginal data for inference
+		if(details.mode != sim){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
 				tab = loadtable(file);

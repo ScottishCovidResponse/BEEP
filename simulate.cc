@@ -19,7 +19,7 @@
 using namespace std;
 
 
-Simulate::Simulate(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : data(data), model(model), poptree(poptree), mpi(mpi)
+Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi)
 {	
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(mode == multisim){
@@ -32,7 +32,7 @@ Simulate::Simulate(DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs 
 /// Simulates data using the MBP algorithm
 void Simulate::run()
 {
-	Chain chain(data,model,poptree,0);
+	Chain chain(details,data,model,poptree,0);
 	proportions(chain.indevi);
 	outputsimulateddata(data,model,chain.trevi,chain.indevi,data.outputdir);
 }
@@ -47,7 +47,7 @@ void Simulate::multirun()
 	
 	for(s = 0; s < nsamp; s++){
 		cout << "Simulating sample " << (s+1) << endl;
-		Chain chain(data,model,poptree,0);
+		Chain chain(details,data,model,poptree,0);
 		
 		sample.meas = getmeas(data,model,chain.trevi,chain.indevi);
 		model.setup(chain.paramval);
@@ -55,7 +55,7 @@ void Simulate::multirun()
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
 	}
-	outputresults(data,model,psamp,opsamp);
+	outputresults(details,data,model,psamp,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments

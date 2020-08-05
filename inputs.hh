@@ -16,22 +16,18 @@ public:
 
 	int find_int(const string &key, int def) const;
 	double find_double(const string &key, double def) const;
-	
-	Mode mode(bool verbose) const;
+	string find_string(const string &key, const string &def) const;	
+
+	Mode mode() const;
 	
 private:
-	void set_command_line_params(int argc, char *argv[]);   // Gets the command line parameters
-	void read_toml_file(bool verbose);                                                  // Reads the TOML file                    
-	string lookup_string_parameter(const map<string,string> &params,
-			  												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-				  											 const string &key, bool verbose, const string &def="") const;
+	void set_command_line_params(int argc, char *argv[]);  
+	void read_toml_file(bool verbose); 
 	
 	vector<string> get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const;
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
-
 	
 	map<string,string> cmdlineparams;                                                   // A map of all the parameters entered on the command line
-
 	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Stores information from the TOML file
 
 	vector<string> definedparams;                                                       // Stores all the possible parameters 

@@ -7,6 +7,7 @@ using namespace std;
 
 #include "inputs.hh"
 #include "consts.hh"
+#include "details.hh"
 
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
@@ -156,32 +157,17 @@ private:
 
 class DataPipeline;
 
-struct Mpi
-{
-	Mpi();
-	
-	unsigned int ncore;                      // The number of cores that MPI is using
-	unsigned int core;                       // The core of the current process
-};
-
-struct Details
-{
-	
-	
-};
-
 class DATA
 {
 	public:
 	
-	DATA(DataPipeline *dp=0) : compX(area), compY(area)
+	DATA(Details &details, DataPipeline *dp=0) : compX(area), compY(area), details(details)
 	{
 		datapipeline = dp;
 	}
 
 	DataPipeline *datapipeline;             // DataPipeline object
 	
-	Mode mode;                       // Stores if doing simulation/inference
 	string outputdir;                        // The output directory
 	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
 	unsigned int fepertime;                  // # fediv per nsettime
@@ -248,7 +234,7 @@ class DATA
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-	void readdata(unsigned int core, unsigned int ncore, Mode mod); 
+	void readdata(unsigned int core, unsigned int ncore); 
 	void adddemocat(string name, vector <string> &st, vector <string> &params);
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
@@ -274,5 +260,7 @@ private:
 	void generatedeathdata();
 	void convertOAtoM();
 	void convertRegion_M();
+	
+	Details &details;
 };
 #endif
