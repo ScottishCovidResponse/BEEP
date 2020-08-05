@@ -11,6 +11,7 @@ using namespace std;
 #include "utils.hh"
 #include "consts.hh"
 #include "toml11/toml.hpp"
+#include "data.hh"
 
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
@@ -272,4 +273,242 @@ Mode Inputs::mode() const
 	else emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	
 	return mode;
+}
+
+/// transdata
+vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
+{
+	vector <TRANSDATA> transdatavec;
+	
+	if(tomldata.contains("transdata")) {
+		const auto tdata = toml::find(tomldata,"transdata");
+
+		for(unsigned int j = 0; j < tdata.size(); j++){
+			const auto td = toml::find(tdata,j);
+		
+			TRANSDATA transdata;
+			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
+			const auto from = toml::find<std::string>(td,"from");
+			transdata.fromstr = from;
+		
+			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
+			const auto to = toml::find<std::string>(td,"to");
+			transdata.tostr = to;
+			
+			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
+			const auto area = toml::find<std::string>(td,"area");
+			transdata.type = area;
+			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
+			
+			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
+			const auto file = toml::find<std::string>(td,"file");
+			transdata.file = file;
+
+			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
+			const auto startdata = toml::find<string>(td,"start");
+			transdata.start = details.gettime(startdata)-details.start;
+			
+			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
+			const auto units = toml::find<std::string>(td,"units");
+			if(units == "days") transdata.units = 1;
+			else{
+				if(units == "weeks") transdata.units = 7;
+				else emsgroot("Units in 'transdata' not recognised");
+			}
+			
+			if(details.mode != inf){
+				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
+				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+			}
+			
+			transdatavec.push_back(transdata);
+		}
+	}
+	return transdatavec;
+}
+
+/// popdata
+vector <POPDATA> Inputs::find_popdata(const Details &details) const
+{
+	vector <POPDATA> popdatavec;
+
+	if(tomldata.contains("popdata")) {
+		const auto pdata = toml::find(tomldata,"popdata");
+
+		POPDATA popdata;
+		for(unsigned int j = 0; j < pdata.size(); j++){
+			const auto pd = toml::find(pdata,j);
+			
+			if(!pd.contains("comp")) emsgroot("A 'comp' property must be specified in 'popdata'.");
+			const auto comp = toml::find<std::string>(pd,"comp");
+			popdata.compstr = comp;
+			
+			if(!pd.contains("area")) emsgroot("An 'area' property must be specified in 'popdata'.");
+			const auto area = toml::find<std::string>(pd,"area");
+			popdata.type = area;
+			if(popdata.type != "reg" && popdata.type != "all") emsgroot("popition data type not recognised"); 
+			
+			if(!pd.contains("file")) emsgroot("A 'file' property must be specified in 'popdata'.");
+			const auto file = toml::find<std::string>(pd,"file");
+			popdata.file = file;
+
+			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
+			const auto startdata = toml::find<string>(pd,"start");
+			popdata.start = details.gettime(startdata)-details.start;
+			
+			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
+			const auto units = toml::find<std::string>(pd,"units");
+			
+			if(units == "days") popdata.units = 1;
+			else{
+				if(units == "weeks") popdata.units = 7;
+				else emsgroot("Units in 'popdata' not recognised");
+			}
+			
+			if(details.mode != inf){
+				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
+				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+			}
+			
+			popdatavec.push_back(popdata);
+		}
+	}
+	
+	return popdatavec;
+}
+
+/// margdata
+vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DEMOCAT> &democat) const
+{
+	vector <MARGDATA> margdatavec;
+	
+	if(tomldata.contains("margdata")) {
+		const auto mdata = toml::find(tomldata,"margdata");
+
+		for(unsigned int j = 0; j < mdata.size(); j++){
+			const auto md = toml::find(mdata,j);
+			
+			MARGDATA margdata;
+			if(!md.contains("from")) emsgroot("A 'from' property must be specified in 'margdata'.");
+			const auto from = toml::find<std::string>(md,"from");
+			margdata.fromstr = from;
+		
+			if(!md.contains("to")) emsgroot("A 'to' property must be specified in 'margdata'.");
+			const auto to = toml::find<std::string>(md,"to");
+			margdata.tostr = to;
+			
+			if(!md.contains("area")) emsgroot("An 'area' property must be specified in 'margdata'.");
+			const auto area = toml::find<std::string>(md,"area");
+			margdata.type = area;
+			if(margdata.type != "reg" && margdata.type != "all") emsgroot("Marginal data type not recognised"); 
+			
+			if(!md.contains("type")) emsgroot("An 'type' property must be specified in 'margdata'.");
+			const auto type = toml::find<std::string>(md,"type");
+			unsigned int d;
+			for(d = 0; d < democat.size(); d++) if(type == democat[d].name) break;
+			if(d == democat.size()) emsg("The 'type' property must be 'age' or a demographic property.");
+			margdata.democat = d;
+				
+			if(!md.contains("file")) emsgroot("A 'file' property must be specified in 'margdata'.");
+			const auto file = toml::find<std::string>(md,"file");
+			margdata.file = file;
+			
+			margdatavec.push_back(margdata);
+		}
+	}
+	
+	return margdatavec;
+}
+
+/// democats
+vector <DEMOCAT> Inputs::find_democat(const Details &details) const
+{
+	vector <DEMOCAT> democatvec;
+	
+	if(tomldata.contains("ages")){                           // Age categories
+		const auto ages = toml::find(tomldata,"ages");
+		
+		DEMOCAT democat;
+		democat.name = "age";
+		for(unsigned int j = 0; j < ages.size(); j++){
+			const auto ag = toml::find(ages,j);
+			
+			if(!ag.contains("range")) emsgroot("A 'range' must be specified in 'ages'.");
+			const auto range = toml::find<std::string>(ag,"range");
+			democat.value.push_back(range);
+			
+			if(!ag.contains("sus")) emsgroot("A 'sus' must be specified in 'ages'.");
+			const auto sus = toml::find<std::string>(ag,"sus");
+			democat.param.push_back(sus);
+		}
+		democatvec.push_back(democat);
+	}
+	else emsgroot("The 'ages' parameter must be set.");
+	
+	if(tomldata.contains("democats")){                        // Other demographic possibilities
+		const auto democats = toml::find(tomldata,"democats");
+	
+		for(unsigned int k = 0; k < democats.size(); k++){
+			const auto democ = toml::find(democats,k);
+			
+			DEMOCAT democat;
+			democat.name="";
+			for(unsigned int j = 0; j < democ.size(); j++){
+				const auto demoval = toml::find(democ,j);
+				
+				if(!demoval.contains("value")) emsgroot("A 'value' must be specified in 'democats'.");
+				const auto value = toml::find<std::string>(demoval,"value");
+				democat.value.push_back(value);
+				
+				if(!demoval.contains("sus")) emsgroot("The property 'sus' must be specified in 'democats'.");
+				const auto sus = toml::find<std::string>(demoval,"sus");
+				democat.param.push_back(sus);
+			}
+			
+			democatvec.push_back(democat);
+		}
+	}
+	
+	return democatvec;
+}
+
+void DATA::addcovar(string name, string param, string func)
+{
+	COVAR cov;
+	cov.name = name;
+	cov.param = param;
+	cov.func = func;
+	cov.col = UNSET;
+	
+	covar.push_back(cov);
+	ncovar = covar.size();
+}
+
+// area covariates
+vector <COVAR> Inputs::find_covar(const Details &details) const
+{
+	vector <COVAR> covarvec;
+	
+	if(tomldata.contains("covars")){
+		const auto covars = toml::find(tomldata,"covars");
+		
+		COVAR cov;
+		for(unsigned int j = 0; j < covars.size(); j++){
+			const auto covar = toml::find(covars,j);
+			
+			if(!covar.contains("name")) emsgroot("A 'name' must be specified in 'covars'.");
+			cov.name = toml::find<std::string>(covar,"name");
+	
+			if(!covar.contains("param")) emsgroot("A 'param' must be specified in 'covars'.");
+			cov.param = toml::find<std::string>(covar,"param");
+
+			if(!covar.contains("func")) emsgroot("A 'func' must be specified in 'covars'.");
+			cov.func = toml::find<std::string>(covar,"func");
+			cov.col = UNSET;
+			
+			covarvec.push_back(cov);
+		}
+	}
+	
+	return covarvec;
 }

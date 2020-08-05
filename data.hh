@@ -157,6 +157,9 @@ private:
 
 class DataPipeline;
 
+class MODEL;
+class Inputs;
+
 class DATA
 {
 public:
@@ -170,14 +173,18 @@ public:
 	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	double thres_h;                          // The height of the threshold observation model
 
+	unsigned int ndemocat;                   // The number of demographic categories
+	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
-	
-	vector <TRANSDATA> transdata;            // Store information about transition data
-	
-	vector <POPDATA> popdata;                // Store information about population data
-	
-	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
-	
+	unsigned int ncovar;                     // The number of covariates for area  
+	vector <COVAR> covar;                    // Covariates for area
+
+	unsigned int nage;                       // The number of age categories
+	unsigned int narage;                     // #area * #age
+	unsigned int nardp;                      // #area * #ndemocatpos
+	unsigned int ndemocatposperage;          // Demographic states per age group
+	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
+
 	
 	GENQ genQ; 															 // Stores information about generating the Q matrix
 
@@ -194,26 +201,25 @@ public:
 	
 	vector <IND> ind;                        // The individuals in the system
 		
-	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
 	
-	unsigned int ncovar;                     // The number of covariates for area  
-	vector <COVAR> covar;                    // Covariates for area
 	
 	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 	
 	vector <QTENSOR> Q;                      // Stores the list of Q tensors
 	
+	
+	vector <TRANSDATA> transdata;            // Store information about transition data
+	
+	vector <POPDATA> popdata;                // Store information about population data
+	
+	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
+	
+	
 	vector <double> agedist; 								 // Gives the overall age distribution
 	
-	unsigned int nage;                       // The number of age categories
-	unsigned int narage;                     // #area * #age
-	unsigned int nardp;                      // #area * #ndemocatpos
-	unsigned int ndemocatposperage;          // Demographic states per age group
-	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
 
 	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
 	void sortY(vector <unsigned int> &vec);	
@@ -225,6 +231,8 @@ public:
 	void addcovar(string name, string param, string func);
 	void addtimep(string name, double tend);
 	void addQtensor(string timep, string comp, string name);
+	void load(Inputs &inputs, MODEL &model);
+	void print_to_terminal() const;
 	
 private:
 	string strip(string line);

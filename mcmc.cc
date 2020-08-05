@@ -38,6 +38,16 @@ Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mp
 	invTmin = inputs.find_double("invTmin",0);                                             // The temperatures of the prior and posterior chains
 	invTmax = inputs.find_double("invTmax",0.25);       
 	
+	string propsmethod_str = inputs.find_string("propsmethod","fixedtime");
+	if(propsmethod_str == "allchainsallparams") propsmethod = proposalsmethod::allchainsallparams;
+	else{
+		if(propsmethod_str == "fixednum") propsmethod = proposalsmethod::fixednum;
+		else{
+			if(propsmethod_str == "fixedtime") propsmethod = proposalsmethod::fixedtime;
+			else emsg("Parameter propsmethod set to an unrecognised value \""+propsmethod_str+"\"");
+		}
+	}
+			
 	assert(mpi.ncore > 0);
   assert(mpi.core < mpi.ncore);
   assert(nchain > 0);
@@ -46,7 +56,7 @@ Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mp
 }
 
 /// Runs the multi-temperature MCMC algorithm	
-void Mcmc::run(enum proposalsmethod propmethod)
+void Mcmc::run()
 {
 	unsigned int p, pp, th, nchaintot = mpi.ncore*nchain, co;
 	unsigned int samp;
@@ -116,7 +126,7 @@ void Mcmc::run(enum proposalsmethod propmethod)
 		for(p = 0; p < nchain; p++) chain[p].standard_prop(samp,burnin);
 		
 		timeprop -= clock();
-		switch(propmethod){
+		switch(propsmethod){
 		case proposalsmethod::allchainsallparams:
 			for(p = 0; p < nchain; p++){
 				for(th = 0; th < model.param.size(); th++){

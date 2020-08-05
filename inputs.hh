@@ -3,11 +3,19 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 using namespace std;
 
 #include "consts.hh"
 #include "toml11/toml.hpp"
+
+struct TRANSDATA;
+struct POPDATA;
+struct MARGDATA;
+struct DEMOCAT;
+struct COVAR;
+class Details;
 
 class Inputs
 {
@@ -17,6 +25,11 @@ public:
 	int find_int(const string &key, int def) const;
 	double find_double(const string &key, double def) const;
 	string find_string(const string &key, const string &def) const;	
+	vector <TRANSDATA> find_transdata(const Details &details) const;
+	vector <POPDATA> find_popdata(const Details &details) const;
+	vector <MARGDATA> find_margdata(const Details &details, const vector <DEMOCAT> &democat) const;
+	vector <DEMOCAT> find_democat(const Details &details) const;
+	vector <COVAR> find_covar(const Details &details) const;
 
 	Mode mode() const;
 	

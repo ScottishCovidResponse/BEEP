@@ -14,8 +14,13 @@
 
 using namespace std;
 
-MODEL::MODEL(Details &details, DATA &data) : details(details), data(data)
+MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), data(data)
 {
+	infmax = large;
+	
+	infmax = inputs.find_int("infmax",large);
+	if(details.mode == inf && infmax == large) emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
+	
 }
 
 /// Defines the compartmental model

@@ -300,12 +300,10 @@ int main(int argc, char** argv)
 	
 	bool param_verbose = (mpi.core == 0);         // Paramater which ensure that only core 0 outputs results
 
-	int seed=0;                               // Sets the random seed for simulation
-	
 	unsigned int j, k, d;
-	TRANSDATA transdata;
-	POPDATA popdata;
-	MARGDATA margdata;
+	//TRANSDATA transdata;
+	//POPDATA popdata;
+	//MARGDATA margdata;
 	string str, command, value;//, startstr, endstr;
 
 	
@@ -332,8 +330,11 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	
-	MODEL model(details,data);
+	MODEL model(inputs,details,data);
 		
+	data.load(inputs,model);
+	
+	
 	//data.threshold=UNSET;
 
 	// A list of all supported parameters (please keep in lexicographic order)   // zz
@@ -459,14 +460,8 @@ int main(int argc, char** argv)
 	}
 	*/
 	
-	model.infmax = large;
-	if(mode == inf){
-		// infmax
-		if(tomldata.contains("infmax")) {
-			model.infmax = lookup_int_parameter(cmdlineparams, tomldata, "infmax", param_verbose);
-		}
-		else emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
-	}
+	//model.infmax = large;
+	
 	
 	// start
 	/*
@@ -481,25 +476,16 @@ int main(int argc, char** argv)
 	details.period = data.end - details.start;
 */
 
+	
+	/*
 	// seed
 	if(tomldata.contains("seed")){
 		seed = lookup_int_parameter(cmdlineparams, tomldata, "seed", param_verbose);
 	}
-		
-	// proposals method
-	string propsmethod_str = lookup_string_parameter(cmdlineparams, tomldata, "propsmethod", param_verbose, "fixedtime");
+	*/
+	
+	
 
-	enum proposalsmethod propsmethod;
-
-	if (propsmethod_str == "allchainsallparams") {
-		propsmethod = proposalsmethod::allchainsallparams;
-	} else if (propsmethod_str == "fixednum") {
-		propsmethod = proposalsmethod::fixednum;
-	} else if (propsmethod_str == "fixedtime") {
-		propsmethod = proposalsmethod::fixedtime;
-	} else {
-		emsg("Parameter propsmethod set to an unrecognised value \""+propsmethod_str+"\"");
-	}
 
 	// outputdir
 	//data.outputdir = lookup_string_parameter(cmdlineparams, tomldata, "outputdir", param_verbose, data.outputdir);
@@ -520,98 +506,9 @@ int main(int argc, char** argv)
 	
 	// THE MODEL
 	
-	// age categories
-	if(tomldata.contains("ages")) {
-		const auto ages = toml::find(tomldata,"ages");
-		vector<string> pos, possus;
-		for(j = 0; j < ages.size(); j++){
-			const auto ag = toml::find(ages,j);
-			
-			if(!ag.contains("range")) emsgroot("A 'range' must be specified in 'ages'.");
-			const auto range = toml::find<std::string>(ag,"range");
-			pos.push_back(range);
-			
-			if(!ag.contains("sus")) emsgroot("A 'sus' must be specified in 'ages'.");
-			const auto sus = toml::find<std::string>(ag,"sus");
-			possus.push_back(sus);
-		}
-		data.adddemocat("age",pos,possus);
-	}
-	else emsgroot("The 'ages' parameter must be set.");
 	
-	if(verbose){	
-		cout << "Age categories: " << endl << "  ";
-		for(j = 0; j < data.democat[0].value.size(); j++){
-			if(j != 0) cout << ", ";
-			cout << data.democat[0].value[j] << " sus='" <<  data.democat[0].param[j] << "'";
-		}
-		cout << endl << endl;
-	}
+	if(verbose) data.print_to_terminal();
 	
-	// democats
-	if(tomldata.contains("democats")) {
-		const auto democats = toml::find(tomldata,"democats");
-	
-		for(k = 0; k < democats.size(); k++){
-			vector<string> pos, possus;
-			
-			const auto democat = toml::find(democats,k);
-			
-			for(j = 0; j < democat.size(); j++){
-				const auto demoval = toml::find(democat,j);
-				
-				if(!demoval.contains("value")) emsgroot("A 'value' must be specified in 'democats'.");
-				const auto value = toml::find<std::string>(demoval,"value");
-				pos.push_back(value);
-				
-				if(!demoval.contains("sus")) emsgroot("The property 'sus' must be specified in 'democats'.");
-				const auto sus = toml::find<std::string>(demoval,"sus");
-				vector<string> pos;
-				possus.push_back(sus);
-			}
-			
-			data.adddemocat("",pos,possus);
-		}
-	}
-	
-	if(verbose && data.democat.size() > 1){
-		cout << "Demographic categories: " << endl;
-		for(k = 1; k < data.democat.size(); k++){
-			cout << "  ";
-			for(j = 0; j < data.democat[k].value.size(); j++){
-				if(j != 0) cout << ", ";
-				cout << data.democat[k].value[j] << " sus='" <<  data.democat[k].param[j] << "'";
-			}	
-			cout << endl;
-		}
-		cout << endl;
-	}
-	
-	// area covariates
-	if(tomldata.contains("covars")) {
-		const auto covars = toml::find(tomldata,"covars");
-		for(j = 0; j < covars.size(); j++){
-			const auto covar = toml::find(covars,j);
-			
-			if(!covar.contains("name")) emsgroot("A 'name' must be specified in 'covars'.");
-			const auto name = toml::find<std::string>(covar,"name");
-	
-			if(!covar.contains("param")) emsgroot("A 'param' must be specified in 'covars'.");
-			const auto par = toml::find<std::string>(covar,"param");
-
-			if(!covar.contains("func")) emsgroot("A 'func' must be specified in 'covars'.");
-			const auto func = toml::find<std::string>(covar,"func");
-
-			data.addcovar(name,par,func);
-		}
-		
-		if(verbose){
-			cout << "Area covariates: " << endl;
-			cout << "  ";
-			for(j = 0; j < data.covar.size(); j++) cout << data.covar[j].name << "   param='" << data.covar[j].param << "'" << endl; 
-			cout << endl;
-		}
-	}
 
 	// timep
 	if(tomldata.contains("timep")) {
@@ -733,129 +630,13 @@ int main(int argc, char** argv)
 
 	// THE DATA
 	
-	// transdata
-	if(tomldata.contains("transdata")) {
-		const auto tdata = toml::find(tomldata,"transdata");
+	
 
-		for(j = 0; j < tdata.size(); j++){
-			const auto td = toml::find(tdata,j);
-			
-			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
-			const auto from = toml::find<std::string>(td,"from");
-			transdata.fromstr = from;
-		
-			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
-			const auto to = toml::find<std::string>(td,"to");
-			transdata.tostr = to;
-			
-			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
-			const auto area = toml::find<std::string>(td,"area");
-			transdata.type = area;
-			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
-			
-			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
-			const auto file = toml::find<std::string>(td,"file");
-			transdata.file = file;
 
-			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
-			const auto startdata = toml::find<string>(td,"start");
-			transdata.start = details.gettime(startdata)-details.start;
-			
-			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
-			const auto units = toml::find<std::string>(td,"units");
-			if(units == "days") transdata.units = 1;
-			else{
-				if(units == "weeks") transdata.units = 7;
-				else emsgroot("Units in 'transdata' not recognised");
-			}
-			
-			if(mode != inf){
-				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
-				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
-			}
-			
-			data.transdata.push_back(transdata);
-		}
-	}
 
-	// popdata
-	if(tomldata.contains("popdata")) {
-		const auto pdata = toml::find(tomldata,"popdata");
-
-		for(j = 0; j < pdata.size(); j++){
-			const auto pd = toml::find(pdata,j);
-			
-			if(!pd.contains("comp")) emsgroot("A 'comp' property must be specified in 'popdata'.");
-			const auto comp = toml::find<std::string>(pd,"comp");
-			popdata.compstr = comp;
-			
-			if(!pd.contains("area")) emsgroot("An 'area' property must be specified in 'popdata'.");
-			const auto area = toml::find<std::string>(pd,"area");
-			popdata.type = area;
-			if(popdata.type != "reg" && popdata.type != "all") emsgroot("popition data type not recognised"); 
-			
-			if(!pd.contains("file")) emsgroot("A 'file' property must be specified in 'popdata'.");
-			const auto file = toml::find<std::string>(pd,"file");
-			popdata.file = file;
-
-			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
-			const auto startdata = toml::find<string>(pd,"start");
-			popdata.start = details.gettime(startdata)-details.start;
-			
-			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
-			const auto units = toml::find<std::string>(pd,"units");
-			
-			if(units == "days") popdata.units = 1;
-			else{
-				if(units == "weeks") popdata.units = 7;
-				else emsgroot("Units in 'popdata' not recognised");
-			}
-			
-			if(mode != inf){
-				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
-				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
-			}
-			
-			data.popdata.push_back(popdata);
-		}
-	}
-
-	if(!tomldata.contains("transdata") && !tomldata.contains("popdata"))  emsgroot("'transdata' and/or 'popdata' must be set.");
 			
 	// margdata
 	
-	if(tomldata.contains("margdata")) {
-		const auto mdata = toml::find(tomldata,"margdata");
-
-		for(j = 0; j < mdata.size(); j++){
-			const auto md = toml::find(mdata,j);
-			
-			if(!md.contains("from")) emsgroot("A 'from' property must be specified in 'margdata'.");
-			const auto from = toml::find<std::string>(md,"from");
-			margdata.fromstr = from;
-		
-			if(!md.contains("to")) emsgroot("A 'to' property must be specified in 'margdata'.");
-			const auto to = toml::find<std::string>(md,"to");
-			margdata.tostr = to;
-			
-			if(!md.contains("area")) emsgroot("An 'area' property must be specified in 'margdata'.");
-			const auto area = toml::find<std::string>(md,"area");
-			margdata.type = area;
-			if(margdata.type != "reg" && margdata.type != "all") emsgroot("Marginal data type not recognised"); 
-			
-			if(!md.contains("type")) emsgroot("An 'type' property must be specified in 'margdata'.");
-			const auto type = toml::find<std::string>(md,"type");
-			for(d = 0; d < data.ndemocat; d++) if(type == data.democat[d].name) break;
-			if(d == data.ndemocat) emsg("The 'type' property must be 'age' or a demographic property.");
-			margdata.democat = d;
-				
-			if(!md.contains("file")) emsgroot("A 'file' property must be specified in 'margdata'.");
-			const auto file = toml::find<std::string>(md,"file");
-			margdata.file = file;
-			
-			data.margdata.push_back(margdata);
-		}
-	}
 
 	if(mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 	
@@ -877,8 +658,8 @@ int main(int argc, char** argv)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	if(duplicate == 1) sran(seed);
-	else sran(mpi.core*10000+seed);
+	unsigned int seed = inputs.find_int("seed",0);
+	sran(mpi.core*10000+seed);
 	
 	Obsmodel obsmodel(details,data,model);
 	Output output(details,data,model,obsmodel);
@@ -901,7 +682,7 @@ int main(int argc, char** argv)
 	case inf: 
 		{
 			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,obsmodel,mode,verbose);
-			mcmc.run(propsmethod);
+			mcmc.run();
 		}
 		break;
 

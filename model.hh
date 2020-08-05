@@ -7,7 +7,7 @@ using namespace std;
 
 #include "consts.hh"
 #include "data.hh"
-//#include "toml11/toml/types.hpp"
+
 
 struct FEV {                               // Stores information about a compartmental transition
   unsigned int trans;                      // References the transition type
@@ -81,11 +81,16 @@ struct SPLINEP{                            // Stores information about a spline 
 	unsigned int param;                      // The parameter which defines the value
 };
 
+
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(Details &details, DATA &data);
+	MODEL(Inputs &inputs, Details &details, DATA &data);
 
+	unsigned int ndemocat;                   // The number of demographic categories
+	vector <DEMOCAT> democat;                // Stores the demographic categories
+	
+	
 	vector <double> beta;                    // The value for beta at the various times
 	vector <SPLINEP> betaspline;             // The spline used to define beta
 	

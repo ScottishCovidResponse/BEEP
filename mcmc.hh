@@ -24,7 +24,7 @@ class Mcmc
 public:	
 	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose);
 	
-	void run(enum proposalsmethod propmethod);
+	void run();
 
 private:
 	void output_meas(vector <SAMPLE> &opsamp) const;
@@ -43,6 +43,8 @@ private:
 	unsigned int nchain;                     // The number of chains per core
 	
 	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
+	
+	enum proposalsmethod propsmethod;        // Stores the type of proposal method
 	
 	Details &details;
 	DATA &data;

@@ -17,6 +17,7 @@ using namespace std;
 #include "generateQ.hh"
 #include "output.hh"
 #include "details.hh"
+#include "inputs.hh"
 
 #ifdef USE_DATA_PIPELINE
 #include "datapipeline.hh"
@@ -27,17 +28,64 @@ DATA::DATA(Inputs &inputs, Details &details, DataPipeline *dp) : compX(area), co
 {
 	datapipeline = dp;
 	
-	datadir = inputs.find_string("datadir","UNSET");                                     // The data directory
+	datadir = inputs.find_string("datadir","UNSET");                                      // The data directory
 	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
 
-	
-	threshold = inputs.find_int("datadir",UNSET);                                       // The threshold (if specified)
-	if(threshold != UNSET)) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*minvar)));
+	threshold = inputs.find_int("threshold",UNSET);                                       // The threshold (if specified)
+	if(threshold != UNSET) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*minvar)));
 	else thres_h = UNSET;
 	
+	democat = inputs.find_democat(details);
+	ndemocat = democat.size();
+	nage = democat[0].value.size();
+	
+	covar = inputs.find_covar(details);
+	ncovar = covar.size();
 	
 }
+
+void DATA::print_to_terminal() const
+{
+	if(covar.size() > 0){
+		cout << "Area covariates: " << endl;
+		cout << "  ";
+		for(unsigned int j = 0; j < covar.size(); j++) cout << covar[j].name << "   param='" << covar[j].param << "'" << endl; 
+		cout << endl;
+	}	
 	
+
+	cout << "Age categories: " << endl << "  ";
+	for(unsigned int j = 0; j < democat[0].value.size(); j++){
+		if(j != 0) cout << ", ";
+		cout << democat[0].value[j] << " sus='" << democat[0].param[j] << "'";
+	}
+	cout << endl << endl;
+
+	if(democat.size() > 1){
+		cout << "Demographic categories: " << endl;
+		for(unsigned int k = 1; k < democat.size(); k++){
+			cout << "  ";
+			for(unsigned int j = 0; j < democat[k].value.size(); j++){
+				if(j != 0) cout << ", ";
+				cout << democat[k].value[j] << " sus='" <<  democat[k].param[j] << "'";
+			}	
+			cout << endl;
+		}
+		cout << endl;
+	}
+}
+
+void DATA::load(Inputs &inputs, MODEL &model)
+{
+	transdata = inputs.find_transdata(details);	                                          // Loads data
+	
+	popdata = inputs.find_popdata(details);	                                       
+	
+	margdata = inputs.find_margdata(details,democat);	 
+
+	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
+}
+
 	
 /// Reads in transition and area data
 void DATA::readdata(unsigned int core, unsigned int ncore)
@@ -57,6 +105,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	vector <double> vec;
 	vector <unsigned int> rcol;
 	
+	cout << ndemocat << " " << nage << " ndemocat\n";
 	
 	if(core == 0){
 		count.resize(ndemocat);                                     // Defines all the demographic states
@@ -654,21 +703,14 @@ void DATA::copydata(unsigned int core)
 	}	
 }
 
+/*
 /// Adds demographic categories
 void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
 {
-	DEMOCAT dem;
-	
-	dem.name = name;	
-	dem.value = st;
-	dem.param = params;
-	
-	democat.push_back(dem);
 
-	ndemocat = democat.size();
-	if(ndemocat == 1) nage = st.size();
 }
-	
+	*/
+	/*
 /// Add a covariate for the areas
 void DATA::addcovar(string name, string param, string func)
 {
@@ -681,6 +723,7 @@ void DATA::addcovar(string name, string param, string func)
 	covar.push_back(cov);
 	ncovar = covar.size();
 }
+	*/
 	
 string DATA::strip(string line)
 {
