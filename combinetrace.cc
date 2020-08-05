@@ -6,7 +6,7 @@ using namespace std;
 
 #include "combinetrace.hh"
 
-void combinetrace(DATA &data, Inputs &inputs)
+void combine_trace(DATA &data, Inputs &inputs)
 {
 	vector <string> paramname;
 	vector < vector < vector <double> > > vals;

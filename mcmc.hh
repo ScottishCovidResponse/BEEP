@@ -16,7 +16,7 @@ enum class proposalsmethod
 class Mcmc
 {
 public:	
-	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);
+	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose);
 	
 	void run(enum proposalsmethod propmethod);
 
@@ -43,6 +43,7 @@ private:
 	MODEL &model;
 	POPTREE &poptree;
 	Mpi &mpi;
+	Output &output;
 };
 
 #endif

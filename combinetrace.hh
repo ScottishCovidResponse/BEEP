@@ -3,4 +3,4 @@
 class DATA;
 class Inputs;
 
-void combinetrace(DATA &data, Inputs &inputs);
+void combine_trace(DATA &data, Inputs &inputs);

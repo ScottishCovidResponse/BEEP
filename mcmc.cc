@@ -21,7 +21,7 @@ using namespace std;
 
 ofstream quenchplot;
 
-Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi)
+Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
@@ -58,9 +58,6 @@ void Mcmc::run(enum proposalsmethod propmethod)
 	vector <vector <double> > Listore;
 	vector <double> invTstore;
 	vector <double> nac_swap;
-	
-	Output output(details,data,model);
-	
 	
 	pmax = 1-pow(invTmin,1.0/Tpower);
 	pmin = 1-pow(invTmax,1.0/Tpower);

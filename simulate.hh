@@ -7,11 +7,12 @@
 class DATA;
 class MODEL;
 class POPTREE;
+class Output;
 
 class Simulate
 {
 public:	
-	Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose);	
+	Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose);	
 	
 	void run();
 	void multirun();
@@ -26,6 +27,7 @@ private:
 	MODEL &model;
 	POPTREE &poptree;
 	Mpi &mpi;
+	Output &output;
 };
 
 //void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, Mcmc &mcmc);

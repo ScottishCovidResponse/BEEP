@@ -26,6 +26,7 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "data.hh"
 #include "poptree.hh"
 #include "model.hh"
+#include "output.hh"
 
 #include "utils.hh"
 #include "timers.hh"
@@ -33,6 +34,8 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 #include "simulate.hh"
 #include "mcmc.hh"
 #include "consts.hh"
+
+#include "combinetrace.hh"
 
 #ifdef USE_DATA_PIPELINE
 #include "pybind11/embed.h"
@@ -324,7 +327,7 @@ int main(int argc, char** argv)
 
 
 	if(mode == combinetrace){
-		combinetrace(data,inputs);
+		combine_trace(data,inputs);
 		return 0;
 	}
 	
@@ -888,24 +891,26 @@ int main(int argc, char** argv)
 	if(duplicate == 1) sran(seed);
 	else sran(mpi.core*10000+seed);
 	
+	Output output(details,data,model);
+	
 	switch(mode){
 	case sim:
 		{
-			Simulate simu(details,data,model,poptree,mpi,inputs,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,output,mode,verbose);
 			simu.run();
 		}
 		break;
 	
 	case multisim:
 		{
-			Simulate simu(details,data,model,poptree,mpi,inputs,mode,verbose);
+			Simulate simu(details,data,model,poptree,mpi,inputs,output,mode,verbose);
 			simu.multirun();
 		}
 		break;
 			
 	case inf: 
 		{
-			Mcmc mcmc(details,data,model,poptree,mpi,inputs,mode,verbose);
+			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,mode,verbose);
 			mcmc.run(propsmethod);
 		}
 		break;

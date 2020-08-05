@@ -19,7 +19,7 @@
 using namespace std;
 
 
-Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi)
+Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output)
 {	
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(mode == multisim){
