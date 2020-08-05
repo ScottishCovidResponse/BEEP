@@ -262,13 +262,13 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	R0out << "# Gives the time variation in R0." << endl;	
 	R0out << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	Rav.resize(data.nsettime);
-	for(st = 0; st < data.nsettime; st++){
+	Rav.resize(details.nsettime);
+	for(st = 0; st < details.nsettime; st++){
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
 		Rav[st] = atof(stat.mean.c_str());
 		
-		R0out << (st+0.5)*details.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		R0out << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	file = "Posterior_phi.txt";
@@ -280,11 +280,11 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	phiout << "# Gives the time variation in phi (expressed as the number of infected per 1000000 individuals)." << endl;	
 	phiout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	for(st = 0; st < data.nsettime; st++){
+	for(st = 0; st < details.nsettime; st++){
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].phi[st]*1000000);
 		stat = getstat(vec);
 	
-		phiout << (st+0.5)*details.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		phiout << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	npsamp = opsamp.size();
@@ -348,7 +348,7 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	cout << "'" << file << "' gives the time and spatial variation in R0." << endl;
 	Rmapout << "# Gives the time and spatial variation in R." << endl;	
 	Rmapout << "# Area, Day: ";
-	for(st = 0; st < data.nsettime; st++){ Rmapout << (st+1); if(st < data.nsettime-1) Rmapout << ", ";}
+	for(st = 0; st < details.nsettime; st++){ Rmapout << (st+1); if(st < details.nsettime-1) Rmapout << ", ";}
 	Rmapout << endl;
 	
 	model.setup(paramav);
@@ -356,7 +356,7 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 
 	for(c = 0; c < data.narea; c++){
 		Rmapout << data.area[c].code;
-		for(st = 0; st < data.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
+		for(st = 0; st < details.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
 		Rmapout << endl;
 	}
 	
@@ -503,13 +503,13 @@ void Output::plot(string file, vector < vector <FEV> > &xi, double tmin, double 
 	N.resize(model.comp.size()); for(c = 0; c < model.comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	td = 0; tdf = 0; while(td < data.fediv && xi[td].size()==0) td++;
+	td = 0; tdf = 0; while(td < details.fediv && xi[td].size()==0) td++;
 	
 	ofstream plot(file.c_str());
 	if(!plot) emsg("Cannot output the file '"+file+"'");
 	
 	for(t = tmin; t < period; t += (period-tmin)/100){
-		while(td < data.fediv && xi[td][tdf].t < t){
+		while(td < details.fediv && xi[td][tdf].t < t){
 			tra = xi[td][tdf].trans;
 			tr = model.trans[tra];
 			N[tr.from]--; N[tr.to]++;
@@ -517,7 +517,7 @@ void Output::plot(string file, vector < vector <FEV> > &xi, double tmin, double 
 			tdf++;
 			if(tdf == xi[td].size()){
 				td++; tdf = 0; 
-				while(td < data.fediv && xi[td].size() == 0) td++;
+				while(td < details.fediv && xi[td].size() == 0) td++;
 			}
 		}
 		

@@ -334,7 +334,7 @@ int main(int argc, char** argv)
 	
 	MODEL model(details,data);
 		
-	data.threshold=UNSET;
+	//data.threshold=UNSET;
 
 	// A list of all supported parameters (please keep in lexicographic order)   // zz
 	vector<string>  definedparams {
@@ -512,12 +512,7 @@ int main(int argc, char** argv)
 
 	// area data
 	data.areadatafile = lookup_string_parameter(cmdlineparams, tomldata, "areas", param_verbose, "UNSET");
-	
-	// threshold
-	if(tomldata.contains("threshold")){
-		data.threshold = lookup_int_parameter(cmdlineparams, tomldata, "threshold", param_verbose);
-		data.thres_h = log(1.0/(data.threshold + 0.5*sqrt(2*M_PI*minvar)));
-	}
+
 	
 	// End of parameters
 	if (param_verbose)

@@ -165,16 +165,12 @@ public:
 
 	DataPipeline *datapipeline;             // DataPipeline object
 	
-	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
-	unsigned int fepertime;                  // # fediv per nsettime
-	unsigned int settpertime;                // # nsettime per unit time
+	string datadir; 												 // The data directory
 
-	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
-	vector <double> settime;                 // The timings at which beta changes
-	
 	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	double thres_h;                          // The height of the threshold observation model
 
+	
 	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
@@ -185,7 +181,6 @@ public:
 	
 	GENQ genQ; 															 // Stores information about generating the Q matrix
 
-	string datadir; 												 // The data directory
 	string regiondatafile;                   // File giving information about data regions
 	string areadatafile;                     // File giving information about areas
 	

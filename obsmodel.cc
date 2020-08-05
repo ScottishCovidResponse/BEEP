@@ -51,7 +51,7 @@ MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vec
 		for(row = 0; row < data.popdata[pd].rows; row++){
 			ti = data.popdata[pd].start + row*data.popdata[pd].units;
 				
-			while(data.settime[sett] < ti){				
+			while(details.settime[sett] < ti){				
 				for(j = 0; j < trev[sett].size(); j++){
 					i = trev[sett][j].ind;
 					tra = indev[i][trev[sett][j].e].trans;
@@ -175,7 +175,7 @@ vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &tre
 
 	for(r = 0; r < data.nregion; r++) num.push_back(0);
 
-	for(sett = data.settpertime*ti; sett < data.settpertime*tf; sett++){
+	for(sett = details.settpertime*ti; sett < details.settpertime*tf; sett++){
 		for(j = 0; j < trev[sett].size(); j++){
 			i = trev[sett][j].ind;
 			if(d == UNSET || data.democatpos[data.ind[i].dp][d] == v){		

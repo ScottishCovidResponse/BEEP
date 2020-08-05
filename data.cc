@@ -27,9 +27,15 @@ DATA::DATA(Inputs &inputs, Details &details, DataPipeline *dp) : compX(area), co
 {
 	datapipeline = dp;
 	
-	datadir = inputs.find_string("datadir","UNSET");
+	datadir = inputs.find_string("datadir","UNSET");                                     // The data directory
 	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
 
+	
+	threshold = inputs.find_int("datadir",UNSET);                                       // The threshold (if specified)
+	if(threshold != UNSET)) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*minvar)));
+	else thres_h = UNSET;
+	
+	
 }
 	
 	
@@ -51,14 +57,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	vector <double> vec;
 	vector <unsigned int> rcol;
 	
-	fepertime = 10;
-	
-	settpertime = 1;
-	nsettime = settpertime*details.period;
-	settime.resize(nsettime+1);
-	for(s = 0; s <= nsettime; s++) settime[s] = double(s*details.period)/nsettime;
-			
-	fediv = nsettime*fepertime;
 	
 	if(core == 0){
 		count.resize(ndemocat);                                     // Defines all the demographic states
@@ -319,7 +317,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore)
 	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
-	nsettardp = nsettime*nardp;
+	nsettardp = details.nsettime*nardp;
 	
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");

@@ -25,16 +25,16 @@ Details::Details(Inputs &inputs)
 {
 	mode = inputs.mode();
 	
-	outputdir = inputs.find_string("outputdir","Ouput"); 
+	outputdir = inputs.find_string("outputdir","Ouput");                              // Output directory
 
-	string timeformat = inputs.find_string("timeformat","number");
+	string timeformat = inputs.find_string("timeformat","number");                    // Time format
 	if(timeformat == "number"){ tform = tform_num; tformat = "time";}
 	else{ 
 		if(timeformat == "year-month-day"){ tform = tform_ymd; tformat = "date";}
 		else emsgroot("Do not recognise time format '"+tformat+"'.");
 	}
 	
-	string startstr = inputs.find_string("start","UNSET");
+	string startstr = inputs.find_string("start","UNSET");                            // Beginning and ending times
 	if(startstr == "UNSET") emsgroot("The 'start' time must be set"); 
 	start = gettime(startstr);
 
@@ -43,6 +43,16 @@ Details::Details(Inputs &inputs)
 	end = gettime(endstr);
 
 	period = end - start;
+	
+	fepertime = 10;                                                                   // Discretiation of time line 
+	
+	settpertime = 1;
+	nsettime = settpertime*period;
+	settime.resize(nsettime+1);
+	for(int s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
+			
+	fediv = nsettime*fepertime;
+	
 }
 
 /// Gets the time from a string

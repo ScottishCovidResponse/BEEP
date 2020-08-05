@@ -27,7 +27,7 @@ Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Obsmo
 	ch = chstart;
 
 	xi.clear();
-	trevi.clear(); trevi.resize(data.nsettime); 
+	trevi.clear(); trevi.resize(details.nsettime); 
 	indevi.clear(); indevi.resize(data.popsize);
 	indevp.clear(); indevp.resize(data.popsize);
 	
@@ -47,8 +47,8 @@ Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Obsmo
 	}
 	dQbuflistv.clear(); dQbuflistq.clear();
 	
-	Qmapi.resize(data.nsettime); Qmapp.resize(data.nsettime); 
-	for(sett = 0; sett < data.nsettime; sett++){
+	Qmapi.resize(details.nsettime); Qmapp.resize(details.nsettime); 
+	for(sett = 0; sett < details.nsettime; sett++){
 		Qmapi[sett].resize(data.narage); for(v = 0; v < data.narage; v++) Qmapi[sett][v] = 0;
 		Qmapp[sett].resize(data.narage); 
 	}
@@ -153,7 +153,7 @@ unsigned int Chain::mbp()
 	//indevp.clear(); indevp.resize(data.popsize);	
 	
 	xp.clear();
-	trevp.clear(); trevp.resize(data.nsettime);
+	trevp.clear(); trevp.resize(details.nsettime);
 	
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 	
@@ -162,9 +162,9 @@ unsigned int Chain::mbp()
 	timers.timembp -= clock();
 		
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		if(details.mode == sim){
-			cout  << "  Time: " << data.settime[t];
+			cout  << "  Time: " << details.settime[t];
 			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
 		}
@@ -181,7 +181,7 @@ unsigned int Chain::mbp()
 
 		constructRtot(Qmapi[sett],Qmapp[sett]);
 	
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		do{
 			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
 			
@@ -245,8 +245,8 @@ void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vec
 	x.push_back(evref);
 	for(e = 0; e < indev.size(); e++){
 		evref.e = e;
-		se = (unsigned int)(data.nsettime*indev[e].t/details.period); 
-		if(se < data.nsettime) trev[se].push_back(evref);
+		se = (unsigned int)(details.nsettime*indev[e].t/details.period); 
+		if(se < details.nsettime) trev[se].push_back(evref);
 	}
 }
 		
@@ -262,7 +262,7 @@ void Chain::setQmapi(unsigned int check)
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 
 	nage = data.nage;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = dQmap[v];
 			if(check == 1){
@@ -849,11 +849,11 @@ void Chain::check_addrem()
 	}
 	if(num != xi.size()) emsgEC("Chain",40);
 
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
 			if(e >= indevi[i].size()) emsgEC("Chain",41);
-			se = (unsigned int)(data.nsettime*indevi[i][e].t/details.period); 
+			se = (unsigned int)(details.nsettime*indevi[i][e].t/details.period); 
 			if(se != sett) emsgEC("Chain",42);
 			if(done[i][e] != 0) emsgEC("Chain",43);
 			done[i][e] = 1;
@@ -893,9 +893,9 @@ double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vec
 	L = 0;
 	
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		
 		for(c = 0; c < data.narea; c++){
 			fac = beta*model.areafac[c];
@@ -940,7 +940,7 @@ void Chain::calcQmapp()
 	
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 	
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
 			if(val < -tiny){ emsgEC("Chain",48);}
@@ -1011,12 +1011,12 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	}		
 			
 	model.setup(paramval);
-	betafac.resize(data.nsettime); phifac.resize(data.nsettime);
+	betafac.resize(details.nsettime); phifac.resize(details.nsettime);
 	
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		//beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 
 		lcontlist.clear();
 		
@@ -1092,7 +1092,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 					model.setup(paramval);
 
 					Levp = 0; 
-					for(sett = 0; sett < data.nsettime; sett++){
+					for(sett = 0; sett < details.nsettime; sett++){
 						double beta = model.beta[sett], phi = model.phi[sett];
 						Levp += betafac[sett]*beta + phifac[sett]*phi;
 						
@@ -1152,9 +1152,9 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 	
 	L0 = 0;
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		
 		for(c = 0; c < data.narea; c++){
 			for(dp = 0; dp < data.ndemocatpos; dp++){
@@ -1383,8 +1383,8 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 		
 			changestat(i,not_sus,0);
 			
-			dt = data.settime[sett+1]-data.settime[sett];
-			t = data.settime[sett] + ran()*dt;
+			dt = details.settime[sett+1]-details.settime[sett];
+			t = details.settime[sett] + ran()*dt;
 			probif += log(1.0/dt);
 			
 			model.simmodel(indevp[i],i,0,t);
@@ -1405,12 +1405,12 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 			l = int(ran()*xp.size());
 			probif += log(1.0/xp.size());
 			i = xp[l].ind;
-			sett = (unsigned int)(data.nsettime*indevi[i][xp[l].e].t/details.period); 
+			sett = (unsigned int)(details.nsettime*indevi[i][xp[l].e].t/details.period); 
 
 			c = data.ind[i].area;
 			w = c*data.ndemocatpos + data.ind[i].dp;
 	
-			dt = data.settime[sett+1]-data.settime[sett];
+			dt = details.settime[sett+1]-details.settime[sett];
 
 			probfi += log(1.0/dt);
 			kst.push_back(sett*data.nardp + w);
@@ -1425,7 +1425,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 			probfi += log(1.0/nindbothlist[w]);
 		}
 		
-		for(sett = 0; sett < data.nsettime; sett++){  // Removes events in trevp
+		for(sett = 0; sett < details.nsettime; sett++){  // Removes events in trevp
 			j = 0; jmax = trevp[sett].size();
 			while(j < jmax){
 				if(indevp[trevp[sett][j].ind].size() == 0){
@@ -1488,7 +1488,7 @@ void Chain::infsampler(vector< vector<double> > &Qmap)
 	double val, sum, beta, phi, fac;
 		
 	sum = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
 	
 		for(c = 0; c < data.narea; c++){

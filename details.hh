@@ -29,5 +29,12 @@ struct Details
 	unsigned int end;                        // The start time over which simulation/inference is performed
 	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
 	
+	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
+	unsigned int fepertime;                  // # fediv per nsettime
+	unsigned int settpertime;                // # nsettime per unit time
+
+	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
+	vector <double> settime;                 // The timings at which beta changes
+	
 };
 #endif

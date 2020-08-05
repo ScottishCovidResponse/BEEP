@@ -299,7 +299,7 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	paramval.resize(param.size());
 	priorsamp();
  
-	beta.resize(data.nsettime);	phi.resize(data.nsettime);
+	beta.resize(details.nsettime);	phi.resize(details.nsettime);
 	
 	setup(paramval);
 	
@@ -579,8 +579,8 @@ void MODEL::timevariation()
 		}
 		
 		p = 0;
-		for(s = 0; s < data.nsettime; s++){		
-			t = double((s+0.5)*details.period)/data.nsettime;
+		for(s = 0; s < details.nsettime; s++){		
+			t = double((s+0.5)*details.period)/details.nsettime;
 			while(p < int(nspline)-1 && t > splinet[p+1]) p++;
 			
 			dt = t-splinet[p];	
@@ -590,8 +590,8 @@ void MODEL::timevariation()
 	
   // This uses a linear spline for beta
 	p = 0;
-	for(s = 0; s < data.nsettime; s++){	
-		t = double((s+0.5)*details.period)/data.nsettime;
+	for(s = 0; s < details.nsettime; s++){	
+		t = double((s+0.5)*details.period)/details.nsettime;
 		
 		while(p < int(betaspline.size())-1 && t > betaspline[p+1].t) p++;
 		
@@ -601,8 +601,8 @@ void MODEL::timevariation()
 	
 	// This uses a linear spline for phi
 	p = 0;
-	for(s = 0; s < data.nsettime; s++){	
-		t = double((s+0.5)*details.period)/data.nsettime;
+	for(s = 0; s < details.nsettime; s++){	
+		t = double((s+0.5)*details.period)/details.nsettime;
 		
 		while(p < int(phispline.size())-1 && t > phispline[p+1].t) p++;
 		
@@ -1043,10 +1043,10 @@ vector <double> MODEL::R0calc()
 		}
 	}
 	
-	R0.resize(data.nsettime);
+	R0.resize(details.nsettime);
 	timep = 0; 
-	for(st = 0; st < data.nsettime; st++){
-		t = data.settime[st];
+	for(st = 0; st < details.nsettime; st++){
+		t = details.settime[st];
 		while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 		
 		R0[st] = beta[st]*R0fac[timep];
