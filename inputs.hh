@@ -55,7 +55,6 @@ public:
 	
 private:
 	void set_command_line_params(int argc, char *argv[]);  
-	vector<string> get_toml_keys( ) const;
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
 	
 	map<string,string> cmdlineparams;                                                   // A map of all the parameters entered on the command line
