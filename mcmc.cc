@@ -35,7 +35,8 @@ Mcmc::Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &popt
 	if(nchaintot%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
 
 	nchain = nchaintot/mpi.ncore;                                                           // The number of chains per core
-	
+	if(nchain == 0) emsgroot("'nchain' must be non-zero");
+		
 	invTmin = inputs.find_double("invTmin",0);                                             // The temperatures of the prior and posterior chains
 	invTmax = inputs.find_double("invTmax",0.25);       
 	
@@ -176,10 +177,10 @@ void Mcmc::run()
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		if(duplicate == 0) swap(nac_swap,samp);
+		if(duplicate == 0) swap(nac_swap,samp,nchain);
 		
 		if(samp%1 == 0) output_param(output,Listore,psamp);
-		if(samp%5 == 0) output_meas(opsamp);
+		if(samp%5 == 0) output_meas(opsamp,nchain);
 		
 		if(mpi.core == 0 && quenchpl == 1){ 
 			quenchplot << chain[0].invT;
@@ -199,7 +200,7 @@ void Mcmc::run()
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 
-void Mcmc::swap(vector <double> &nac_swap, unsigned int samp)
+void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchain)
 {
   unsigned int p, p1, p2, th, tempi, chs;
 	unsigned int nparam = model.param.size(), nchaintot = nchain*mpi.ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
@@ -413,7 +414,7 @@ void Mcmc::output_param(Output &output, vector <vector <double> > &Listore, vect
 }
 
 /// Ouputs a measurement sample from the MBP algorithm
-void Mcmc::output_meas(vector <SAMPLE> &opsamp) const
+void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 {
 	unsigned int p,  ppost, nchaintot = mpi.ncore*nchain;
 	int siz;

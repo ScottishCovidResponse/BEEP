@@ -49,7 +49,7 @@ Details::Details(Inputs &inputs)
 	settpertime = 1;
 	nsettime = settpertime*period;
 	settime.resize(nsettime+1);
-	for(int s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
+	for(unsigned int s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
 			
 	fediv = nsettime*fepertime;
 	

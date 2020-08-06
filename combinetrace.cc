@@ -6,6 +6,7 @@ using namespace std;
 
 #include "combinetrace.hh"
 
+/// Finishing this is on the TO DO list
 void combine_trace(DATA &data, Inputs &inputs)
 {
 	vector <string> paramname;

@@ -27,10 +27,10 @@ public:
 	void run();
 
 private:
-	void output_meas(vector <SAMPLE> &opsamp) const;
+	void output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const;
 	void output_param(Output &output, vector <vector <double> > &Listore, vector <PARAMSAMP> &psamp) const;
 	void diagnostic(vector <vector <double> > &Listore, vector <double> &invTstore, vector <double> &nac_swap) const;
-	void swap(vector <double> &nac_swap, unsigned int samp);
+	void swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchain);
 	double calcME(vector <vector <double> > &Listore,vector <double> &invTstore) const;
 
 	vector <Chain> chain; 
