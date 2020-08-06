@@ -48,7 +48,7 @@ Inputs::Inputs(int argc, char** argv, bool verbose)
 		emsgroot(oss.str());
 	}	
 	
-	vector<string> tomlkeys = get_toml_keys(tomldata);
+	vector<string> tomlkeys = get_toml_keys();
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 }
 
@@ -181,10 +181,10 @@ double Inputs::find_double(const string &key, double def) const
 }
 
 /// Gets a list of all the keys
-vector<string> Inputs::get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const
+vector<string> Inputs::get_toml_keys( ) const
 {
 	vector<string> keys;
-	for(const auto& p : data.as_table())
+	for(const auto& p : tomldata.as_table())
 	{
 		keys.push_back(p.first);
 	}
