@@ -2,6 +2,7 @@
 #define BEEPMBP__OUTPUT_HH
 
 #include "poptree.hh"
+#include <fstream>
 
 struct SAMPLE{                                        // Stores information about a sample from the posterior
 	MEAS meas;                                          // Stores measurements corresponding to the data file

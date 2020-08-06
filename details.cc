@@ -2,10 +2,12 @@
 
 #include <math.h> 
 
+
 using namespace std;
 
 #include "details.hh"
-
+#include <cstring>
+#include <sstream>
 
 Mpi::Mpi()
 {

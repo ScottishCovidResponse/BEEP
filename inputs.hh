@@ -8,7 +8,6 @@
 using namespace std;
 
 #include "consts.hh"
-#include "toml11/toml.hpp"
 
 struct TRANSDATA;
 struct POPDATA;
@@ -21,12 +20,18 @@ struct QTENSOR;
 struct PRIORCOMP;
 struct COMP;
 class Details;
+class InputData;
 
 class Inputs
 {
 public:
 	Inputs(int argc, char** argv, bool verbose);
-
+	~Inputs();
+	Inputs(const Inputs&) = delete;
+	Inputs(Inputs&&) = delete;
+	Inputs& operator=(const Inputs&) = delete;
+	Inputs& operator=(Inputs&&) = delete;
+	
 	int find_int(const string &key, int def) const;
 	double find_double(const string &key, double def) const;
 	string find_string(const string &key, const string &def) const;	
@@ -54,7 +59,7 @@ private:
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
 	
 	map<string,string> cmdlineparams;                                                   // A map of all the parameters entered on the command line
-	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Information from the TOML file
+	InputData *basedata;
 };
 
 const vector<string> definedparams = {       // A list of all supported parameters (please keep in lexicographic order)
