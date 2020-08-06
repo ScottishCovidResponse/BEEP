@@ -19,9 +19,10 @@ public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
 	InputData(const std::string& inputfilename);
-	//InputData(Node&& data) = delete;
-	InputData& operator=(const Node& data) = delete;
-	InputData& operator=(Node&& data) = delete;
+	InputData(const InputData& data) = delete;
+	InputData(InputData&& data) = delete;
+	InputData& operator=(const InputData& data) = delete;
+	InputData& operator=(InputData&& data) = delete;
 	~InputData() {}
 	bool contains(const std::string& name) const
 		{
