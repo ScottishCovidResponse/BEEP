@@ -13,7 +13,7 @@ class Obsmodel;
 class Simulate
 {
 public:	
-	Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose);	
+	Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
 	
 	void run();
 	void multirun();

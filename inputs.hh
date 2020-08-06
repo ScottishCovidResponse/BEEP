@@ -18,6 +18,8 @@ struct COVAR;
 struct TIMEP;
 struct GENQ;
 struct QTENSOR;
+struct PRIORCOMP;
+struct COMP;
 class Details;
 
 class Inputs
@@ -38,6 +40,11 @@ public:
 	void find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const;
 	void find_param(vector <string> &name, vector <double> &val) const;
 	void find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const;
+	void find_comps(vector <string> &name, vector <double> &infectivty) const;
+	void find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar,
+                 	vector <int> &type, vector <string> &mean, vector <string> &cv) const;
+	vector <PRIORCOMP> find_priorcomps(const vector<COMP> &comp) const;
+	void find_spline(Details &details, string &name, vector <int> &time, vector <string> &param) const;
 
 	Mode mode() const;
 	

@@ -62,8 +62,8 @@ struct TRANS{                              // Stores information about a compart
 	unsigned int to;                         // Which compartment the individual is going to
 	
 	unsigned int type;                       // The type of distribution (exponential or gamma)
-	int param1;                              // First characteristic parameter (e.g. mean)
-	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
+	int param_mean;                          // The parameter for the mean of the distribution
+	int param_cv;                            // The parameter for the coefficient of variation (if used)
 	
 	unsigned int istimep;                    // Set to one if the transition is in time period
 	vector <unsigned int> num;               // The number of times down transition 
@@ -85,7 +85,7 @@ struct SPLINEP{                            // Stores information about a spline 
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(Inputs &inputs, Details &details, DATA &data,  const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
+	MODEL(Inputs &inputs, Details &details, DATA &data);
 
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories

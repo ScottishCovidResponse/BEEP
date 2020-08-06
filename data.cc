@@ -36,9 +36,10 @@ DATA::DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp) : compX
 	else thres_h = UNSET;
 	
 	democat = inputs.find_democat(details);
-	ndemocat = democat.size();
+	ndemocat = democat.size();	
 	nage = democat[0].value.size();
-	
+	calc_democatpos();
+
 	covar = inputs.find_covar(details);
 	ncovar = covar.size();
 	
@@ -137,8 +138,6 @@ void DATA::load_region_file(Inputs &inputs)
 		region.push_back(reg);
 	}		
 	nregion = region.size();
-	
-	cout << "Region data loaded." << endl;
 }
 
 /// Reads in transition and area data
@@ -167,10 +166,8 @@ void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
 
 	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
 
-	
 	if(mpi.core == 0){
-		calc_democatpos();
-
+		
 		load_region_file(inputs);
 	
 		string file = inputs.find_string("areas","UNSET");
@@ -286,7 +283,6 @@ void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
 			for(c = 0; c < narea; c++) area[c].covar[j] -= sum;
 		}		
 		
-		cout << endl << "Area data loaded." << endl;
 		if(checkon == 1){
 			for(c = 0; c < narea; c++){
 				cout << nregion << " " << area[c].region << "region" << endl;
@@ -624,14 +620,14 @@ void DATA::copydata(unsigned int core)
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
-		pack(ndemocatpos);
-		pack(democatpos);
+		//pack(ndemocatpos);
+		//pack(democatpos);
 		pack(nregion);
 		pack(region);
 		pack(narea);
 		pack(area);
-		pack(nage);
-		pack(ndemocatposperage);
+		//pack(nage);
+		//pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			pack(transdata[td].num);
 			pack(transdata[td].rows);
@@ -656,14 +652,14 @@ void DATA::copydata(unsigned int core)
 
 	if(core != 0){
 		packinit();
-		unpack(ndemocatpos);
-		unpack(democatpos);
+		//unpack(ndemocatpos);
+		//unpack(democatpos);
 		unpack(nregion);
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		unpack(nage);
-		unpack(ndemocatposperage);
+		//unpack(nage);
+		//unpack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			unpack(transdata[td].num);
 			unpack(transdata[td].rows);

@@ -12,6 +12,7 @@ using namespace std;
 #include "consts.hh"
 #include "toml11/toml.hpp"
 #include "data.hh"
+#include "model.hh"
 
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
@@ -131,7 +132,7 @@ void Inputs::read_toml_file(bool verbose)
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();
-		emsg(oss.str());
+		emsgroot(oss.str());
 	}	
 	
 	vector<string> tomlkeys = get_toml_keys(tomldata);
@@ -176,7 +177,7 @@ int Inputs::find_int(const string &key, int def) const
 			} else {
 				oss << what;
 			}
-			emsg(oss.str());
+			emsgroot(oss.str());
 		}
 	} else {
 		if (tomldata.contains(key)) {
@@ -214,7 +215,7 @@ double Inputs::find_double(const string &key, double def) const
 			} else {
 				oss << what;
 			}
-			emsg(oss.str());
+			emsgroot(oss.str());
 		}
 	} else {
 		if (tomldata.contains(key)) {
@@ -406,7 +407,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 			const auto type = toml::find<std::string>(md,"type");
 			unsigned int d;
 			for(d = 0; d < democat.size(); d++) if(type == democat[d].name) break;
-			if(d == democat.size()) emsg("The 'type' property must be 'age' or a demographic property.");
+			if(d == democat.size()) emsgroot("The 'type' property must be 'age' or a demographic property.");
 			margdata.democat = d;
 				
 			if(!md.contains("file")) emsgroot("A 'file' property must be specified in 'margdata'.");
@@ -519,13 +520,13 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 			auto tendstr = toml::find<string>(tim,"tend");
 			timeperiod.tend = details.gettime(tendstr) - details.start;
 			
-			if(timeperiod.tend < 0 || timeperiod.tend > (int)details.period) emsg("Time '"+tendstr+"' is out of range."); 
+			if(timeperiod.tend < 0 || timeperiod.tend > (int)details.period) emsgroot("Time '"+tendstr+"' is out of range."); 
 			if(j > 0){
-				if(timeperiod.tend < timeperiodvec[j-1].tend) emsg("'timep' is not time ordered.");
+				if(timeperiod.tend < timeperiodvec[j-1].tend) emsgroot("'timep' is not time ordered.");
 			}
 			
 			if(j == timep.size()-1){
-				if(timeperiod.tend != (int)details.period) emsg("'tend' in 'timep' must finish with the end time.");
+				if(timeperiod.tend != (int)details.period) emsgroot("'tend' in 'timep' must finish with the end time.");
 			}
 			timeperiodvec.push_back(timeperiod);
 		}
@@ -598,7 +599,7 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 			if(!Q.contains("timep")) emsgroot("A 'timep' must be specified in 'Q'.");
 			const auto timep = toml::find<std::string>(Q,"timep");
 			unsigned int tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
-			if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
+			if(tp == timeperiod.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
 			qten.timep = tp;
 	
 			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
@@ -621,10 +622,10 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 		const auto paramsin = toml::find(tomldata,"params");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
-			if(!params.contains("name")) emsg("The quantity 'params' must contain a 'name' definition.");
+			if(!params.contains("name")) emsgroot("The quantity 'params' must contain a 'name' definition.");
 			string nam = toml::find<std::string>(params,"name");
 			
-			if(!params.contains("value")) emsg("The quantity 'params' must contain a 'value' definition.");
+			if(!params.contains("value")) emsgroot("The quantity 'params' must contain a 'value' definition.");
 			const auto value_temp = toml::find(params,"value");
 			double value;
 			if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();
@@ -633,7 +634,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 			val.push_back(value);
 		}
 	}
-	else{ emsg("The input file must contain parameter values through 'params'.");}
+	else{ emsgroot("The input file must contain parameter values through 'params'.");}
 }
 
 void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const
@@ -642,7 +643,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 		const auto paramsin = toml::find(tomldata,"priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
-			if(!params.contains("name")) emsg("The quantity 'priors' must contain a 'name' definition.");
+			if(!params.contains("name")) emsgroot("The quantity 'priors' must contain a 'name' definition.");
 			string nam = toml::find<std::string>(params,"name");
 
 			double mi, ma;
@@ -653,23 +654,168 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 				mi = value; ma = value;
 			}
 			else{
-				if(!params.contains("type")) emsg("The prior '"+nam+"' must have a 'value' or a 'type'");
+				if(!params.contains("type")) emsgroot("The prior '"+nam+"' must have a 'value' or a 'type'");
 				
 				string type = toml::find<std::string>(params,"type");
 				if(type == "uniform"){
-					if(!params.contains("min")) emsg("For the prior '"+nam+"', the uniform distribution must contain a 'min' definition.");
+					if(!params.contains("min")) emsgroot("For the prior '"+nam+"', the uniform distribution must contain a 'min' definition.");
 					const auto min_temp = toml::find(params,"min");
 					if(min_temp.is_floating()) mi = min_temp.as_floating(); else mi = min_temp.as_integer();	
 		
-					if(!params.contains("max")) emsg("For the prior '"+nam+"', the uniform distribution must contain a 'max' definition.");
+					if(!params.contains("max")) emsgroot("For the prior '"+nam+"', the uniform distribution must contain a 'max' definition.");
 					const auto max_temp = toml::find(params,"max");
 					if(max_temp.is_floating()) ma = max_temp.as_floating(); else ma = max_temp.as_integer();	
 				}
-				else emsg("In 'priors', the prior type '"+type+"' is not recognised.");
+				else emsgroot("In 'priors', the prior type '"+type+"' is not recognised.");
 			}
 			
 			name.push_back(nam); min.push_back(mi); max.push_back(ma);
 		}
 	}
-	else{ emsg("The input file must contain quantity 'priors'.");}
+	else{ emsgroot("The input file must contain quantity 'priors'.");}
 }
+
+void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) const
+{
+	if(tomldata.contains("comps")) {
+		const auto compsin = toml::find(tomldata,"comps");
+		for(unsigned int j = 0; j < compsin.size(); j++){
+			const toml::value comps = toml::find(compsin,j);
+			if(!comps.contains("name")) emsgroot("Compartments in 'comps' must contain a 'name' definition.");
+
+			string nam = toml::find<std::string>(comps,"name");
+			if(!comps.contains("inf")) emsgroot("The compartment 'name' must contain an 'inf' definition.");
+			
+			const auto inf_temp = toml::find(comps,"inf");
+			double infect;
+			if(inf_temp.is_floating()) infect = inf_temp.as_floating(); else infect = inf_temp.as_integer();	
+	
+			name.push_back(nam); infectivity.push_back(infect);
+		}
+	}
+	else{ emsgroot("The input file must contain compartment definitions through 'comps'");}
+}
+
+void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar, vector <int> &type, vector <string> &mean, vector <string> &cv) const
+{
+	if(tomldata.contains("trans")){
+		const auto transin = toml::find(tomldata,"trans");
+		for(unsigned int j = 0; j < transin.size(); j++){
+			const auto trans = toml::find(transin,j);
+			
+			if(!trans.contains("from")) emsgroot("Transition specified in 'trans' must contain a 'from' definition.");
+			string fr_temp = toml::find<std::string>(trans, "from");
+			
+			if(!trans.contains("to")) emsgroot("Transition specified in 'trans' must contain a 'to' definition.");
+			string to_temp = toml::find<std::string>(trans, "to");
+		
+			string name = fr_temp+"→"+to_temp;
+			if(!trans.contains("dist")) emsgroot("For the '"+name+"' transition the 'dist' distribution must be set.");
+			
+			string dist = toml::find<std::string>(trans, "dist");
+			
+			unsigned int distval = UNSET;
+			string mean_temp="", cv_temp="";
+			
+			if(dist == "infection"){
+				distval = infection_dist;
+			}
+			
+			if(dist == "exp"){
+				distval = exp_dist;
+				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
+				mean_temp = toml::find<std::string>(trans, "mean");
+			}
+			
+			if(dist == "lognorm"){
+				distval = lognorm_dist;
+				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
+				mean_temp = toml::find<std::string>(trans, "mean");
+				
+				if(!trans.contains("cv")) emsgroot("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
+				cv_temp = toml::find<std::string>(trans, "cv");
+			}
+			
+			if(dist == "gamma"){
+				distval = gamma_dist;
+				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
+				mean_temp = toml::find<std::string>(trans, "mean");
+				
+				if(!trans.contains("cv")) emsgroot("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
+				cv_temp = toml::find<std::string>(trans, "cv");
+			}
+			
+			if(distval == UNSET) emsgroot("For the '"+name+"' transition the distribution '"+dist+"' is not recognised.");
+			
+			string prob="";
+			if(trans.contains("prob")) prob = toml::find<std::string>(trans, "prob");
+
+			from.push_back(fr_temp); to.push_back(to_temp); prpar.push_back(prob);
+			type.push_back(distval); mean.push_back(mean_temp); cv.push_back(cv_temp);
+		}
+	}
+	else{ emsgroot("The input file must contain transition definitions through the 'trans' quantity.");}
+}
+
+vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
+{
+	vector <PRIORCOMP> priorcompvec;
+	
+	if(tomldata.contains("priorcomps")){
+		const auto prcomps = toml::find(tomldata,"priorcomps");
+		for(unsigned int j = 0; j < prcomps.size(); j++){
+			const auto prcomp = toml::find(prcomps,j);
+			
+			PRIORCOMP pricomp;
+			if(!prcomp.contains("comp")) emsgroot("'priorcomps' must contain a 'comp' definition.");
+			string co = toml::find<std::string>(prcomp,"comp");
+			unsigned int c = 0; while(c < comp.size() && comp[c].name != co) c++;
+			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
+			pricomp.comp = c;
+			
+			if(!prcomp.contains("value")) emsgroot("'priorcomps' must contain a 'value' definition.");
+			double val;
+			const auto val_temp = toml::find(prcomp,"inf");
+			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
+	
+			pricomp.value = val;
+			
+			if(!prcomp.contains("sd")) emsgroot("'priorcomps' must contain a 'sd' standard deviation definition.");
+			double sd;
+			const auto sd_temp = toml::find(prcomp,"sd");
+			if(sd_temp.is_floating()) sd = sd_temp.as_floating(); else sd = sd_temp.as_integer();	
+			pricomp.sd = sd;
+	
+			priorcompvec.push_back(pricomp);
+		}
+	}
+	
+	return priorcompvec;
+}
+
+void Inputs::find_spline(Details &details, string &name, vector <int> &time, vector <string> &param) const
+{
+	time.clear(); param.clear();
+	if(tomldata.contains(name)) {
+		const auto bespin = toml::find(tomldata,name);
+		for(unsigned int j = 0; j < bespin.size(); j++){
+			const auto besp = toml::find(bespin,j);
+			
+			if(!besp.contains("param")) emsgroot("The '"+name+"' definition must contain a 'param' definition.");
+			const auto name = toml::find<std::string>(besp,"param");
+			
+			if(!besp.contains("time")) emsgroot("The '"+name+"' definition must contain a 'time' definition.");
+			const auto timstr = toml::find<string>(besp,"time");
+			int tim = details.gettime(timstr) - details.start;
+			
+			if(j == 0 && tim != 0) emsgroot("The first point in '"+name+"' must be at the 'start' time.");
+			if(j == bespin.size()-1 && tim != (int)details.period) emsgroot("The last '"+name+"' point must be at the 'end' time.");
+			if(tim < 0 || tim > (int)details.period) emsgroot("The '"+name+"' points must be within the time period set for the simulation/inference.");
+			
+			time.push_back(tim);
+			param.push_back(name);
+		}
+	}
+	else emsgroot("'"+name+"' must be specified");
+}
+	

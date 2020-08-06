@@ -19,7 +19,7 @@ struct POS{
 bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
 		
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
-void POPTREE::init(DATA &data, unsigned int core)
+POPTREE::POPTREE(DATA &data)
 {
 	unsigned int h, l, j, jmax, num, c, cmax, cc, ccc, flag;
 	NODE node;
@@ -106,9 +106,6 @@ void POPTREE::init(DATA &data, unsigned int core)
 	}
 	for(c = 0; c < data.narea; c++) lev[level-1].node[c].arearef[0] = c;
 	
-	
-	if(core == 0) cout << endl << "Number of areas: " << data.narea << endl;
-
 	for(l = 0; l < level; l++){
 		cmax = lev[l].node.size();
 		for(c = 0; c < cmax; c++) lev[l].add.push_back(0); 

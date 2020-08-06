@@ -5,7 +5,6 @@
 
 using namespace std;
 
-#include "inputs.hh"
 #include "consts.hh"
 #include "details.hh"
 

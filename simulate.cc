@@ -19,10 +19,12 @@
 using namespace std;
 
 
-Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel, Mode mode, bool verbose) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
+	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
+
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
-	if(mode == multisim){
+	if(details.mode == multisim){
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	}
 	
