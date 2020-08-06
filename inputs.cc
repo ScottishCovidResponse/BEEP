@@ -29,11 +29,17 @@ public:
 			return n.size();
 		}
 	InputNode operator[](unsigned int index) const;
+	InputNode operator[](const std::string& s) const;
 };
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
 	return InputNode(toml::find(n,index));
+}
+InputNode InputNode::operator[](
+	const std::string& s) const
+{
+	return InputNode(toml::find(n,s));
 }
 std::string stringfield(
 	const InputNode& td,
@@ -80,7 +86,7 @@ public:
 		}
 	InputNode open(const std::string& name)
 		{
-			return InputNode(toml::find(data.n, name));
+			return data[name];
 		}
 	vector<string> get_keys() const;
 	InputNode data;// Information from the TOML file	
