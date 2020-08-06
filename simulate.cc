@@ -11,54 +11,59 @@
 
 #include "utils.hh"
 #include "timers.hh"
-#include "MBPCHAIN.hh"
+#include "chain.hh"
 #include "data.hh"
 #include "output.hh"
 #include "obsmodel.hh"
 
 using namespace std;
 
-void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev);
+/// Initilaises the simulation
+Simulate::Simulate(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+{	
+	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 
-/// Simulates data using the MBP algorithm
-void simulatedata(DATA &data, MODEL &model, POPTREE &poptree, unsigned int nsamp)
-{
-	unsigned int s;
-	vector <SAMPLE> opsamp; 
-    vector <PARAMSAMP> psamp;
-    
-	model.infmax = large;
-		
-	switch(data.mode){
-	case MODE_SIM:       // Performs a single simulation 
-		{
-			MBPCHAIN mbpchain(data,model,poptree,0);
-			proportions(data,model,mbpchain.indevi);
-			outputsimulateddata(data,model,poptree,mbpchain.trevi,mbpchain.indevi,data.outputdir);
-		}
-		break;
-		
-	case MODE_MULTISIM:  // Performs multiple simulations and plots the distribution of results
-		SAMPLE sample;
-		PARAMSAMP paramsamp;
-		
-		for(s = 0; s < nsamp; s++){
-			cout << "Simulating sample " << (s+1) << endl;
-      MBPCHAIN mbpchain(data,model,poptree,0);
-			
-			sample.meas = getmeas(data,model,poptree,mbpchain.trevi,mbpchain.indevi);
-			model.setup(mbpchain.paramval);
-			sample.R0 = model.R0calc();
-			paramsamp.paramval =  mbpchain.paramval;
-			opsamp.push_back(sample);
-		}
-		outputresults(data,model,psamp,opsamp);
-		break;
+	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
+	if(details.mode == multisim){
+		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	}
+	
+	model.infmax = large;
+}
+
+/// Performs a simulation
+void Simulate::run()
+{
+	Chain chain(details,data,model,poptree,obsmodel,0);
+	proportions(chain.indevi);
+	
+	output.simulateddata(chain.trevi,chain.indevi,details.outputdir);
+}
+
+/// Runs multiple simulations
+void Simulate::multirun()
+{		
+	unsigned int s;
+	SAMPLE sample;
+	PARAMSAMP paramsamp;		
+	vector <SAMPLE> opsamp; 
+  vector <PARAMSAMP> psamp;
+	
+	for(s = 0; s < nsamp; s++){
+		cout << "Simulating sample " << (s+1) << endl;
+		Chain chain(details,data,model,poptree,obsmodel,0);
+		
+		sample.meas = obsmodel.getmeas(chain.trevi,chain.indevi);
+		model.setup(chain.paramval);
+		sample.R0 = model.R0calc();
+		paramsamp.paramval = chain.paramval;
+		opsamp.push_back(sample);
+	}
+	output.results(psamp,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments
-void proportions(DATA &data, MODEL &model, vector< vector <FEV> > &indev)
+void Simulate::proportions(const vector< vector <FEV> > &indev)
 {
 	unsigned int ninf, i, c, e, emax, dp;
 	vector <unsigned int> visit;

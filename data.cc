@@ -16,18 +16,139 @@ using namespace std;
 #include "pack.hh"
 #include "generateQ.hh"
 #include "output.hh"
+#include "details.hh"
+#include "inputs.hh"
 
 #ifdef USE_DATA_PIPELINE
 #include "datapipeline.hh"
 #include "table.hh"
 #endif
 
-/// Reads in transition and area data
-void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
+/// Initialises data
+DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) : compX(area), compY(area), details(details)
 {
-	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
-	unsigned int namecol, codecol, xcol, ycol, regcol;
-	int dc;
+	datapipeline = dp;
+	
+	datadir = inputs.find_string("datadir","UNSET");                                      // The data directory
+	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
+
+	threshold = inputs.find_int("threshold",UNSET);                                       // The threshold (if specified)
+	if(threshold != UNSET) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*minvar)));
+	else thres_h = UNSET;
+	
+	democat = inputs.find_democat(details);
+	ndemocat = democat.size();	
+	nage = democat[0].value.size();
+	calc_democatpos();
+
+	covar = inputs.find_covar(details);
+	ncovar = covar.size();
+	
+	timeperiod = inputs.find_timeperiod(details);
+	
+	inputs.find_genQ(genQ,details);
+	inputs.find_Q(Q,timeperiod,details);
+	
+	read_data_files(inputs,mpi);                                  // Reads the data files
+}
+
+/// Outputs properties of data to the terminal
+void DATA::print_to_terminal() const
+{
+	if(covar.size() > 0){
+		cout << "Area covariates: " << endl;
+		cout << "  ";
+		for(unsigned int j = 0; j < covar.size(); j++) cout << covar[j].name << "   param='" << covar[j].param << "'" << endl; 
+		cout << endl;
+	}	
+	
+	cout << "Age categories: " << endl << "  ";
+	for(unsigned int j = 0; j < democat[0].value.size(); j++){
+		if(j != 0) cout << ", ";
+		cout << democat[0].value[j] << " sus='" << democat[0].param[j] << "'";
+	}
+	cout << endl << endl;
+
+	if(democat.size() > 1){
+		cout << "Demographic categories: " << endl;
+		for(unsigned int k = 1; k < democat.size(); k++){
+			cout << "  ";
+			for(unsigned int j = 0; j < democat[k].value.size(); j++){
+				if(j != 0) cout << ", ";
+				cout << democat[k].value[j] << " sus='" <<  democat[k].param[j] << "'";
+			}	
+			cout << endl;
+		}
+		cout << endl;
+	}
+	
+	cout << "Time periods defined:" << endl;
+	for(unsigned int j = 0; j < timeperiod.size(); j++){
+		cout << "  ";
+		cout << timeperiod[j].name << ": ";
+		if(j == 0) cout << "0"; else cout << timeperiod[j-1].tend;
+		cout << " - " <<  timeperiod[j].tend << endl;
+	}
+	cout << endl;
+	
+	cout << "Q tensors loaded:" << endl;
+	for(unsigned int j = 0; j < Q.size(); j++){
+		cout << "    ";
+		cout << "timep: " << timeperiod[Q[j].timep].name << "  ";
+		cout << "compartment: " << Q[j].comp << "  ";
+		cout << "name: " << Q[j].name << "  ";
+		cout << endl;
+	}
+	cout << endl;
+}
+
+/// Based to the different demographic categories, this calculates all the possible compinations
+void DATA::calc_democatpos()
+{
+	vector <unsigned int> count;
+	
+	count.resize(ndemocat);                                     // Defines all the demographic states
+	for(int dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
+	
+	int fl, dc;
+	do{
+		democatpos.push_back(count);
+		
+		dc = ndemocat-1;
+		do{
+			fl = 0;
+			count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
+		}while(fl == 1 && dc >= 0);
+	}while(dc >= 0);
+	ndemocatpos = democatpos.size();
+	ndemocatposperage = ndemocatpos/nage;
+}
+
+/// Loads the region data file
+void DATA::load_region_file(const Inputs &inputs)
+{
+	string file = inputs.find_string("regions","UNSET");
+	if(file == "UNSET") emsgroot("A 'regions' file must be specified");
+	
+	TABLE tab = loadtable(file);
+	
+	unsigned int namecol = findcol(tab,"name");
+	unsigned int codecol = findcol(tab,"code");
+	
+	for(unsigned int row = 0; row < tab.nrow; row++){
+		REGION reg;
+		reg.name = tab.ele[row][namecol];
+		reg.code = tab.ele[row][codecol];
+		region.push_back(reg);
+	}		
+	nregion = region.size();
+}
+
+/// Reads in transition and area data
+void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
+{
+	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, d, dp, a, q, row;
+	unsigned int codecol, xcol, ycol, regcol;
 	double v=0, sum;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
@@ -35,54 +156,24 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	DEMOCAT dem;
 	IND indi;
 	TABLE tab;
-	vector <unsigned int> count;
+	
 	vector <vector <double> > val;
 	vector <double> vec;
 	vector <unsigned int> rcol;
 	
-	mode = mod;
-	fepertime = 10;
+	transdata = inputs.find_transdata(details);	                                          // Loads data
 	
-	settpertime = 1;
-	nsettime = settpertime*period;
-	settime.resize(nsettime+1);
-	for(s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
-			
-	fediv = nsettime*fepertime;
+	popdata = inputs.find_popdata(details);	                                       
 	
-	if(core == 0){
-		count.resize(ndemocat);                                     // Defines all the demographic states
-		for(dc = 0; dc < int(ndemocat); dc++) count[dc] = 0;
-		
-		do{
-			democatpos.push_back(count);
-			
-			dc = ndemocat-1;
-			do{
-				fl = 0;
-				count[dc]++; if(count[dc] == democat[dc].value.size()){ fl = 1; count[dc] = 0; dc--;}
-			}while(fl == 1 && dc >= 0);
-		}while(dc >= 0);
-		ndemocatpos = democatpos.size();
-		ndemocatposperage = ndemocatpos/nage;
- 
-		tab = loadtable(regiondatafile);
-		namecol = findcol(tab,"name");
-		codecol = findcol(tab,"code");
-		
-		for(row = 0; row < tab.nrow; row++){
-			reg.name = tab.ele[row][namecol];
-			reg.code = tab.ele[row][codecol];
-			region.push_back(reg);
-		}		
-		nregion = region.size();
-		
-		cout << "Region data loaded." << endl;
-		if(checkon == 1){
-			for(r = 0; r < nregion; r++) cout << region[r].code << ", " << region[r].name  << " regionload" << endl;
-		}
+	margdata = inputs.find_margdata(details,democat);	 
+
+	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
+
+	if(mpi.core == 0){
+		load_region_file(inputs);
 	
-		file = areadatafile;
+		string file = inputs.find_string("areas","UNSET");
+		if(file == "UNSET") emsgroot("A 'areas' file must be specified");
 		tab = loadtable(file);
 		
 		// If onle one age group then combines all columns with "age" to generate an "all" column
@@ -115,23 +206,23 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	
 			regcode = tab.ele[row][regcol];
 			r = 0; while(r < nregion && region[r].code != regcode) r++;
-			if(r == nregion) emsg("In file '"+areadatafile+"' the region code '"+regcode+"' is not recognised.");
+			if(r == nregion) emsg("In file '"+file+"' the region code '"+regcode+"' is not recognised.");
 			are.region = r;
 					
 			are.covar.resize(ncovar);
 			for(j = 0; j < ncovar; j++){
 				st = tab.ele[row][covar[j].col];
 				v = atof(st.c_str());
-				if(std::isnan(are.covar[j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
+				if(std::isnan(are.covar[j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 			
 				if(covar[j].func == "log"){
 					if(v == 0) v = 0.01;
-					if(v <= 0) emsg("In file '"+areadatafile+"' the log transformed quantities from 'covar' must be positive.");
+					if(v <= 0) emsg("In file '"+file+"' the log transformed quantities from 'covar' must be positive.");
 					are.covar[j] = log(v);
 				}
 				else{
 					if(covar[j].func == "linear") are.covar[j] = v;
-					else emsg("n file '"+areadatafile+"' the functional relationship '"+covar[j].func+"' is not recognised.");
+					else emsg("n file '"+file+"' the functional relationship '"+covar[j].func+"' is not recognised.");
 				}
 			}
 			
@@ -142,7 +233,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				for(j = 0; j < jmax; j++){
 					st = tab.ele[row][democat[d].col[j]];
 					val[d][j] = atof(st.c_str());
-					if(std::isnan(val[d][j])) emsg("In file '"+areadatafile+"' the expression '"+st+"' is not a number");	
+					if(std::isnan(val[d][j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 				}
 			}
 			
@@ -194,7 +285,6 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 			for(c = 0; c < narea; c++) area[c].covar[j] -= sum;
 		}		
 		
-		cout << endl << "Area data loaded." << endl;
 		if(checkon == 1){
 			for(c = 0; c < narea; c++){
 				cout << nregion << " " << area[c].region << "region" << endl;
@@ -207,10 +297,10 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
-			 
-		if(mode != MODE_SIM){                                                    // Loads transition data for inference
+
+		if(details.mode != sim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
-				file = transdata[td].file;
+				file = transdata[td].file; 
 				tab = loadtable(file);
 				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
 				
@@ -220,20 +310,20 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				
 				transdata[td].num.resize(rcol.size());
 				for(r = 0; r < rcol.size(); r++){
+					
 					transdata[td].num[r].resize(tab.nrow);
 					for(row = 0; row < tab.nrow; row++){	
 						transdata[td].num[r][row] = getint(tab.ele[row][rcol[r]],file);
 					}
 				}
 				transdata[td].rows = tab.nrow;
-				
-				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > period){
+				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
 		
-		if(mode != MODE_SIM){                                                    // Loads population data for inference
+		if(details.mode != sim){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
 				tab = loadtable(file);
@@ -250,13 +340,13 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 				}
 				popdata[pd].rows = tab.nrow;
 				
-				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > period){
+				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
 		
-		if(mode != MODE_SIM){                                                    // Loads marginal data for inference
+		if(details.mode != sim){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
 				tab = loadtable(file);
@@ -278,7 +368,7 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 		generateQ(nage,datadir,genQ,area,datapipeline);
 	}
 
-	if(ncore > 1) copydata(core);
+	if(mpi.ncore > 1) copydata(mpi.core);
 	
 	vec.resize(nage);                                                 // Reads in Q tensors
 	for(q = 0; q < Q.size(); q++){
@@ -309,15 +399,14 @@ void DATA::readdata(unsigned int core, unsigned int ncore, unsigned int mod)
 	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
-	nsettardp = nsettime*nardp;
+	nsettardp = details.nsettime*nardp;
 	
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");
 }
 
-
 /// Gets a positive integer from a string
-unsigned int DATA::getint(string st, string file)
+unsigned int DATA::getint(string st, string file) const
 {
 	unsigned int i, j;
 	int n = st.length();  
@@ -339,34 +428,8 @@ unsigned int DATA::getint(string st, string file)
 	return i;
 }
 
-/// Adds a time period
-void DATA::addtimep(string name, double tend)
-{
-	TIMEP timep;
-	
-	timep.name = name;
-	timep.tend = tend;
-	timeperiod.push_back(timep);
-}
-	
-/// Adds a Q tensor
-void DATA::addQtensor(string timep, string comp, string name)
-{
-	unsigned int tp;
-	QTENSOR qten;
-	
-	tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
-	if(tp == timeperiod.size()) emsg("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
-	
-	qten.timep = tp;
-	qten.comp = comp;
-	qten.name = name;
-	qten.Qtenref = UNSET;
-	Q.push_back(qten);
-}
-
 /// Loads a table from the data pipeline
-TABLE DATA::loadtablefromdatapipeline(string file)
+TABLE DATA::loadtablefromdatapipeline(string file) const
 {
 	TABLE tab;
 #ifdef USE_DATA_PIPELINE
@@ -403,7 +466,7 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 }
 
 /// Loads a table from a file
-TABLE DATA::loadtablefromfile(string file, string dir)
+TABLE DATA::loadtablefromfile(string file, string dir) const
 {
 	TABLE tab;
 	string line, st;
@@ -413,15 +476,15 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 	string used_file;
 	
 	if(dir != ""){
-        used_file =dir+"/"+file;
+    used_file =dir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
 	}
 	else{
-        used_file = outputdir+"/"+file;
+    used_file = details.outputdir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in){
-            used_file = (datadir+"/"+file);
+      used_file = (datadir+"/"+file);
 			in.open(used_file.c_str());
 			if(!in) emsg("Cannot open the file '"+file+"'");
 		}
@@ -462,7 +525,7 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 }
 
 /// Loads a table from a file (if dir is specified then this directory is used
-TABLE DATA::loadtable(string file, string dir)
+TABLE DATA::loadtable(string file, string dir) const
 {
 	if (stringhasending(file, ".txt")) {
 		return loadtablefromfile(file, dir);
@@ -472,7 +535,7 @@ TABLE DATA::loadtable(string file, string dir)
 }
 
 /// Creates a new column by adding together existing columns		
-void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab)
+void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const
 {
 	unsigned int row, i, sum;
 	
@@ -486,13 +549,13 @@ void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab)
 }
 
 /// Selects dates as specified in the TOLM file
-void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type)
+void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const 
 {
 	unsigned int row, tt, num1, num2, i;
 	
 	row = 0;
 	while(row < tab.nrow){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		if(tt < t){
 			if(type == "trans" && row > 0){ // In the case of transitions adds up the contributions from other days to make a week 
 				for(i = 1; i < tab.ncol; i++){
@@ -506,7 +569,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 			tab.nrow--;
 		}
 		else{
-			if(tt > t) emsg("In file '"+tab.file+"' there is no observed data at time '"+getdate(t)+"'."); 
+			if(tt > t) emsg("In file '"+tab.file+"' there is no observed data at time '"+details.getdate(t)+"'."); 
 			t += units;
 			row++;
 		}
@@ -514,7 +577,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 	if(tab.nrow == 0) emsg("The file '"+tab.file+"' does not contain any information.");
 	
 	if(type=="trans"){                         // Removes the last line if incomplete
-		if(gettime(tab.ele[tab.nrow-1][0]) > end-units){
+		if(details.gettime(tab.ele[tab.nrow-1][0]) > details.end-units){
 			tab.ele.erase(tab.ele.begin()+tab.nrow-1);
 			tab.nrow--;
 		}
@@ -529,7 +592,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 }				
 
 /// Finds a column in a table
-unsigned int DATA::findcol(TABLE &tab, string name)
+unsigned int DATA::findcol(const TABLE &tab, string name) const
 {
 	unsigned int c;
 	
@@ -546,14 +609,10 @@ void DATA::copydata(unsigned int core)
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
-		pack(ndemocatpos);
-		pack(democatpos);
 		pack(nregion);
 		pack(region);
 		pack(narea);
 		pack(area);
-		pack(nage);
-		pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			pack(transdata[td].num);
 			pack(transdata[td].rows);
@@ -578,14 +637,10 @@ void DATA::copydata(unsigned int core)
 
 	if(core != 0){
 		packinit();
-		unpack(ndemocatpos);
-		unpack(democatpos);
 		unpack(nregion);
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		unpack(nage);
-		unpack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			unpack(transdata[td].num);
 			unpack(transdata[td].rows);
@@ -646,35 +701,7 @@ void DATA::copydata(unsigned int core)
 	}	
 }
 
-/// Adds demographic categories
-void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
-{
-	DEMOCAT dem;
-	
-	dem.name = name;	
-	dem.value = st;
-	dem.param = params;
-	
-	democat.push_back(dem);
-
-	ndemocat = democat.size();
-	if(ndemocat == 1) nage = st.size();
-}
-	
-/// Add a covariate for the areas
-void DATA::addcovar(string name, string param, string func)
-{
-	COVAR cov;
-	cov.name = name;
-	cov.param = param;
-	cov.func = func;
-	cov.col = UNSET;
-	
-	covar.push_back(cov);
-	ncovar = covar.size();
-}
-	
-string DATA::strip(string line)
+string DATA::strip(string line) const 
 {
 	unsigned int len;
 	
@@ -687,105 +714,6 @@ string DATA::strip(string line)
 	
 	return line;
 }	
-
-/// Gets the time from a string
-unsigned int DATA::gettime(string st)
-{
-	unsigned int t;
-	const char *buf = st.c_str();
-	struct tm result;
-			
-	if(st == "start") return start;
-	if(st == "end") return end;
-			
-	switch(tform){
-	case TFORM_NUM:
-		t = atoi(buf);
-		if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
-		break;
-
-	case TFORM_YMD:
-		memset(&result, 0, sizeof(result));
-		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
-			time_t tt = mktime(&result);
-			t = tt/(60*60*24);
-		}
-		else{ 
-			emsg("'"+st+"' is not regonised as Year-Month-Day format.");
-			t = 0;
-		}
-		break;
-		
-	default:
-		emsg("The time format is not recognised.");
-		t = 0;
-		break;
-	}
-
-	return t;	
-}
-
-/// Returns a date from a time
-string DATA::getdate(unsigned int t)
-{
-	time_t tt;
-	string st;
-	stringstream ss; 
-	char buffer[80];
-  struct tm *timeinfo;
-	
-	t += start;
-
-	switch(tform){
-	case TFORM_NUM:
-		ss << t;
-		break;
-		
-	case TFORM_YMD:
-		tt = (t + 0.5)*(60*60*24);	
-		timeinfo = localtime(&tt);
-		strftime(buffer,80,"%Y-%m-%d",timeinfo);
-		ss << buffer;
-		break;
-	}
-	
-	return ss.str();
-}
-
-
-// This function combines results from different trace files to generate overall statistics
-void DATA::combinetrace(vector <string> inputdirs, string output, string distfile, unsigned int burnin)
-{
-	unsigned int inp, i, row, th;
-	double v;
-	vector <string> paramname;
-	vector < vector < vector <double> > > vals;
-	TABLE tab;
-	
-	vals.resize(inputdirs.size());
-	for(inp = 0; inp < inputdirs.size(); inp++){
-		tab = loadtable("trace.txt",inputdirs[inp]);
-	
-		for(i = 1; i < tab.ncol; i++){
-			if(tab.heading[i] == "zero") break;
-			if(inp == 0) paramname.push_back(tab.heading[i]);
-			else{
-				if(i-1 >= paramname.size()) emsg("The columns in the input trace files do not match up.");
-				if(paramname[i-1] != tab.heading[i]) emsg("The headings in the input trace files do not match up.");
-			}
-		}
-		vals[inp].resize(paramname.size());
-		
-		for(th = 0; th < paramname.size(); th++){
-			for(row = 0; row < tab.nrow; row++){
-				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("In file '"+inputdirs[inp]+"\trace.txt' the quantity '"+tab.ele[row][th]+"' is not a number.");
-				vals[inp][th].push_back(v);
-			}
-		}
-	}
-	
-	outputcombinedtrace(paramname,vals,output,distfile,burnin);
-}
 
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
@@ -810,10 +738,10 @@ void DATA::plotrawdata()
 	}
 	
 	tab = loadtable("DailyDeathsConfirmedCovid.txt");
-	ofstream dout(outputdir+"/deathraw.txt");
+	ofstream dout(details.outputdir+"/deathraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
@@ -821,10 +749,10 @@ void DATA::plotrawdata()
 	cout << sum << " Deaths" << endl;
 	
 	tab = loadtable("hospital_admissions_number_per_day.txt");
-	ofstream dout2(outputdir+"/hospadminraw.txt");
+	ofstream dout2(details.outputdir+"/hospadminraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) sum += num;
 		if(num != UNKNOWN) dout2 << tt << " " << num << " " << sum << endl;
@@ -835,17 +763,17 @@ void DATA::plotrawdata()
 		
 
 	tab = loadtable("NHS_and_UKG_national_daily_confirmed_cases.txt");
-	ofstream dout3(outputdir+"/nhsothercasesraw.txt");
+	ofstream dout3(details.outputdir+"/nhsothercasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout3 << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
 	}
 	cout << sum << " NHS+other cases" << endl;
 	
-	ofstream poptot(outputdir+"/Htot.txt");
+	ofstream poptot(details.outputdir+"/Htot.txt");
 
 	pd = 0;
 	for(row = 0; row < popdata[pd].rows; row++){
@@ -862,16 +790,16 @@ void DATA::plotrawdata()
 		poptot << popdata[pd].start + row*popdata[pd].units << " "<< sum<< endl;
 	}
 	
-	ofstream recrate(outputdir+"/recrate.txt");
+	ofstream recrate(details.outputdir+"/recrate.txt");
 	for(t = 54; t < 134; t++){
 		recrate << t << " " << " " << Hnum[t] << " " << adm[t] << " " << adm[t] - ( Hnum[t+1] - Hnum[t]) << "\n";
 	}
 	
 	tab = loadtable("NHS_only_national_daily_confirmed_cases.txt");
-	ofstream dout4(outputdir+"/nhsonlycasesraw.txt");
+	ofstream dout4(details.outputdir+"/nhsonlycasesraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout4 << tt << " " << num << endl;
 		if(num != UNKNOWN) sum += num;
@@ -879,10 +807,10 @@ void DATA::plotrawdata()
 	cout << sum << " NHS cases" << endl;
 	
 	tab = loadtable("HD_NRS.txt");
-	ofstream dout5(outputdir+"/HDraw.txt");
+	ofstream dout5(details.outputdir+"/HDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout5 << tt << " " <<  double(num)/7 << endl;
 		if(num != UNKNOWN) sum += num;
@@ -890,10 +818,10 @@ void DATA::plotrawdata()
 	cout << sum << "HD Deaths" << endl;
 	
 	tab = loadtable("ID_NRS.txt");
-	ofstream dout6(outputdir+"/IDraw.txt");
+	ofstream dout6(details.outputdir+"/IDraw.txt");
 	sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		tt = gettime(tab.ele[row][0]) - start;
+		tt = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN) dout6 << tt << " " << double(num)/7 << endl;
 		if(num != UNKNOWN) sum += num;
@@ -909,7 +837,7 @@ void DATA::plotrawdata()
 	tab = loadtable("hospital_admissions_number_per_day.txt");
 	//sum = 0;
 	for(row = 0; row < tab.nrow; row++){
-		t = gettime(tab.ele[row][0]) - start;
+		t = details.gettime(tab.ele[row][0]) - details.start;
 		num = getint(tab.ele[row][1],"");
 		if(num != UNKNOWN){
 			for(j = 0; j < num; j++){
@@ -924,7 +852,7 @@ void DATA::plotrawdata()
 		}
 	}
 	
-	ofstream deathpred(outputdir+"/deathpred.txt");
+	ofstream deathpred(details.outputdir+"/deathpred.txt");
 	for(t = 0; t < tmax; t++){
 		deathpred << t << " " << numst[t] <<  " " << numst2[t] << endl;
 	}
@@ -963,9 +891,9 @@ void DATA::generatedeathdata()
 		
 		if(date.substr(0,4) == "w/c "){
 			date = date.substr(4,date.length()-4);
-			t = gettime(date);
-			if(t >=start){
-				w = (t-start)/7; if(w > nweek) emsg("out");
+			t = details.gettime(date);
+			if(t >=details.start){
+				w = (t-details.start)/7; if(w > nweek) emsg("out");
 						
 				if(sex == "All" && age == "All" && cause == "COVID-19 related"){
 					r = 0; while(r < region.size() && region[r].code != reg) r++;
@@ -990,7 +918,7 @@ void DATA::generatedeathdata()
 	cout << "Total from hospitals: " << sumH << endl;
 	cout << "Total from community: " << sumI << endl;
 
-	file = outputdir+"/D_NRS_reg.txt";
+	file = details.outputdir+"/D_NRS_reg.txt";
 	ofstream deathout(file.c_str());
 	deathout << "date"; for(r = 0; r < region.size(); r++) deathout << "\t" << region[r].code;
 	deathout << endl;
@@ -1003,14 +931,14 @@ void DATA::generatedeathdata()
 		deathout << endl;
 	}
 	
-	file = outputdir+"/HD_NRS.txt";
+	file = details.outputdir+"/HD_NRS.txt";
 	ofstream HDout(file.c_str());
 	HDout << "date\tall" << endl;
 	for(w = 0; w < nweek; w++){
 		HDout << linedate[w] << "\t" << HDnum[w] << endl;
 	}
 
-	file = outputdir+"/ID_NRS.txt";
+	file = details.outputdir+"/ID_NRS.txt";
 	ofstream IDout(file.c_str());
 	IDout << "date\tall" << endl;
 	for(w = 0; w < nweek; w++){

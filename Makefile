@@ -39,12 +39,15 @@ endif
 
 # Please keep these in lexicographic order to aid merging
 srcs := \
- MBP.cc \
- MBPCHAIN.cc \
+ chain.cc \
+ combinetrace.cc \
  data.cc \
+ details.cc \
  generateQ.cc \
  gitversion.cc \
+ inputs.cc \
  main.cc \
+ mcmc.cc \
  model.cc \
  obsmodel.cc \
  output.cc \
@@ -60,8 +63,7 @@ deps := $(objs:.o=.d)
 CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
 # Disable warning for old versions of GCC in files that include toml11/toml.hpp
-CXXFLAGS_main.cc  := -Wno-unused-parameter -O
-CXXFLAGS_model.cc := -Wno-unused-parameter
+CXXFLAGS_inputs.cc := -Wno-unused-parameter -O
 
 # Main executable
 exe := beepmbp

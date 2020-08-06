@@ -6,12 +6,13 @@
 #include "../utils.hh"
 
 #define private public // Comments welcome :)
-#include "../data.hh"
+//#include "../data.hh"
 
 #include "../consts.hh"
 
 using namespace std;
 
+/*
 TEST_CASE("test_ran") {
 
 	sran(0);
@@ -36,3 +37,5 @@ TEST_CASE("split") {
 	// CHECK(parts.at(4) == "");
 	// CHECK(parts.size() == 5);
 }
+*/
+

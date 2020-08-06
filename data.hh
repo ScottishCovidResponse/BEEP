@@ -2,7 +2,11 @@
 #define BEEPMBP__DATA_HH
 
 #include <string>
+
 using namespace std;
+
+#include "consts.hh"
+#include "details.hh"
 
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
@@ -152,50 +156,39 @@ private:
 
 class DataPipeline;
 
+class MODEL;
+class Inputs;
+
 class DATA
 {
-	public:
+public:
 	
-	DATA(DataPipeline *dp=0) : compX(area), compY(area)
-	{
-		datapipeline = dp;
-	}
+	DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
 
-	DataPipeline *datapipeline;             // DataPipeline object
-	unsigned int mode;                       // Stores if doing simulation/inference
-	string outputdir;                        // The output directory
-	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
-	unsigned int fepertime;                  // # fediv per nsettime
-	unsigned int settpertime;                // # nsettime per unit time
-
-	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
-	vector <double> settime;                 // The timings at which beta changes
+	DataPipeline *datapipeline;              // DataPipeline object
 	
+	string datadir; 												 // The data directory
+
 	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	double thres_h;                          // The height of the threshold observation model
 
-	double invTmin, invTmax;                 // The minimum and maximum inverse tenperatures that get run at
+	unsigned int ndemocat;                   // The number of demographic categories
+	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
-	vector <TRANSDATA> transdata;            // Store information about transition data
-	
-	vector <POPDATA> popdata;                // Store information about population data
-	
-	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
-	
-	unsigned int tform;                      // The time format (e.g. times or dates)
-	string tformat;                          // A description of the time format ('time' or 'date').
-	unsigned int start;                      // The start time over which simulation/inference is performed
-	unsigned int end;                        // The start time over which simulation/inference is performed
-	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
+	unsigned int ncovar;                     // The number of covariates for area  
+	vector <COVAR> covar;                    // Covariates for area
+
+	unsigned int nage;                       // The number of age categories
+	unsigned int narage;                     // #area * #age
+	unsigned int nardp;                      // #area * #ndemocatpos
+	unsigned int ndemocatposperage;          // Demographic states per age group
+	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
+
+	vector <TIMEP> timeperiod;               // The timings of changes to Q;
 
 	GENQ genQ; 															 // Stores information about generating the Q matrix
-
-	string datadir; 												 // The data directory
-	string regiondatafile;                   // File giving information about data regions
-	string areadatafile;                     // File giving information about areas
+	vector <QTENSOR> Q;                      // Stores the list of Q tensors
 	
- 	unsigned int popsize;                    // The total population size 
- 
 	unsigned int nregion;                    // Number of data regions
 	vector <REGION> region;                  // The names of the data regions
 
@@ -204,57 +197,47 @@ class DATA
 	
 	vector <IND> ind;                        // The individuals in the system
 		
-	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DEMOCAT> democat;                // Stores the demographic categories
-	
+	unsigned int popsize;                    // The total population size 
+ 
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
+
+	vector <TRANSDATA> transdata;            // Store information about transition data
 	
-	unsigned int ncovar;                     // The number of covariates for area  
-	vector <COVAR> covar;                    // Covariates for area
+	vector <POPDATA> popdata;                // Store information about population data
 	
-	vector <TIMEP> timeperiod;               // The timings of changes to Q;
-	
-	vector <QTENSOR> Q;                      // Stores the list of Q tensors
+	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
 	
 	vector <double> agedist; 								 // Gives the overall age distribution
 	
-	unsigned int nage;                       // The number of age categories
-	unsigned int narage;                     // #area * #age
-	unsigned int nardp;                      // #area * #ndemocatpos
-	unsigned int ndemocatposperage;          // Demographic states per age group
-	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
-
-	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
+	void sortX(vector <unsigned int> &vec);	 // Used for sorting houses by x and y location
 	void sortY(vector <unsigned int> &vec);	
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-	void readdata(unsigned int core, unsigned int ncore, unsigned int mod); 
-	void adddemocat(string name, vector <string> &st, vector <string> &params);
-	void addcovar(string name, string param, string func);
-	void addtimep(string name, double tend);
-	void addQtensor(string timep, string comp, string name);
-	unsigned int gettime(string st);
-	string getdate(unsigned int t);
-	void combinetrace(vector <string> inputdirs, string output, string distfile, unsigned int burnin);
+	void print_to_terminal() const;
 	
 private:
-	string strip(string line);
-	void copydata(unsigned int core);
-	TABLE loadtable(string file, string dir="");
-	TABLE loadtablefromdatapipeline(string file);
-	TABLE loadtablefromfile(string file, string dir);
-
-	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
-	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
-	unsigned int findcol(TABLE &tab, string name);
-	//void normaliseQ(unsigned int q);
-	unsigned int getint(string st, string file);
+	void calc_democatpos();
+	void read_data_files(const Inputs &inputs, const Mpi &mpi);
+	void load_region_file(const Inputs &inputs);
 	
-	void plotrawdata();
+	string strip(string line) const;
+	void copydata(unsigned int core);
+	TABLE loadtable(string file, string dir="") const;
+	TABLE loadtablefromdatapipeline(string file) const;
+	TABLE loadtablefromfile(string file, string dir) const;
+
+	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const;
+	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const;
+	unsigned int findcol(const TABLE &tab, string name) const;
+	unsigned int getint(string st, string file) const;
+	
+	void plotrawdata();   // These are temporary function used for analysis (they will be removed later)
 	void generatedeathdata();
 	void convertOAtoM();
 	void convertRegion_M();
+	
+	const Details &details;
 };
 #endif

@@ -16,30 +16,18 @@ using namespace std;
 #include "obsmodel.hh"
 #include "consts.hh"
 #include "data.hh"
-
-struct STAT{                                           // Stores statistical information
-	string mean;                                         // The mean
-	string CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
-	string ESS;                                          // The estimated sample size
-};
-
-struct DIST{                                          // Stores a probability distribution
-	vector <string> value;
-	vector <string> prob;
-};
-
-static STAT getstat(vector <double> &vec);
-static DIST getdist(vector <double> &vec);
-
-ofstream trace, traceLi;
-
+	
+Output::Output(const Details &details, const DATA &data, MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
+{
+}
+	
 /// Initialises trace plot for parameters
-void outputinit(DATA &data, MODEL &model)
+void Output::trace_plot_init()
 {
 	unsigned int p, pc;
 	
-	ensuredirectory(data.outputdir);
-	stringstream ss; ss << data.outputdir << "/trace.txt";
+	ensuredirectory(details.outputdir);
+	stringstream ss; ss << details.outputdir << "/trace.txt";
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
@@ -52,7 +40,7 @@ void outputinit(DATA &data, MODEL &model)
 }
 
 /// Output trace plot
-void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval)
+void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval)
 {
 	unsigned int p, c, pc, a;
 	double pr;
@@ -76,12 +64,12 @@ void outputtrace(DATA &data, MODEL &model, unsigned int samp, double Li, double 
 }
 
 /// Initialises trace plot for likelihoods on difference chains (MBP only)
-void outputLiinit(DATA &data, unsigned int nchaintot)
+void Output::Li_trace_plot_init(unsigned int nchaintot)
 {
 	unsigned int p;
 	
-	ensuredirectory(data.outputdir);
-	stringstream ss; ss << data.outputdir << "/traceLi.txt";
+	ensuredirectory(details.outputdir);
+	stringstream ss; ss << details.outputdir << "/traceLi.txt";
 
 	traceLi.open(ss.str().c_str());		
 	traceLi << "state";
@@ -90,7 +78,7 @@ void outputLiinit(DATA &data, unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
+void Output::Li_trace_plot(unsigned int samp, unsigned int nchaintot, double *Litot)
 {
 	unsigned int p;
 	
@@ -100,7 +88,7 @@ void outputLi(unsigned int samp, unsigned int nchaintot, double *Litot)
 }
 
 /// Outputs a posterior graph
-void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
+void Output::posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const
 {
 	unsigned int j, jmax, row, s, t=0, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
 	double sum, valsum;
@@ -112,9 +100,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	opsampmin = nopsamp/4;
 	
 	switch(type){
-	case POP_DATA: name = data.popdata[d].file; break;
-	case TRANS_DATA: name = data.transdata[d].file; break;
-	case MARG_DATA: name = data.margdata[d].file; break;
+	case pop_data: name = data.popdata[d].file; break;
+	case trans_data: name = data.transdata[d].file; break;
+	case marg_data: name = data.margdata[d].file; break;
 	default: emsgEC("Output",1); break;
 	}
 	
@@ -129,24 +117,24 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 	default: file = "Posterior_"+name+"_"+data.region[r].code+".txt"; break;
 	}
 	
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream dataout(filefull.c_str());
 	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
 						
 	switch(type){
-	case POP_DATA: 
+	case pop_data: 
 		cout << "'" << file << "' gives the population in '" << data.popdata[d].compstr << "'";
 		dataout << "# The population in '" << data.popdata[d].compstr << "'"; 
 		nrow = data.popdata[d].rows;
 		break;
 		
-	case TRANS_DATA:
+	case trans_data:
 		cout << "'" << file << "' gives numbers of " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		dataout << "# Population in " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		nrow = data.transdata[d].rows;
 		break;
 	
-	case MARG_DATA:
+	case marg_data:
 		dc = data.margdata[d].democat;
 		nrow = data.democat[dc].value.size();
 		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
@@ -165,13 +153,13 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		
 	switch(r){
 	case UNSET: rrmin = 0; rrmax = 1; break;
-	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsgEC("Output",2); break;
+	case ADD: rrmin = 0; rrmax = data.nregion; if(type == marg_data) emsgEC("Output",2); break;
 	default: rrmin = r; rrmax = r+1; break;
 	}
 
 	switch(type){
-	case TRANS_DATA: case POP_DATA: dataout << "# Time from start, " << data.tformat; break;
-	case MARG_DATA: dataout << "category"; break;
+	case trans_data: case pop_data: dataout << "# Time from start, " << details.tformat; break;
+	case marg_data: dataout << "category"; break;
 	}	
 	dataout << ", data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 	for(row = 0; row < nrow; row++){
@@ -180,9 +168,9 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
 				switch(type){
-				case POP_DATA: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
-				case TRANS_DATA: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
-				case MARG_DATA:
+				case pop_data: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
+				case trans_data: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
+				case marg_data:
 					sum = 0; for(jj = 0; jj < data.democat[dc].value.size(); jj++) sum += opsamp[s].meas.margnum[d][jj][rr];
 					valsum += 100.0*opsamp[s].meas.margnum[d][row][rr]/sum;
 					break;
@@ -193,20 +181,20 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 		
 		stat = getstat(vec);
 		switch(type){
-		case POP_DATA: t = data.popdata[d].start+row*data.popdata[d].units; break;
-		case TRANS_DATA: t = data.transdata[d].start+row*data.transdata[d].units; break;
+		case pop_data: t = data.popdata[d].start+row*data.popdata[d].units; break;
+		case trans_data: t = data.transdata[d].start+row*data.transdata[d].units; break;
 		}
-		if(type == MARG_DATA) dataout << data.democat[dc].value[row] << " ";
-		else dataout << t << " " << data.getdate(t) << " ";
+		if(type == marg_data) dataout << data.democat[dc].value[row] << " ";
+		else dataout << t << " " << details.getdate(t) << " ";
 		
-		if(data.mode != MODE_SIM){
+		if(details.mode != sim){
 			valsum = 0;
 			for(rr = rrmin; rr < rrmax; rr++){
-				if(type == MARG_DATA) valsum += data.margdata[d].percent[rr][row]; 
+				if(type == marg_data) valsum += data.margdata[d].percent[rr][row]; 
 				else{
 					switch(type){
-					case POP_DATA: jj = data.popdata[d].num[rr][row]; break;
-					case TRANS_DATA: jj = data.transdata[d].num[rr][row]; break;
+					case pop_data: jj = data.popdata[d].num[rr][row]; break;
+					case trans_data: jj = data.transdata[d].num[rr][row]; break;
 					default: jj = 0; break;
 					}
 					switch(jj){
@@ -224,7 +212,7 @@ void outputplot(DATA &data, vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
+void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &opsamp) const
 {      
 	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d, b, c;
 	double areaav;
@@ -235,38 +223,38 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	vector <DIST> paramdist;
 	vector <double> paramav, Rav;
 
-	ensuredirectory(data.outputdir);
+	ensuredirectory(details.outputdir);
 		
 	nopsamp = opsamp.size();
 	opsampmin = nopsamp/4;
 	
 	cout << endl;
-	if(data.mode == MODE_SIM) cout << "Outputs in directory '" << data.outputdir << "':" << endl;
-	else cout << "Posterior outputs in directory '" << data.outputdir << "':" << endl;
+	if(details.mode == sim) cout << "Outputs in directory '" << details.outputdir << "':" << endl;
+	else cout << "Posterior outputs in directory '" << details.outputdir << "':" << endl;
 	
 	for(d = 0; d < data.transdata.size(); d++){
 		if(data.transdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,TRANS_DATA);
-			outputplot(data,opsamp,d,ADD,TRANS_DATA);
+			for(r = 0; r < data.nregion; r++) posterior_plot(opsamp,d,r,trans_data);
+			posterior_plot(opsamp,d,ADD,trans_data);
 		}
-		if(data.transdata[d].type == "all") outputplot(data,opsamp,d,UNSET,TRANS_DATA);
+		if(data.transdata[d].type == "all") posterior_plot(opsamp,d,UNSET,trans_data);
 	}
 	
 	for(d = 0; d < data.popdata.size(); d++){
 		if(data.popdata[d].type == "reg"){
-			for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,POP_DATA);
-			outputplot(data,opsamp,d,ADD,POP_DATA);
+			for(r = 0; r < data.nregion; r++) posterior_plot(opsamp,d,r,pop_data);
+			posterior_plot(opsamp,d,ADD,pop_data);
 		}
-		if(data.popdata[d].type == "all") outputplot(data,opsamp,d,UNSET,POP_DATA);
+		if(data.popdata[d].type == "all") posterior_plot(opsamp,d,UNSET,pop_data);
 	}
 	
 	for(d = 0; d < data.margdata.size(); d++){
-		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) outputplot(data,opsamp,d,r,MARG_DATA);}
-		if(data.margdata[d].type == "all") outputplot(data,opsamp,d,UNSET,MARG_DATA);
+		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) posterior_plot(opsamp,d,r,marg_data);}
+		if(data.margdata[d].type == "all") posterior_plot(opsamp,d,UNSET,marg_data);
 	}
 		
 	file = "Posterior_R0.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream R0out(filefull.c_str());
 	if(!R0out) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -274,17 +262,17 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	R0out << "# Gives the time variation in R0." << endl;	
 	R0out << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	Rav.resize(data.nsettime);
-	for(st = 0; st < data.nsettime; st++){
+	Rav.resize(details.nsettime);
+	for(st = 0; st < details.nsettime; st++){
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
 		stat = getstat(vec);
 		Rav[st] = atof(stat.mean.c_str());
 		
-		R0out << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		R0out << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	file = "Posterior_phi.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream phiout(filefull.c_str());
 	if(!phiout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -292,18 +280,18 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	phiout << "# Gives the time variation in phi (expressed as the number of infected per 1000000 individuals)." << endl;	
 	phiout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	for(st = 0; st < data.nsettime; st++){
+	for(st = 0; st < details.nsettime; st++){
 		vec.clear(); for(s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].phi[st]*1000000);
 		stat = getstat(vec);
 	
-		phiout << (st+0.5)*data.period/data.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		phiout << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	npsamp = opsamp.size();
 	psampmin = npsamp/4;
 	
 	file = "Posterior_parameters.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream paramout(filefull.c_str());
 	if(!paramout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -324,7 +312,7 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 	}
 	
 	file = "Posterior_distributions.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -353,14 +341,14 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 			
 				
 	file = "Posterior_Rmap.txt";
-	filefull = data.outputdir+"/"+file;
+	filefull = details.outputdir+"/"+file;
 	ofstream Rmapout(filefull.c_str());
 	if(!Rmapout) emsg("Cannot output the file '"+filefull+"'");
 	
 	cout << "'" << file << "' gives the time and spatial variation in R0." << endl;
 	Rmapout << "# Gives the time and spatial variation in R." << endl;	
 	Rmapout << "# Area, Day: ";
-	for(st = 0; st < data.nsettime; st++){ Rmapout << (st+1); if(st < data.nsettime-1) Rmapout << ", ";}
+	for(st = 0; st < details.nsettime; st++){ Rmapout << (st+1); if(st < details.nsettime-1) Rmapout << ", ";}
 	Rmapout << endl;
 	
 	model.setup(paramav);
@@ -368,20 +356,21 @@ void outputresults(DATA &data, MODEL &model, vector <PARAMSAMP> &psamp, vector <
 
 	for(c = 0; c < data.narea; c++){
 		Rmapout << data.area[c].code;
-		for(st = 0; st < data.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
+		for(st = 0; st < details.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
 		Rmapout << endl;
 	}
 	
-	if(data.mode != MODE_SIM){
-		cout << "'" << data.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
+	if(details.mode != sim){
+		cout << "'" << details.outputdir << "/trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
-	if(data.mode == MODE_INF){
-		cout << "'" << data.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
+	if(details.mode == inf){
+		cout << "'" << details.outputdir << "/traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 }
 
-void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin)
+void Output::combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
+                           string file, string distfile, unsigned int burnin) const
 {
 	unsigned int p, inp, s, npsamp, psampmin, N, M, nmax, nmin, b;
 	double W, B, valav, varr, muav;
@@ -471,7 +460,7 @@ void outputcombinedtrace(vector <string> &paramname, vector < vector < vector <d
 }
 	
 /// Outputs an event sample fev
-void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model*/, POPTREE & /*poptree*/)
+void Output::eventsample(const vector < vector <FEV> > &fev) const
 {
 	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
@@ -483,8 +472,8 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model
 		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
 	}
 	
-	ensuredirectory(data.outputdir);
-	stringstream sst; sst << data.outputdir << "/events.txt";
+	ensuredirectory(details.outputdir);
+	stringstream sst; sst << details.outputdir << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	if(!evsamp) emsg("Cannot output the file '"+sst.str()+"'");
 	
@@ -505,7 +494,7 @@ void outputeventsample(vector < vector <FEV> > &fev, DATA &data, MODEL & /*model
 }
 
 /// Outputs a population plot for event sequence xi
-void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > &xi, double tmin, double period)
+void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
 {
 	unsigned int c, tra, td, tdf;
 	double t;
@@ -515,13 +504,13 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 	N.resize(model.comp.size()); for(c = 0; c < model.comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	td = 0; tdf = 0; while(td < data.fediv && xi[td].size()==0) td++;
+	td = 0; tdf = 0; while(td < details.fediv && xi[td].size()==0) td++;
 	
 	ofstream plot(file.c_str());
 	if(!plot) emsg("Cannot output the file '"+file+"'");
 	
 	for(t = tmin; t < period; t += (period-tmin)/100){
-		while(td < data.fediv && xi[td][tdf].t < t){
+		while(td < details.fediv && xi[td][tdf].t < t){
 			tra = xi[td][tdf].trans;
 			tr = model.trans[tra];
 			N[tr.from]--; N[tr.to]++;
@@ -529,7 +518,7 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 			tdf++;
 			if(tdf == xi[td].size()){
 				td++; tdf = 0; 
-				while(td < data.fediv && xi[td].size() == 0) td++;
+				while(td < details.fediv && xi[td].size() == 0) td++;
 			}
 		}
 		
@@ -540,7 +529,7 @@ void outputplot(string file, DATA &data, MODEL &model,  vector < vector <FEV> > 
 }
 
 /// Generates case data based on a simulation using the MBP algorithm
-void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir)
+void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const
 {
 	unsigned int row, r, td, pd, md, d, j, jj;
 	string file, filefull;
@@ -549,7 +538,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 	
 	ensuredirectory(dir);
 		
-	meas = getmeas(data,model,poptree,trev,indev);
+	meas = obsmodel.getmeas(trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(td = 0; td < data.transdata.size(); td++){
@@ -562,9 +551,9 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(data.tform){
-		case TFORM_NUM: transout << "time"; break;
-		case TFORM_YMD: transout << "date"; break;
+		switch(details.tform){
+		case tform_num: transout << "time"; break;
+		case tform_ymd: transout << "date"; break;
 		}
 
 		if(data.transdata[td].type == "reg"){ for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
@@ -572,7 +561,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		transout << endl;
 		
 		for(row = 0; row < data.transdata[td].rows; row++){
-			transout << data.getdate(data.transdata[td].start + row*data.transdata[td].units);
+			transout << details.getdate(data.transdata[td].start + row*data.transdata[td].units);
 			for(r = 0; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
 		}
 	}
@@ -587,9 +576,9 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		if(data.popdata[pd].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(data.tform){
-		case TFORM_NUM: popout << "time"; break;
-		case TFORM_YMD: popout << "date"; break;
+		switch(details.tform){
+		case tform_num: popout << "time"; break;
+		case tform_ymd: popout << "date"; break;
 		}
 		
 		if(data.popdata[pd].type == "reg"){ for(r = 0; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
@@ -597,7 +586,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 		popout << endl;
 		
 		for(row = 0; row < data.popdata[pd].rows; row++){
-			popout << data.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
+			popout << details.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
 			for(r = 0; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
 		}
 	}
@@ -632,7 +621,7 @@ void outputsimulateddata(DATA &data, MODEL &model, POPTREE &poptree, vector < ve
 }
 
 /// Calculates diagnostic statistics
-static STAT getstat(vector <double> &vec)                           
+STAT Output::getstat(const vector <double> &vec) const                       
 {
 	unsigned int n, i, d;
 	double sum, sum2, var, sd, a, cor, f;
@@ -663,15 +652,16 @@ static STAT getstat(vector <double> &vec)
 			stat.CImax = to_string(vec2[0]);
 		}
 
+		vec2 = vec;
 		var = sum2 - sum*sum;
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
 		else{	
 			sd = sqrt(var);
-			for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
+			for(i = 0; i < n; i++) vec2[i] = (vec2[i]-sum)/sd;
 				
 			sum = 1;
 			for(d = 1; d < n/2; d++){             // calculates the effective sample size
-				a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
+				a = 0; for(i = 0; i < n-d; i++) a += vec2[i]*vec2[i+d]; 
 				cor = a/(n-d);
 				if(cor < 0) break;
 				sum += 2*cor;			
@@ -684,7 +674,7 @@ static STAT getstat(vector <double> &vec)
 }
 
 /// Gets the probability distributions for a given set of samples
-static DIST getdist(vector <double> &vec)
+DIST Output::getdist(const vector <double> &vec) const
 {
 	unsigned int i, b;
 	double min, max, d;

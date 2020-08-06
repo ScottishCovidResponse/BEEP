@@ -7,7 +7,7 @@ using namespace std;
 
 #include "consts.hh"
 #include "data.hh"
-#include "toml11/toml/types.hpp"
+
 
 struct FEV {                               // Stores information about a compartmental transition
   unsigned int trans;                      // References the transition type
@@ -62,8 +62,8 @@ struct TRANS{                              // Stores information about a compart
 	unsigned int to;                         // Which compartment the individual is going to
 	
 	unsigned int type;                       // The type of distribution (exponential or gamma)
-	int param1;                              // First characteristic parameter (e.g. mean)
-	int param2;                              // Second characteristic parameter (e.g. standard deviation in the case of gamma)
+	int param_mean;                          // The parameter for the mean of the distribution
+	int param_cv;                            // The parameter for the coefficient of variation (if used)
 	
 	unsigned int istimep;                    // Set to one if the transition is in time period
 	vector <unsigned int> num;               // The number of times down transition 
@@ -81,11 +81,16 @@ struct SPLINEP{                            // Stores information about a spline 
 	unsigned int param;                      // The parameter which defines the value
 };
 
+
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(DATA &data);
+	MODEL(Inputs &inputs, const Details &details, DATA &data);
 
+	unsigned int ndemocat;                   // The number of demographic categories
+	vector <DEMOCAT> democat;                // Stores the demographic categories
+	
+	
 	vector <double> beta;                    // The value for beta at the various times
 	vector <SPLINEP> betaspline;             // The spline used to define beta
 	
@@ -125,19 +130,13 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	DATA &data;
-	
 	double getparam(string name);
 	double getinfectivity(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
-	void definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
-	void addQ();
-
+	void print_to_terminal() const;
 	void priorsamp();
-	        
-	void checkdata();
-	unsigned int setup(vector <double> &paramval);
+	unsigned int setup(const vector <double> &paramval);
 	void copyi();
 	void copyp();
 	vector <double> R0calc();
@@ -149,6 +148,8 @@ public:
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
 													 
 private:
+	void addQ();
+	void checkdata();
 	void addcomp(string name, double infectivity);
 	void addparam(string name, double min, double max);
 	void addtrans(string from, string to, string prpar, unsigned int type, string param1, string param2);
@@ -160,5 +161,8 @@ private:
 	double likelihood_prob();
 	double likelihood_dt(vector <double> &paramv);
 	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
+
+	const Details &details;
+	DATA &data;
 };
 #endif

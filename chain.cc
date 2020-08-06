@@ -1,4 +1,4 @@
-// This file contains all the functions for running a chain under the MBP algorithm
+// This file contains all the functions for running a MCMC er the MBP algorithm
 
 #include <fstream>
 #include <iostream>
@@ -13,12 +13,13 @@ using namespace std;
 #include "timers.hh"
 #include "model.hh"
 #include "utils.hh"
-#include "MBPCHAIN.hh"
+#include "chain.hh"
 #include "output.hh"
 #include "pack.hh"
 #include "obsmodel.hh"
 
-MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chstart) : data(data), model(model), poptree(poptree), trans(model.trans), comp(model.comp), lev(poptree.lev)
+/// Initialises a single mcmc chain
+Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;
@@ -27,7 +28,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	ch = chstart;
 
 	xi.clear();
-	trevi.clear(); trevi.resize(data.nsettime); 
+	trevi.clear(); trevi.resize(details.nsettime); 
 	indevi.clear(); indevi.resize(data.popsize);
 	indevp.clear(); indevp.resize(data.popsize);
 	
@@ -47,8 +48,8 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	}
 	dQbuflistv.clear(); dQbuflistq.clear();
 	
-	Qmapi.resize(data.nsettime); Qmapp.resize(data.nsettime); 
-	for(sett = 0; sett < data.nsettime; sett++){
+	Qmapi.resize(details.nsettime); Qmapp.resize(details.nsettime); 
+	for(sett = 0; sett < details.nsettime; sett++){
 		Qmapi[sett].resize(data.narage); for(v = 0; v < data.narage; v++) Qmapi[sett][v] = 0;
 		Qmapp[sett].resize(data.narage); 
 	}
@@ -59,7 +60,7 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	
 	loop = 0;
 	do{
-		//if(data.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
+		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
 		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
 
 		nparam = model.param.size();                   
@@ -87,9 +88,9 @@ MBPCHAIN::MBPCHAIN(DATA &data, MODEL &model, POPTREE &poptree, unsigned int chst
 	indevi = indevp;
 	xi = xp;
 	
-	if(data.mode != MODE_INF) return;
+	if(details.mode != inf) return;
 	
-	Li = Lobs(data,model,poptree,trevi,indevi);
+	Li = obsmodel.Lobs(trevi,indevi);
 	Pri = model.prior();
 
 	setQmapi(1);
@@ -136,7 +137,7 @@ struct LCONT {
 };
 
 /// Performs a MBP
-unsigned int MBPCHAIN::mbp()
+unsigned int Chain::mbp()
 {
 	unsigned int j, jmax, c, v, sett, n, i, w, doev;
 	double t, tmax, val, txi, tinf, al;
@@ -153,7 +154,7 @@ unsigned int MBPCHAIN::mbp()
 	//indevp.clear(); indevp.resize(data.popsize);	
 	
 	xp.clear();
-	trevp.clear(); trevp.resize(data.nsettime);
+	trevp.clear(); trevp.resize(details.nsettime);
 	
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 	
@@ -162,9 +163,9 @@ unsigned int MBPCHAIN::mbp()
 	timers.timembp -= clock();
 		
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
-		if(data.mode == MODE_SIM){
-			cout  << "  Time: " << data.settime[t];
+	for(sett = 0; sett < details.nsettime; sett++){
+		if(details.mode == sim){
+			cout  << "  Time: " << details.settime[t];
 			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
 		}
@@ -174,14 +175,14 @@ unsigned int MBPCHAIN::mbp()
 
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -tiny) emsgEC("MBPchain",1);
+			if(val < -tiny) emsgEC("Chain",1);
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
 
 		constructRtot(Qmapi[sett],Qmapp[sett]);
 	
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		do{
 			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
 			
@@ -199,19 +200,19 @@ unsigned int MBPCHAIN::mbp()
 				t = txi;
 				i = ev.ind;
 			
-				if(stat[i] == BOTH){
+				if(stat[i] == both_sus){
 					w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
 					al = lamp[w]/lami[w];
 					if(ran() < al){                                    // Keeps the infection event
-						changestat(i,NOT,1);
+						changestat(i,not_sus,1);
 						
 						if(doev == 1) model.mbpmodel(indevi[i],indevp[i]);
 						else indevp[i] = indevi[i];
 						
 						addindev(i,indevp[i],xp,trevp);
 					}
-					else changestat(i,PONLY,1);      // Does not keep the infection event
+					else changestat(i,ponly_sus,1);      // Does not keep the infection event
 				}
 				n++;
 			}
@@ -233,7 +234,7 @@ unsigned int MBPCHAIN::mbp()
 }
 
 /// Adds an individual event sequence
-void MBPCHAIN::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev)
+void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev)
 {
 	unsigned int e, emax, se;
 	EVREF evref;
@@ -245,13 +246,13 @@ void MBPCHAIN::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, 
 	x.push_back(evref);
 	for(e = 0; e < indev.size(); e++){
 		evref.e = e;
-		se = (unsigned int)(data.nsettime*indev[e].t/data.period); 
-		if(se < data.nsettime) trev[se].push_back(evref);
+		se = (unsigned int)(details.nsettime*indev[e].t/details.period); 
+		if(se < details.nsettime) trev[se].push_back(evref);
 	}
 }
 		
 /// Based on the the event sequence in xi, this sets Qmapi
-void MBPCHAIN::setQmapi(unsigned int check)
+void Chain::setQmapi(unsigned int check)
 {
 	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop, qt;
 	double val, fac;
@@ -262,12 +263,12 @@ void MBPCHAIN::setQmapi(unsigned int check)
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 
 	nage = data.nage;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = dQmap[v];
 			if(check == 1){
-				if(val < -tiny) emsgEC("MBPchain",2);
-				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsgEC("MBPchain",3);
+				if(val < -tiny) emsgEC("Chain",2);
+				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsgEC("Chain",3);
 			}
 			if(val < 0){ val = 0; dQmap[v] = 0;}	
 			
@@ -313,7 +314,7 @@ void MBPCHAIN::setQmapi(unsigned int check)
 }
 
 /// Constructs the tree Rtot for fast Gilelspie sampling	
-void MBPCHAIN::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
+void Chain::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 {
 	unsigned int c, cmax, wmin, wmax, dp, v, a, w, j, jmax;
 	int l;
@@ -337,7 +338,7 @@ void MBPCHAIN::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
-		if(std::isnan(sum)) emsgEC("MBPchain",4);
+		if(std::isnan(sum)) emsgEC("Chain",4);
 		Rtot[l][c] = sum;
 	}
 	
@@ -354,8 +355,8 @@ void MBPCHAIN::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 	timers.timembpconRtot += clock();
 }
 	
-/// Performs an MBP on parameter 'th'
-void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
+/// Performs a MBP on parameter 'th'
+void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
 {
 	unsigned int j, jmax;
 	double al, valst, Lp=0, Prp=0, dd;
@@ -377,7 +378,7 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 			model.copyp();
 			if(mbp() == 1) al = 0;
 			else{
-				Lp = Lobs(data,model,poptree,trevp,indevp);
+				Lp = obsmodel.Lobs(trevp,indevp);
 				Prp = model.prior();
 				
 				al = exp(Prp-Pri + invT*(Lp-Li));		
@@ -408,8 +409,8 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 
 	if(checkon == 1){
 		model.setup(paramval);
-		dd = Li - Lobs(data,model,poptree,trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",5);
-		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",6);
+		dd = Li - obsmodel.Lobs(trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",5);
+		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsgEC("Chain",6);
 	}
 	
 	timers.timembpprop += clock();
@@ -417,7 +418,7 @@ void MBPCHAIN::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 }
 
 /// Sets up lists for use with MBPs
-void MBPCHAIN::setuplists()
+void Chain::setuplists()
 {	
 	unsigned int c, dp, j, jmax, w, i;
 
@@ -433,7 +434,7 @@ void MBPCHAIN::setuplists()
 			jmax = data.area[c].ind[dp].size();
 			for(j = 0; j < jmax; j++){
 				i = data.area[c].ind[dp][j];
-				stat[i] = BOTH;
+				stat[i] = both_sus;
 				indlistref[i] = indbothlist[w].size();
 				indbothlist[w].push_back(i);
 			}
@@ -445,7 +446,7 @@ void MBPCHAIN::setuplists()
 }
 
 /// Makes a change in the status of an individual
-void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
+void Chain::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 {
 	unsigned int c, w;
 	int l, n;
@@ -461,8 +462,8 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 	
 	l = indlistref[i];   // Removes the exisiting entry
 	switch(stat[i]){
-  case BOTH:
-		if(indbothlist[w][l] != i) emsgEC("MBPchain",7);
+  case both_sus:
+		if(indbothlist[w][l] != i) emsgEC("Chain",7);
 		n = indbothlist[w].size();
 		if(l < n-1){
 			indbothlist[w][l] = indbothlist[w][n-1];
@@ -472,8 +473,8 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindbothlist[w]--;
 		break;
 		
-	case PONLY:
-		if(indponlylist[w][l] != i) emsgEC("MBPchain",8);
+	case ponly_sus:
+		if(indponlylist[w][l] != i) emsgEC("Chain",8);
 		n = indponlylist[w].size();
 		if(l < n-1){
 			indponlylist[w][l] = indponlylist[w][n-1];
@@ -483,8 +484,8 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindponlylist[w]--;
 		break;
 		
-	case NOT:
-		if(indnotlist[w][l] != i) emsgEC("MBPchain",9);
+	case not_sus:
+		if(indnotlist[w][l] != i) emsgEC("Chain",9);
 		n = indnotlist[w].size();
 		if(l < n-1){
 			indnotlist[w][l] = indnotlist[w][n-1];
@@ -494,30 +495,30 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 		nindnotlist[w]--;
 		break;
 	
-	default: emsgEC("MBPChain",10); break;
+	default: emsgEC("Chain",10); break;
 	}
 
 	stat[i] = st;
 	switch(stat[i]){
-	case PONLY:
+	case ponly_sus:
 		indlistref[i] = indponlylist[w].size();
 		indponlylist[w].push_back(i);
 		nindponlylist[w]++;
 		break;
 		
-	case NOT:
+	case not_sus:
 		indlistref[i] = indnotlist[w].size();
 		indnotlist[w].push_back(i);
 		nindnotlist[w]++;
 		break;
 	
-	case BOTH:
+	case both_sus:
 		indlistref[i] = indbothlist[w].size();
 		indbothlist[w].push_back(i);
 		nindbothlist[w]++;
 		break;
 		
-	default: emsgEC("MBPChain",11); break;
+	default: emsgEC("Chain",11); break;
 	}
 	
 	if(updateR == 1){
@@ -535,7 +536,7 @@ void MBPCHAIN::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 }
 
 /// Places all individuals back onto the both susceptible list 
-void MBPCHAIN::resetlists()
+void Chain::resetlists()
 {
 	unsigned int w, j, jmax, i;
 	
@@ -543,7 +544,7 @@ void MBPCHAIN::resetlists()
 		jmax = indponlylist[w].size();
 		for(j = 0; j < jmax; j++){
 			i = indponlylist[w][j];
-			stat[i] = BOTH;
+			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
 			nindbothlist[w]++;
@@ -554,7 +555,7 @@ void MBPCHAIN::resetlists()
 		jmax = indnotlist[w].size();
 		for(j = 0; j < jmax; j++){
 			i = indnotlist[w][j];
-			stat[i] = BOTH;
+			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
 			nindbothlist[w]++;
@@ -565,7 +566,7 @@ void MBPCHAIN::resetlists()
 }
 
 /// Updates dQmap based on events which occur in timestep sett in the initial and proposed states
-void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
+void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 {
 	unsigned int j, jmax, k, kmax, i, tra, v, dq, q, vv, a, nage, loop, qt;
 	double fac;
@@ -625,7 +626,7 @@ void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		}
 	}
 	
-	if(data.mode == MODE_SIM){
+	if(details.mode == sim){
 		jmax = trep.size(); 
 		for(j = 0; j < jmax; j++){
 			tra = indevp[trep[j].ind][trep[j].e].trans;
@@ -668,7 +669,7 @@ void MBPCHAIN::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 }
 	
 /// This samples the area in which the next infection occurs due to the MBP
-unsigned int MBPCHAIN::nextinfection()
+unsigned int Chain::nextinfection()
 {
 	unsigned int l, lmax, c, j, jmax;
 	double z, sum, sumst[4];
@@ -684,7 +685,7 @@ unsigned int MBPCHAIN::nextinfection()
 		}
 		
 		z = ran()*sum; j = 0; while(j < jmax && z > sumst[j]) j++;
-		if(j == jmax) emsgEC("MBPchain",12);
+		if(j == jmax) emsgEC("Chain",12);
 		
 		c = lev[l].node[c].child[j];
 		l++;
@@ -694,7 +695,7 @@ unsigned int MBPCHAIN::nextinfection()
 }
 
 /// Adds an exposed indivdual in area
-void MBPCHAIN::addinfc(unsigned int c, double t)
+void Chain::addinfc(unsigned int c, double t)
 {
 	unsigned int dp, dpmax, w, i, n;
 	double sum, dlam, z;
@@ -712,20 +713,20 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 	}
 
 	z = ran()*sum; dp = 0; while(dp < dpmax && z > sumst[dp]) dp++; 
-	if(dp == dpmax) emsgEC("MBPchain",13);
+	if(dp == dpmax) emsgEC("Chain",13);
 	
 	w = c*dpmax + dp;                  // Next select when individuals in the initial and proposed states are susceptible
 	dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 	if(ran() < dlam/(dlam + nindponlylist[w]*lamp[w])){ // Both suscetible
-		n = indbothlist[w].size(); if(n == 0) emsgEC("MBPchain",14);
+		n = indbothlist[w].size(); if(n == 0) emsgEC("Chain",14);
 		i = indbothlist[w][(unsigned int)(ran()*n)];
 	}
 	else{                                       // Only proposed state susceptible
-		n = indponlylist[w].size(); if(n == 0) emsgEC("MBPchain",15);
+		n = indponlylist[w].size(); if(n == 0) emsgEC("Chain",15);
 		i = indponlylist[w][(unsigned int)(ran()*n)];
 	}
 	
-	changestat(i,NOT,1);
+	changestat(i,not_sus,1);
 	
 	model.simmodel(indevp[i],i,0,t);
 
@@ -733,7 +734,7 @@ void MBPCHAIN::addinfc(unsigned int c, double t)
 }
 
 /// Used for checking the code is running correctly
-void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
+void Chain::check(unsigned int /* num */, double t, unsigned int sett)
 {
 	unsigned int c, l, i, w, dp, a, wmin, wmax, v, j, e, emax, tra, timep;
 	double dd, dlam, sum, tt, ttt;
@@ -742,10 +743,10 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 	for(j = 0; j < xp.size(); j++){ // Checks order
 		i = xp[j].ind; e = xp[j].e;
 		// Unsigned quantities always >= 0
-		if( /* i < 0 || */ i >= indevp.size()) emsgEC("MBPchain",16);
-		if( /* e < 0 || */ e >= indevp[i].size()) emsgEC("MBPchain",17);
+		if( /* i < 0 || */ i >= indevp.size()) emsgEC("Chain",16);
+		if( /* e < 0 || */ e >= indevp[i].size()) emsgEC("Chain",17);
 		if(j < xp.size()-1){
-			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsgEC("MBPchain",18);
+			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsgEC("Chain",18);
 		}
 	}
 
@@ -754,22 +755,22 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		if(emax > 0){
 			c = 0; tt = 0;
 			for(e = 0; e < emax; e++){
-				ttt = indevp[i][e].t; if(ttt <= tt){ model.oe("here",indevp[i]); emsgEC("MBPchain",19);}
+				ttt = indevp[i][e].t; if(ttt <= tt){ model.oe("here",indevp[i]); emsgEC("Chain",19);}
 				tra = indevp[i][e].trans;
-				if(trans[tra].from != c) emsgEC("MBPchain",20);
+				if(trans[tra].from != c) emsgEC("Chain",20);
 				c = trans[tra].to; tt = ttt;
 			}
-			if(comp[c].trans.size() != 0) emsgEC("MBPchain",21);
+			if(comp[c].trans.size() != 0) emsgEC("Chain",21);
 			
 			for(timep = 0; timep < model.ntimeperiod; timep++){
 				tt = model.timeperiod[timep].tend;
 				if(tt > indevp[i][0].t && tt < indevp[i][emax-1].t){
 					for(e = 0; e < emax; e++) if(indevp[i][e].t == tt) break;
 					if(timep <  model.ntimeperiod-1){
-						if(e == emax) emsgEC("MBPchain",22);
+						if(e == emax) emsgEC("Chain",22);
 					}
 					else{
-						if(e != emax) emsgEC("MBPchain",23);
+						if(e != emax) emsgEC("Chain",23);
 					}
 				}
 			}
@@ -779,22 +780,22 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 	for(i = 0; i < data.popsize; i++){    // Checks stat is correct
 	  w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
-		if(nindbothlist[w] != indbothlist[w].size()) emsgEC("MBPchain",24);
-		if(nindponlylist[w] != indponlylist[w].size()) emsgEC("MBPchain",25);
-		if(nindnotlist[w] != indnotlist[w].size()) emsgEC("MBPchain",26);
+		if(nindbothlist[w] != indbothlist[w].size()) emsgEC("Chain",24);
+		if(nindponlylist[w] != indponlylist[w].size()) emsgEC("Chain",25);
+		if(nindnotlist[w] != indnotlist[w].size()) emsgEC("Chain",26);
 		
 		if((indevi[i].size() == 0 || t < indevi[i][0].t) && indevp[i].size() == 0){
-			if(stat[i] != BOTH) emsgEC("MBPchain",27);
-			if(indbothlist[w][indlistref[i]] != i) emsgEC("MBPchain",28);
+			if(stat[i] != both_sus) emsgEC("Chain",27);
+			if(indbothlist[w][indlistref[i]] != i) emsgEC("Chain",28);
 		}
 		else{
 			if((indevi[i].size() != 0 && t >= indevi[i][0].t) && indevp[i].size() == 0){
-				if(stat[i] != PONLY) emsgEC("MBPchain",29);
-				if(indponlylist[w][indlistref[i]] != i) emsgEC("MBPchain",30);
+				if(stat[i] != ponly_sus) emsgEC("Chain",29);
+				if(indponlylist[w][indlistref[i]] != i) emsgEC("Chain",30);
 			}
 			else{
-				if(stat[i] != NOT) emsgEC("MBPchain",31);
-				if(indnotlist[w][indlistref[i]] != i) emsgEC("MBPchain",32);
+				if(stat[i] != not_sus) emsgEC("Chain",31);
+				if(indnotlist[w][indlistref[i]] != i) emsgEC("Chain",32);
 			}
 		}
 	}
@@ -806,35 +807,35 @@ void MBPCHAIN::check(unsigned int /* num */, double t, unsigned int sett)
 		sum = 0; dp = 0; v = c*data.nage; 
 		for(w = wmin; w < wmax; w++){
 			a = data.democatpos[dp][0];
-			dd = lami[w] - model.susi[dp]*(betai*model.areafaci[c]*Qmapi[sett][v+a] + phii); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",33);
-			dd = lamp[w] - model.susp[dp]*(betap*model.areafacp[c]*Qmapp[sett][v+a] + phip); if(sqrt(dd*dd) > tiny) emsgEC("MBPchain",34);
+			dd = lami[w] - model.susi[dp]*(betai*model.areafaci[c]*Qmapi[sett][v+a] + phii); if(sqrt(dd*dd) > tiny) emsgEC("Chain",33);
+			dd = lamp[w] - model.susp[dp]*(betap*model.areafacp[c]*Qmapp[sett][v+a] + phip); if(sqrt(dd*dd) > tiny) emsgEC("Chain",34);
 	
 			dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
-		dd = Rtot[l][c] - sum; if(sqrt(dd*dd) > tiny){ emsgEC("MBPchain",35);}
+		dd = Rtot[l][c] - sum; if(sqrt(dd*dd) > tiny){ emsgEC("Chain",35);}
 	}
 	
 	for(i = 0; i < data.popsize; i++){
 		for(tra = 0; tra < model.trans.size(); tra++){
-			if(indmap[i][tra] != 0) emsgEC("MBPchain",36);
+			if(indmap[i][tra] != 0) emsgEC("Chain",36);
 		}
 	}
 }
 
 /// Checks that quantities used when adding and removing events are correctly updated
-void MBPCHAIN::check_addrem()
+void Chain::check_addrem()
 {
 	unsigned int j, i, e, num, sett, se;
 	vector < vector <int> > done;
 	
 	for(j = 0; j < xi.size(); j++){
 		i = xi[j].ind; e = xi[j].e;
-		if(i >= indevi.size()) emsgEC("MBPchain",37);
-		if(e >= indevi[i].size()) emsgEC("MBPchain",38);
+		if(i >= indevi.size()) emsgEC("Chain",37);
+		if(e >= indevi[i].size()) emsgEC("Chain",38);
 		if(j < xi.size()-1){
-			if(indevi[i][e].t > indevi[xi[j+1].ind][xi[j+1].e].t) emsgEC("MBPchain",39);
+			if(indevi[i][e].t > indevi[xi[j+1].ind][xi[j+1].e].t) emsgEC("Chain",39);
 		}
 	}
 
@@ -847,26 +848,26 @@ void MBPCHAIN::check_addrem()
 			for(e = 0; e < indevi[i].size(); e++) done[i][e] = 0;
 		}
 	}
-	if(num != xi.size()) emsgEC("MBPchain",40);
+	if(num != xi.size()) emsgEC("Chain",40);
 
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(j = 0; j < trevi[sett].size(); j++){
 			i = trevi[sett][j].ind; e = trevi[sett][j].e;
-			if(e >= indevi[i].size()) emsgEC("MBPchain",41);
-			se = (unsigned int)(data.nsettime*indevi[i][e].t/data.period); 
-			if(se != sett) emsgEC("MBPchain",42);
-			if(done[i][e] != 0) emsgEC("MBPchain",43);
+			if(e >= indevi[i].size()) emsgEC("Chain",41);
+			se = (unsigned int)(details.nsettime*indevi[i][e].t/details.period); 
+			if(se != sett) emsgEC("Chain",42);
+			if(done[i][e] != 0) emsgEC("Chain",43);
 			done[i][e] = 1;
 		}
 	}
 	
 	for(i = 0; i < indevi.size(); i++){
 		for(e = 0; e < indevi[i].size(); e++){
-			if(indevi[i][e].t < data.period){
-				if(done[i][e] != 1) emsgEC("MBPchain",44);
+			if(indevi[i][e].t < details.period){
+				if(done[i][e] != 1) emsgEC("Chain",44);
 			}
 			else{
-				if(done[i][e] != 0) emsgEC("MBPchain",45);
+				if(done[i][e] != 0) emsgEC("Chain",45);
 			}
 		}
 	}
@@ -875,7 +876,7 @@ void MBPCHAIN::check_addrem()
 }
 
 /// Calculates the likelihood in the initial state
-double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev)
+double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev)
 {	
 	unsigned int c, dp, w, v, i, n, sett;
 	double L, t, tt, tmax, beta, phi, fac;
@@ -893,9 +894,9 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 	L = 0;
 	
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		
 		for(c = 0; c < data.narea; c++){
 			fac = beta*model.areafac[c];
@@ -903,7 +904,7 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 				w = c*data.ndemocatpos + dp;
 				v = c*data.nage + data.democatpos[dp][0];
 				lami[w] = model.sus[dp]*(fac*Qmap[sett][v] + phi);		
-				if(lami[w] < 0) emsgEC("MBPchain",46);
+				if(lami[w] < 0) emsgEC("Chain",46);
 				
 				L -= lami[w]*popw[w]*(tmax-t);
 			}
@@ -920,7 +921,7 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 			c = data.ind[i].area;
 			w = c*data.ndemocatpos + data.ind[i].dp;
 			L += log(lami[w]);
-			if(std::isnan(L)) emsgEC("MBPchain",47);
+			if(std::isnan(L)) emsgEC("Chain",47);
 			popw[w]--;
 			n++;
 			
@@ -933,17 +934,17 @@ double MBPCHAIN::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, 
 }
 
 /// Calculates Qmapp based on the initial and final sequences
-void MBPCHAIN::calcQmapp()
+void Chain::calcQmapp()
 {	
 	unsigned int v, sett;
 	double val;
 	
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
 	
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -tiny){ emsgEC("MBPchain",48);}
+			if(val < -tiny){ emsgEC("Chain",48);}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -952,7 +953,7 @@ void MBPCHAIN::calcQmapp()
 }
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
-void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
+void Chain::standard_prop(unsigned int samp, unsigned int burnin)
 {
 	unsigned int loop, loopmax = 1;
 	
@@ -972,22 +973,22 @@ void MBPCHAIN::standard_prop(unsigned int samp, unsigned int burnin)
 		if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 		timers.timeparam += clock();
 			
-		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",49);}
+		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",49);}
 
 		timers.timeaddrem -= clock();
 		if(loop%2 == 0) addrem_prop(samp,burnin);
 		timers.timeaddrem += clock();
 		
-		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",50);}
+		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",50);}
 	}
 	
-	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("MBPchain",51);}}
+	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
 	timers.timestandard += clock();
 }
 
 /// Makes proposal to beta and phi
-void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
+void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 {	
 	unsigned int c, dp, w, v, i, j, jmax, n, sett, loop, loopmax, th, pos;
 	double t, tt, tmax, betasum, phisum, al, Levp, valst, fac;
@@ -1011,12 +1012,12 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 	}		
 			
 	model.setup(paramval);
-	betafac.resize(data.nsettime); phifac.resize(data.nsettime);
+	betafac.resize(details.nsettime); phifac.resize(details.nsettime);
 	
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		//beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 
 		lcontlist.clear();
 		
@@ -1092,7 +1093,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 					model.setup(paramval);
 
 					Levp = 0; 
-					for(sett = 0; sett < data.nsettime; sett++){
+					for(sett = 0; sett < details.nsettime; sett++){
 						double beta = model.beta[sett], phi = model.phi[sett];
 						Levp += betafac[sett]*beta + phifac[sett]*phi;
 						
@@ -1101,7 +1102,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 						for(j = 0; j < jmax; j++){
 							Levp += lc[sett][j].num*log(lc[sett][j].betafac*beta + lc[sett][j].phifac*phi);
 						}
-						if(std::isnan(Levp)) emsgEC("MBPchain",52);
+						if(std::isnan(Levp)) emsgEC("Chain",52);
 					}
 					al = exp(Levp-Levi);
 				}
@@ -1123,7 +1124,7 @@ void MBPCHAIN::betaphi_prop(unsigned int samp, unsigned int burnin)
 }
 
 /// Makes proposal to change factors affecting transmission rates in areas
-void MBPCHAIN::area_prop(unsigned int samp, unsigned int burnin)
+void Chain::area_prop(unsigned int samp, unsigned int burnin)
 {	
 	unsigned int c, dp, w, v, i, n, sett, j, th, loop, loopmax, num;
 	double L0, t, tt, tmax, beta, phi;
@@ -1152,9 +1153,9 @@ void MBPCHAIN::area_prop(unsigned int samp, unsigned int burnin)
 	
 	L0 = 0;
 	t = 0; n = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
-		tmax = data.settime[sett+1];
+		tmax = details.settime[sett+1];
 		
 		for(c = 0; c < data.narea; c++){
 			for(dp = 0; dp < data.ndemocatpos; dp++){
@@ -1221,7 +1222,7 @@ void MBPCHAIN::area_prop(unsigned int samp, unsigned int burnin)
 	timers.timecovar += clock();
 }
 
-void MBPCHAIN::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add)
+void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add)
 {
 	unsigned int c, k, kmax;
 	double valst, al, Levp, fac, Prp;
@@ -1240,7 +1241,7 @@ void MBPCHAIN::area_prop2(unsigned int samp, unsigned int burnin, unsigned int t
 			kmax = mult[c].size();
 			for(k = 0; k < kmax; k++) Levp += log(mult[c][k]*fac + add[c][k]);
 		}
-		if(std::isnan(Levp)) emsgEC("MBPchain",53);
+		if(std::isnan(Levp)) emsgEC("Chain",53);
 	
 	  Prp = model.prior();
 		al = exp(Prp-Pri + Levp-Levi);
@@ -1260,7 +1261,7 @@ void MBPCHAIN::area_prop2(unsigned int samp, unsigned int burnin, unsigned int t
 }
 
 /// Makes fast proposals whilst fixing area factor 
-void MBPCHAIN::fixarea_prop(unsigned int samp, unsigned int burnin)
+void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 {
 	unsigned int th, r, loop, loopmax=10;
 	double al, Prp, sd, dlogbeta, valst;
@@ -1308,7 +1309,7 @@ void MBPCHAIN::fixarea_prop(unsigned int samp, unsigned int burnin)
 }
 
 /// Time orders x
-void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
+void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 {
 	unsigned int i;
 	EVREFT evreft;         
@@ -1316,7 +1317,7 @@ void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 
 	for(i = 0; i < x.size(); i++){
 		evreft.ind = x[i].ind; evreft.e = x[i].e;
-		if(indev[x[i].ind].size() == 0) emsgEC("MBPchain",54);
+		if(indev[x[i].ind].size() == 0) emsgEC("Chain",54);
 		
 		evreft.t = indev[x[i].ind][x[i].e].t;
 		xt.push_back(evreft);	
@@ -1329,7 +1330,7 @@ void MBPCHAIN::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 }
 
 /// Adds and removes infectious individuals
-void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
+void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 {
 	unsigned int j, jmax, k, dk, sett, w, c, i, l;
 	double z, probif, probfi, Levp, Lp, t, dt, al, dd, sumtot;
@@ -1337,7 +1338,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	
 	model.setup(paramval);
 		
-	if(checkon == 1){ dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("MBPchain",55);}
+	if(checkon == 1){ dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",55);}
 
 	probif = 0; probfi = 0;
 	
@@ -1346,7 +1347,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	xp = xi;
 	jmax = xp.size(); for(j = 0; j < jmax; j++) indevp[xp[j].ind] = indevi[xp[j].ind];
 		 
-	for(j = 0; j < xp.size(); j++) changestat(xp[j].ind,NOT,0);
+	for(j = 0; j < xp.size(); j++) changestat(xp[j].ind,not_sus,0);
 	
 	if(ran() < 0.5){  // Adds individuals
 		timers.timembptemp2 -= clock();
@@ -1356,7 +1357,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 		for(j = 0; j < numaddrem; j++){
 			if(xp.size() >= model.infmax){ resetlists(); return;}
 			
-			sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsgEC("MBPchain",56);
+			sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsgEC("Chain",56);
 			z = ran()*sumtot;
 			
 			k = 0; dk = data.nsettardp/10; if(dk == 0) dk = 1;
@@ -1366,11 +1367,11 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 				if(k >= dk) k -= dk;
 				dk /= 10; if(dk == 0) dk = 1;
 			}while(1 == 1);
-			if(k >= data.nsettardp) emsgEC("MBPchain",57);
+			if(k >= data.nsettardp) emsgEC("Chain",57);
 		
 			if(k > 0){
-				if(k >= lamsum.size()) emsgEC("MBPchain",58);
-				if(!(z < lamsum[k] && z > lamsum[k-1])) emsgEC("MBPchain",59);
+				if(k >= lamsum.size()) emsgEC("Chain",58);
+				if(!(z < lamsum[k] && z > lamsum[k-1])) emsgEC("Chain",59);
 			}
 			
 			probif += log(lam[k]/sumtot);
@@ -1381,10 +1382,10 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			i = indbothlist[w][int(ran()*nindbothlist[w])];
 			probif += log(1.0/nindbothlist[w]);
 		
-			changestat(i,NOT,0);
+			changestat(i,not_sus,0);
 			
-			dt = data.settime[sett+1]-data.settime[sett];
-			t = data.settime[sett] + ran()*dt;
+			dt = details.settime[sett+1]-details.settime[sett];
+			t = details.settime[sett] + ran()*dt;
 			probif += log(1.0/dt);
 			
 			model.simmodel(indevp[i],i,0,t);
@@ -1405,12 +1406,12 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			l = int(ran()*xp.size());
 			probif += log(1.0/xp.size());
 			i = xp[l].ind;
-			sett = (unsigned int)(data.nsettime*indevi[i][xp[l].e].t/data.period); 
+			sett = (unsigned int)(details.nsettime*indevi[i][xp[l].e].t/details.period); 
 
 			c = data.ind[i].area;
 			w = c*data.ndemocatpos + data.ind[i].dp;
 	
-			dt = data.settime[sett+1]-data.settime[sett];
+			dt = details.settime[sett+1]-details.settime[sett];
 
 			probfi += log(1.0/dt);
 			kst.push_back(sett*data.nardp + w);
@@ -1420,12 +1421,12 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 			xp[l] = xp[xp.size()-1];
 			xp.pop_back();
 			
-			changestat(i,BOTH,0);
+			changestat(i,both_sus,0);
 			
 			probfi += log(1.0/nindbothlist[w]);
 		}
 		
-		for(sett = 0; sett < data.nsettime; sett++){  // Removes events in trevp
+		for(sett = 0; sett < details.nsettime; sett++){  // Removes events in trevp
 			j = 0; jmax = trevp[sett].size();
 			while(j < jmax){
 				if(indevp[trevp[sett][j].ind].size() == 0){
@@ -1452,7 +1453,7 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 	timers.timembptemp4 -= clock();
 	Levp = likelihood(Qmapp,xp,indevp);
 	
-	Lp = Lobs(data,model,poptree,trevp,indevp);
+	Lp = obsmodel.Lobs(trevp,indevp);
 	timers.timembptemp4 += clock();
 		
 	al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);
@@ -1482,13 +1483,13 @@ void MBPCHAIN::addrem_prop(unsigned int samp, unsigned int burnin)
 }
 
 /// Generates a sampler for adding infected individuals into the system
-void MBPCHAIN::infsampler(vector< vector<double> > &Qmap)
+void Chain::infsampler(vector< vector<double> > &Qmap)
 {
 	unsigned int sett, tot, c, dp, v, w;
 	double val, sum, beta, phi, fac;
 		
 	sum = 0;
-	for(sett = 0; sett < data.nsettime; sett++){
+	for(sett = 0; sett < details.nsettime; sett++){
 		beta = model.beta[sett]; phi = model.phi[sett];
 	
 		for(c = 0; c < data.narea; c++){

@@ -5,7 +5,7 @@
 #include <string>
 
 #define private public
-#include "../data.hh"
+//#include "../data.hh"
 
 #include "../consts.hh"
 
@@ -15,6 +15,7 @@ using namespace std;
 // getint
 ///////////////////////////////////////////////////////////////////////////
 
+/*
 TEST_CASE("DATA::getint 45") {
 	DATA d;
 	unsigned int i = d.getint("45", "anon");
@@ -32,3 +33,4 @@ TEST_CASE("DATA::getint *") {
 	unsigned int i = d.getint("*", "anon");
 	CHECK(i == THRESH);
 }
+*/

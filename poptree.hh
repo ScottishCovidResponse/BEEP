@@ -23,7 +23,7 @@ class POPTREE
 {
  	public:
 
-	void init(DATA &data, unsigned int core);
+	POPTREE(DATA &data);
 	
 	vector <LEVEL> lev;                     // Stores information about different levels on the tree
 	unsigned int level;                     // The number of levels of scale in the model

@@ -2,13 +2,16 @@
 
 #include "utils.hh"
 #include "model.hh"
-#include "poptree.hh"
 #include "obsmodel.hh"
 
 using namespace std;
 
+Obsmodel::Obsmodel(const Details &details, const DATA &data, const MODEL &model) : details(details), data(data), model(model)
+{
+}
+
 /// Gets all measured quantities
-MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const
 {
 	unsigned int td, pd, md, ti, tf, r, row, sett, c, j, i, tra, d;
 	double sum;
@@ -22,7 +25,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 			ti = data.transdata[td].start + row*data.transdata[td].units;
 			tf = ti + data.transdata[td].units;
 
-			num = getnumtrans(data,model,poptree,trev,indev,data.transdata[td].trans,ti,tf,UNSET,UNSET);
+			num = getnumtrans(trev,indev,data.transdata[td].trans,ti,tf,UNSET,UNSET);
 			
 			if(data.transdata[td].type == "reg"){
 				meas.transnum[td][row].resize(data.nregion);
@@ -48,7 +51,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 		for(row = 0; row < data.popdata[pd].rows; row++){
 			ti = data.popdata[pd].start + row*data.popdata[pd].units;
 				
-			while(data.settime[sett] < ti){				
+			while(details.settime[sett] < ti){				
 				for(j = 0; j < trev[sett].size(); j++){
 					i = trev[sett][j].ind;
 					tra = indev[i][trev[sett][j].e].trans;
@@ -79,7 +82,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 	
 		if(data.margdata[md].type == "reg"){
 			for(j = 0; j < data.democat[d].value.size(); j++){
-				num = getnumtrans(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
+				num = getnumtrans(trev,indev,data.margdata[md].trans,0,details.period,d,j);
 				
 				meas.margnum[md][j].resize(data.nregion);
 				for(r = 0; r < data.nregion; r++) meas.margnum[md][j][r] = num[r];
@@ -88,7 +91,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 		
 		if(data.margdata[md].type == "all"){
 			for(j = 0; j < data.democat[d].value.size(); j++){
-				num = getnumtrans(data,model,poptree,trev,indev,data.margdata[md].trans,0,data.period,d,j);
+				num = getnumtrans(trev,indev,data.margdata[md].trans,0,details.period,d,j);
 				sum = 0; for(r = 0; r < data.nregion; r++) sum += num[r];
 				
 				meas.margnum[md][j].resize(1);
@@ -101,7 +104,7 @@ MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF>
 }
 
 /// The contribution from a single measurement 
-double singobs(DATA &data, unsigned int mean, unsigned int val)
+double Obsmodel::singobs(unsigned int mean, unsigned int val) const
 {
 	double var;
 	
@@ -121,19 +124,19 @@ double singobs(DATA &data, unsigned int mean, unsigned int val)
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev)
+double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const 
 {
 	unsigned int td, pd, md, row, r, j;
 	double mean, val, var, L, sum;
 	MEAS meas;
 	
-	meas = getmeas(data,model,poptree,trev,indev);
+	meas = getmeas(trev,indev);
 	
 	L = 0;	
 	for(td = 0; td < meas.transnum.size(); td++){                                   // Incorporates transition observations
 		for(row = 0; row < meas.transnum[td].size(); row++){
 			for(r = 0; r < meas.transnum[td][row].size(); r++){
-				L += singobs(data,data.transdata[td].num[r][row],meas.transnum[td][row][r]);
+				L += singobs(data.transdata[td].num[r][row],meas.transnum[td][row][r]);
 			}
 		}
 	}
@@ -141,7 +144,7 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 	for(pd = 0; pd < meas.popnum.size(); pd++){                                   // Incorporates population observations
 		for(row = 0; row < meas.popnum[pd].size(); row++){
 			for(r = 0; r < meas.popnum[pd][row].size(); r++){
-				L += singobs(data,data.popdata[pd].num[r][row],meas.popnum[pd][row][r]);
+				L += singobs(data.popdata[pd].num[r][row],meas.popnum[pd][row][r]);
 			}
 		}
 	}
@@ -165,14 +168,14 @@ double Lobs(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> 
 /// Returns the number of transitions for individuals going down a transition
 /// in different regions over the time range ti - tf
 /// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> getnumtrans(DATA &data, MODEL & /*model*/, POPTREE &/*poptree*/, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
+vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
 {
 	unsigned int r, sett, i, j;
 	vector <unsigned int> num;
 
 	for(r = 0; r < data.nregion; r++) num.push_back(0);
 
-	for(sett = data.settpertime*ti; sett < data.settpertime*tf; sett++){
+	for(sett = details.settpertime*ti; sett < details.settpertime*tf; sett++){
 		for(j = 0; j < trev[sett].size(); j++){
 			i = trev[sett][j].ind;
 			if(d == UNSET || data.democatpos[data.ind[i].dp][d] == v){		

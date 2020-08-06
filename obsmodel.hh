@@ -14,9 +14,23 @@ using namespace std;
 #include "data.hh"
 #include "poptree.hh"
 
-vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v);
+class Obsmodel
+{
+public:
+	Obsmodel(const Details &details, const DATA &data, const MODEL &model);
 
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree,  vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
+	vector <unsigned int> getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
 
-MEAS getmeas(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
+	double Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const;
+
+	MEAS getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const ;
+
+private:
+	double singobs(unsigned int mean, unsigned int val) const;
+	
+	const Details &details;
+	const DATA &data;
+	const MODEL &model;
+};
+
 #endif
