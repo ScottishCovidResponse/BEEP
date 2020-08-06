@@ -73,6 +73,23 @@ std::string stringfield(
 	}
 	return toml::find<std::string>(td,name);
 }
+double numberfield(
+	const InputData::Node& td,
+	const char *title,
+	const char *name)
+{
+	if(!td.contains(name)) {
+		ostringstream oss;
+		oss << "A numeric value for '" << name <<
+			"' must be specified in '" << title << "'.";
+		emsgroot(oss.str().c_str());
+	}
+	const auto value = toml::find(td,name);
+	if(value.is_floating())
+		return value.as_floating();
+	else
+		return value.as_integer();
+}
 
 const InputData::Node& opennamedtable(
 	const InputData::Node& t, const char* name)
@@ -572,10 +589,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 			if(!params.contains("name")) emsgroot("The quantity 'params' must contain a 'name' definition.");
 			string nam = stringfield(params,"params","name");
 			
-			if(!params.contains("value")) emsgroot("The quantity 'params' must contain a 'value' definition.");
-			const auto value_temp = toml::find(params,"value");
-			double value;
-			if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();
+			double value = numberfield(params,"params","value");
 			
 			name.push_back(nam);
 			val.push_back(value);
@@ -595,9 +609,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 
 			double mi, ma;
 			if(params.contains("value")){
-				const auto value_temp = toml::find(params,"value");
-				double value;
-				if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
+				double value = numberfield(params,"params","value");
 				mi = value; ma = value;
 			}
 			else{
@@ -605,13 +617,8 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 				
 				string type = toml::find<std::string>(params,"type");
 				if(type == "uniform"){
-					if(!params.contains("min")) emsgroot("For the prior '"+nam+"', the uniform distribution must contain a 'min' definition.");
-					const auto min_temp = toml::find(params,"min");
-					if(min_temp.is_floating()) mi = min_temp.as_floating(); else mi = min_temp.as_integer();	
-		
-					if(!params.contains("max")) emsgroot("For the prior '"+nam+"', the uniform distribution must contain a 'max' definition.");
-					const auto max_temp = toml::find(params,"max");
-					if(max_temp.is_floating()) ma = max_temp.as_floating(); else ma = max_temp.as_integer();	
+					mi = numberfield(params,nam.c_str(),"min");
+					ma = numberfield(params,nam.c_str(),"max");
 				}
 				else emsgroot("In 'priors', the prior type '"+type+"' is not recognised.");
 			}
@@ -632,11 +639,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 
 			string nam = stringfield(comps,"comps","name");
 
-			if(!comps.contains("inf")) emsgroot("The compartment 'name' must contain an 'inf' definition.");
-			
-			const auto inf_temp = toml::find(comps,"inf");
-			double infect;
-			if(inf_temp.is_floating()) infect = inf_temp.as_floating(); else infect = inf_temp.as_integer();	
+			double infect = numberfield(comps,"name","inf");
 	
 			name.push_back(nam); infectivity.push_back(infect);
 		}
@@ -713,18 +716,8 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
 			pricomp.comp = c;
 			
-			if(!prcomp.contains("value")) emsgroot("'priorcomps' must contain a 'value' definition.");
-			double val;
-			const auto val_temp = toml::find(prcomp,"inf");
-			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
-	
-			pricomp.value = val;
-			
-			if(!prcomp.contains("sd")) emsgroot("'priorcomps' must contain a 'sd' standard deviation definition.");
-			double sd;
-			const auto sd_temp = toml::find(prcomp,"sd");
-			if(sd_temp.is_floating()) sd = sd_temp.as_floating(); else sd = sd_temp.as_integer();	
-			pricomp.sd = sd;
+			pricomp.value = numberfield(prcomp,"priorcomps","inf");
+			pricomp.sd = numberfield(prcomp,"priorcomps","sd");
 	
 			priorcompvec.push_back(pricomp);
 		}
