@@ -18,8 +18,8 @@
 
 using namespace std;
 
-
-Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+/// Initilaises the simulation
+Simulate::Simulate(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
 	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 
@@ -31,7 +31,7 @@ Simulate::Simulate(Details &details, DATA &data, MODEL &model, POPTREE &poptree,
 	model.infmax = large;
 }
 
-/// Simulates data using the MBP algorithm
+/// Performs a simulation
 void Simulate::run()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
@@ -40,6 +40,7 @@ void Simulate::run()
 	output.simulateddata(chain.trevi,chain.indevi,details.outputdir);
 }
 
+/// Runs multiple simulations
 void Simulate::multirun()
 {		
 	unsigned int s;

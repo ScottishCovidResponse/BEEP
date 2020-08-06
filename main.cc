@@ -84,13 +84,8 @@ int main(int argc, char** argv)
 	}
 	
 	MODEL model(inputs,details,data);                                        // Loads up the model
-		
-	data.read_data_files(inputs,model,mpi);                                  // Reads the data files
 	
-	POPTREE poptree(data);
-
-	model.addQ();
-	model.checkdata();
+	POPTREE poptree(data);                                                   // Initialises poptree
 
 	unsigned int seed = inputs.find_int("seed",0);                           // Sets up the random seed
 	sran(mpi.core*10000+seed);

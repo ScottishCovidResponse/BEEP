@@ -29,23 +29,24 @@ class Obsmodel;
 class Output
 {
 public:
-	Output(Details &details, DATA &data, MODEL &model, Obsmodel &obsmodel);
+	Output(const Details &details, const DATA &data, MODEL &model, Obsmodel &obsmodel);
 	
-	void init();
-	void Liinit(unsigned int nchaintot);
-	void Li(unsigned int samp, unsigned int nchaintot, double *Litot);
-	void plot(string file, vector < vector <FEV> > &xi, double tmin, double period);
+	void trace_plot_init();
+	void trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval);
+	void Li_trace_plot_init(unsigned int nchaintot);
+	void Li_trace_plot(unsigned int samp, unsigned int nchaintot, double *Litot);
+	void plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const;
 
-	void traceplot(unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval);
-	void results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp);
-	void eventsample(vector < vector <FEV> > &fev);
-	void simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir);
-	void combinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin);
+	void results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &opsamp) const;
+	void eventsample(const vector < vector <FEV> > &fev) const;
+	void simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const;
+	void combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
+	                   string file, string distfile, unsigned int burnin) const;
 
 private:
-	STAT getstat(vector <double> &vec); 
-	DIST getdist(vector <double> &vec);
-	void posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type);
+	STAT getstat(const vector <double> &vec) const; 
+	DIST getdist(const vector <double> &vec) const;
+	void posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const;
 
 	ofstream trace, traceLi;
 	

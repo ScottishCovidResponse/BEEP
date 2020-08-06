@@ -17,12 +17,12 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 	
-Output::Output(Details &details, DATA &data, MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
+Output::Output(const Details &details, const DATA &data, MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
 }
 	
 /// Initialises trace plot for parameters
-void Output::init()
+void Output::trace_plot_init()
 {
 	unsigned int p, pc;
 	
@@ -40,7 +40,7 @@ void Output::init()
 }
 
 /// Output trace plot
-void  Output::traceplot(unsigned int samp, double Li, double Pri, unsigned int ninf, vector <double> &paramval)
+void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval)
 {
 	unsigned int p, c, pc, a;
 	double pr;
@@ -64,7 +64,7 @@ void  Output::traceplot(unsigned int samp, double Li, double Pri, unsigned int n
 }
 
 /// Initialises trace plot for likelihoods on difference chains (MBP only)
-void Output::Liinit(unsigned int nchaintot)
+void Output::Li_trace_plot_init(unsigned int nchaintot)
 {
 	unsigned int p;
 	
@@ -78,7 +78,7 @@ void Output::Liinit(unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void Output::Li(unsigned int samp, unsigned int nchaintot, double *Litot)
+void Output::Li_trace_plot(unsigned int samp, unsigned int nchaintot, double *Litot)
 {
 	unsigned int p;
 	
@@ -88,7 +88,7 @@ void Output::Li(unsigned int samp, unsigned int nchaintot, double *Litot)
 }
 
 /// Outputs a posterior graph
-void Output::posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type)
+void Output::posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const
 {
 	unsigned int j, jmax, row, s, t=0, nopsamp, opsampmin, rr, rrmin, rrmax, nrow=0, dc=0, jj;
 	double sum, valsum;
@@ -212,7 +212,7 @@ void Output::posterior_plot(vector <SAMPLE> &opsamp, unsigned int d, unsigned in
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
+void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &opsamp) const
 {      
 	unsigned int p, r, s, st, nopsamp, opsampmin, npsamp, psampmin, d, b, c;
 	double areaav;
@@ -369,7 +369,8 @@ void Output::results(vector <PARAMSAMP> &psamp, vector <SAMPLE> &opsamp)
 	}
 }
 
-void Output::combinedtrace(vector <string> &paramname, vector < vector < vector <double> > > &vals, string file, string distfile, unsigned int burnin)
+void Output::combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
+                           string file, string distfile, unsigned int burnin) const
 {
 	unsigned int p, inp, s, npsamp, psampmin, N, M, nmax, nmin, b;
 	double W, B, valav, varr, muav;
@@ -459,7 +460,7 @@ void Output::combinedtrace(vector <string> &paramname, vector < vector < vector 
 }
 	
 /// Outputs an event sample fev
-void Output::eventsample(vector < vector <FEV> > &fev)
+void Output::eventsample(const vector < vector <FEV> > &fev) const
 {
 	unsigned int d, j, nind;
 	vector< vector <FEV> > indev;
@@ -493,7 +494,7 @@ void Output::eventsample(vector < vector <FEV> > &fev)
 }
 
 /// Outputs a population plot for event sequence xi
-void Output::plot(string file, vector < vector <FEV> > &xi, double tmin, double period)
+void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
 {
 	unsigned int c, tra, td, tdf;
 	double t;
@@ -528,7 +529,7 @@ void Output::plot(string file, vector < vector <FEV> > &xi, double tmin, double 
 }
 
 /// Generates case data based on a simulation using the MBP algorithm
-void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string dir)
+void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const
 {
 	unsigned int row, r, td, pd, md, d, j, jj;
 	string file, filefull;
@@ -620,7 +621,7 @@ void Output::simulateddata(vector < vector <EVREF> > &trev, vector < vector <FEV
 }
 
 /// Calculates diagnostic statistics
-STAT Output::getstat(vector <double> &vec)                           
+STAT Output::getstat(const vector <double> &vec) const                       
 {
 	unsigned int n, i, d;
 	double sum, sum2, var, sd, a, cor, f;
@@ -651,15 +652,16 @@ STAT Output::getstat(vector <double> &vec)
 			stat.CImax = to_string(vec2[0]);
 		}
 
+		vec2 = vec;
 		var = sum2 - sum*sum;
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
 		else{	
 			sd = sqrt(var);
-			for(i = 0; i < n; i++) vec[i] = (vec[i]-sum)/sd;
+			for(i = 0; i < n; i++) vec2[i] = (vec2[i]-sum)/sd;
 				
 			sum = 1;
 			for(d = 1; d < n/2; d++){             // calculates the effective sample size
-				a = 0; for(i = 0; i < n-d; i++) a += vec[i]*vec[i+d]; 
+				a = 0; for(i = 0; i < n-d; i++) a += vec2[i]*vec2[i+d]; 
 				cor = a/(n-d);
 				if(cor < 0) break;
 				sum += 2*cor;			
@@ -672,7 +674,7 @@ STAT Output::getstat(vector <double> &vec)
 }
 
 /// Gets the probability distributions for a given set of samples
-DIST Output::getdist(vector <double> &vec)
+DIST Output::getdist(const vector <double> &vec) const
 {
 	unsigned int i, b;
 	double min, max, d;

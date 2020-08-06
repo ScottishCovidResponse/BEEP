@@ -21,7 +21,8 @@ using namespace std;
 
 ofstream quenchplot;
 
-Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+/// In initialises the inference algorithm
+Mcmc::Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
@@ -51,8 +52,6 @@ Mcmc::Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mp
 	assert(mpi.ncore > 0);
   assert(mpi.core < mpi.ncore);
   assert(nchain > 0);
-	assert(quench >= 0);
-	assert(burnin >= 0);
 }
 
 /// Runs the multi-temperature MCMC algorithm	
@@ -96,7 +95,7 @@ void Mcmc::run()
 		}
 	}
 	
-	if(mpi.core == 0){ output.init(); output.Liinit(mpi.ncore*nchain);}
+	if(mpi.core == 0){ output.trace_plot_init(); output.Li_trace_plot_init(mpi.ncore*nchain);}
 
 	if(quenchpl == 1){ quenchplot.open((details.outputdir+"/quenchplot.txt").c_str());}
 	
@@ -220,6 +219,8 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp)
 	float numaddrem[nchain], numaddremtot[nchaintot];
 	unsigned int ntr_addrem[nchain], ntr_addremtot[nchaintot];
 	unsigned int nac_addrem[nchain], nac_addremtot[nchaintot];
+
+	// logbetajump and sigmajump should be added
 
 	timers.timeswap -= clock();
 		
@@ -366,7 +367,7 @@ void Mcmc::output_param(Output &output, vector <vector <double> > &Listore, vect
 			Listore[chtot[p]].push_back(Litot[p]);
 			Liord[chtot[p]] = Litot[p];
 		}
-		output.Li(samp,nchaintot,Liord);
+		output.Li_trace_plot(samp,nchaintot,Liord);
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
@@ -392,7 +393,7 @@ void Mcmc::output_param(Output &output, vector <vector <double> > &Listore, vect
 			unpack(ninfplot);
 		}
 	
-		output.traceplot(samp,L,Pr,ninfplot,paramsamp.paramval);
+		output.trace_plot(samp,L,Pr,ninfplot,paramsamp.paramval);
 		psamp.push_back(paramsamp);
 	}
 	else{
@@ -542,7 +543,6 @@ void Mcmc::diagnostic(vector <vector <double> > &Listore, vector <double> &invTs
 			diag << "Liav: " << av/jmax << "  ";
 			
 			ntrsum = 0; for(th = 0; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
-			//diag << "Time: " << int(1000*timeproptot[cc]/(ntrsum*CLOCKS_PER_SEC));
 			diag << endl;
 			
 			diag << "MBP Accept: " << endl;

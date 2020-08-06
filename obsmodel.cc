@@ -6,12 +6,12 @@
 
 using namespace std;
 
-Obsmodel::Obsmodel(Details &details, DATA &data, MODEL &model) : details(details), data(data), model(model)
+Obsmodel::Obsmodel(const Details &details, const DATA &data, const MODEL &model) : details(details), data(data), model(model)
 {
 }
 
 /// Gets all measured quantities
-MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev)
+MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const
 {
 	unsigned int td, pd, md, ti, tf, r, row, sett, c, j, i, tra, d;
 	double sum;
@@ -104,7 +104,7 @@ MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vec
 }
 
 /// The contribution from a single measurement 
-double Obsmodel::singobs(unsigned int mean, unsigned int val)
+double Obsmodel::singobs(unsigned int mean, unsigned int val) const
 {
 	double var;
 	
@@ -124,7 +124,7 @@ double Obsmodel::singobs(unsigned int mean, unsigned int val)
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev)
+double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const 
 {
 	unsigned int td, pd, md, row, r, j;
 	double mean, val, var, L, sum;
@@ -168,7 +168,7 @@ double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vect
 /// Returns the number of transitions for individuals going down a transition
 /// in different regions over the time range ti - tf
 /// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v)
+vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
 {
 	unsigned int r, sett, i, j;
 	vector <unsigned int> num;

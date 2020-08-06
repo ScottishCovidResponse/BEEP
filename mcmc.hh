@@ -22,7 +22,7 @@ class Obsmodel;
 class Mcmc
 {
 public:	
-	Mcmc(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);
+	Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);
 	
 	void run();
 
@@ -46,11 +46,11 @@ private:
 	
 	enum proposalsmethod propsmethod;        // Stores the type of proposal method
 	
-	Details &details;
+	const Details &details;
 	DATA &data;
 	MODEL &model;
-	POPTREE &poptree;
-	Mpi &mpi;
+	const POPTREE &poptree;
+	const Mpi &mpi;
 	Output &output;
 	Obsmodel &obsmodel;
 };

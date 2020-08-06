@@ -85,7 +85,7 @@ struct SPLINEP{                            // Stores information about a spline 
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(Inputs &inputs, Details &details, DATA &data);
+	MODEL(Inputs &inputs, const Details &details, DATA &data);
 
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories
@@ -135,11 +135,7 @@ public:
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void print_to_terminal() const;
-	void addQ();
-
 	void priorsamp();
-	        
-	void checkdata();
 	unsigned int setup(const vector <double> &paramval);
 	void copyi();
 	void copyp();
@@ -152,6 +148,8 @@ public:
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
 													 
 private:
+	void addQ();
+	void checkdata();
 	void addcomp(string name, double infectivity);
 	void addparam(string name, double min, double max);
 	void addtrans(string from, string to, string prpar, unsigned int type, string param1, string param2);
@@ -164,9 +162,7 @@ private:
 	double likelihood_dt(vector <double> &paramv);
 	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
 
-
-	Details &details;
+	const Details &details;
 	DATA &data;
-	
 };
 #endif

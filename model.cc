@@ -15,19 +15,14 @@ using namespace std;
 #include "utils.hh"
 #include "inputs.hh"
 
-
-MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), data(data)
+/// Initialises the model 
+MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
 {
 	infmax = inputs.find_int("infmax",large);
 	if(details.mode == inf && infmax == large){
 		emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}	
 	
-	
-	
-	unsigned int p, c, j, fi, tra, a, th, r;
-	SPLINEP spl;
-
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
 	if(details.mode == sim || details.mode == multisim){
@@ -46,7 +41,7 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
 	
 	regioneffect = 0;
 	sigma_param = UNSET;
-	for(th = 0; th < param.size(); th++){
+	for(unsigned int th = 0; th < param.size(); th++){
 		if(param[th].name == "regeff_sigma"){
 			param[th].used = 1;
 			
@@ -54,7 +49,7 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
 			sigma_param = th;	
 			
 			regioneff_param.resize(data.nregion);
-			for(r = 0; r < data.nregion; r++){
+			for(unsigned int r = 0; r < data.nregion; r++){
 				regioneff_param[r] = param.size();
 				stringstream ss; ss << "reff_" << data.region[r].code;
 				addparam(ss.str(),-large,large);
@@ -63,6 +58,7 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
 		}
 	}
 		
+	unsigned int th;
 	for(th = 0; th < param.size(); th++){
 		if(param[th].name == "logbeta"){
 			param[th].used = 1;
@@ -111,17 +107,17 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
 	}	
 		
 	sus_param.resize(data.ndemocat);
-	for(c = 0; c < data.ndemocat; c++){
-		for(fi = 0; fi < data.democat[c].value.size(); fi++){
+	for(unsigned int c = 0; c < data.ndemocat; c++){
+		for(unsigned int fi = 0; fi < data.democat[c].value.size(); fi++){
 			sus_param[c].push_back(findparam(data.democat[c].param[fi]));
 		}
 	}
 
-	for(c = 0; c < data.ncovar; c++){
+	for(unsigned int c = 0; c < data.ncovar; c++){
 		covar_param.push_back(findparam(data.covar[c].param));
 	}
 
-	for(p = 0; p < param.size(); p++){
+	for(unsigned int p = 0; p < param.size(); p++){
 		if(param[p].used == 0) emsg("The [arameter '"+param[p].name+"' is not used in the model.");
 	}
 
@@ -133,9 +129,7 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
  
 	beta.resize(details.nsettime); phi.resize(details.nsettime);
 	
-	//setup(paramval);
-	
-	for(tra = 0; tra < trans.size(); tra++){
+	for(unsigned int tra = 0; tra < trans.size(); tra++){
 		switch(trans[tra].type){
 		case exp_dist: param[trans[tra].param_mean].type = 1; break;
 		case gamma_dist: case lognorm_dist: param[trans[tra].param_mean].type = 1; param[trans[tra].param_cv].type = 1; break;
@@ -143,10 +137,13 @@ MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), d
 		
 		if(trans[tra].istimep == 0){
 			if(trans[tra].probparam.size() > 0){
-				for(a = 0; a < data.nage; a++) param[trans[tra].probparam[a]].type = 2; 
+				for(unsigned int a = 0; a < data.nage; a++) param[trans[tra].probparam[a]].type = 2; 
 			}
 		}
 	}
+	
+	addQ();
+	checkdata();
 }
 
 /// Outputs a summary of the model
@@ -212,7 +209,7 @@ void MODEL::print_to_terminal() const
 	cout << endl;
 }
 
-/// Sets up the model with a set of parameters
+/// Sets up the model with a given set of parameters
 unsigned int MODEL::setup(const vector <double> &paramv)
 {
 	paramval = paramv;
@@ -224,7 +221,7 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 	return 0;
 }
 
-/// Copies values used for the initial state (MBPs)
+/// Copies values used for the initial state (used in MBPs)
 void MODEL::copyi()
 {
 	unsigned int c;
@@ -233,7 +230,7 @@ void MODEL::copyi()
 	for(c = 0; c < comp.size(); c++) comp[c].probi = comp[c].prob;
 }
 	
-/// Copies values used for the proposed state (MBPs)
+/// Copies values used for the proposed state (used in MBPs)
 void MODEL::copyp()
 {
 	unsigned int c;
@@ -395,7 +392,7 @@ void MODEL::timevariation()
 	double t, fac;
 	
 	/*  // This uses a cubic spline for beta
-	double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
+		double t, fac, dt, a[n+1], b[n], c[n+1], d[n], h[n], alpha[n], l[n+1], mu[n+1], z[n+1];
 	
 		int n = nspline-1;
 		for(p = 0; p <= n; p++) a[p] = log(paramval[p]);
@@ -423,9 +420,9 @@ void MODEL::timevariation()
 			dt = t-splinet[p];	
 			beta[s] = exp(a[p]+ b[p]*dt + c[p]*dt*dt + d[p]*dt*dt*dt);
 		}
-		*/
+	*/
 	
-  // This uses a linear spline for beta
+  // Uses a linear spline for beta
 	p = 0;
 	for(s = 0; s < details.nsettime; s++){	
 		t = double((s+0.5)*details.period)/details.nsettime;
@@ -436,7 +433,7 @@ void MODEL::timevariation()
 		beta[s] = (paramval[betaspline[p].param]*(1-fac) + paramval[betaspline[p+1].param]*fac);
 	}
 	
-	// This uses a linear spline for phi
+	// Uses a linear spline for phi
 	p = 0;
 	for(s = 0; s < details.nsettime; s++){	
 		t = double((s+0.5)*details.period)/details.nsettime;
@@ -772,8 +769,6 @@ void MODEL::calcprobin()
 	double prob;
 	vector <unsigned int> cst, kst;
 	vector <double> probst;
-	//vector <vector <double> > probin;
-	
 	
 	for(c = 0; c < comp.size(); c++){
 		comp[c].probin.resize(data.nage);

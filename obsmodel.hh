@@ -17,20 +17,20 @@ using namespace std;
 class Obsmodel
 {
 public:
-	Obsmodel(Details &details, DATA &data, MODEL &model);
+	Obsmodel(const Details &details, const DATA &data, const MODEL &model);
 
-	vector <unsigned int> getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v);
+	vector <unsigned int> getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
 
-	double Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev);
+	double Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const;
 
-	MEAS getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev);
+	MEAS getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const ;
 
 private:
-	double singobs(unsigned int mean, unsigned int val);
+	double singobs(unsigned int mean, unsigned int val) const;
 	
-	Details &details;
-	DATA &data;
-	MODEL &model;
+	const Details &details;
+	const DATA &data;
+	const MODEL &model;
 };
 
 #endif
