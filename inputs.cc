@@ -18,8 +18,11 @@ class InputData {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
-	InputData(const Node& data) : tomldata(data) {}
-	Node tomldata;// Information from the TOML file
+	InputData(const Node& data);
+	//InputData(Node&& data) = delete;
+	InputData& operator=(const Node& data) = delete;
+	InputData& operator=(Node&& data) = delete;
+	~InputData() {}
 	bool contains(const std::string& name) const
 		{
 			return tomldata.contains(name);
@@ -29,7 +32,26 @@ public:
 			return toml::find(tomldata, name);
 		}
 	vector<string> get_keys() const;
+	Node tomldata;// Information from the TOML file
 };
+
+InputData::InputData(const Node& data) : tomldata(data)
+{
+	// Allow using values from another TOML file as a base for this one. TODO:
+	// make this into functions so you can do this recursively.
+	if (contains("baseinputfile")) {
+		const string basefile = toml::find<string>(tomldata,"baseinputfile");
+		// TODO: make the filename relative to the original TOML file
+		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
+		
+		for(const auto& p : basetomlddata.as_table())
+		{
+			if (!contains(p.first)) {
+				tomldata[p.first] = p.second;
+			}
+		}
+	}
+}
 
 Inputs::~Inputs()
 {
@@ -73,21 +95,6 @@ Inputs::Inputs(int argc, char** argv, bool verbose)
 
 	try {
 		basedata = new InputData{toml::parse(inputfilename)};
-
-		// Allow using values from another TOML file as a base for this one. TODO:
-		// make this into functions so you can do this recursively.
-		if (basedata->contains("baseinputfile")) {
-			const string basefile = toml::find<string>(basedata->tomldata,"baseinputfile");
-			// TODO: make the filename relative to the original TOML file
-			decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
-
-			for(const auto& p : basetomlddata.as_table())
-			{
-				if (!basedata->contains(p.first)) {
-					basedata->tomldata[p.first] = p.second;
-				}
-			}
-		}
 
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
