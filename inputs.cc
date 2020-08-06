@@ -54,12 +54,16 @@ InputData::InputData(const std::string& inputfilename) :
 		}
 	}
 }
-
-Inputs::~Inputs()
+const InputData::Node& opennamedtable(
+	const InputData::Node& t, const char* name)
 {
-	delete basedata;
+	return toml::find(t,name);
 }
-
+const InputData::Node& openindexedtable(
+	const InputData::Node& t, unsigned int index)
+{
+	return toml::find(t,index);
+}
 std::string stringfield(
 	const InputData::Node& td,
 	const char *title,
@@ -91,15 +95,10 @@ double numberfield(
 		return value.as_integer();
 }
 
-const InputData::Node& opennamedtable(
-	const InputData::Node& t, const char* name)
+
+Inputs::~Inputs()
 {
-	return toml::find(t,name);
-}
-const InputData::Node& openindexedtable(
-	const InputData::Node& t, unsigned int index)
-{
-	return toml::find(t,index);
+	delete basedata;
 }
 
 /// /// Reads TOML and command line parameters
