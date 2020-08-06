@@ -18,7 +18,7 @@ class InputData {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
-	InputData(const Node& data);
+	InputData(const std::string& inputfilename);
 	//InputData(Node&& data) = delete;
 	InputData& operator=(const Node& data) = delete;
 	InputData& operator=(Node&& data) = delete;
@@ -35,7 +35,8 @@ public:
 	Node tomldata;// Information from the TOML file
 };
 
-InputData::InputData(const Node& data) : tomldata(data)
+InputData::InputData(const std::string& inputfilename) :
+	tomldata(toml::parse(inputfilename))
 {
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
@@ -94,7 +95,7 @@ Inputs::Inputs(int argc, char** argv, bool verbose)
 	}
 
 	try {
-		basedata = new InputData{toml::parse(inputfilename)};
+		basedata = new InputData{inputfilename};
 
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
