@@ -24,6 +24,21 @@ Inputs::~Inputs()
 	delete basedata;
 }
 
+template<class T>
+std::string stringfield(
+	const T& td,
+	const char *title,
+	const char *name)
+{
+	if(!td.contains(name)) {
+		ostringstream oss;
+		oss << "A '" << name <<
+			"' property must be specified in '" << title << "'.";
+		emsgroot(oss.str().c_str());
+	}
+	return toml::find<std::string>(td,name);
+}
+
 /// /// Reads TOML and command line parameters
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
@@ -252,9 +267,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 			const auto td = toml::find(tdata,j);
 		
 			TRANSDATA transdata;
-			if(!td.contains("from")) emsgroot("A 'from' property must be specified in 'transdata'.");
-			const auto from = toml::find<std::string>(td,"from");
-			transdata.fromstr = from;
+			transdata.fromstr = stringfield(td,"transdata","from");
 		
 			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
 			const auto to = toml::find<std::string>(td,"to");
