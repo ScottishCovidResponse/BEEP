@@ -18,6 +18,7 @@ class InputData {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
+	InputData(const Node& data) : tomldata(data) {}
 	Node tomldata;// Information from the TOML file
 	bool contains(const std::string& name) const
 		{
@@ -70,8 +71,7 @@ Inputs::Inputs(int argc, char** argv, bool verbose)
 	}
 
 	try {
-		basedata = new InputData;
-		basedata->tomldata = toml::parse(inputfilename);
+		basedata = new InputData{toml::parse(inputfilename)};
 
 		// Allow using values from another TOML file as a base for this one. TODO:
 		// make this into functions so you can do this recursively.
