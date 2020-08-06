@@ -19,7 +19,7 @@ public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
 	Node n;
-	InputNode(const Node n) : n(n) {}
+	explicit InputNode(const Node n) : n(n) {}
 	bool contains(const std::string& name) const
 		{
 			return n.contains(name);
@@ -44,7 +44,7 @@ public:
 		}
 	InputNode open(const std::string& name)
 		{
-			return toml::find(data.n, name);
+			return InputNode(toml::find(data.n, name));
 		}
 	vector<string> get_keys() const;
 	InputNode data;// Information from the TOML file
@@ -78,15 +78,10 @@ vector<string> InputData::get_keys( ) const
 	}
 	return keys;
 }
-InputNode opennamedtable(
-	const InputNode& t, const char* name)
-{
-	return InputNode(toml::find(t.n,name));
-}
 InputNode openindexedtable(
 	const InputNode& t, unsigned int index)
 {
-	return toml::find(t.n,index);
+	return InputNode(toml::find(t.n,index));
 }
 std::string stringfield(
 	const InputNode& td,
