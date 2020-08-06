@@ -51,6 +51,12 @@ InputNode InputNode::operator[](
 {
 	return InputNode(toml::find(n,s),s);
 }
+std::string stringfield_unchecked(
+	const InputNode& td,
+	const std::string& name)
+{
+	return toml::find<std::string>(td.n,name);
+}
 std::string stringfield(
 	const InputNode& td,
 	const char *name)
@@ -61,7 +67,7 @@ std::string stringfield(
 			"' property must be specified in '" << td.label() << "'.";
 		emsgroot(oss.str().c_str());
 	}
-	return toml::find<std::string>(td.n,name);
+	return stringfield_unchecked(td,name);
 }
 double numberfield(
 	const InputNode& td,
@@ -201,7 +207,7 @@ string Inputs::find_string(const string &key, const string &def) const
 	if(val_it != cmdlineparams.end()) val = val_it->second;
 	else{
 		if(basedata->contains(key))
-			val = toml::find<string>(basedata->data.n,key);
+			val = stringfield_unchecked(basedata->data,key);
 		else val = def;
 	}
 
@@ -637,7 +643,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 			else{
 				if(!params.contains("type")) emsgroot("The prior '"+nam+"' must have a 'value' or a 'type'");
 				
-				string type = toml::find<std::string>(params.n,"type");
+				string type = stringfield_unchecked(params,"type");
 				if(type == "uniform"){
 					mi = numberfield(params,nam.c_str(),"min");
 					ma = numberfield(params,nam.c_str(),"max");
@@ -684,7 +690,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			string name = fr_temp+"→"+to_temp;
 			if(!trans.contains("dist")) emsgroot("For the '"+name+"' transition the 'dist' distribution must be set.");
 			
-			string dist = toml::find<std::string>(trans.n, "dist");
+			string dist = stringfield_unchecked(trans, "dist");
 			
 			unsigned int distval = UNSET;
 			string mean_temp="", cv_temp="";
@@ -714,7 +720,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			
 			string prob="";
 			if(trans.contains("prob"))
-				prob = toml::find<std::string>(trans.n, "prob");
+				prob = stringfield_unchecked(trans, "prob");
 
 			from.push_back(fr_temp); to.push_back(to_temp); prpar.push_back(prob);
 			type.push_back(distval); mean.push_back(mean_temp); cv.push_back(cv_temp);
