@@ -39,6 +39,17 @@ std::string stringfield(
 	return toml::find<std::string>(td,name);
 }
 
+template<class T>
+const T& opennamedtable(const T& t, const char* name)
+{
+	return toml::find(t,name);
+}
+template<class T>
+const T& openindexedtable(const T& t, unsigned int index)
+{
+	return toml::find(t,index);
+}
+
 /// /// Reads TOML and command line parameters
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
@@ -261,10 +272,10 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 	vector <TRANSDATA> transdatavec;
 	
 	if(basedata->tomldata.contains("transdata")) {
-		const auto tdata = toml::find(basedata->tomldata,"transdata");
+		const auto tdata = opennamedtable(basedata->tomldata,"transdata");
 
 		for(unsigned int j = 0; j < tdata.size(); j++){
-			const auto td = toml::find(tdata,j);
+			const auto td = openindexedtable(tdata,j);
 		
 			TRANSDATA transdata;
 			transdata.fromstr = stringfield(td,"transdata","from");
