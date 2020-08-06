@@ -353,7 +353,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 
 		POPDATA popdata;
 		for(unsigned int j = 0; j < pdata.size(); j++){
-			const auto pd = toml::find(pdata,j);
+			const auto pd = openindexedtable(pdata,j);
 			
 			popdata.compstr = stringfield(pd,"popdata","comp");
 			popdata.type = stringfield(pd,"popdata","area");
@@ -393,7 +393,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 		const auto mdata = basedata->open("margdata");
 
 		for(unsigned int j = 0; j < mdata.size(); j++){
-			const auto md = toml::find(mdata,j);
+			const auto md = openindexedtable(mdata,j);
 			
 			MARGDATA margdata;
 			margdata.fromstr = stringfield(md,"margdata","from");
@@ -429,7 +429,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		DEMOCAT democat;
 		democat.name = "age";
 		for(unsigned int j = 0; j < ages.size(); j++){
-			const auto ag = toml::find(ages,j);
+			const auto ag = openindexedtable(ages,j);
 			
 			const auto range = stringfield(ag,"ages","range");
 			democat.value.push_back(range);
@@ -445,12 +445,12 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		const auto democats = basedata->open("democats");
 	
 		for(unsigned int k = 0; k < democats.size(); k++){
-			const auto democ = toml::find(democats,k);
+			const auto democ = openindexedtable(democats,k);
 			
 			DEMOCAT democat;
 			democat.name="";
 			for(unsigned int j = 0; j < democ.size(); j++){
-				const auto demoval = toml::find(democ,j);
+				const auto demoval = openindexedtable(democ,j);
 				
 				const auto value = stringfield(demoval,"democats","value");
 				democat.value.push_back(value);
@@ -476,7 +476,7 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 		
 		COVAR cov;
 		for(unsigned int j = 0; j < covars.size(); j++){
-			const auto covar = toml::find(covars,j);
+			const auto covar = openindexedtable(covars,j);
 			
 			cov.name = stringfield(covar,"covars","name");
 			cov.param = stringfield(covar,"covars","param");
@@ -498,7 +498,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 	if(basedata->contains("timep")) {
 		const auto timep = basedata->open("timep");
 		for(unsigned int j = 0; j < timep.size(); j++){
-			const auto tim = toml::find(timep,j);
+			const auto tim = openindexedtable(timep,j);
 			
 			TIMEP timeperiod;
 			timeperiod.name = stringfield(tim,"timep","name");
@@ -559,7 +559,7 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 		for(unsigned int j = 0; j < Qlist.size(); j++){
 			QTENSOR qten;
 		
-			const auto Q = toml::find(Qlist,j);
+			const auto Q = openindexedtable(Qlist,j);
 			
 			const auto timep = stringfield(Q,"Q","timep");
 			unsigned int tp = 0;
@@ -585,8 +585,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 	if(basedata->contains("params")){
 		const auto paramsin = basedata->open("params");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
-			const auto params = toml::find(paramsin,j);
-			if(!params.contains("name")) emsgroot("The quantity 'params' must contain a 'name' definition.");
+			const auto params = openindexedtable(paramsin,j);
 			string nam = stringfield(params,"params","name");
 			
 			double value = numberfield(params,"params","value");
@@ -604,7 +603,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 	if(basedata->contains("priors")){
 		const auto paramsin = basedata->open("priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
-			const auto params = toml::find(paramsin,j);
+			const auto params = openindexedtable(paramsin,j);
 			string nam = stringfield(params,"priors","name");
 
 			double mi, ma;
@@ -635,7 +634,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 	if(basedata->contains("comps")) {
 		const auto compsin = basedata->open("comps");
 		for(unsigned int j = 0; j < compsin.size(); j++){
-			const toml::value comps = toml::find(compsin,j);
+			const auto comps = openindexedtable(compsin,j);
 
 			string nam = stringfield(comps,"comps","name");
 
@@ -653,7 +652,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 	if(basedata->contains("trans")){
 		const auto transin = basedata->open("trans");
 		for(unsigned int j = 0; j < transin.size(); j++){
-			const auto trans = toml::find(transin,j);
+			const auto trans = openindexedtable(transin,j);
 			
 			string fr_temp = stringfield(trans, "trans", "from");
 			
@@ -708,7 +707,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 	if(basedata->contains("priorcomps")){
 		const auto prcomps = basedata->open("priorcomps");
 		for(unsigned int j = 0; j < prcomps.size(); j++){
-			const auto prcomp = toml::find(prcomps,j);
+			const auto prcomp = openindexedtable(prcomps,j);
 			
 			PRIORCOMP pricomp;
 			string co = stringfield(prcomp,"priorcomps","comp");
@@ -733,7 +732,7 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 	if(basedata->contains(name)) {
 		const auto bespin = basedata->open(name);
 		for(unsigned int j = 0; j < bespin.size(); j++){
-			const auto besp = toml::find(bespin,j);
+			const auto besp = openindexedtable(bespin,j);
 
 			const auto nam = stringfield(besp,name.c_str(),"param");
 			const auto timstr = stringfield(besp,name.c_str(),"time");
