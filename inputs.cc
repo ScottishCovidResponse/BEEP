@@ -454,11 +454,9 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 			const auto tim = toml::find(timep,j);
 			
 			TIMEP timeperiod;
-			if(!tim.contains("name")) emsgroot("A 'name' must be specified in 'timep'.");
-			timeperiod.name = toml::find<std::string>(tim,"name");
+			timeperiod.name = stringfield(tim,"timep","name");
 			
-			if(!tim.contains("tend")) emsgroot("'tend' must be specified in 'timep'.");
-			auto tendstr = toml::find<string>(tim,"tend");
+			auto tendstr = stringfield(tim,"timep","tend");
 			timeperiod.tend = details.gettime(tendstr) - details.start;
 			
 			if(timeperiod.tend < 0 || timeperiod.tend > (int)details.period) emsgroot("Time '"+tendstr+"' is out of range."); 
@@ -483,47 +481,25 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 	if(basedata->tomldata.contains("agemix")) {
 		const auto agemix = toml::find(basedata->tomldata,"agemix");
 		
-		if(!agemix.contains("Nall")) emsgroot("'Nall' must be specified in 'agemix'.");
-		const auto Nall = toml::find<std::string>(agemix,"Nall");
-		genQ.Nall = Nall;
-		
-		if(!agemix.contains("Nhome")) emsgroot("'Nhome' must be specified in 'agemix'.");
-		const auto Nhome = toml::find<std::string>(agemix,"Nhome");
-		genQ.Nhome = Nhome;
-		
-		if(!agemix.contains("Nother")) emsgroot("'Nother' must be specified in 'agemix'.");
-		const auto Nother = toml::find<std::string>(agemix,"Nother");
-		genQ.Nother = Nother;
-		
-		if(!agemix.contains("Nschool")) emsgroot("'Nschool' must be specified in 'agemix'.");
-		const auto Nschool = toml::find<std::string>(agemix,"Nschool");
-		genQ.Nschool = Nschool;
-		
-		if(!agemix.contains("Nwork")) emsgroot("'Nwork' must be specified in 'agemix'.");
-		const auto Nwork = toml::find<std::string>(agemix,"Nwork");
-		genQ.Nwork = Nwork;
+		genQ.Nall = stringfield(agemix,"agemix","Nall");
+		genQ.Nhome = stringfield(agemix,"agemix","Nhome");
+		genQ.Nother = stringfield(agemix,"agemix","Nother");
+		genQ.Nschool = stringfield(agemix,"agemix","Nschool");
+		genQ.Nwork = stringfield(agemix,"agemix","Nwork");
 	}
 	else emsgroot("'agemix' must be specified.");
 
 	if(basedata->tomldata.contains("geomix")) {
-		const auto geomix = toml::find(basedata->tomldata,"geomix");
-		
-		if(!geomix.contains("M")) emsgroot("'M' must be specified in 'geomix'.");
-		const auto M = toml::find<std::string>(geomix,"M");
-		genQ.M = M;
+		const auto geomix = toml::find(basedata->tomldata,"geomix");		
+		genQ.M = stringfield(geomix,"geomix","M");
 	}
 	else emsgroot("'geomix' must be specified.");
 	
 	if(basedata->tomldata.contains("genQoutput")) {
 		const auto qout = toml::find(basedata->tomldata,"genQoutput");
 		
-		if(!qout.contains("localhome")) emsgroot("'localhome' must be specified in 'genQoutput'.");
-		const auto localhome = toml::find<std::string>(qout,"localhome");
-		genQ.localhome = localhome;
-
-		if(!qout.contains("flowall")) emsgroot("'flowall' must be specified in 'genQoutput'.");
-		const auto flowall = toml::find<std::string>(qout,"flowall");
-		genQ.flowall = flowall;
+		genQ.localhome = stringfield(qout,"genQoutput","localhome");
+		genQ.flowall = stringfield(qout,"genQoutput","flowall");
 	}
 	else emsgroot("'genQoutput' must be specified.");
 }
@@ -538,17 +514,15 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 		
 			const auto Q = toml::find(Qlist,j);
 			
-			if(!Q.contains("timep")) emsgroot("A 'timep' must be specified in 'Q'.");
-			const auto timep = toml::find<std::string>(Q,"timep");
-			unsigned int tp = 0; while(tp < timeperiod.size() && timeperiod[tp].name != timep) tp++;
+			const auto timep = stringfield(Q,"Q","timep");
+			unsigned int tp = 0;
+			while(tp < timeperiod.size() && timeperiod[tp].name != timep)
+				tp++;
 			if(tp == timeperiod.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
 			qten.timep = tp;
 	
-			if(!Q.contains("comp")) emsgroot("'comp' must be specified in 'Q'.");
-			qten.comp = toml::find<std::string>(Q,"comp");
-			
-			if(!Q.contains("name")) emsgroot("'name' must be specified in 'Q'.");
-			qten.name = toml::find<std::string>(Q,"name");
+			qten.comp = stringfield(Q,"Q","comp");			
+			qten.name = stringfield(Q,"Q","name");
 		
 		  qten.Qtenref = UNSET;
 			
@@ -566,7 +540,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
 			if(!params.contains("name")) emsgroot("The quantity 'params' must contain a 'name' definition.");
-			string nam = toml::find<std::string>(params,"name");
+			string nam = stringfield(params,"params","name");
 			
 			if(!params.contains("value")) emsgroot("The quantity 'params' must contain a 'value' definition.");
 			const auto value_temp = toml::find(params,"value");
