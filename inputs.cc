@@ -349,29 +349,20 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 			const auto md = toml::find(mdata,j);
 			
 			MARGDATA margdata;
-			if(!md.contains("from")) emsgroot("A 'from' property must be specified in 'margdata'.");
-			const auto from = toml::find<std::string>(md,"from");
-			margdata.fromstr = from;
+			margdata.fromstr = stringfield(md,"margdata","from");
 		
-			if(!md.contains("to")) emsgroot("A 'to' property must be specified in 'margdata'.");
-			const auto to = toml::find<std::string>(md,"to");
-			margdata.tostr = to;
+			margdata.tostr = stringfield(md,"margdata","to");
 			
-			if(!md.contains("area")) emsgroot("An 'area' property must be specified in 'margdata'.");
-			const auto area = toml::find<std::string>(md,"area");
-			margdata.type = area;
+			margdata.type = stringfield(md,"margdata","area");
 			if(margdata.type != "reg" && margdata.type != "all") emsgroot("Marginal data type not recognised"); 
 			
-			if(!md.contains("type")) emsgroot("An 'type' property must be specified in 'margdata'.");
-			const auto type = toml::find<std::string>(md,"type");
+			const auto type = stringfield(md,"margdata","type");
 			unsigned int d;
 			for(d = 0; d < democat.size(); d++) if(type == democat[d].name) break;
 			if(d == democat.size()) emsgroot("The 'type' property must be 'age' or a demographic property.");
 			margdata.democat = d;
 				
-			if(!md.contains("file")) emsgroot("A 'file' property must be specified in 'margdata'.");
-			const auto file = toml::find<std::string>(md,"file");
-			margdata.file = file;
+			margdata.file = stringfield(md,"margdata","file");
 			
 			margdatavec.push_back(margdata);
 		}
