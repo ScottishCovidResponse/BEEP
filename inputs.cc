@@ -19,37 +19,46 @@ public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
 	Node n;
-	explicit InputNode(const Node n) : n(n) {}
-	bool contains(const std::string& name) const
-		{
-			return n.contains(name);
-		}
+private:
+	std::string label_;
+public:
+	explicit InputNode(const Node n, const std::string& label) :
+		n(n), label_(label) {}
 	size_t size() const
 		{
 			return n.size();
 		}
+	const std::string& label() const
+		{
+			return label_;
+		}
+	bool contains(const std::string& name) const
+		{
+			return n.contains(name);
+		}
 	InputNode operator[](unsigned int index) const;
 	InputNode operator[](const std::string& s) const;
 };
+// Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
-	return InputNode(toml::find(n,index));
+	return InputNode(toml::find(n,index),label());
 }
+// Could potentially include parent information here
 InputNode InputNode::operator[](
 	const std::string& s) const
 {
-	return InputNode(toml::find(n,s));
+	return InputNode(toml::find(n,s),s);
 }
 std::string stringfield(
 	const InputNode& td,
-	const char *title,
 	const char *name)
 {
 	if(!td.contains(name)) {
 		ostringstream oss;
 		oss << "A '" << name <<
-			"' property must be specified in '" << title << "'.";
+			"' property must be specified in '" << td.label() << "'.";
 		emsgroot(oss.str().c_str());
 	}
 	return toml::find<std::string>(td.n,name);
@@ -93,7 +102,7 @@ public:
 };
 
 InputData::InputData(const std::string& inputfilename) :
-	data(toml::parse(inputfilename))
+	data(toml::parse(inputfilename),"")
 {
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
@@ -328,18 +337,18 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 			const auto td = tdata[j];
 		
 			TRANSDATA transdata;
-			transdata.fromstr = stringfield(td,"transdata","from");
-			transdata.tostr = stringfield(td,"transdata","to");
-			transdata.type = stringfield(td,"transdata","area");
+			transdata.fromstr = stringfield(td,"from");
+			transdata.tostr = stringfield(td,"to");
+			transdata.type = stringfield(td,"area");
 
 			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
 			
-			transdata.file = stringfield(td,"transdata","file");
+			transdata.file = stringfield(td,"file");
 
-			const auto startdata = stringfield(td,"transdata","start");
+			const auto startdata = stringfield(td,"start");
 			transdata.start = details.gettime(startdata)-details.start;
 			
-			const auto units = stringfield(td,"transdata","units");
+			const auto units = stringfield(td,"units");
 			if(units == "days") transdata.units = 1;
 			else{
 				if(units == "weeks") transdata.units = 7;
@@ -369,17 +378,17 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 		for(unsigned int j = 0; j < pdata.size(); j++){
 			const auto pd = pdata[j];
 			
-			popdata.compstr = stringfield(pd,"popdata","comp");
-			popdata.type = stringfield(pd,"popdata","area");
+			popdata.compstr = stringfield(pd,"comp");
+			popdata.type = stringfield(pd,"area");
 
 			if(popdata.type != "reg" && popdata.type != "all") emsgroot("popition data type not recognised"); 
 			
-			popdata.file = stringfield(pd,"popdata","file");
+			popdata.file = stringfield(pd,"file");
 
-			const auto startdata = stringfield(pd,"popdata","start");
+			const auto startdata = stringfield(pd,"start");
 			popdata.start = details.gettime(startdata)-details.start;
 			
-			const auto units = stringfield(pd,"popdata","units");;			
+			const auto units = stringfield(pd,"units");;			
 			if(units == "days") popdata.units = 1;
 			else{
 				if(units == "weeks") popdata.units = 7;
@@ -410,20 +419,20 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 			const auto md = mdata[j];
 			
 			MARGDATA margdata;
-			margdata.fromstr = stringfield(md,"margdata","from");
+			margdata.fromstr = stringfield(md,"from");
 		
-			margdata.tostr = stringfield(md,"margdata","to");
+			margdata.tostr = stringfield(md,"to");
 			
-			margdata.type = stringfield(md,"margdata","area");
+			margdata.type = stringfield(md,"area");
 			if(margdata.type != "reg" && margdata.type != "all") emsgroot("Marginal data type not recognised"); 
 			
-			const auto type = stringfield(md,"margdata","type");
+			const auto type = stringfield(md,"type");
 			unsigned int d;
 			for(d = 0; d < democat.size(); d++) if(type == democat[d].name) break;
 			if(d == democat.size()) emsgroot("The 'type' property must be 'age' or a demographic property.");
 			margdata.democat = d;
 				
-			margdata.file = stringfield(md,"margdata","file");
+			margdata.file = stringfield(md,"file");
 			
 			margdatavec.push_back(margdata);
 		}
@@ -445,10 +454,10 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		for(unsigned int j = 0; j < ages.size(); j++){
 			const auto ag = ages[j];
 			
-			const auto range = stringfield(ag,"ages","range");
+			const auto range = stringfield(ag,"range");
 			democat.value.push_back(range);
 			
-			const auto sus = stringfield(ag,"ages","sus");
+			const auto sus = stringfield(ag,"sus");
 			democat.param.push_back(sus);
 		}
 		democatvec.push_back(democat);
@@ -466,10 +475,10 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 			for(unsigned int j = 0; j < democ.size(); j++){
 				const auto demoval = democ[j];
 				
-				const auto value = stringfield(demoval,"democats","value");
+				const auto value = stringfield(demoval,"value");
 				democat.value.push_back(value);
 				
-				const auto sus = stringfield(demoval,"democats","sus");
+				const auto sus = stringfield(demoval,"sus");
 				democat.param.push_back(sus);
 			}
 			
@@ -492,9 +501,9 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 		for(unsigned int j = 0; j < covars.size(); j++){
 			const auto covar = covars[j];
 			
-			cov.name = stringfield(covar,"covars","name");
-			cov.param = stringfield(covar,"covars","param");
-			cov.func = stringfield(covar,"covars","func");
+			cov.name = stringfield(covar,"name");
+			cov.param = stringfield(covar,"param");
+			cov.func = stringfield(covar,"func");
 			cov.col = UNSET;
 			
 			covarvec.push_back(cov);
@@ -515,9 +524,9 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 			const auto tim = timep[j];
 			
 			TIMEP timeperiod;
-			timeperiod.name = stringfield(tim,"timep","name");
+			timeperiod.name = stringfield(tim,"name");
 			
-			auto tendstr = stringfield(tim,"timep","tend");
+			auto tendstr = stringfield(tim,"tend");
 			timeperiod.tend = details.gettime(tendstr) - details.start;
 			
 			if(timeperiod.tend < 0 || timeperiod.tend > (int)details.period) emsgroot("Time '"+tendstr+"' is out of range."); 
@@ -542,25 +551,25 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 	if(basedata->contains("agemix")) {
 		const auto agemix = basedata->open("agemix");
 		
-		genQ.Nall = stringfield(agemix,"agemix","Nall");
-		genQ.Nhome = stringfield(agemix,"agemix","Nhome");
-		genQ.Nother = stringfield(agemix,"agemix","Nother");
-		genQ.Nschool = stringfield(agemix,"agemix","Nschool");
-		genQ.Nwork = stringfield(agemix,"agemix","Nwork");
+		genQ.Nall = stringfield(agemix,"Nall");
+		genQ.Nhome = stringfield(agemix,"Nhome");
+		genQ.Nother = stringfield(agemix,"Nother");
+		genQ.Nschool = stringfield(agemix,"Nschool");
+		genQ.Nwork = stringfield(agemix,"Nwork");
 	}
 	else emsgroot("'agemix' must be specified.");
 
 	if(basedata->contains("geomix")) {
 		const auto geomix = basedata->open("geomix");		
-		genQ.M = stringfield(geomix,"geomix","M");
+		genQ.M = stringfield(geomix,"M");
 	}
 	else emsgroot("'geomix' must be specified.");
 	
 	if(basedata->contains("genQoutput")) {
 		const auto qout = basedata->open("genQoutput");
 		
-		genQ.localhome = stringfield(qout,"genQoutput","localhome");
-		genQ.flowall = stringfield(qout,"genQoutput","flowall");
+		genQ.localhome = stringfield(qout,"localhome");
+		genQ.flowall = stringfield(qout,"flowall");
 	}
 	else emsgroot("'genQoutput' must be specified.");
 }
@@ -575,15 +584,15 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 		
 			const auto Q = Qlist[j];
 			
-			const auto timep = stringfield(Q,"Q","timep");
+			const auto timep = stringfield(Q,"timep");
 			unsigned int tp = 0;
 			while(tp < timeperiod.size() && timeperiod[tp].name != timep)
 				tp++;
 			if(tp == timeperiod.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
 			qten.timep = tp;
 	
-			qten.comp = stringfield(Q,"Q","comp");			
-			qten.name = stringfield(Q,"Q","name");
+			qten.comp = stringfield(Q,"comp");			
+			qten.name = stringfield(Q,"name");
 		
 		  qten.Qtenref = UNSET;
 			
@@ -600,7 +609,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 		const auto paramsin = basedata->open("params");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = paramsin[j];
-			string nam = stringfield(params,"params","name");
+			string nam = stringfield(params,"name");
 			
 			double value = numberfield(params,"params","value");
 			
@@ -618,11 +627,11 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 		const auto paramsin = basedata->open("priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = paramsin[j];
-			string nam = stringfield(params,"priors","name");
+			string nam = stringfield(params,"name");
 
 			double mi, ma;
 			if(params.contains("value")){
-				double value = numberfield(params,"params","value");
+				double value = numberfield(params,nam.c_str(),"value");
 				mi = value; ma = value;
 			}
 			else{
@@ -650,9 +659,9 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 		for(unsigned int j = 0; j < compsin.size(); j++){
 			const auto comps = compsin[j];
 
-			string nam = stringfield(comps,"comps","name");
+			string nam = stringfield(comps,"name");
 
-			double infect = numberfield(comps,"name","inf");
+			double infect = numberfield(comps,nam.c_str(),"inf");
 	
 			name.push_back(nam); infectivity.push_back(infect);
 		}
@@ -668,9 +677,9 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 		for(unsigned int j = 0; j < transin.size(); j++){
 			const auto trans = transin[j];
 			
-			string fr_temp = stringfield(trans, "trans", "from");
+			string fr_temp = stringfield(trans, "from");
 			
-			string to_temp = stringfield(trans, "trans", "to");
+			string to_temp = stringfield(trans, "to");
 		
 			string name = fr_temp+"→"+to_temp;
 			if(!trans.contains("dist")) emsgroot("For the '"+name+"' transition the 'dist' distribution must be set.");
@@ -686,19 +695,19 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			
 			if(dist == "exp"){
 				distval = exp_dist;
-				mean_temp = stringfield(trans,name.c_str(),"mean");				
+				mean_temp = stringfield(trans,"mean");				
 			}
 			
 			if(dist == "lognorm"){
 				distval = lognorm_dist;
-				mean_temp = stringfield(trans,name.c_str(),"mean");				
-				cv_temp = stringfield(trans,name.c_str(),"cv");
+				mean_temp = stringfield(trans,"mean");				
+				cv_temp = stringfield(trans,"cv");
 			}
 			
 			if(dist == "gamma"){
 				distval = gamma_dist;
-				mean_temp = stringfield(trans,name.c_str(),"mean");
-				cv_temp = stringfield(trans,name.c_str(),"cv");
+				mean_temp = stringfield(trans,"mean");
+				cv_temp = stringfield(trans,"cv");
 			}
 			
 			if(distval == UNSET) emsgroot("For the '"+name+"' transition the distribution '"+dist+"' is not recognised.");
@@ -725,7 +734,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 			const auto prcomp = prcomps[j];
 			
 			PRIORCOMP pricomp;
-			string co = stringfield(prcomp,"priorcomps","comp");
+			string co = stringfield(prcomp,"comp");
 			unsigned int c = 0; while(c < comp.size() && comp[c].name != co) c++;
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
 			pricomp.comp = c;
@@ -749,8 +758,8 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 		for(unsigned int j = 0; j < bespin.size(); j++){
 			const auto besp = bespin[j];
 
-			const auto nam = stringfield(besp,name.c_str(),"param");
-			const auto timstr = stringfield(besp,name.c_str(),"time");
+			const auto nam = stringfield(besp,"param");
+			const auto timstr = stringfield(besp,"time");
 			
 			int tim = details.gettime(timstr) - details.start;
 			
