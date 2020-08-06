@@ -268,26 +268,17 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 		
 			TRANSDATA transdata;
 			transdata.fromstr = stringfield(td,"transdata","from");
-		
-			if(!td.contains("to")) emsgroot("A 'to' property must be specified in 'transdata'.");
-			const auto to = toml::find<std::string>(td,"to");
-			transdata.tostr = to;
-			
-			if(!td.contains("area")) emsgroot("An 'area' property must be specified in 'transdata'.");
-			const auto area = toml::find<std::string>(td,"area");
-			transdata.type = area;
+			transdata.tostr = stringfield(td,"transdata","to");
+			transdata.type = stringfield(td,"transdata","area");
+
 			if(transdata.type != "reg" && transdata.type != "all") emsgroot("Transition data type not recognised"); 
 			
-			if(!td.contains("file")) emsgroot("A 'file' property must be specified in 'transdata'.");
-			const auto file = toml::find<std::string>(td,"file");
-			transdata.file = file;
+			transdata.file = stringfield(td,"transdata","file");
 
-			if(!td.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
-			const auto startdata = toml::find<string>(td,"start");
+			const auto startdata = stringfield(td,"transdata","start");
 			transdata.start = details.gettime(startdata)-details.start;
 			
-			if(!td.contains("units")) emsgroot("A 'units' property must be specified in 'transdata'.");
-			const auto units = toml::find<std::string>(td,"units");
+			const auto units = stringfield(td,"transdata","units");
 			if(units == "days") transdata.units = 1;
 			else{
 				if(units == "weeks") transdata.units = 7;
@@ -296,7 +287,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 			
 			if(details.mode != inf){
 				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
-				if(transdata.rows == 0) emsgroot("Transition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+				if(transdata.rows == 0) emsgroot("Transition data '"+transdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
 			transdatavec.push_back(transdata);
