@@ -54,6 +54,16 @@ InputData::InputData(const std::string& inputfilename) :
 		}
 	}
 }
+/// Gets a list of all the keys
+vector<string> InputData::get_keys( ) const
+{
+	vector<string> keys;
+	for(const auto& p : tomldata.as_table())
+	{
+		keys.push_back(p.first);
+	}
+	return keys;
+}
 const InputData::Node& opennamedtable(
 	const InputData::Node& t, const char* name)
 {
@@ -250,17 +260,6 @@ double Inputs::find_double(const string &key, double def) const
 	}
 	
 	return val;
-}
-
-/// Gets a list of all the keys
-vector<string> InputData::get_keys( ) const
-{
-	vector<string> keys;
-	for(const auto& p : tomldata.as_table())
-	{
-		keys.push_back(p.first);
-	}
-	return keys;
 }
 
 /// Checks for unrecognised parameters
