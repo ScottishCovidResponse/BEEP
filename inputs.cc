@@ -19,9 +19,13 @@ public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
 	Node tomldata;// Information from the TOML file
-	bool contains(const std::string& name)
+	bool contains(const std::string& name) const
 		{
 			return tomldata.contains(name);
+		}
+	Node open(const std::string& name)
+		{
+			return toml::find(tomldata, name);
 		}
 };
 
@@ -277,7 +281,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 	vector <TRANSDATA> transdatavec;
 	
 	if(basedata->contains("transdata")) {
-		const auto tdata = opennamedtable(basedata->tomldata,"transdata");
+		const auto tdata = basedata->open("transdata");
 
 		for(unsigned int j = 0; j < tdata.size(); j++){
 			const auto td = openindexedtable(tdata,j);
@@ -318,7 +322,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 	vector <POPDATA> popdatavec;
 
 	if(basedata->contains("popdata")) {
-		const auto pdata = toml::find(basedata->tomldata,"popdata");
+		const auto pdata = basedata->open("popdata");
 
 		POPDATA popdata;
 		for(unsigned int j = 0; j < pdata.size(); j++){
@@ -359,7 +363,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 	vector <MARGDATA> margdatavec;
 	
 	if(basedata->contains("margdata")) {
-		const auto mdata = toml::find(basedata->tomldata,"margdata");
+		const auto mdata = basedata->open("margdata");
 
 		for(unsigned int j = 0; j < mdata.size(); j++){
 			const auto md = toml::find(mdata,j);
@@ -393,7 +397,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 	vector <DEMOCAT> democatvec;
 	
 	if(basedata->contains("ages")){                           // Age categories
-		const auto ages = toml::find(basedata->tomldata,"ages");
+		const auto ages = basedata->open("ages");
 		
 		DEMOCAT democat;
 		democat.name = "age";
@@ -411,7 +415,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 	else emsgroot("The 'ages' parameter must be set.");
 	
 	if(basedata->contains("democats")){                        // Other demographic possibilities
-		const auto democats = toml::find(basedata->tomldata,"democats");
+		const auto democats = basedata->open("democats");
 	
 		for(unsigned int k = 0; k < democats.size(); k++){
 			const auto democ = toml::find(democats,k);
@@ -441,7 +445,7 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 	vector <COVAR> covarvec;
 	
 	if(basedata->contains("covars")){
-		const auto covars = toml::find(basedata->tomldata,"covars");
+		const auto covars = basedata->open("covars");
 		
 		COVAR cov;
 		for(unsigned int j = 0; j < covars.size(); j++){
@@ -465,7 +469,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 	vector <TIMEP> timeperiodvec;
 	
 	if(basedata->contains("timep")) {
-		const auto timep = toml::find(basedata->tomldata,"timep");
+		const auto timep = basedata->open("timep");
 		for(unsigned int j = 0; j < timep.size(); j++){
 			const auto tim = toml::find(timep,j);
 			
@@ -495,7 +499,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 {
 	if(basedata->contains("agemix")) {
-		const auto agemix = toml::find(basedata->tomldata,"agemix");
+		const auto agemix = basedata->open("agemix");
 		
 		genQ.Nall = stringfield(agemix,"agemix","Nall");
 		genQ.Nhome = stringfield(agemix,"agemix","Nhome");
@@ -506,13 +510,13 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 	else emsgroot("'agemix' must be specified.");
 
 	if(basedata->contains("geomix")) {
-		const auto geomix = toml::find(basedata->tomldata,"geomix");		
+		const auto geomix = basedata->open("geomix");		
 		genQ.M = stringfield(geomix,"geomix","M");
 	}
 	else emsgroot("'geomix' must be specified.");
 	
 	if(basedata->contains("genQoutput")) {
-		const auto qout = toml::find(basedata->tomldata,"genQoutput");
+		const auto qout = basedata->open("genQoutput");
 		
 		genQ.localhome = stringfield(qout,"genQoutput","localhome");
 		genQ.flowall = stringfield(qout,"genQoutput","flowall");
@@ -524,7 +528,7 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const
 {
 	if(basedata->contains("Q")) {
-		const auto Qlist = toml::find(basedata->tomldata,"Q");
+		const auto Qlist = basedata->open("Q");
 		for(unsigned int j = 0; j < Qlist.size(); j++){
 			QTENSOR qten;
 		
@@ -552,7 +556,7 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 void Inputs::find_param(vector <string> &name, vector <double> &val) const
 {
 	if(basedata->contains("params")){
-		const auto paramsin = toml::find(basedata->tomldata,"params");
+		const auto paramsin = basedata->open("params");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
 			if(!params.contains("name")) emsgroot("The quantity 'params' must contain a 'name' definition.");
@@ -574,7 +578,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const
 {
 	if(basedata->contains("priors")){
-		const auto paramsin = toml::find(basedata->tomldata,"priors");
+		const auto paramsin = basedata->open("priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
 			if(!params.contains("name")) emsgroot("The quantity 'priors' must contain a 'name' definition.");
@@ -613,7 +617,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) const
 {
 	if(basedata->contains("comps")) {
-		const auto compsin = toml::find(basedata->tomldata,"comps");
+		const auto compsin = basedata->open("comps");
 		for(unsigned int j = 0; j < compsin.size(); j++){
 			const toml::value comps = toml::find(compsin,j);
 			if(!comps.contains("name")) emsgroot("Compartments in 'comps' must contain a 'name' definition.");
@@ -635,7 +639,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar, vector <int> &type, vector <string> &mean, vector <string> &cv) const
 {
 	if(basedata->contains("trans")){
-		const auto transin = toml::find(basedata->tomldata,"trans");
+		const auto transin = basedata->open("trans");
 		for(unsigned int j = 0; j < transin.size(); j++){
 			const auto trans = toml::find(transin,j);
 			
@@ -699,7 +703,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 	vector <PRIORCOMP> priorcompvec;
 	
 	if(basedata->contains("priorcomps")){
-		const auto prcomps = toml::find(basedata->tomldata,"priorcomps");
+		const auto prcomps = basedata->open("priorcomps");
 		for(unsigned int j = 0; j < prcomps.size(); j++){
 			const auto prcomp = toml::find(prcomps,j);
 			
@@ -735,7 +739,7 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 {
 	time.clear(); param.clear();
 	if(basedata->contains(name)) {
-		const auto bespin = toml::find(basedata->tomldata,name);
+		const auto bespin = basedata->open(name);
 		for(unsigned int j = 0; j < bespin.size(); j++){
 			const auto besp = toml::find(bespin,j);
 			
