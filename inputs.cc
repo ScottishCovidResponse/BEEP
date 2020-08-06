@@ -14,10 +14,24 @@ using namespace std;
 #include "data.hh"
 #include "model.hh"
 
-class InputData {
+class InputNode {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
+	Node n;
+	InputNode(const Node n) : n(n) {}
+	bool contains(const std::string& name) const
+		{
+			return n.contains(name);
+		}
+	size_t size() const
+		{
+			return n.size();
+		}
+};
+
+class InputData {
+public:
 	InputData(const std::string& inputfilename);
 	InputData(const InputData& data) = delete;
 	InputData(InputData&& data) = delete;
@@ -26,30 +40,30 @@ public:
 	~InputData() {}
 	bool contains(const std::string& name) const
 		{
-			return tomldata.contains(name);
+			return data.contains(name);
 		}
-	Node open(const std::string& name)
+	InputNode open(const std::string& name)
 		{
-			return toml::find(tomldata, name);
+			return toml::find(data.n, name);
 		}
 	vector<string> get_keys() const;
-	Node tomldata;// Information from the TOML file
+	InputNode data;// Information from the TOML file
 };
 
 InputData::InputData(const std::string& inputfilename) :
-	tomldata(toml::parse(inputfilename))
+	data(toml::parse(inputfilename))
 {
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
 	if (contains("baseinputfile")) {
-		const string basefile = toml::find<string>(tomldata,"baseinputfile");
+		const string basefile = toml::find<string>(data.n,"baseinputfile");
 		// TODO: make the filename relative to the original TOML file
 		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
 		
 		for(const auto& p : basetomlddata.as_table())
 		{
 			if (!contains(p.first)) {
-				tomldata[p.first] = p.second;
+				data.n[p.first] = p.second;
 			}
 		}
 	}
@@ -58,24 +72,24 @@ InputData::InputData(const std::string& inputfilename) :
 vector<string> InputData::get_keys( ) const
 {
 	vector<string> keys;
-	for(const auto& p : tomldata.as_table())
+	for(const auto& p : data.n.as_table())
 	{
 		keys.push_back(p.first);
 	}
 	return keys;
 }
-const InputData::Node& opennamedtable(
-	const InputData::Node& t, const char* name)
+InputNode opennamedtable(
+	const InputNode& t, const char* name)
 {
-	return toml::find(t,name);
+	return InputNode(toml::find(t.n,name));
 }
-const InputData::Node& openindexedtable(
-	const InputData::Node& t, unsigned int index)
+InputNode openindexedtable(
+	const InputNode& t, unsigned int index)
 {
-	return toml::find(t,index);
+	return toml::find(t.n,index);
 }
 std::string stringfield(
-	const InputData::Node& td,
+	const InputNode& td,
 	const char *title,
 	const char *name)
 {
@@ -85,10 +99,10 @@ std::string stringfield(
 			"' property must be specified in '" << title << "'.";
 		emsgroot(oss.str().c_str());
 	}
-	return toml::find<std::string>(td,name);
+	return toml::find<std::string>(td.n,name);
 }
 double numberfield(
-	const InputData::Node& td,
+	const InputNode& td,
 	const char *title,
 	const char *name)
 {
@@ -98,7 +112,7 @@ double numberfield(
 			"' must be specified in '" << title << "'.";
 		emsgroot(oss.str().c_str());
 	}
-	const auto value = toml::find(td,name);
+	const auto value = toml::find(td.n,name);
 	if(value.is_floating())
 		return value.as_floating();
 	else
@@ -176,7 +190,8 @@ string Inputs::find_string(const string &key, const string &def) const
 	auto val_it = cmdlineparams.find(key);
 	if(val_it != cmdlineparams.end()) val = val_it->second;
 	else{
-		if(basedata->contains(key)) val = toml::find<string>(basedata->tomldata,key);
+		if(basedata->contains(key))
+			val = toml::find<string>(basedata->data.n,key);
 		else val = def;
 	}
 
@@ -213,7 +228,7 @@ int Inputs::find_int(const string &key, int def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			val = toml::find<int>(basedata->tomldata,key);
+			val = toml::find<int>(basedata->data.n,key);
 		} else {
 			val = def;
 		}
@@ -252,7 +267,7 @@ double Inputs::find_double(const string &key, double def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			const auto val_temp = toml::find(basedata->tomldata,key);
+			const auto val_temp = toml::find(basedata->data.n,key);
 			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
 		} else {
 			val = def;
@@ -612,7 +627,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 			else{
 				if(!params.contains("type")) emsgroot("The prior '"+nam+"' must have a 'value' or a 'type'");
 				
-				string type = toml::find<std::string>(params,"type");
+				string type = toml::find<std::string>(params.n,"type");
 				if(type == "uniform"){
 					mi = numberfield(params,nam.c_str(),"min");
 					ma = numberfield(params,nam.c_str(),"max");
@@ -659,7 +674,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			string name = fr_temp+"→"+to_temp;
 			if(!trans.contains("dist")) emsgroot("For the '"+name+"' transition the 'dist' distribution must be set.");
 			
-			string dist = toml::find<std::string>(trans, "dist");
+			string dist = toml::find<std::string>(trans.n, "dist");
 			
 			unsigned int distval = UNSET;
 			string mean_temp="", cv_temp="";
@@ -688,7 +703,8 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			if(distval == UNSET) emsgroot("For the '"+name+"' transition the distribution '"+dist+"' is not recognised.");
 			
 			string prob="";
-			if(trans.contains("prob")) prob = toml::find<std::string>(trans, "prob");
+			if(trans.contains("prob"))
+				prob = toml::find<std::string>(trans.n, "prob");
 
 			from.push_back(fr_temp); to.push_back(to_temp); prpar.push_back(prob);
 			type.push_back(distval); mean.push_back(mean_temp); cv.push_back(cv_temp);
