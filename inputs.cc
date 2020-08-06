@@ -384,12 +384,10 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		for(unsigned int j = 0; j < ages.size(); j++){
 			const auto ag = toml::find(ages,j);
 			
-			if(!ag.contains("range")) emsgroot("A 'range' must be specified in 'ages'.");
-			const auto range = toml::find<std::string>(ag,"range");
+			const auto range = stringfield(ag,"ages","range");
 			democat.value.push_back(range);
 			
-			if(!ag.contains("sus")) emsgroot("A 'sus' must be specified in 'ages'.");
-			const auto sus = toml::find<std::string>(ag,"sus");
+			const auto sus = stringfield(ag,"ages","sus");
 			democat.param.push_back(sus);
 		}
 		democatvec.push_back(democat);
@@ -407,12 +405,10 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 			for(unsigned int j = 0; j < democ.size(); j++){
 				const auto demoval = toml::find(democ,j);
 				
-				if(!demoval.contains("value")) emsgroot("A 'value' must be specified in 'democats'.");
-				const auto value = toml::find<std::string>(demoval,"value");
+				const auto value = stringfield(demoval,"democats","value");
 				democat.value.push_back(value);
 				
-				if(!demoval.contains("sus")) emsgroot("The property 'sus' must be specified in 'democats'.");
-				const auto sus = toml::find<std::string>(demoval,"sus");
+				const auto sus = stringfield(demoval,"democats","sus");
 				democat.param.push_back(sus);
 			}
 			
@@ -435,14 +431,9 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 		for(unsigned int j = 0; j < covars.size(); j++){
 			const auto covar = toml::find(covars,j);
 			
-			if(!covar.contains("name")) emsgroot("A 'name' must be specified in 'covars'.");
-			cov.name = toml::find<std::string>(covar,"name");
-	
-			if(!covar.contains("param")) emsgroot("A 'param' must be specified in 'covars'.");
-			cov.param = toml::find<std::string>(covar,"param");
-
-			if(!covar.contains("func")) emsgroot("A 'func' must be specified in 'covars'.");
-			cov.func = toml::find<std::string>(covar,"func");
+			cov.name = stringfield(covar,"covars","name");
+			cov.param = stringfield(covar,"covars","param");
+			cov.func = stringfield(covar,"covars","func");
 			cov.col = UNSET;
 			
 			covarvec.push_back(cov);
