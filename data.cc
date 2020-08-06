@@ -24,7 +24,8 @@ using namespace std;
 #include "table.hh"
 #endif
 
-DATA::DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp) : compX(area), compY(area), details(details)
+/// Initialises data
+DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) : compX(area), compY(area), details(details)
 {
 	datapipeline = dp;
 	
@@ -47,8 +48,11 @@ DATA::DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp) : compX
 	
 	inputs.find_genQ(genQ,details);
 	inputs.find_Q(Q,timeperiod,details);
+	
+	read_data_files(inputs,mpi);                                  // Reads the data files
 }
 
+/// Outputs properties of data to the terminal
 void DATA::print_to_terminal() const
 {
 	if(covar.size() > 0){
@@ -121,7 +125,7 @@ void DATA::calc_democatpos()
 }
 
 /// Loads the region data file
-void DATA::load_region_file(Inputs &inputs)
+void DATA::load_region_file(const Inputs &inputs)
 {
 	string file = inputs.find_string("regions","UNSET");
 	if(file == "UNSET") emsgroot("A 'regions' file must be specified");
@@ -141,11 +145,10 @@ void DATA::load_region_file(Inputs &inputs)
 }
 
 /// Reads in transition and area data
-void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
+void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 {
-	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, fl, d, dp, a, q, s, row;
-	unsigned int namecol, codecol, xcol, ycol, regcol;
-	int dc;
+	unsigned int r, i, c, imax, k, td, pd, md, j, jmax, d, dp, a, q, row;
+	unsigned int codecol, xcol, ycol, regcol;
 	double v=0, sum;
 	string line, ele, name, regcode, st, file;
 	REGION reg;
@@ -167,7 +170,6 @@ void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
 	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
 
 	if(mpi.core == 0){
-		
 		load_region_file(inputs);
 	
 		string file = inputs.find_string("areas","UNSET");
@@ -403,9 +405,8 @@ void DATA::read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi)
 	//generatedeathdata(); emsg("done");
 }
 
-
 /// Gets a positive integer from a string
-unsigned int DATA::getint(string st, string file)
+unsigned int DATA::getint(string st, string file) const
 {
 	unsigned int i, j;
 	int n = st.length();  
@@ -427,20 +428,8 @@ unsigned int DATA::getint(string st, string file)
 	return i;
 }
 
-/*
-/// Adds a time period
-void DATA::addtimep(string name, double tend)
-{
-	TIMEP timep;
-	
-	timep.name = name;
-	timep.tend = tend;
-	timeperiod.push_back(timep);
-}
-	*/
-	
 /// Loads a table from the data pipeline
-TABLE DATA::loadtablefromdatapipeline(string file)
+TABLE DATA::loadtablefromdatapipeline(string file) const
 {
 	TABLE tab;
 #ifdef USE_DATA_PIPELINE
@@ -477,7 +466,7 @@ TABLE DATA::loadtablefromdatapipeline(string file)
 }
 
 /// Loads a table from a file
-TABLE DATA::loadtablefromfile(string file, string dir)
+TABLE DATA::loadtablefromfile(string file, string dir) const
 {
 	TABLE tab;
 	string line, st;
@@ -536,7 +525,7 @@ TABLE DATA::loadtablefromfile(string file, string dir)
 }
 
 /// Loads a table from a file (if dir is specified then this directory is used
-TABLE DATA::loadtable(string file, string dir)
+TABLE DATA::loadtable(string file, string dir) const
 {
 	if (stringhasending(file, ".txt")) {
 		return loadtablefromfile(file, dir);
@@ -546,7 +535,7 @@ TABLE DATA::loadtable(string file, string dir)
 }
 
 /// Creates a new column by adding together existing columns		
-void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab)
+void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const
 {
 	unsigned int row, i, sum;
 	
@@ -560,7 +549,7 @@ void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab)
 }
 
 /// Selects dates as specified in the TOLM file
-void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type)
+void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const 
 {
 	unsigned int row, tt, num1, num2, i;
 	
@@ -603,7 +592,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 }				
 
 /// Finds a column in a table
-unsigned int DATA::findcol(TABLE &tab, string name)
+unsigned int DATA::findcol(const TABLE &tab, string name) const
 {
 	unsigned int c;
 	
@@ -620,14 +609,10 @@ void DATA::copydata(unsigned int core)
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit();
-		//pack(ndemocatpos);
-		//pack(democatpos);
 		pack(nregion);
 		pack(region);
 		pack(narea);
 		pack(area);
-		//pack(nage);
-		//pack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			pack(transdata[td].num);
 			pack(transdata[td].rows);
@@ -652,14 +637,10 @@ void DATA::copydata(unsigned int core)
 
 	if(core != 0){
 		packinit();
-		//unpack(ndemocatpos);
-		//unpack(democatpos);
 		unpack(nregion);
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		//unpack(nage);
-		//unpack(ndemocatposperage);
 		for(td = 0; td < transdata.size(); td++){
 			unpack(transdata[td].num);
 			unpack(transdata[td].rows);
@@ -720,29 +701,7 @@ void DATA::copydata(unsigned int core)
 	}	
 }
 
-/*
-/// Adds demographic categories
-void DATA::adddemocat(string name, vector <string> &st, vector <string> &params)
-{
-
-}
-	*/
-	/*
-/// Add a covariate for the areas
-void DATA::addcovar(string name, string param, string func)
-{
-	COVAR cov;
-	cov.name = name;
-	cov.param = param;
-	cov.func = func;
-	cov.col = UNSET;
-	
-	covar.push_back(cov);
-	ncovar = covar.size();
-}
-	*/
-	
-string DATA::strip(string line)
+string DATA::strip(string line) const 
 {
 	unsigned int len;
 	
@@ -755,7 +714,6 @@ string DATA::strip(string line)
 	
 	return line;
 }	
-
 
 void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
 void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}

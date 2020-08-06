@@ -163,9 +163,9 @@ class DATA
 {
 public:
 	
-	DATA(Inputs &inputs, Details &details, Mpi &mpi, DataPipeline *dp=0);
+	DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
 
-	DataPipeline *datapipeline;             // DataPipeline object
+	DataPipeline *datapipeline;              // DataPipeline object
 	
 	string datadir; 												 // The data directory
 
@@ -189,10 +189,6 @@ public:
 	GENQ genQ; 															 // Stores information about generating the Q matrix
 	vector <QTENSOR> Q;                      // Stores the list of Q tensors
 	
-	
-	//string regiondatafile;                   // File giving information about data regions
-	//string areadatafile;                     // File giving information about areas
-	
 	unsigned int nregion;                    // Number of data regions
 	vector <REGION> region;                  // The names of the data regions
 
@@ -206,48 +202,38 @@ public:
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
 
-	
 	vector <TRANSDATA> transdata;            // Store information about transition data
 	
 	vector <POPDATA> popdata;                // Store information about population data
 	
 	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
 	
-	
 	vector <double> agedist; 								 // Gives the overall age distribution
 	
-
-	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
+	void sortX(vector <unsigned int> &vec);	 // Used for sorting houses by x and y location
 	void sortY(vector <unsigned int> &vec);	
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;
 	
-
-	//void adddemocat(string name, vector <string> &st, vector <string> &params);
-	//void addcovar(string name, string param, string func);
-	//void addtimep(string name, double tend);
-	//void addQtensor(string timep, string comp, string name);
-	void read_data_files(Inputs &inputs, MODEL &model, Mpi &mpi);
 	void print_to_terminal() const;
 	
 private:
 	void calc_democatpos();
+	void read_data_files(const Inputs &inputs, const Mpi &mpi);
+	void load_region_file(const Inputs &inputs);
 	
-	void load_region_file(Inputs &inputs);
-	
-	string strip(string line);
+	string strip(string line) const;
 	void copydata(unsigned int core);
-	TABLE loadtable(string file, string dir="");
-	TABLE loadtablefromdatapipeline(string file);
-	TABLE loadtablefromfile(string file, string dir);
+	TABLE loadtable(string file, string dir="") const;
+	TABLE loadtablefromdatapipeline(string file) const;
+	TABLE loadtablefromfile(string file, string dir) const;
 
-	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab);
-	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type);
-	unsigned int findcol(TABLE &tab, string name);
-	//void normaliseQ(unsigned int q);
-	unsigned int getint(string st, string file);
+	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const;
+	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const;
+	unsigned int findcol(const TABLE &tab, string name) const;
+	unsigned int getint(string st, string file) const;
 	
-	void plotrawdata();
+	void plotrawdata();   // These are temporary function used for analysis (they will be removed later)
 	void generatedeathdata();
 	void convertOAtoM();
 	void convertRegion_M();

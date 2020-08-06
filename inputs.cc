@@ -14,58 +14,42 @@ using namespace std;
 #include "data.hh"
 #include "model.hh"
 
+/// /// Reads TOML and command line parameters
 Inputs::Inputs(int argc, char** argv, bool verbose) 
 {
 	set_command_line_params(argc,argv);                          // Loads up the command line parameters
 	
-	// A list of all supported parameters (please keep in lexicographic order)
-	definedparams = {
-		"baseinputfile",
-		"Q",
-		"agemix",
-		"ages",
-		"areas",
-		"betaspline",
-		"burnin",
-		"comps",
-		"covars",
-		"datadir",
-		"democats",
-		"distribution",
-		"end",
-		"genQ",
-		"genQoutput",
-		"geomix",
-		"infmax",
-		"invTmin",
-		"invTmax",
-		"dirs",
-		"inputfile",
-		"margdata",
-		"mode",
-		"model",
-		"nchain",
-		"nsamp",
-		"output",
-		"outputdir",
-		"params",
-		"phispline",
-		"popdata",
-		"priorcomps",
-		"priors",
-		"propsmethod",
-		"regions",
-		"seed",
-		"start",
-		"threshold",
-		"timeformat",
-		"timep",
-		"timeunits",
-		"trans",
-		"transdata",
-	};
+	string inputfilename = "/dev/null";
+	if (cmdlineparams.count("inputfile") == 1) {
+		inputfilename = cmdlineparams["inputfile"];
+	}
+
+	try {
+		tomldata = toml::parse(inputfilename);
+
+		// Allow using values from another TOML file as a base for this one. TODO:
+		// make this into functions so you can do this recursively.
+		if (tomldata.contains("baseinputfile")) {
+			const string basefile = toml::find<string>(tomldata,"baseinputfile");
+			// TODO: make the filename relative to the original TOML file
+			decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
+
+			for(const auto& p : basetomlddata.as_table())
+			{
+				if (!tomldata.contains(p.first)) {
+					tomldata[p.first] = p.second;
+				}
+			}
+		}
+
+	} catch (const std::exception& e) {
+		std::ostringstream oss;
+		oss << "toml::parse returns exception\n" << e.what();
+		emsgroot(oss.str());
+	}	
 	
-	read_toml_file(verbose);
+	vector<string> tomlkeys = get_toml_keys(tomldata);
+	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 }
 
 /// Gets the command line parameters and places them into cmdlineparams
@@ -103,42 +87,7 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 	}
 }
 
-/// Reads TOML parameters and places them into tomldata
-void Inputs::read_toml_file(bool verbose)
-{
-	string inputfilename = "/dev/null";
-	if (cmdlineparams.count("inputfile") == 1) {
-		inputfilename = cmdlineparams["inputfile"];
-	}
-	//decltype(toml::parse(inputfilename)) tomldata;
-	try {
-		tomldata = toml::parse(inputfilename);
-
-		// Allow using values from another TOML file as a base for this one. TODO:
-		// make this into functions so you can do this recursively.
-		if (tomldata.contains("baseinputfile")) {
-			const string basefile = toml::find<string>(tomldata,"baseinputfile");
-			// TODO: make the filename relative to the original TOML file
-			decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
-
-			for(const auto& p : basetomlddata.as_table())
-			{
-				if (!tomldata.contains(p.first)) {
-					tomldata[p.first] = p.second;
-				}
-			}
-		}
-
-	} catch (const std::exception& e) {
-		std::ostringstream oss;
-		oss << "toml::parse returns exception\n" << e.what();
-		emsgroot(oss.str());
-	}	
-	
-	vector<string> tomlkeys = get_toml_keys(tomldata);
-	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
-}
-
+/// Finds a string from the TOML file (or uses the default 'def' value)
 string Inputs::find_string(const string &key, const string &def) const
 {
 	string val;
@@ -152,6 +101,7 @@ string Inputs::find_string(const string &key, const string &def) const
 	return val;
 }
 
+/// Finds an integer from the TOML file (or uses the default 'def' value)
 int Inputs::find_int(const string &key, int def) const
 {
 	int val;
@@ -190,6 +140,7 @@ int Inputs::find_int(const string &key, int def) const
 	return val;
 }
 
+/// Finds a double from the TOML file (or uses the default 'def' value)
 double Inputs::find_double(const string &key, double def) const
 {
 	double val;
@@ -229,6 +180,7 @@ double Inputs::find_double(const string &key, double def) const
 	return val;
 }
 
+/// Gets a list of all the keys
 vector<string> Inputs::get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const
 {
 	vector<string> keys;
@@ -239,6 +191,7 @@ vector<string> Inputs::get_toml_keys( const toml::basic_value<::toml::discard_co
 	return keys;
 }
 
+/// Checks for unrecognised parameters
 void Inputs::check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const
 {
 	vector<string> undefined;
@@ -262,7 +215,7 @@ void Inputs::check_for_undefined_parameters(vector<string> allowed, vector<strin
 	}
 }
 
-
+/// Returns the mode of operation
 Mode Inputs::mode() const
 {
 	string val = find_string("mode","UNSET");  
@@ -276,7 +229,7 @@ Mode Inputs::mode() const
 	return mode;
 }
 
-/// transdata
+/// Finds and returns 'transdata'
 vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 {
 	vector <TRANSDATA> transdatavec;
@@ -328,7 +281,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 	return transdatavec;
 }
 
-/// popdata
+/// Finds and returns 'popdata'
 vector <POPDATA> Inputs::find_popdata(const Details &details) const
 {
 	vector <POPDATA> popdatavec;
@@ -378,7 +331,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 	return popdatavec;
 }
 
-/// margdata
+/// Finds and returns 'margdata'
 vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DEMOCAT> &democat) const
 {
 	vector <MARGDATA> margdatavec;
@@ -421,7 +374,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 	return margdatavec;
 }
 
-/// democats
+/// Finds and returns 'democats'
 vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 {
 	vector <DEMOCAT> democatvec;
@@ -473,7 +426,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 	return democatvec;
 }
 
-// area covariates
+/// Finds and returns 'covar'
 vector <COVAR> Inputs::find_covar(const Details &details) const
 {
 	vector <COVAR> covarvec;
@@ -502,7 +455,7 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 	return covarvec;
 }
 
-/// timep
+/// Finds and returns 'timep'
 vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 {
 	vector <TIMEP> timeperiodvec;
@@ -536,7 +489,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 	return timeperiodvec;
 }
 
-// gen Q
+/// Finds properties of 'genQ'
 void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 {
 	if(tomldata.contains("agemix")) {
@@ -587,6 +540,7 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 	else emsgroot("'genQoutput' must be specified.");
 }
 
+/// Sets up Q
 void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const
 {
 	if(tomldata.contains("Q")) {
@@ -616,6 +570,7 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 	else emsgroot("Property 'timep' defining time periods must be set.");
 }
 
+/// Finds 'params'
 void Inputs::find_param(vector <string> &name, vector <double> &val) const
 {
 	if(tomldata.contains("params")){
@@ -637,6 +592,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 	else{ emsgroot("The input file must contain parameter values through 'params'.");}
 }
 
+/// Finds 'priors'
 void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const
 {
 	if(tomldata.contains("priors")){
@@ -675,6 +631,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 	else{ emsgroot("The input file must contain quantity 'priors'.");}
 }
 
+/// Finds 'comps'
 void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) const
 {
 	if(tomldata.contains("comps")) {
@@ -696,6 +653,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 	else{ emsgroot("The input file must contain compartment definitions through 'comps'");}
 }
 
+/// Finds 'trans'
 void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar, vector <int> &type, vector <string> &mean, vector <string> &cv) const
 {
 	if(tomldata.contains("trans")){
@@ -757,6 +715,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 	else{ emsgroot("The input file must contain transition definitions through the 'trans' quantity.");}
 }
 
+/// Finds 'priorcomps'
 vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 {
 	vector <PRIORCOMP> priorcompvec;
@@ -793,7 +752,8 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 	return priorcompvec;
 }
 
-void Inputs::find_spline(Details &details, string &name, vector <int> &time, vector <string> &param) const
+/// Finds 'betaspline' and 'phispline'
+void Inputs::find_spline(const Details &details, string &name, vector <int> &time, vector <string> &param) const
 {
 	time.clear(); param.clear();
 	if(tomldata.contains(name)) {

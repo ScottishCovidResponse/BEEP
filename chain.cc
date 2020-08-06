@@ -18,7 +18,8 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-Chain::Chain(Details &details, DATA &data, MODEL &model, POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+/// Initialises a single mcmc chain
+Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
 	int l;

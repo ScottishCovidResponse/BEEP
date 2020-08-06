@@ -44,20 +44,63 @@ public:
 	void find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar,
                  	vector <int> &type, vector <string> &mean, vector <string> &cv) const;
 	vector <PRIORCOMP> find_priorcomps(const vector<COMP> &comp) const;
-	void find_spline(Details &details, string &name, vector <int> &time, vector <string> &param) const;
+	void find_spline(const Details &details, string &name, vector <int> &time, vector <string> &param) const;
 
 	Mode mode() const;
 	
 private:
 	void set_command_line_params(int argc, char *argv[]);  
-	void read_toml_file(bool verbose); 
 	vector<string> get_toml_keys( const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &data) const;
 	void check_for_undefined_parameters(vector<string> allowed, vector<string> given,	const string &context) const;
 	
 	map<string,string> cmdlineparams;                                                   // A map of all the parameters entered on the command line
-	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Stores information from the TOML file
-
-	vector<string> definedparams;                                                       // Stores all the possible parameters 
+	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Information from the TOML file
 };
 
+const vector<string> definedparams = {       // A list of all supported parameters (please keep in lexicographic order)
+		"baseinputfile",
+		"Q",
+		"agemix",
+		"ages",
+		"areas",
+		"betaspline",
+		"burnin",
+		"comps",
+		"covars",
+		"datadir",
+		"democats",
+		"distribution",
+		"end",
+		"genQ",
+		"genQoutput",
+		"geomix",
+		"infmax",
+		"invTmin",
+		"invTmax",
+		"dirs",
+		"inputfile",
+		"margdata",
+		"mode",
+		"model",
+		"nchain",
+		"nsamp",
+		"output",
+		"outputdir",
+		"params",
+		"phispline",
+		"popdata",
+		"priorcomps",
+		"priors",
+		"propsmethod",
+		"regions",
+		"seed",
+		"start",
+		"threshold",
+		"timeformat",
+		"timep",
+		"timeunits",
+		"trans",
+		"transdata",
+	};
+	
 #endif
