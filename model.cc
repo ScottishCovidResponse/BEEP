@@ -14,18 +14,16 @@
 
 using namespace std;
 
-MODEL::MODEL(Inputs &inputs, Details &details, DATA &data) : details(details), data(data)
+MODEL::MODEL(Inputs &inputs, Details &details, DATA &data,  const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata) : details(details), data(data)
 {
 	infmax = large;
 	
 	infmax = inputs.find_int("infmax",large);
 	if(details.mode == inf && infmax == large) emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	
-}
-
-/// Defines the compartmental model
-void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* popsize*/, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata)
-{
+	
+	
+	
 	unsigned int p, c, j, fi, tra, a, th, r;
 	SPLINEP spl;
 	PRIORCOMP pricomp;
@@ -33,65 +31,17 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 	timeperiod = data.timeperiod; ntimeperiod = timeperiod.size();
 
 	if(details.mode == sim || details.mode == multisim){
-		if(tomldata.contains("params")){
-			string name;
-			double value;
-			
-			const auto paramsin = toml::find(tomldata,"params");
-			for(j = 0; j < paramsin.size(); j++){
-				const auto params = toml::find(paramsin,j);
-				if(!params.contains("name")) emsg("The quantity 'params' must contain a 'name' definition.");
-				name = toml::find<std::string>(params,"name");
-				
-				if(!params.contains("value")) emsg("The quantity 'params' must contain a 'value' definition.");
-				const auto value_temp = toml::find(params,"value");
-			  if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
-				
-				addparam(name,value,value);
-			}
-		}
-		else{ emsg("The input file must contain parameter values through 'params'.");}
+		vector <string> name;
+		vector <double> val;
+		inputs.find_param(name,val);
+		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],val[th],val[th]);
 	}
 
 	if(details.mode == inf){
-		if(tomldata.contains("priors")){
-			string name;
-			double value;
-			
-			const auto paramsin = toml::find(tomldata,"priors");
-			for(j = 0; j < paramsin.size(); j++){
-				const auto params = toml::find(paramsin,j);
-				if(!params.contains("name")) emsg("The quantity 'priors' must contain a 'name' definition.");
-				name = toml::find<std::string>(params,"name");
-
-				if(params.contains("value")){
-					const auto value_temp = toml::find(params,"value");
-					if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
-			
-					addparam(name,value,value);
-				}
-				else{
-					if(!params.contains("type")) emsg("The prior '"+name+"' must have a 'value' or a 'type'");
-					
-					string type = toml::find<std::string>(params,"type");
-					if(type == "uniform"){
-						if(!params.contains("min")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'min' definition.");
-						double min;
-						const auto min_temp = toml::find(params,"min");
-						if(min_temp.is_floating()) min = min_temp.as_floating(); else min = min_temp.as_integer();	
-			
-						if(!params.contains("max")) emsg("For the prior '"+name+"', the uniform distribution must contain a 'max' definition.");
-						double max;
-						const auto max_temp = toml::find(params,"max");
-						if(max_temp.is_floating()) max = max_temp.as_floating(); else max = max_temp.as_integer();	
-			
-						addparam(name,min,max);
-					}
-					else emsg("In 'priors', the prior type '"+type+"' is not recognised.");
-				}
-			}
-		}
-		else{ emsg("The input file must contain quantity 'priors'.");}
+		vector <string> name;
+		vector <double> min,max;
+		inputs.find_prior(name,min,max);
+		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],min[th],max[th]);
 	}
 	
 	regioneffect = 0;
@@ -320,64 +270,66 @@ void MODEL::definemodel(unsigned int core, double /* period */, unsigned int /* 
 			}
 		}
 	}
-	
-	if(core == 0){
-		cout << endl;                                               // Outputs a summary of the model
-		if(details.mode == sim || details.mode == multisim){
-			cout << "Parameters:" << endl;
-			for(p = 0; p < param.size()-1; p++){
-				cout << "  " << param[p].name << " = " << param[p].min << endl;
-			}
+}
+
+/// Outputs a summary of the model
+void MODEL::print_to_terminal() const
+{
+	cout << endl;                                           
+	if(details.mode == sim || details.mode == multisim){
+		cout << "Parameters:" << endl;
+		for(unsigned int p = 0; p < param.size()-1; p++){
+			cout << "  " << param[p].name << " = " << param[p].min << endl;
 		}
-		else{
-			cout << "Priors:" << endl;
-			for(p = 0; p < param.size()-1; p++){
-				cout << "  " << param[p].name << " = ";
-				if(param[p].min ==  param[p].max) cout << param[p].min << endl;
-				else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
-			}
+	}
+	else{
+		cout << "Priors:" << endl;
+		for(unsigned int p = 0; p < param.size()-1; p++){
+			cout << "  " << param[p].name << " = ";
+			if(param[p].min ==  param[p].max) cout << param[p].min << endl;
+			else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
 		}
-		cout << endl;
-			
-		cout << "Compartments:" << endl; 
-		for(c = 0; c < comp.size(); c++){
-			cout << "  " << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 			
-		}
-		cout << endl;
+	}
+	cout << endl;
 		
-		cout << "Transitions:" << endl; 
-		for(tra = 0; tra < trans.size(); tra++){
-			cout << "  " << comp[trans[tra].from].name << " → " << comp[trans[tra].to].name;
-			if(trans[tra].probparam.size() > 0){
-				cout << "  with probability ";
-				for(j = 0; j < trans[tra].probparam.size(); j++){
-					if(j > 0) cout << ", ";
-					cout << param[trans[tra].probparam[j]].name;
-				}
+	cout << "Compartments:" << endl; 
+	for(unsigned int c = 0; c < comp.size(); c++){
+		cout << "  " << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 			
+	}
+	cout << endl;
+	
+	cout << "Transitions:" << endl; 
+	for(unsigned int tra = 0; tra < trans.size(); tra++){
+		cout << "  " << comp[trans[tra].from].name << " → " << comp[trans[tra].to].name;
+		if(trans[tra].probparam.size() > 0){
+			cout << "  with probability ";
+			for(unsigned int j = 0; j < trans[tra].probparam.size(); j++){
+				if(j > 0) cout << ", ";
+				cout << param[trans[tra].probparam[j]].name;
 			}
-			
-			switch(trans[tra].type){
-				case infection_dist: 
-					cout << " Infection";
-					break;
-				case exp_dist:
-					cout << " Exponential  mean=" << param[trans[tra].param1].name;
-					break;
-				case gamma_dist:
-					cout << " Gamma mean=" << param[trans[tra].param1].name 
-							 << " cv=" << param[trans[tra].param2].name; 
-					break;
-				case lognorm_dist:
-					cout << " Lognormal mean=" << param[trans[tra].param1].name 
-							 << " cv=" << param[trans[tra].param2].name; 
-					break;
-				default:
-					break;
-			}
-			cout << endl;
+		}
+		
+		switch(trans[tra].type){
+			case infection_dist: 
+				cout << " Infection";
+				break;
+			case exp_dist:
+				cout << " Exponential  mean=" << param[trans[tra].param1].name;
+				break;
+			case gamma_dist:
+				cout << " Gamma mean=" << param[trans[tra].param1].name 
+						 << " cv=" << param[trans[tra].param2].name; 
+				break;
+			case lognorm_dist:
+				cout << " Lognormal mean=" << param[trans[tra].param1].name 
+						 << " cv=" << param[trans[tra].param2].name; 
+				break;
+			default:
+				break;
 		}
 		cout << endl;
 	}
+	cout << endl;
 }
 
 /// Sets up the model with a set of parameters

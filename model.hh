@@ -85,7 +85,7 @@ struct SPLINEP{                            // Stores information about a spline 
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(Inputs &inputs, Details &details, DATA &data);
+	MODEL(Inputs &inputs, Details &details, DATA &data,  const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
 
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories
@@ -134,7 +134,7 @@ public:
 	double getinfectivity(string name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
-	void definemodel(unsigned int core, double period, unsigned int popsize, const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata);
+	void print_to_terminal() const;
 	void addQ();
 
 	void priorsamp();

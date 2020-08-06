@@ -614,3 +614,62 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 	}
 	else emsgroot("Property 'timep' defining time periods must be set.");
 }
+
+void Inputs::find_param(vector <string> &name, vector <double> &val) const
+{
+	if(tomldata.contains("params")){
+		const auto paramsin = toml::find(tomldata,"params");
+		for(unsigned int j = 0; j < paramsin.size(); j++){
+			const auto params = toml::find(paramsin,j);
+			if(!params.contains("name")) emsg("The quantity 'params' must contain a 'name' definition.");
+			string nam = toml::find<std::string>(params,"name");
+			
+			if(!params.contains("value")) emsg("The quantity 'params' must contain a 'value' definition.");
+			const auto value_temp = toml::find(params,"value");
+			double value;
+			if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();
+			
+			name.push_back(nam);
+			val.push_back(value);
+		}
+	}
+	else{ emsg("The input file must contain parameter values through 'params'.");}
+}
+
+void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const
+{
+	if(tomldata.contains("priors")){
+		const auto paramsin = toml::find(tomldata,"priors");
+		for(unsigned int j = 0; j < paramsin.size(); j++){
+			const auto params = toml::find(paramsin,j);
+			if(!params.contains("name")) emsg("The quantity 'priors' must contain a 'name' definition.");
+			string nam = toml::find<std::string>(params,"name");
+
+			double mi, ma;
+			if(params.contains("value")){
+				const auto value_temp = toml::find(params,"value");
+				double value;
+				if(value_temp.is_floating()) value = value_temp.as_floating(); else value = value_temp.as_integer();	
+				mi = value; ma = value;
+			}
+			else{
+				if(!params.contains("type")) emsg("The prior '"+nam+"' must have a 'value' or a 'type'");
+				
+				string type = toml::find<std::string>(params,"type");
+				if(type == "uniform"){
+					if(!params.contains("min")) emsg("For the prior '"+nam+"', the uniform distribution must contain a 'min' definition.");
+					const auto min_temp = toml::find(params,"min");
+					if(min_temp.is_floating()) mi = min_temp.as_floating(); else mi = min_temp.as_integer();	
+		
+					if(!params.contains("max")) emsg("For the prior '"+nam+"', the uniform distribution must contain a 'max' definition.");
+					const auto max_temp = toml::find(params,"max");
+					if(max_temp.is_floating()) ma = max_temp.as_floating(); else ma = max_temp.as_integer();	
+				}
+				else emsg("In 'priors', the prior type '"+type+"' is not recognised.");
+			}
+			
+			name.push_back(nam); min.push_back(mi); max.push_back(ma);
+		}
+	}
+	else{ emsg("The input file must contain quantity 'priors'.");}
+}

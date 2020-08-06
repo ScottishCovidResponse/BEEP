@@ -45,70 +45,6 @@ Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
 using namespace std;
 
-string lookup_string_parameter(const map<string,string> &params,
-															 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-															 const string &key, bool verbose, const string &def="")                        // zz
-{
-	string val;
-	auto val_it = params.find(key);
-	if (val_it != params.end()) {
-		val = val_it->second;
-	} else {
-		if (tomldata.contains(key)) {
-			val = toml::find<string>(tomldata,key);
-		} else {
-			val = def;
-			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
-		}
-	}
-	if (verbose)
-		cout << "  " << key << " = " << val << endl;
-	return val;
-}
-
-
-int lookup_int_parameter(const map<string,string> &params,
-												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
-												 const string &key, bool verbose, int def=-1)
-{
-	int val;
-	auto val_it = params.find(key);
-	if (val_it != params.end()) {
-		const std::string& valstr = val_it->second;
-		try {
-			size_t idx;
-			val = stoi(valstr,&idx);
-			if (idx != valstr.length()) {
-				std::ostringstream oss;
-				oss << "Should be integer, found '"<< valstr;
-				throw std::invalid_argument(oss.str());
-			}
-		} catch (const std::exception& e) {
-			std::ostringstream oss;
-			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
-			// Add exception description if it's informative
-			std::string what = e.what();
-			if (what == "stoi") {
-				if (valstr == "")
-					oss << "Should be integer, found no value\n";
-			} else {
-				oss << what;
-			}
-			emsg(oss.str());
-		}
-	} else {
-		if (tomldata.contains(key)) {
-			val = toml::find<int>(tomldata,key);
-		} else {
-			val = def;
-			// emsgroot("ERROR: Parameter \'"+key+"\' must be supplied");
-		}
-	}
-	if (verbose)
-		cout << "  " << key << " = " << val << endl;
-	return val;
-}
-
 double lookup_double_parameter(const map<string,string> &params,
 												 const toml::basic_value<::toml::discard_comments, std::unordered_map, std::vector> &tomldata,
 												 const string &key, bool verbose, int def=-1) //zz
@@ -330,9 +266,6 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	
-	MODEL model(inputs,details,data);
-		
-	data.read_data_files(inputs,model,mpi);
 	
 	
 	//data.threshold=UNSET;
@@ -422,6 +355,10 @@ int main(int argc, char** argv)
 	vector<string> tomlkeys = get_toml_keys(tomldata);
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 
+	MODEL model(inputs,details,data,tomldata);
+		
+	data.read_data_files(inputs,model,mpi);
+	
 	// The code could be simplified by reading the TOML parameters into a
 	// map<string,string> and merging it with cmdlineparams. However, this would
 	// require casting all the TOML values to strings, and we would lose the
@@ -512,7 +449,7 @@ int main(int argc, char** argv)
 	POPTREE poptree;
 	poptree.init(data,mpi.core);	
 
-	model.definemodel(mpi.core,details.period,data.popsize,tomldata);
+	//model.definemodel(mpi.core,details.period,data.popsize,tomldata);
 	model.addQ();
 	model.checkdata();
 

@@ -36,6 +36,8 @@ public:
 	vector <TIMEP> find_timeperiod(const Details &details) const;
 	void find_genQ(GENQ &genQ, const Details &details) const;
 	void find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const;
+	void find_param(vector <string> &name, vector <double> &val) const;
+	void find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const;
 
 	Mode mode() const;
 	
