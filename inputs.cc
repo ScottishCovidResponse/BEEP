@@ -308,26 +308,17 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 		for(unsigned int j = 0; j < pdata.size(); j++){
 			const auto pd = toml::find(pdata,j);
 			
-			if(!pd.contains("comp")) emsgroot("A 'comp' property must be specified in 'popdata'.");
-			const auto comp = toml::find<std::string>(pd,"comp");
-			popdata.compstr = comp;
-			
-			if(!pd.contains("area")) emsgroot("An 'area' property must be specified in 'popdata'.");
-			const auto area = toml::find<std::string>(pd,"area");
-			popdata.type = area;
+			popdata.compstr = stringfield(pd,"popdata","comp");
+			popdata.type = stringfield(pd,"popdata","area");
+
 			if(popdata.type != "reg" && popdata.type != "all") emsgroot("popition data type not recognised"); 
 			
-			if(!pd.contains("file")) emsgroot("A 'file' property must be specified in 'popdata'.");
-			const auto file = toml::find<std::string>(pd,"file");
-			popdata.file = file;
+			popdata.file = stringfield(pd,"popdata","file");
 
-			if(!pd.contains("start")) emsgroot("A 'start' property must be specified in 'popdata'.");
-			const auto startdata = toml::find<string>(pd,"start");
+			const auto startdata = stringfield(pd,"popdata","start");
 			popdata.start = details.gettime(startdata)-details.start;
 			
-			if(!pd.contains("units")) emsgroot("A 'units' property must be specified in 'popdata'.");
-			const auto units = toml::find<std::string>(pd,"units");
-			
+			const auto units = stringfield(pd,"popdata","units");;			
 			if(units == "days") popdata.units = 1;
 			else{
 				if(units == "weeks") popdata.units = 7;
@@ -336,7 +327,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 			
 			if(details.mode != inf){
 				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
-				if(popdata.rows == 0) emsgroot("popition data '"+file+"' cannot be generated because the time period is not sufficiently long.");
+				if(popdata.rows == 0) emsgroot("popition data '"+popdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			}
 			
 			popdatavec.push_back(popdata);
