@@ -591,8 +591,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 		const auto paramsin = basedata->open("priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
 			const auto params = toml::find(paramsin,j);
-			if(!params.contains("name")) emsgroot("The quantity 'priors' must contain a 'name' definition.");
-			string nam = toml::find<std::string>(params,"name");
+			string nam = stringfield(params,"priors","name");
 
 			double mi, ma;
 			if(params.contains("value")){
@@ -630,9 +629,9 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 		const auto compsin = basedata->open("comps");
 		for(unsigned int j = 0; j < compsin.size(); j++){
 			const toml::value comps = toml::find(compsin,j);
-			if(!comps.contains("name")) emsgroot("Compartments in 'comps' must contain a 'name' definition.");
 
-			string nam = toml::find<std::string>(comps,"name");
+			string nam = stringfield(comps,"comps","name");
+
 			if(!comps.contains("inf")) emsgroot("The compartment 'name' must contain an 'inf' definition.");
 			
 			const auto inf_temp = toml::find(comps,"inf");
@@ -653,11 +652,9 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 		for(unsigned int j = 0; j < transin.size(); j++){
 			const auto trans = toml::find(transin,j);
 			
-			if(!trans.contains("from")) emsgroot("Transition specified in 'trans' must contain a 'from' definition.");
-			string fr_temp = toml::find<std::string>(trans, "from");
+			string fr_temp = stringfield(trans, "trans", "from");
 			
-			if(!trans.contains("to")) emsgroot("Transition specified in 'trans' must contain a 'to' definition.");
-			string to_temp = toml::find<std::string>(trans, "to");
+			string to_temp = stringfield(trans, "trans", "to");
 		
 			string name = fr_temp+"→"+to_temp;
 			if(!trans.contains("dist")) emsgroot("For the '"+name+"' transition the 'dist' distribution must be set.");
@@ -673,26 +670,19 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			
 			if(dist == "exp"){
 				distval = exp_dist;
-				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
-				mean_temp = toml::find<std::string>(trans, "mean");
+				mean_temp = stringfield(trans,name.c_str(),"mean");				
 			}
 			
 			if(dist == "lognorm"){
 				distval = lognorm_dist;
-				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
-				mean_temp = toml::find<std::string>(trans, "mean");
-				
-				if(!trans.contains("cv")) emsgroot("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
-				cv_temp = toml::find<std::string>(trans, "cv");
+				mean_temp = stringfield(trans,name.c_str(),"mean");				
+				cv_temp = stringfield(trans,name.c_str(),"cv");
 			}
 			
 			if(dist == "gamma"){
 				distval = gamma_dist;
-				if(!trans.contains("mean")) emsgroot("The '"+name+"' transition must contain a 'mean' definition.");
-				mean_temp = toml::find<std::string>(trans, "mean");
-				
-				if(!trans.contains("cv")) emsgroot("The '"+name+"' transition must contain an 'cv' coefficient of variation definition.");
-				cv_temp = toml::find<std::string>(trans, "cv");
+				mean_temp = stringfield(trans,name.c_str(),"mean");
+				cv_temp = stringfield(trans,name.c_str(),"cv");
 			}
 			
 			if(distval == UNSET) emsgroot("For the '"+name+"' transition the distribution '"+dist+"' is not recognised.");
@@ -718,8 +708,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 			const auto prcomp = toml::find(prcomps,j);
 			
 			PRIORCOMP pricomp;
-			if(!prcomp.contains("comp")) emsgroot("'priorcomps' must contain a 'comp' definition.");
-			string co = toml::find<std::string>(prcomp,"comp");
+			string co = stringfield(prcomp,"priorcomps","comp");
 			unsigned int c = 0; while(c < comp.size() && comp[c].name != co) c++;
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
 			pricomp.comp = c;
@@ -752,12 +741,10 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 		const auto bespin = basedata->open(name);
 		for(unsigned int j = 0; j < bespin.size(); j++){
 			const auto besp = toml::find(bespin,j);
+
+			const auto nam = stringfield(besp,name.c_str(),"param");
+			const auto timstr = stringfield(besp,name.c_str(),"time");
 			
-			if(!besp.contains("param")) emsgroot("The '"+name+"' definition must contain a 'param' definition.");
-			const auto name = toml::find<std::string>(besp,"param");
-			
-			if(!besp.contains("time")) emsgroot("The '"+name+"' definition must contain a 'time' definition.");
-			const auto timstr = toml::find<string>(besp,"time");
 			int tim = details.gettime(timstr) - details.start;
 			
 			if(j == 0 && tim != 0) emsgroot("The first point in '"+name+"' must be at the 'start' time.");
@@ -765,7 +752,7 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 			if(tim < 0 || tim > (int)details.period) emsgroot("The '"+name+"' points must be within the time period set for the simulation/inference.");
 			
 			time.push_back(tim);
-			param.push_back(name);
+			param.push_back(nam);
 		}
 	}
 	else emsgroot("'"+name+"' must be specified");
