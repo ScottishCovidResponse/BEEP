@@ -16,7 +16,9 @@ using namespace std;
 
 class InputData {
 public:
-	toml::basic_value<toml::discard_comments, std::unordered_map, std::vector> tomldata;// Information from the TOML file
+	typedef toml::basic_value<toml::discard_comments,
+														std::unordered_map, std::vector> Node;
+	Node tomldata;// Information from the TOML file
 };
 
 Inputs::~Inputs()
@@ -24,9 +26,8 @@ Inputs::~Inputs()
 	delete basedata;
 }
 
-template<class T>
 std::string stringfield(
-	const T& td,
+	const InputData::Node& td,
 	const char *title,
 	const char *name)
 {
@@ -39,13 +40,13 @@ std::string stringfield(
 	return toml::find<std::string>(td,name);
 }
 
-template<class T>
-const T& opennamedtable(const T& t, const char* name)
+const InputData::Node& opennamedtable(
+	const InputData::Node& t, const char* name)
 {
 	return toml::find(t,name);
 }
-template<class T>
-const T& openindexedtable(const T& t, unsigned int index)
+const InputData::Node& openindexedtable(
+	const InputData::Node& t, unsigned int index)
 {
 	return toml::find(t,index);
 }
