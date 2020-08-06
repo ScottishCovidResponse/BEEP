@@ -28,60 +28,12 @@ public:
 		{
 			return n.size();
 		}
+	InputNode operator[](unsigned int index) const;
 };
-
-class InputData {
-public:
-	InputData(const std::string& inputfilename);
-	InputData(const InputData& data) = delete;
-	InputData(InputData&& data) = delete;
-	InputData& operator=(const InputData& data) = delete;
-	InputData& operator=(InputData&& data) = delete;
-	~InputData() {}
-	bool contains(const std::string& name) const
-		{
-			return data.contains(name);
-		}
-	InputNode open(const std::string& name)
-		{
-			return InputNode(toml::find(data.n, name));
-		}
-	vector<string> get_keys() const;
-	InputNode data;// Information from the TOML file
-};
-
-InputData::InputData(const std::string& inputfilename) :
-	data(toml::parse(inputfilename))
+InputNode InputNode::operator[](
+	unsigned int index) const
 {
-	// Allow using values from another TOML file as a base for this one. TODO:
-	// make this into functions so you can do this recursively.
-	if (contains("baseinputfile")) {
-		const string basefile = toml::find<string>(data.n,"baseinputfile");
-		// TODO: make the filename relative to the original TOML file
-		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
-		
-		for(const auto& p : basetomlddata.as_table())
-		{
-			if (!contains(p.first)) {
-				data.n[p.first] = p.second;
-			}
-		}
-	}
-}
-/// Gets a list of all the keys
-vector<string> InputData::get_keys( ) const
-{
-	vector<string> keys;
-	for(const auto& p : data.n.as_table())
-	{
-		keys.push_back(p.first);
-	}
-	return keys;
-}
-InputNode openindexedtable(
-	const InputNode& t, unsigned int index)
-{
-	return InputNode(toml::find(t.n,index));
+	return InputNode(toml::find(n,index));
 }
 std::string stringfield(
 	const InputNode& td,
@@ -114,6 +66,54 @@ double numberfield(
 		return value.as_integer();
 }
 
+class InputData {
+public:
+	InputData(const std::string& inputfilename);
+	InputData(const InputData& data) = delete;
+	InputData(InputData&& data) = delete;
+	InputData& operator=(const InputData& data) = delete;
+	InputData& operator=(InputData&& data) = delete;
+	~InputData() {}
+	bool contains(const std::string& name) const
+		{
+			return data.contains(name);
+		}
+	InputNode open(const std::string& name)
+		{
+			return InputNode(toml::find(data.n, name));
+		}
+	vector<string> get_keys() const;
+	InputNode data;// Information from the TOML file	
+};
+
+InputData::InputData(const std::string& inputfilename) :
+	data(toml::parse(inputfilename))
+{
+	// Allow using values from another TOML file as a base for this one. TODO:
+	// make this into functions so you can do this recursively.
+	if (contains("baseinputfile")) {
+		const string basefile = toml::find<string>(data.n,"baseinputfile");
+		// TODO: make the filename relative to the original TOML file
+		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
+		
+		for(const auto& p : basetomlddata.as_table())
+		{
+			if (!contains(p.first)) {
+				data.n[p.first] = p.second;
+			}
+		}
+	}
+}
+/// Gets a list of all the keys
+vector<string> InputData::get_keys( ) const
+{
+	vector<string> keys;
+	for(const auto& p : data.n.as_table())
+	{
+		keys.push_back(p.first);
+	}
+	return keys;
+}
 
 Inputs::~Inputs()
 {
@@ -319,7 +319,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 		const auto tdata = basedata->open("transdata");
 
 		for(unsigned int j = 0; j < tdata.size(); j++){
-			const auto td = openindexedtable(tdata,j);
+			const auto td = tdata[j];
 		
 			TRANSDATA transdata;
 			transdata.fromstr = stringfield(td,"transdata","from");
@@ -361,7 +361,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 
 		POPDATA popdata;
 		for(unsigned int j = 0; j < pdata.size(); j++){
-			const auto pd = openindexedtable(pdata,j);
+			const auto pd = pdata[j];
 			
 			popdata.compstr = stringfield(pd,"popdata","comp");
 			popdata.type = stringfield(pd,"popdata","area");
@@ -401,7 +401,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 		const auto mdata = basedata->open("margdata");
 
 		for(unsigned int j = 0; j < mdata.size(); j++){
-			const auto md = openindexedtable(mdata,j);
+			const auto md = mdata[j];
 			
 			MARGDATA margdata;
 			margdata.fromstr = stringfield(md,"margdata","from");
@@ -437,7 +437,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		DEMOCAT democat;
 		democat.name = "age";
 		for(unsigned int j = 0; j < ages.size(); j++){
-			const auto ag = openindexedtable(ages,j);
+			const auto ag = ages[j];
 			
 			const auto range = stringfield(ag,"ages","range");
 			democat.value.push_back(range);
@@ -453,12 +453,12 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 		const auto democats = basedata->open("democats");
 	
 		for(unsigned int k = 0; k < democats.size(); k++){
-			const auto democ = openindexedtable(democats,k);
+			const auto democ = democats[k];
 			
 			DEMOCAT democat;
 			democat.name="";
 			for(unsigned int j = 0; j < democ.size(); j++){
-				const auto demoval = openindexedtable(democ,j);
+				const auto demoval = democ[j];
 				
 				const auto value = stringfield(demoval,"democats","value");
 				democat.value.push_back(value);
@@ -484,7 +484,7 @@ vector <COVAR> Inputs::find_covar(const Details &details) const
 		
 		COVAR cov;
 		for(unsigned int j = 0; j < covars.size(); j++){
-			const auto covar = openindexedtable(covars,j);
+			const auto covar = covars[j];
 			
 			cov.name = stringfield(covar,"covars","name");
 			cov.param = stringfield(covar,"covars","param");
@@ -506,7 +506,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 	if(basedata->contains("timep")) {
 		const auto timep = basedata->open("timep");
 		for(unsigned int j = 0; j < timep.size(); j++){
-			const auto tim = openindexedtable(timep,j);
+			const auto tim = timep[j];
 			
 			TIMEP timeperiod;
 			timeperiod.name = stringfield(tim,"timep","name");
@@ -567,7 +567,7 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 		for(unsigned int j = 0; j < Qlist.size(); j++){
 			QTENSOR qten;
 		
-			const auto Q = openindexedtable(Qlist,j);
+			const auto Q = Qlist[j];
 			
 			const auto timep = stringfield(Q,"Q","timep");
 			unsigned int tp = 0;
@@ -593,7 +593,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 	if(basedata->contains("params")){
 		const auto paramsin = basedata->open("params");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
-			const auto params = openindexedtable(paramsin,j);
+			const auto params = paramsin[j];
 			string nam = stringfield(params,"params","name");
 			
 			double value = numberfield(params,"params","value");
@@ -611,7 +611,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 	if(basedata->contains("priors")){
 		const auto paramsin = basedata->open("priors");
 		for(unsigned int j = 0; j < paramsin.size(); j++){
-			const auto params = openindexedtable(paramsin,j);
+			const auto params = paramsin[j];
 			string nam = stringfield(params,"priors","name");
 
 			double mi, ma;
@@ -642,7 +642,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 	if(basedata->contains("comps")) {
 		const auto compsin = basedata->open("comps");
 		for(unsigned int j = 0; j < compsin.size(); j++){
-			const auto comps = openindexedtable(compsin,j);
+			const auto comps = compsin[j];
 
 			string nam = stringfield(comps,"comps","name");
 
@@ -660,7 +660,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 	if(basedata->contains("trans")){
 		const auto transin = basedata->open("trans");
 		for(unsigned int j = 0; j < transin.size(); j++){
-			const auto trans = openindexedtable(transin,j);
+			const auto trans = transin[j];
 			
 			string fr_temp = stringfield(trans, "trans", "from");
 			
@@ -716,7 +716,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 	if(basedata->contains("priorcomps")){
 		const auto prcomps = basedata->open("priorcomps");
 		for(unsigned int j = 0; j < prcomps.size(); j++){
-			const auto prcomp = openindexedtable(prcomps,j);
+			const auto prcomp = prcomps[j];
 			
 			PRIORCOMP pricomp;
 			string co = stringfield(prcomp,"priorcomps","comp");
@@ -741,7 +741,7 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 	if(basedata->contains(name)) {
 		const auto bespin = basedata->open(name);
 		for(unsigned int j = 0; j < bespin.size(); j++){
-			const auto besp = openindexedtable(bespin,j);
+			const auto besp = bespin[j];
 
 			const auto nam = stringfield(besp,name.c_str(),"param");
 			const auto timstr = stringfield(besp,name.c_str(),"time");
