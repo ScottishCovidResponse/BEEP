@@ -103,6 +103,12 @@ double numberfield(
 	}
 	return numberfield_unchecked(td,name);
 }
+int intfield_unchecked(
+	const InputNode& td,
+	const std::string& name)
+{
+	return toml::find<int>(td.n,name);
+}
 
 class InputData {
 public:
@@ -261,7 +267,7 @@ int Inputs::find_int(const string &key, int def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			val = toml::find<int>(basedata->data.n,key);
+			val = intfield_unchecked(basedata->data,key);
 		} else {
 			val = def;
 		}
