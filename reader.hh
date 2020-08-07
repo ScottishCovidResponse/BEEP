@@ -25,7 +25,7 @@ public:
 	explicit InputNode(const Node n, const std::string& label) :
 		n_(n), label_(label) {}
 	size_t size() const;
-//private:
+private:
 	const Node& n() const;
 public:
 	const std::string& label() const
@@ -46,6 +46,7 @@ public:
 		const char *name) const;
 	int intfield_unchecked(
 		const std::string& name) const;
+	std::vector<std::string> get_keys() const;
 };
 
 class InputData {

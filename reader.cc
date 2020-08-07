@@ -72,7 +72,18 @@ int InputNode::intfield_unchecked(
 {
 	return toml::find<int>(n(),name);
 }
+/// Gets a list of all the keys
+vector<string> InputNode::get_keys( ) const
+{
+	vector<string> keys;
+	for(const auto& p : n().as_table())
+	{
+		keys.push_back(p.first);
+	}
+	return keys;
+}
 
+/// Factory to generate InputNode from names file
 InputNode parsefile(const std::string& inputfilename)
 {
 	InputNode::Node n = toml::parse(inputfilename);
@@ -100,10 +111,5 @@ InputData::InputData(const std::string& inputfilename) :
 /// Gets a list of all the keys
 vector<string> InputData::get_keys( ) const
 {
-	vector<string> keys;
-	for(const auto& p : data.n().as_table())
-	{
-		keys.push_back(p.first);
-	}
-	return keys;
+	return data.get_keys();
 }
