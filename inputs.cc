@@ -80,6 +80,16 @@ std::string stringfield(
 	}
 	return stringfield_unchecked(td,name);
 }
+double numberfield_unchecked(
+	const InputNode& td,
+	const std::string& name)
+{
+	const auto value = toml::find(td.n,name);
+	if(value.is_floating())
+		return value.as_floating();
+	else
+		return value.as_integer();
+}
 double numberfield(
 	const InputNode& td,
 	const char *title,
@@ -91,11 +101,7 @@ double numberfield(
 			"' must be specified in '" << title << "'.";
 		emsgroot(oss.str().c_str());
 	}
-	const auto value = toml::find(td.n,name);
-	if(value.is_floating())
-		return value.as_floating();
-	else
-		return value.as_integer();
+	return numberfield_unchecked(td,name);
 }
 
 class InputData {
@@ -294,8 +300,7 @@ double Inputs::find_double(const string &key, double def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			const auto val_temp = toml::find(basedata->data.n,key);
-			if(val_temp.is_floating()) val = val_temp.as_floating(); else val = val_temp.as_integer();	
+			val = numberfield_unchecked(basedata->data,key);
 		} else {
 			val = def;
 		}
