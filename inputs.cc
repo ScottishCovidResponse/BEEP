@@ -53,6 +53,11 @@ public:
 		const std::string& name) const;
 	std::string stringfield(
 		const char *name) const;
+	double numberfield_unchecked(
+		const std::string& name) const;
+	double numberfield(
+		const char *title,
+		const char *name) const;
 };
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
@@ -82,28 +87,26 @@ std::string InputNode::stringfield(
 	}
 	return stringfield_unchecked(name);
 }
-double numberfield_unchecked(
-	const InputNode& td,
-	const std::string& name)
+double InputNode::numberfield_unchecked(
+	const std::string& name) const
 {
-	const auto value = toml::find(td.n,name);
+	const auto value = toml::find(n,name);
 	if(value.is_floating())
 		return value.as_floating();
 	else
 		return value.as_integer();
 }
-double numberfield(
-	const InputNode& td,
+double InputNode::numberfield(
 	const char *title,
-	const char *name)
+	const char *name) const
 {
-	if(!td.contains(name)) {
+	if(!contains(name)) {
 		ostringstream oss;
 		oss << "A numeric value for '" << name <<
 			"' must be specified in '" << title << "'.";
 		emsgroot(oss.str().c_str());
 	}
-	return numberfield_unchecked(td,name);
+	return numberfield_unchecked(name);
 }
 int intfield_unchecked(
 	const InputNode& td,
@@ -308,7 +311,7 @@ double Inputs::find_double(const string &key, double def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			val = numberfield_unchecked(basedata->data,key);
+			val = basedata->data.numberfield_unchecked(key);
 		} else {
 			val = def;
 		}
@@ -641,7 +644,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 			const auto params = paramsin[j];
 			string nam = params.stringfield("name");
 			
-			double value = numberfield(params,"params","value");
+			double value = params.numberfield("params","value");
 			
 			name.push_back(nam);
 			val.push_back(value);
@@ -661,7 +664,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 
 			double mi, ma;
 			if(params.contains("value")){
-				double value = numberfield(params,nam.c_str(),"value");
+				double value = params.numberfield(nam.c_str(),"value");
 				mi = value; ma = value;
 			}
 			else{
@@ -669,8 +672,8 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 				
 				string type = params.stringfield_unchecked("type");
 				if(type == "uniform"){
-					mi = numberfield(params,nam.c_str(),"min");
-					ma = numberfield(params,nam.c_str(),"max");
+					mi = params.numberfield(nam.c_str(),"min");
+					ma = params.numberfield(nam.c_str(),"max");
 				}
 				else emsgroot("In 'priors', the prior type '"+type+"' is not recognised.");
 			}
@@ -691,7 +694,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 
 			string nam = comps.stringfield("name");
 
-			double infect = numberfield(comps,nam.c_str(),"inf");
+			double infect = comps.numberfield(nam.c_str(),"inf");
 	
 			name.push_back(nam); infectivity.push_back(infect);
 		}
@@ -769,8 +772,8 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
 			pricomp.comp = c;
 			
-			pricomp.value = numberfield(prcomp,"priorcomps","inf");
-			pricomp.sd = numberfield(prcomp,"priorcomps","sd");
+			pricomp.value = prcomp.numberfield("priorcomps","inf");
+			pricomp.sd = prcomp.numberfield("priorcomps","sd");
 	
 			priorcompvec.push_back(pricomp);
 		}
