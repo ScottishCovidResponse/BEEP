@@ -62,9 +62,6 @@ deps := $(objs:.o=.d)
 
 CPPFLAGS := $(CPPFLAGS_EXTRA) -MMD -MP -I$(BUILD_DIR)
 
-# Disable warning for old versions of GCC in files that include toml11/toml.hpp
-CXXFLAGS_inputs.cc := -Wno-unused-parameter -O
-
 # Main executable
 exe := beepmbp
 
@@ -82,7 +79,7 @@ $(exe): $(objs) $(exe_deps)
 
 $(BUILD_DIR)/%.cc.o: %.cc | gitversion
 	@$(MKDIR_P) $(dir $@)
-	$(CXX) $(CXXFLAGS) $(CXXFLAGS_$<) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 # Link the test executable from its corresponding object files
 $(TEST_EXEC): $(BUILD_DIR)/% : $(TEST_EXEC_OBJS)

@@ -10,7 +10,18 @@ using namespace std;
 #include "inputs.hh"
 #include "utils.hh"
 #include "consts.hh"
+
+// Suppress spurious warning triggered by toml11 for gcc 4.8.5
+#if defined(__GNUC__) && __GNUC__ < 5
+#pragma GCC ignored "-Wno-unused-parameter"
+#endif
 #include "toml11/toml.hpp"
+
+// Re-enable warnings
+#if defined(__GNUC__) && __GNUC__ < 5
+#pragma GCC warning "-Wno-unused-parameter"
+#endif
+
 #include "data.hh"
 #include "model.hh"
 
@@ -142,7 +153,7 @@ Inputs::~Inputs()
 }
 
 /// /// Reads TOML and command line parameters
-Inputs::Inputs(int argc, char** argv, bool verbose) 
+Inputs::Inputs(int argc, char** argv, bool /* verbose */) 
 {
 	set_command_line_params(argc,argv);                          // Loads up the command line parameters
 	
@@ -414,7 +425,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 }
 
 /// Finds and returns 'margdata'
-vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DEMOCAT> &democat) const
+vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vector <DEMOCAT> &democat) const
 {
 	vector <MARGDATA> margdatavec;
 	
@@ -448,7 +459,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details &details, const vector <DE
 }
 
 /// Finds and returns 'democats'
-vector <DEMOCAT> Inputs::find_democat(const Details &details) const
+vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
 {
 	vector <DEMOCAT> democatvec;
 	
@@ -496,7 +507,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details &details) const
 }
 
 /// Finds and returns 'covar'
-vector <COVAR> Inputs::find_covar(const Details &details) const
+vector <COVAR> Inputs::find_covar(const Details &/*details*/) const
 {
 	vector <COVAR> covarvec;
 	
@@ -552,7 +563,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 }
 
 /// Finds properties of 'genQ'
-void Inputs::find_genQ(GENQ &genQ, const Details &details) const
+void Inputs::find_genQ(GENQ &genQ, const Details &/*details*/) const
 {
 	if(basedata->contains("agemix")) {
 		const auto agemix = basedata->open("agemix");
@@ -581,7 +592,7 @@ void Inputs::find_genQ(GENQ &genQ, const Details &details) const
 }
 
 /// Sets up Q
-void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const
+void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details & /* details */) const
 {
 	if(basedata->contains("Q")) {
 		const auto Qlist = basedata->open("Q");
