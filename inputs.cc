@@ -58,6 +58,8 @@ public:
 	double numberfield(
 		const char *title,
 		const char *name) const;
+	int intfield_unchecked(
+		const std::string& name) const;
 };
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
@@ -108,11 +110,10 @@ double InputNode::numberfield(
 	}
 	return numberfield_unchecked(name);
 }
-int intfield_unchecked(
-	const InputNode& td,
-	const std::string& name)
+int InputNode::intfield_unchecked(
+	const std::string& name) const
 {
-	return toml::find<int>(td.n,name);
+	return toml::find<int>(n,name);
 }
 
 class InputData {
@@ -141,7 +142,7 @@ InputData::InputData(const std::string& inputfilename) :
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
 	if (contains("baseinputfile")) {
-		const string basefile = toml::find<string>(data.n,"baseinputfile");
+		const string basefile = data.stringfield_unchecked("baseinputfile");
 		// TODO: make the filename relative to the original TOML file
 		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
 		
@@ -272,7 +273,7 @@ int Inputs::find_int(const string &key, int def) const
 		}
 	} else {
 		if (basedata->contains(key)) {
-			val = intfield_unchecked(basedata->data,key);
+			val = basedata->data.intfield_unchecked(key);
 		} else {
 			val = def;
 		}
