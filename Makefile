@@ -53,6 +53,7 @@ srcs := \
  output.cc \
  pack.cc \
  poptree.cc \
+ reader.cc \
  simulate.cc \
  timers.cc \
  utils.cc

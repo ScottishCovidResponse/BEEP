@@ -8,6 +8,7 @@
 using namespace std;
 
 #include "inputs.hh"
+#include "reader.hh"
 #include "utils.hh"
 #include "consts.hh"
 
