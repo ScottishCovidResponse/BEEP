@@ -6,6 +6,14 @@
 
 using namespace std;
 
+size_t InputNode::size() const
+{
+	return n.size();
+}
+bool InputNode::contains(const std::string& name) const
+{
+	return n.contains(name);
+}
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
 	unsigned int index) const

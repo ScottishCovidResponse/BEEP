@@ -24,18 +24,12 @@ private:
 public:
 	explicit InputNode(const Node n, const std::string& label) :
 		n(n), label_(label) {}
-	size_t size() const
-		{
-			return n.size();
-		}
+	size_t size() const;
 	const std::string& label() const
 		{
 			return label_;
 		}
-	bool contains(const std::string& name) const
-		{
-			return n.contains(name);
-		}
+	bool contains(const std::string& name) const;
 	InputNode operator[](unsigned int index) const;
 	InputNode operator[](const std::string& s) const;
 	std::string stringfield_unchecked(
