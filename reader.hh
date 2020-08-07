@@ -18,13 +18,16 @@ class InputNode {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> Node;
-	Node n;
 private:
+	Node n_;
 	std::string label_;
 public:
 	explicit InputNode(const Node n, const std::string& label) :
-		n(n), label_(label) {}
+		n_(n), label_(label) {}
 	size_t size() const;
+//private:
+	const Node& n() const;
+public:
 	const std::string& label() const
 		{
 			return label_;

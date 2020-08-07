@@ -8,28 +8,32 @@ using namespace std;
 
 size_t InputNode::size() const
 {
-	return n.size();
+	return n().size();
+}
+const InputNode::Node& InputNode::n() const
+{
+	return n_;
 }
 bool InputNode::contains(const std::string& name) const
 {
-	return n.contains(name);
+	return n().contains(name);
 }
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
-	return InputNode(toml::find(n,index),label());
+	return InputNode(toml::find(n(),index),label());
 }
 // Could potentially include parent information here
 InputNode InputNode::operator[](
 	const std::string& s) const
 {
-	return InputNode(toml::find(n,s),s);
+	return InputNode(toml::find(n(),s),s);
 }
 std::string InputNode::stringfield_unchecked(
 	const std::string& name) const
 {
-	return toml::find<std::string>(n,name);
+	return toml::find<std::string>(n(),name);
 }
 std::string InputNode::stringfield(
 	const char *name) const
@@ -45,7 +49,7 @@ std::string InputNode::stringfield(
 double InputNode::numberfield_unchecked(
 	const std::string& name) const
 {
-	const auto value = toml::find(n,name);
+	const auto value = toml::find(n(),name);
 	if(value.is_floating())
 		return value.as_floating();
 	else
@@ -66,32 +70,38 @@ double InputNode::numberfield(
 int InputNode::intfield_unchecked(
 	const std::string& name) const
 {
-	return toml::find<int>(n,name);
+	return toml::find<int>(n(),name);
 }
 
-InputData::InputData(const std::string& inputfilename) :
-	data(toml::parse(inputfilename),"")
+InputNode parsefile(const std::string& inputfilename)
 {
+	InputNode::Node n = toml::parse(inputfilename);
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
-	if (contains("baseinputfile")) {
-		const string basefile = data.stringfield_unchecked("baseinputfile");
+	if (n.contains("baseinputfile")) {
+		const string basefile = toml::find<std::string>(n,"baseinputfile");
 		// TODO: make the filename relative to the original TOML file
 		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
 		
 		for(const auto& p : basetomlddata.as_table())
 		{
-			if (!contains(p.first)) {
-				data.n[p.first] = p.second;
+			if (!n.contains(p.first)) {
+				n[p.first] = p.second;
 			}
 		}
 	}
+	return InputNode(n,"");
 }
+
+InputData::InputData(const std::string& inputfilename) :
+	data(parsefile(inputfilename))
+{}
+
 /// Gets a list of all the keys
 vector<string> InputData::get_keys( ) const
 {
 	vector<string> keys;
-	for(const auto& p : data.n.as_table())
+	for(const auto& p : data.n().as_table())
 	{
 		keys.push_back(p.first);
 	}
