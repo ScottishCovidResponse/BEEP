@@ -8,32 +8,32 @@ using namespace std;
 
 size_t InputNode::size() const
 {
-	return n().size();
+	return n().v.size();
 }
-const InputNode::Node& InputNode::n() const
+const Node& InputNode::n() const
 {
 	return n_;
 }
 bool InputNode::contains(const std::string& name) const
 {
-	return n().contains(name);
+	return n().v.contains(name);
 }
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
-	return InputNode(toml::find(n(),index),label());
+	return InputNode(Node(toml::find(n().v,index)),label());
 }
 // Could potentially include parent information here
 InputNode InputNode::operator[](
 	const std::string& s) const
 {
-	return InputNode(toml::find(n(),s),s);
+	return InputNode(Node(toml::find(n().v,s)),s);
 }
 std::string InputNode::stringfield_unchecked(
 	const std::string& name) const
 {
-	return toml::find<std::string>(n(),name);
+	return toml::find<std::string>(n().v,name);
 }
 std::string InputNode::stringfield(
 	const char *name) const
@@ -49,7 +49,7 @@ std::string InputNode::stringfield(
 double InputNode::numberfield_unchecked(
 	const std::string& name) const
 {
-	const auto value = toml::find(n(),name);
+	const auto value = toml::find(n().v,name);
 	if(value.is_floating())
 		return value.as_floating();
 	else
@@ -70,13 +70,13 @@ double InputNode::numberfield(
 int InputNode::intfield_unchecked(
 	const std::string& name) const
 {
-	return toml::find<int>(n(),name);
+	return toml::find<int>(n().v,name);
 }
 /// Gets a list of all the keys
 vector<string> InputNode::get_keys( ) const
 {
 	vector<string> keys;
-	for(const auto& p : n().as_table())
+	for(const auto& p : n().v.as_table())
 	{
 		keys.push_back(p.first);
 	}
@@ -86,18 +86,18 @@ vector<string> InputNode::get_keys( ) const
 /// Factory to generate InputNode from names file
 InputNode parsefile(const std::string& inputfilename)
 {
-	InputNode::Node n = toml::parse(inputfilename);
+	Node n{toml::parse(inputfilename)};
 	// Allow using values from another TOML file as a base for this one. TODO:
 	// make this into functions so you can do this recursively.
-	if (n.contains("baseinputfile")) {
-		const string basefile = toml::find<std::string>(n,"baseinputfile");
+	if (n.v.contains("baseinputfile")) {
+		const string basefile = toml::find<std::string>(n.v,"baseinputfile");
 		// TODO: make the filename relative to the original TOML file
 		decltype(toml::parse(basefile)) basetomlddata = toml::parse(basefile);
 		
 		for(const auto& p : basetomlddata.as_table())
 		{
-			if (!n.contains(p.first)) {
-				n[p.first] = p.second;
+			if (!n.v.contains(p.first)) {
+				n.v[p.first] = p.second;
 			}
 		}
 	}

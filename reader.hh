@@ -14,10 +14,16 @@
 #pragma GCC warning "-Wno-unused-parameter"
 #endif
 
-class InputNode {
+class Node {
 public:
 	typedef toml::basic_value<toml::discard_comments,
-														std::unordered_map, std::vector> Node;
+														std::unordered_map, std::vector> value_type;
+	Node(const value_type& v) : v(v) {}
+	value_type v;
+};
+
+class InputNode {
+public:
 private:
 	Node n_;
 	std::string label_;
