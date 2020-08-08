@@ -12,7 +12,7 @@ size_t InputNode::size() const
 }
 const Node& InputNode::n() const
 {
-	return n_;
+	return *n_;
 }
 bool InputNode::contains(const std::string& name) const
 {

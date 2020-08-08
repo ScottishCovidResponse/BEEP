@@ -2,6 +2,7 @@
 #define BEEPMBP__READER_HH
 
 #include <vector>
+#include <memory>
 
 // Suppress spurious warning triggered by toml11 for gcc 4.8.5
 #if defined(__GNUC__) && __GNUC__ < 5
@@ -25,11 +26,11 @@ public:
 class InputNode {
 public:
 private:
-	Node n_;
+	std::shared_ptr<Node> n_;
 	std::string label_;
 public:
 	explicit InputNode(const Node n, const std::string& label) :
-		n_(n), label_(label) {}
+		n_(std::shared_ptr<Node>(new Node{n})), label_(label) {}
 	size_t size() const;
 private:
 	const Node& n() const;
