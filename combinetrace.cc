@@ -58,7 +58,7 @@ void DATA::combinetrace(vector <string> inputdirs, string outputfile, string dis
 		
 		for(th = 0; th < paramname.size(); th++){
 			for(row = 0; row < tab.nrow; row++){
-				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("In file '"+inputdirs[inp]+"\trace.txt' the quantity '"+tab.ele[row][th]+"' is not a number.");
+				v = atof(tab.ele[row][th+1].c_str()); if(std::isnan(v)) emsg("In file '"+inputdirs[inp]+"/trace.txt' the quantity '"+tab.ele[row][th]+"' is not a number.");
 				vals[inp][th].push_back(v);
 			}
 		}
