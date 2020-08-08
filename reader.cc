@@ -4,6 +4,11 @@
 
 #include "utils.hh"
 
+// Suppress optimization to speed up compilation
+#if defined(__GNUC__) && __GNUC__ >=4
+#pragma GCC optimize "-O"
+#endif
+
 // Suppress spurious warning triggered by toml11 for gcc 4.8.5
 #if defined(__GNUC__) && __GNUC__ < 5
 #pragma GCC ignored "-Wno-unused-parameter"
