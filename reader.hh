@@ -35,7 +35,7 @@ public:
 		const char *name) const;
 	int intfield_unchecked(
 		const std::string& name) const;
-	std::vector<std::string> get_keys() const;
+	std::vector<std::string> keys() const;
 };
 
 class InputData {
@@ -54,7 +54,7 @@ public:
 		{
 			return data[name];
 		}
-	std::vector<std::string> get_keys() const;
+	std::vector<std::string> keys() const;
 	InputNode data;// Information from the TOML file	
 };
 

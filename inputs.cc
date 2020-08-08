@@ -40,7 +40,7 @@ Inputs::Inputs(int argc, char** argv, bool /* verbose */)
 		emsgroot(oss.str());
 	}	
 	
-	vector<string> tomlkeys = basedata->get_keys();
+	vector<string> tomlkeys = basedata->keys();
 	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
 }
 

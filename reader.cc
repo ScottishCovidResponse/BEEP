@@ -101,7 +101,7 @@ int InputNode::intfield_unchecked(
 	return toml::find<int>(n().v,name);
 }
 /// Gets a list of all the keys
-vector<string> InputNode::get_keys( ) const
+vector<string> InputNode::keys( ) const
 {
 	vector<string> keys;
 	for(const auto& p : n().v.as_table())
@@ -137,7 +137,7 @@ InputData::InputData(const std::string& inputfilename) :
 {}
 
 /// Gets a list of all the keys
-vector<string> InputData::get_keys( ) const
+vector<string> InputData::keys( ) const
 {
-	return data.get_keys();
+	return data.keys();
 }
