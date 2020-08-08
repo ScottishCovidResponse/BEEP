@@ -21,6 +21,7 @@
 #pragma GCC warning "-Wno-unused-parameter"
 #endif
 
+// Wrapper class for TOML type
 class Node {
 public:
 	typedef toml::basic_value<toml::discard_comments,
@@ -32,37 +33,45 @@ public:
 using namespace std;
 
 InputNode::InputNode(const Node n, const std::string& label) :
-		n_(std::shared_ptr<Node>(new Node{n})), label_(label) {}
+		n_(std::shared_ptr<Node>(new Node{n})), label_(label)
+{
+}
 
 size_t InputNode::size() const
 {
 	return n().v.size();
 }
+
 const Node& InputNode::n() const
 {
 	return *n_;
 }
+
 bool InputNode::contains(const std::string& name) const
 {
 	return n().v.contains(name);
 }
+
 // Inherit label from parent -- could potentially add index here
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
 	return InputNode(Node(toml::find(n().v,index)),label());
 }
+
 // Could potentially include parent information here
 InputNode InputNode::operator[](
 	const std::string& s) const
 {
 	return InputNode(Node(toml::find(n().v,s)),s);
 }
+
 std::string InputNode::stringfield_unchecked(
 	const std::string& name) const
 {
 	return toml::find<std::string>(n().v,name);
 }
+
 std::string InputNode::stringfield(
 	const char *name) const
 {
@@ -74,6 +83,7 @@ std::string InputNode::stringfield(
 	}
 	return stringfield_unchecked(name);
 }
+
 double InputNode::numberfield_unchecked(
 	const std::string& name) const
 {
@@ -83,6 +93,7 @@ double InputNode::numberfield_unchecked(
 	else
 		return value.as_integer();
 }
+
 double InputNode::numberfield(
 	const char *title,
 	const char *name) const
@@ -95,11 +106,13 @@ double InputNode::numberfield(
 	}
 	return numberfield_unchecked(name);
 }
+
 int InputNode::intfield_unchecked(
 	const std::string& name) const
 {
 	return toml::find<int>(n().v,name);
 }
+
 /// Gets a list of all the keys
 vector<string> InputNode::keys( ) const
 {
@@ -130,14 +143,4 @@ InputNode parsefile(const std::string& inputfilename)
 		}
 	}
 	return InputNode(n,"");
-}
-
-InputData::InputData(const std::string& inputfilename) :
-	data(parsefile(inputfilename))
-{}
-
-/// Gets a list of all the keys
-vector<string> InputData::keys( ) const
-{
-	return data.keys();
 }

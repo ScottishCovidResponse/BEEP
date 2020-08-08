@@ -7,16 +7,11 @@
 class Node;
 
 class InputNode {
-public:
-private:
 	std::shared_ptr<Node> n_;
 	std::string label_;
 public:
 	explicit InputNode(const Node n, const std::string& label);
 	size_t size() const;
-private:
-	const Node& n() const;
-public:
 	const std::string& label() const
 		{
 			return label_;
@@ -36,11 +31,17 @@ public:
 	int intfield_unchecked(
 		const std::string& name) const;
 	std::vector<std::string> keys() const;
+private:
+	const Node& n() const;
 };
+
+/// Factory to generate InputNode from names file
+InputNode parsefile(const std::string& inputfilename);
 
 class InputData {
 public:
-	InputData(const std::string& inputfilename);
+	InputData(const std::string& inputfilename) :
+		data(parsefile(inputfilename)) {}
 	InputData(const InputData& data) = delete;
 	InputData(InputData&& data) = delete;
 	InputData& operator=(const InputData& data) = delete;
@@ -54,8 +55,13 @@ public:
 		{
 			return data[name];
 		}
-	std::vector<std::string> keys() const;
-	InputNode data;// Information from the TOML file	
+	/// Gets a list of all the keys
+	std::vector<std::string> keys() const
+		{
+			return data.keys();
+		}
+	// Information from the TOML file	
+	InputNode data;
 };
 
 #endif
