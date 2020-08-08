@@ -4,24 +4,7 @@
 #include <vector>
 #include <memory>
 
-// Suppress spurious warning triggered by toml11 for gcc 4.8.5
-#if defined(__GNUC__) && __GNUC__ < 5
-#pragma GCC ignored "-Wno-unused-parameter"
-#endif
-#include "toml11/toml.hpp"
-
-// Re-enable warnings
-#if defined(__GNUC__) && __GNUC__ < 5
-#pragma GCC warning "-Wno-unused-parameter"
-#endif
-
-class Node {
-public:
-	typedef toml::basic_value<toml::discard_comments,
-														std::unordered_map, std::vector> value_type;
-	Node(const value_type& v) : v(v) {}
-	value_type v;
-};
+class Node;
 
 class InputNode {
 public:
@@ -29,8 +12,7 @@ private:
 	std::shared_ptr<Node> n_;
 	std::string label_;
 public:
-	explicit InputNode(const Node n, const std::string& label) :
-		n_(std::shared_ptr<Node>(new Node{n})), label_(label) {}
+	explicit InputNode(const Node n, const std::string& label);
 	size_t size() const;
 private:
 	const Node& n() const;
