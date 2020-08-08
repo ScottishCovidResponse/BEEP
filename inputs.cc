@@ -203,7 +203,7 @@ Mode Inputs::mode() const
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"combinetace", combinetrace}};
+	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"combinetrace", combinetrace}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	
