@@ -26,14 +26,18 @@ class Node {
 public:
 	typedef toml::basic_value<toml::discard_comments,
 														std::unordered_map, std::vector> value_type;
-	Node(const value_type& v) : v(v) {}
+	explicit Node(const value_type& v) : v(v) {}
 	value_type v;
 };
 
 using namespace std;
 
-InputNode::InputNode(const Node n, const std::string& label) :
-		n_(std::shared_ptr<Node>(new Node{n})), label_(label)
+InputNode::InputNode(
+	const Node n,
+	const std::string& label,
+	const InputNode* parent
+	) :
+	n_(std::shared_ptr<Node>(new Node{n})), label_(label), parent_(parent)
 {
 }
 
@@ -52,18 +56,19 @@ bool InputNode::contains(const std::string& name) const
 	return n().v.contains(name);
 }
 
-// Inherit label from parent -- could potentially add index here
+// Use index to augment label
 InputNode InputNode::operator[](
 	unsigned int index) const
 {
-	return InputNode(Node(toml::find(n().v,index)),label());
+	std::ostringstream oss;
+	oss << '[' << index << ']';
+	return InputNode(Node(toml::find(n().v,index)),oss.str(),this);
 }
 
-// Could potentially include parent information here
 InputNode InputNode::operator[](
 	const std::string& s) const
 {
-	return InputNode(Node(toml::find(n().v,s)),s);
+	return InputNode(Node(toml::find(n().v,s)),s,this);
 }
 
 std::string InputNode::stringfield_unchecked(
@@ -95,13 +100,12 @@ double InputNode::numberfield_unchecked(
 }
 
 double InputNode::numberfield(
-	const char *title,
 	const char *name) const
 {
 	if(!contains(name)) {
 		ostringstream oss;
 		oss << "A numeric value for '" << name <<
-			"' must be specified in '" << title << "'.";
+			"' must be specified in '" << label() << "'.";
 		emsgroot(oss.str().c_str());
 	}
 	return numberfield_unchecked(name);
@@ -142,5 +146,5 @@ InputNode parsefile(const std::string& inputfilename)
 			}
 		}
 	}
-	return InputNode(n,"");
+	return InputNode(n,"",NULL);
 }

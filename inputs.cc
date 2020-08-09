@@ -496,7 +496,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 			const auto params = paramsin[j];
 			string nam = params.stringfield("name");
 			
-			double value = params.numberfield("params","value");
+			double value = params.numberfield("value");
 			
 			name.push_back(nam);
 			val.push_back(value);
@@ -516,7 +516,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 
 			double mi, ma;
 			if(params.contains("value")){
-				double value = params.numberfield(nam.c_str(),"value");
+				double value = params.numberfield("value");
 				mi = value; ma = value;
 			}
 			else{
@@ -524,8 +524,8 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 				
 				string type = params.stringfield_unchecked("type");
 				if(type == "uniform"){
-					mi = params.numberfield(nam.c_str(),"min");
-					ma = params.numberfield(nam.c_str(),"max");
+					mi = params.numberfield("min");
+					ma = params.numberfield("max");
 				}
 				else emsgroot("In 'priors', the prior type '"+type+"' is not recognised.");
 			}
@@ -546,7 +546,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 
 			string nam = comps.stringfield("name");
 
-			double infect = comps.numberfield(nam.c_str(),"inf");
+			double infect = comps.numberfield("inf");
 	
 			name.push_back(nam); infectivity.push_back(infect);
 		}
@@ -624,8 +624,8 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");
 			pricomp.comp = c;
 			
-			pricomp.value = prcomp.numberfield("priorcomps","inf");
-			pricomp.sd = prcomp.numberfield("priorcomps","sd");
+			pricomp.value = prcomp.numberfield("inf");
+			pricomp.sd = prcomp.numberfield("sd");
 	
 			priorcompvec.push_back(pricomp);
 		}

@@ -9,12 +9,21 @@ class Node;
 class InputNode {
 	std::shared_ptr<Node> n_;
 	std::string label_;
+	const InputNode* parent_;
 public:
-	explicit InputNode(const Node n, const std::string& label);
+	explicit InputNode(
+		const Node n,
+		const std::string& label,
+		const InputNode* parent_);
 	size_t size() const;
-	const std::string& label() const
+	std::string label() const
 		{
-			return label_;
+			std::string plabel = parent_ != NULL ? parent_->label() : ""; 
+			if (plabel.size() > 0 && label_[0] != '[' )
+			{
+				return plabel+'.'+label_;
+			}
+			return plabel+label_;
 		}
 	bool contains(const std::string& name) const;
 	InputNode operator[](unsigned int index) const;
@@ -26,7 +35,6 @@ public:
 	double numberfield_unchecked(
 		const std::string& name) const;
 	double numberfield(
-		const char *title,
 		const char *name) const;
 	int intfield_unchecked(
 		const std::string& name) const;
