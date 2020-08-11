@@ -84,7 +84,7 @@ std::string InputNode::stringfield(
 		ostringstream oss;
 		oss << "A '" << name <<
 			"' property must be specified in '" << label() << "'.";
-		emsgroot(oss.str().c_str());
+		emsgroot(oss.str());
 	}
 	return stringfield_unchecked(name);
 }
@@ -106,7 +106,7 @@ double InputNode::numberfield(
 		ostringstream oss;
 		oss << "A numeric value for '" << name <<
 			"' must be specified in '" << label() << "'.";
-		emsgroot(oss.str().c_str());
+		emsgroot(oss.str());
 	}
 	return numberfield_unchecked(name);
 }
