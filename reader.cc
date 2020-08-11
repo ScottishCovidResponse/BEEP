@@ -11,14 +11,14 @@
 
 // Suppress spurious warning triggered by toml11 for gcc 4.8.5
 #if defined(__GNUC__) && __GNUC__ < 5
-#pragma GCC ignored "-Wno-unused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 #include "toml11/toml.hpp"
 
 // Re-enable warnings
 #if defined(__GNUC__) && __GNUC__ < 5
-#pragma GCC warning "-Wno-unused-parameter"
+#pragma GCC diagnostic warning "-Wunused-parameter"
 #endif
 
 // Wrapper class for TOML type
