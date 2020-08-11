@@ -222,6 +222,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 			const auto td = tdata[j];
 		
 			TRANSDATA transdata;
+			transdata.trans = UNSET;
 			transdata.fromstr = td.stringfield("from");
 			transdata.tostr = td.stringfield("to");
 			transdata.type = td.stringfield("area");
@@ -259,10 +260,11 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 	if(basedata->contains("popdata")) {
 		const auto pdata = basedata->open("popdata");
 
-		POPDATA popdata;
 		for(unsigned int j = 0; j < pdata.size(); j++){
 			const auto pd = pdata[j];
-			
+
+			POPDATA popdata;
+			popdata.comp = UNSET;
 			popdata.compstr = pd.stringfield("comp");
 			popdata.type = pd.stringfield("area");
 
@@ -304,8 +306,8 @@ vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vect
 			const auto md = mdata[j];
 			
 			MARGDATA margdata;
+			margdata.trans = UNSET;
 			margdata.fromstr = md.stringfield("from");
-		
 			margdata.tostr = md.stringfield("to");
 			
 			margdata.type = md.stringfield("area");

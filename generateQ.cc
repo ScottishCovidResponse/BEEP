@@ -333,7 +333,7 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
 
 #else
-	N = N;
+	mat.N = N;
 	emsg("loadsparsefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in.");
 #endif
 
