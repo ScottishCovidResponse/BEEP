@@ -88,12 +88,14 @@ double gammasamp(double a, double b)
 
 double normalprob(double x, double mean, double var)
 {
+	// Was var < 0 -- changed to protect from FPE
   if(var <= 0) emsgEC("Utile",2);
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
 double gammaprob(double x, double a, double b)                                      // The log of the probability from the gamma distribution
 {
+	// Was x < 0 -- changed to protect from FPE
   if(x <= 0 || a < 0 || b <= 0) emsgEC("Utile",3);
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
@@ -104,6 +106,7 @@ double lognormprob(double x, double mean, double var)
 {
 	double val;
 	if(x <= 0) emsgEC("Utils",4);
+	// Was var < 0 -- changed to protect from FPE
 	if(var <= 0) emsgEC("Utils",5); 
 	val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
