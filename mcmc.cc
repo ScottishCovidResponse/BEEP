@@ -58,8 +58,7 @@ Mcmc::Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &popt
 /// Runs the multi-temperature MCMC algorithm	
 void Mcmc::run()
 {
-	unsigned int p, pp, th, nchaintot = mpi.ncore*nchain, co;
-	unsigned int samp;
+	unsigned int nchaintot = mpi.ncore*nchain, co;
 	long time, timeprop=0, ntimeprop=0;
 	double timeloop=0.1, pmin, pmax, kappa, ppf, ppeff, fac;
 	long timeproptot[mpi.ncore], ntimeproptot[mpi.ncore], timeproptotsum, ntimeproptotsum;
@@ -72,26 +71,26 @@ void Mcmc::run()
 	pmax = 1-pow(invTmin,1.0/Tpower);
 	pmin = 1-pow(invTmax,1.0/Tpower);
 	
-	for(p = 0; p < nchain; p++){
-		pp = mpi.core*nchain+p;
+	for(auto p = 0; p < nchain; p++){
+		auto pp = mpi.core*nchain+p;
 		Chain ch = Chain(details,data,model,poptree,obsmodel,pp);
 		chain.push_back(ch);
 	}
 
 	if(mpi.core == 0){
 		Listore.resize(nchaintot); invTstore.resize(nchaintot);
-		for(pp = 0; pp < nchaintot; pp++){
+		for(auto pp = 0; pp < nchaintot; pp++){
 			kappa = double(pp)/(nchaintot-1);
 			if(nchaintot == 1 || duplicate == 1) invTstore[pp] = invTmax;
 			else invTstore[pp] = pow(1-(pmin+kappa*(pmax-pmin)),Tpower);
 		}
 		
 		nac_swap.resize(nchaintot);
-		for(pp = 0; pp < nchaintot; pp++) nac_swap[pp] = 0;
+		for(auto pp = 0; pp < nchaintot; pp++) nac_swap[pp] = 0;
 	}
 
 	if(checkon == 1){
-		for(th = 0; th < chain[0].paramval.size(); th++){
+		for(auto th = 0; th < chain[0].paramval.size(); th++){
 			cout << th << " " << model.param[th].name << " " << chain[0].paramval[th] <<  "param" << endl;		
 		}
 	}
@@ -100,11 +99,11 @@ void Mcmc::run()
 
 	if(quenchpl == 1){ quenchplot.open((details.outputdir+"/quenchplot.txt").c_str());}
 	
-	for(samp = 0; samp < nsamp; samp++){	
+	for(auto samp = 0; samp < nsamp; samp++){	
 		if(mpi.core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
 	
-		for(p = 0; p < nchain; p++){
-			pp = chain[p].ch;
+		for(auto p = 0; p < nchain; p++){
+			auto pp = chain[p].ch;
 		
 			if(nchaintot == 1 || duplicate == 1) chain[p].invT = invTmax;
 			else{
@@ -123,31 +122,30 @@ void Mcmc::run()
 			
 		time = clock();
 
-		for(p = 0; p < nchain; p++) chain[p].standard_prop(samp,burnin);
+		for(auto p = 0; p < nchain; p++) chain[p].standard_prop(samp,burnin);
 		
 		timeprop -= clock();
 		switch(propsmethod){
 		case proposalsmethod::allchainsallparams:
-			for(p = 0; p < nchain; p++){
-				for(th = 0; th < model.param.size(); th++){
+			for(auto p = 0; p < nchain; p++){
+				for(auto th = 0; th < model.param.size(); th++){
 					if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
 				}
 			}
 			break;
 			
 		case proposalsmethod::fixednum:
-			short lo; 
-			for(lo = 0; lo < 10; lo++){
-				p = int(ran()*nchain);
-				th = (unsigned int)(ran()*model.param.size());
+			for(auto lo = 0; lo < 10; lo++){
+				auto p = int(ran()*nchain);
+				auto th = (unsigned int)(ran()*model.param.size());
 				if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
 			}
 			break;
 			
 		case proposalsmethod::fixedtime:
 			do{                         // Does proposals for timeloop seconds (on average 20 proposals)
-				p = int(ran()*nchain);
-				th = (unsigned int)(ran()*model.param.size());
+				auto p = int(ran()*nchain);
+				auto th = int(ran()*model.param.size());
 				if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
 			}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
 			break;
@@ -155,7 +153,7 @@ void Mcmc::run()
 		
 		timeprop += clock();
 
-		if(samp%10 == 0){ for(p = 0; p < nchain; p++) chain[p].setQmapi(0);}  // Recalcualtes Qmapi (numerical)
+		if(samp%10 == 0){ for(auto p = 0; p < nchain; p++) chain[p].setQmapi(0);}  // Recalcualtes Qmapi (numerical)
 	
 		timers.timewait -= clock();
 		
@@ -168,7 +166,7 @@ void Mcmc::run()
 		MPI_Gather(&ntimeprop,1,MPI_LONG,ntimeproptot,1,MPI_LONG,0,MPI_COMM_WORLD);
 		if(mpi.core == 0){
 			timeproptotsum = 0; ntimeproptotsum = 0; 
-			for(co = 0; co < mpi.ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
+			for(auto co = 0; co < mpi.ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
             
 			// Update the time to run only if some proposals have run (otherwise it runs forever)
 			if (ntimeproptotsum > 0 && timeproptotsum > 0) {
@@ -184,7 +182,7 @@ void Mcmc::run()
 		
 		if(mpi.core == 0 && quenchpl == 1){ 
 			quenchplot << chain[0].invT;
-			for(p = 0; p < chain[0].paramval.size(); p++) quenchplot << "\t" << chain[0].paramval[p]; 
+			for(auto pval : chain[0].paramval) quenchplot << "\t" << pval; 
 			quenchplot << endl;
 		}	
 	
