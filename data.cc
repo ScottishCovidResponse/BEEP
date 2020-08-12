@@ -155,7 +155,6 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	AREA are;
 	DEMOCAT dem;
 	IND indi;
-	TABLE tab;
 	
 	vector <vector <double> > val;
 	vector <double> vec;
@@ -174,7 +173,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	
 		string file = inputs.find_string("areas","UNSET");
 		if(file == "UNSET") emsgroot("A 'areas' file must be specified");
-		tab = loadtable(file);
+		TABLE tab = loadtable(file);
 		
 		// If onle one age group then combines all columns with "age" to generate an "all" column
 		if(nage == 1){
@@ -255,7 +254,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 		narea = area.size();
 		
-		if(1 == 0){  // Averages covariates across regions
+		if(false){  // Averages covariates across regions
 			vector <double> av, nav;
 			av.resize(region.size()); nav.resize(region.size());
 			for(j = 0; j < ncovar; j++){  
@@ -301,7 +300,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		if(details.mode != sim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file; 
-				tab = loadtable(file);
+				TABLE tab = loadtable(file);
 				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
 				
 				rcol.clear();
@@ -326,7 +325,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		if(details.mode != sim){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
-				tab = loadtable(file);
+				TABLE tab = loadtable(file);
 				table_selectdates(popdata[pd].start,popdata[pd].units,tab,"pop");
 			
 				rcol.clear();
@@ -349,7 +348,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		if(details.mode != sim){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
-				tab = loadtable(file);
+				TABLE tab = loadtable(file);
 	
 				rcol.clear();
 				if(margdata[md].type == "reg"){	for(k = 0; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
@@ -501,7 +500,7 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
 		getline(ss,st,'\t'); st = strip(st);
 		tab.heading.push_back(st);
 		if(ss.eof()) break;
-	}while(1 == 1);
+	}while(true);
 	tab.ncol = tab.heading.size();
 	
 	do{
@@ -514,11 +513,11 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
 			getline(ss,st,'\t'); st = strip(st);
 			vec.push_back(st);
 			if(ss.eof()) break;
-		}while(1 == 1);
+		}while(true);
 		if(vec.size() != tab.ncol) emsg("Rows in file '"+file+"' do not all share the same number of columns.");
 		
 		tab.ele.push_back(vec);
-	}while(1 == 1);
+	}while(true);
 	tab.nrow = tab.ele.size();
 	
 	return tab;
@@ -965,7 +964,7 @@ void DATA::convertOAtoM()
 		}
 	}
 	
-	if(1 == 1){    // A powerlaw spatial kernel
+	if(true){    // A powerlaw spatial kernel
 		double xmin, xmax;
 		xmin = large; xmax = -large;
 		for(a = 0; a < area.size(); a++){

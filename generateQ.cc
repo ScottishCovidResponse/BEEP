@@ -52,7 +52,6 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 							 DataPipeline *dp)
 {
 	TABLE tab;
-	MATRIX N_all, N_home, N_other, N_school, N_work;
 	SPARSEMATRIX M, I;
 
 	datapipeline = dp;
@@ -60,19 +59,23 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 	cout << "Generating Q tensors." << endl;
 	
 	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
-	N_all = matfromtable(tab,nage);
+	MATRIX N_all = matfromtable(tab,nage);
 	
 	tab = loadarray(genQ.Nhome, datadir);
-	N_home = matfromtable(tab,nage);
+	MATRIX N_home = matfromtable(tab,nage);
 	
-	tab = loadarray(genQ.Nother, datadir);
-	N_other = matfromtable(tab,nage);
+	if (false) {
+		tab = loadarray(genQ.Nother, datadir);
+		MATRIX N_other = matfromtable(tab,nage);
+	}
 	
-	tab = loadarray(genQ.Nschool, datadir);
-	N_school = matfromtable(tab,nage);
+	if (false) {
+		tab = loadarray(genQ.Nschool, datadir);
+		MATRIX N_school = matfromtable(tab,nage);
+	}
 	
 	tab = loadarray(genQ.Nwork, datadir);
-	N_work = matfromtable(tab,nage);
+	MATRIX N_work = matfromtable(tab,nage);
 
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
