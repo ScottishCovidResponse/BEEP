@@ -12,12 +12,6 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-struct POS{
-	unsigned int c;
-	double dist;
-};
-bool ordpos(POS lhs, POS rhs) { return lhs.dist < rhs.dist; }
-		
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 POPTREE::POPTREE(DATA &data)
 {

@@ -68,7 +68,7 @@ double gammasamp(double a, double b)
     double d = a - 1.0 / 3.0;
     double c = (1.0 / 3.0) / sqrt (d);
  
-    while(1 == 1){
+    while(true){
       do{
         x = sqrt(-2*log(ran()))*cos(2*M_PI*ran());
         v = 1.0 + c * x;
