@@ -23,13 +23,12 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 	auto pmin = 1-pow(invTmax,1.0/Tpower);
 	
 	for(auto p = 0u; p < nchaintot; p++){
-		auto kappa = double(p)/(nchaintot-1);
 		if(nchaintot == 1 || duplicate == 1) invT[p] = invTmax;
 		else{
 			auto fac=1.0;
 			if(samp < quench) fac = double(samp)/quench;
 		
-			kappa = double(p)/(nchaintot-1);
+			auto kappa = double(p)/(nchaintot-1);
 			auto ppf = pmin+kappa*(pmax-pmin);
 			auto ppeff = 1-fac*(1-ppf);	
 			invT[p] = pow(1-ppeff,Tpower);
