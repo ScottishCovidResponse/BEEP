@@ -12,7 +12,7 @@ cat >"$tmpfile" <<EOF
 #define GIT_VERSION "$version"
 EOF
 
-if [ -r $outfile ]; then
+if [ -r "$outfile" ]; then
     if diff -q "$outfile" "$tmpfile" >/dev/null; then
         rm -f "$tmpfile"
         # No change to version
