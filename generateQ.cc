@@ -67,15 +67,20 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 	if (false) {
 		tab = loadarray(genQ.Nother, datadir);
 		MATRIX N_other = matfromtable(tab,nage);
+		plotmat(N_other,"'Other' matrix");
 	}
 	
 	if (false) {
 		tab = loadarray(genQ.Nschool, datadir);
 		MATRIX N_school = matfromtable(tab,nage);
+		plotmat(N_school,"'School' matrix");
 	}
-	
-	tab = loadarray(genQ.Nwork, datadir);
-	MATRIX N_work = matfromtable(tab,nage);
+
+	if (false) {
+		tab = loadarray(genQ.Nwork, datadir);
+		MATRIX N_work = matfromtable(tab,nage);
+		plotmat(N_work,"'Work' matrix");
+	}
 
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
