@@ -127,9 +127,9 @@ Additionally, for each question please explain the situation and include any rel
 
 ### Are software dependencies listed and of appropriate quality?
 
->   - [X] Sufficiently addressed
->   - [ ] Some work remaining or caveats
->   - [ ] Needs to be addressed
+> - [X] Sufficiently addressed
+> - [ ] Some work remaining or caveats
+> - [ ] Needs to be addressed
 > 
 > The only external dependency is MPI, a standard interface, and implementations are usually of high quality. The code does not depend on a specific implementation.
 
