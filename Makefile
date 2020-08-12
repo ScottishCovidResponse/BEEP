@@ -49,6 +49,7 @@ srcs := \
  main.cc \
  mcmc.cc \
  model.cc \
+ model_evidence.cc \
  obsmodel.cc \
  output.cc \
  pack.cc \

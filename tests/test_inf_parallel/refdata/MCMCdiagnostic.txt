@@ -1,6 +1,6 @@
 -------- Chain: 0 ----------
 
-invT: 0.25  Liav: -2337.77  
+invT: 0.25  Li average: -2337.77  
 MBP Accept: 
 f0: --- 
 f1: --- 
