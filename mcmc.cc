@@ -481,7 +481,7 @@ void Mcmc::diagnostic(vector <vector <double> > &Listore, vector <double> &invTs
 {
 	unsigned int p, c, cc, th, j, jmax;
 	unsigned int nparam = model.param.size(), nchaintot = mpi.ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
-	double av, ntrsum;
+	double av;
 	double Li[nchain], Litot[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
 	long timeprop[nchain], timeproptot[nchaintot];
@@ -540,8 +540,10 @@ void Mcmc::diagnostic(vector <vector <double> > &Listore, vector <double> &invTs
 			
 			av = 0; jmax = Listore[c].size(); for(j = 0; j < jmax; j++) av += Listore[c][j];
 			diag << "Liav: " << av/jmax << "  ";
-			
-			ntrsum = 0; for(th = 0; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
+
+			if (false) {
+				double ntrsum = 0; for(th = 0; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
+			}
 			diag << endl;
 			
 			diag << "MBP Accept: " << endl;
