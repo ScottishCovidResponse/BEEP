@@ -70,7 +70,8 @@ unsigned int Details::gettime(string st) const
 	switch(tform){
 	case tform_num:
 		t = atoi(buf);
-		if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
+		//if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
+		if(isnan(t)) emsg("The time '"+st+"' is not a number");
 		break;
 
 	case tform_ymd:
