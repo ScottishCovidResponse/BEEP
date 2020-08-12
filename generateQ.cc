@@ -33,22 +33,22 @@ struct SPARSEMATRIX {                      // Loads a matrix
 	vector <double> val;                     // The elements of the matrix
 };
 
-TABLE loadtable(string file, string head);
-TABLE loadarray(string file, string dir);
-unsigned int findcol(TABLE &tab, string name);
-vector <AREA> loadarea(TABLE tab);
-MATRIX matfromtable(TABLE tab, unsigned int N);
-SPARSEMATRIX loadsparse(string file, string dir, unsigned int N);
+TABLE loadtable(const string& file, const string& head);
+TABLE loadarray(const string& file, const string& dir);
+unsigned int findcol(TABLE &tab, const string& name);
+vector <AREA> loadarea(const TABLE& tab);
+MATRIX matfromtable(const TABLE& tab, unsigned int N);
+SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N);
 SPARSEMATRIX identity(unsigned int N);
-void plotmat(MATRIX mat, string title);
-void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area);
-TABLE loadarrayfromdatapipeline(string file);
+void plotmat(const MATRIX& mat, const string& title);
+void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, vector <AREA> &area);
+TABLE loadarrayfromdatapipeline(const string& file);
 
-string strip(string line);
+string strip(const string& line);
 
 DataPipeline *datapipeline;             // DataPipeline object
 
-void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &area,
+void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <AREA> &area,
 							 DataPipeline *dp)
 {
 	TABLE tab;
@@ -93,7 +93,7 @@ void generateQ(unsigned int nage, string datadir, GENQ &genQ, vector <AREA> &are
 }
 
 /// Outputs a matrix
-void plotmat(MATRIX mat, string title)
+void plotmat(const MATRIX& mat, const string& title)
 {
 	unsigned int i, j;
 	
@@ -143,7 +143,7 @@ vector <AREA> loadarea(TABLE tab)
 	return area;
 }
 
-void generateQten(SPARSEMATRIX &M, MATRIX &N, string name, GENQ &genQ, vector <AREA> &area)
+void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, vector <AREA> &area)
 {
 	unsigned int nage = N.N, narea = M.N, k, c, cc, a, aa, vi, j, jmax, q;
 	double v, sum, sum2;
@@ -241,7 +241,7 @@ SPARSEMATRIX identity(unsigned int N)
 }
 
 /// Creates a matrix from a table
-MATRIX matfromtable(TABLE tab, unsigned int N)
+MATRIX matfromtable(const TABLE& tab, unsigned int N)
 {
 	unsigned int i, j, ii, jj;
 	double sum, val;
@@ -287,7 +287,7 @@ MATRIX matfromtable(TABLE tab, unsigned int N)
 }
 
 /// Uses 'from' and 'to' columns to generate a sparse matrix
-SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
+SPARSEMATRIX loadsparsefromdatapipeline(const string& file, unsigned int N)
 {
 	SPARSEMATRIX mat;
 #ifdef USE_DATA_PIPELINE
@@ -333,7 +333,7 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 	cout << "Loaded sparse matrix " << file << " from data pipeline" << endl;
 
 #else
-	N = N;
+	mat.N = N;
 	emsg("loadsparsefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in.");
 #endif
 
@@ -342,7 +342,7 @@ SPARSEMATRIX loadsparsefromdatapipeline(string file, unsigned int N)
 
 
 /// Uses 'from' and 'to' columns to generate a sparse matrix
-SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
+SPARSEMATRIX loadsparsefromfile(const string& file, unsigned int N)
 {
 	unsigned int a1, a2;
 	double v;
@@ -372,7 +372,7 @@ SPARSEMATRIX loadsparsefromfile(string file, unsigned int N)
 }
 
 /// Uses 'from' and 'to' columns to generate a sparse matrix
-SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
+SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N)
 {
 	if (stringhasending(file, ".txt")) {
 		return loadsparsefromfile(dir+"/"+file, N);
@@ -382,7 +382,7 @@ SPARSEMATRIX loadsparse(string file, string dir, unsigned int N)
 }
 
 /// Loads a table from the data pipeline
-TABLE loadarrayfromdatapipeline(string file)
+TABLE loadarrayfromdatapipeline(const string& file)
 {
 	TABLE tab;
 
@@ -417,7 +417,7 @@ TABLE loadarrayfromdatapipeline(string file)
 
 
 /// Loads a table from a file
-TABLE loadarray(string file, string dir)
+TABLE loadarray(const string& file, const string& dir)
 {
 	if (stringhasending(file, ".txt")) {
 		return loadtable(dir+"/"+file, "nohead");
@@ -427,7 +427,7 @@ TABLE loadarray(string file, string dir)
 }
 
 /// Loads a table from a file
-TABLE loadtable(string file, string head)
+TABLE loadtable(const string& file, const string& head)
 {
 	TABLE tab;
 	string line, st;
@@ -475,7 +475,7 @@ TABLE loadtable(string file, string head)
 }
 
 /// Finds a column in a table
-unsigned int findcol(TABLE &tab, string name)
+unsigned int findcol(TABLE &tab, const string& name)
 {
 	unsigned int c;
 	
@@ -485,11 +485,12 @@ unsigned int findcol(TABLE &tab, string name)
 }		
 
 /// Strips off '\\r' character if necessary
-string strip(string line)
+string strip(const string& line)
 {
-	unsigned int len = line.length();
+	string val = line;
+	unsigned int len = val.length();
 	if(len > 0){
-		if(line.substr(len-1,1) == "\r") line = line.substr(0,len-1);
+		if(val.substr(len-1,1) == "\r") val = val.substr(0,len-1);
 	}
-	return line;
+	return val;
 }	

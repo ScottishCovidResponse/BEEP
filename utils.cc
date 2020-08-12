@@ -88,13 +88,15 @@ double gammasamp(double a, double b)
 
 double normalprob(double x, double mean, double var)
 {
-  if(var < 0) emsgEC("Utile",2);
+	// Was var < 0 -- changed to protect from FPE
+  if(var <= 0) emsgEC("Utile",2);
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
 double gammaprob(double x, double a, double b)                                      // The log of the probability from the gamma distribution
 {
-  if(x < 0 || a < 0 || b < 0) emsgEC("Utile",3);
+	// Was x < 0 -- changed to protect from FPE
+  if(x <= 0 || a < 0 || b <= 0) emsgEC("Utile",3);
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
 
@@ -104,7 +106,8 @@ double lognormprob(double x, double mean, double var)
 {
 	double val;
 	if(x <= 0) emsgEC("Utils",4);
-	if(var < 0) emsgEC("Utils",5); 
+	// Was var < 0 -- changed to protect from FPE
+	if(var <= 0) emsgEC("Utils",5); 
 	val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
 }
@@ -122,14 +125,14 @@ vector<string> split(const string& s, char delimiter)
 /// @cond EMSG
 
 /// Displays an error message
-void emsg(string msg)
+void emsg(const string& msg)
 {
 	cout << msg << endl;
 	exit (EXIT_FAILURE);
 }
 
 /// Displays an internal error message
-void emsgEC(string section, unsigned int ec)
+void emsgEC(const string& section, unsigned int ec)
 {
 	cout << "Unfortunately BEEPmbp has generated an internal error. We are very sorry about this!" << endl;
 	cout << "The error occurred in '" << section << "' with code '" << ec << "'" << endl;
@@ -137,7 +140,7 @@ void emsgEC(string section, unsigned int ec)
 }
 
 /// Displays an error message on the root core
-void emsgroot(string msg)
+void emsgroot(const string& msg)
 {
 	int core;
 	MPI_Comm_rank(MPI_COMM_WORLD,&core);
