@@ -35,7 +35,7 @@ struct SPARSEMATRIX {                      // Loads a matrix
 
 TABLE loadtable(const string& file, const string& head);
 TABLE loadarray(const string& file, const string& dir);
-unsigned int findcol(TABLE &tab, const string& name);
+unsigned int findcol(const TABLE &tab, const string& name);
 vector <AREA> loadarea(const TABLE& tab);
 MATRIX matfromtable(const TABLE& tab, unsigned int N);
 SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N);
@@ -109,7 +109,7 @@ void plotmat(const MATRIX& mat, const string& title)
 }
 
 /// Loads age stratified population data for areas
-vector <AREA> loadarea(TABLE tab)
+vector <AREA> loadarea(const TABLE& tab)
 {
 	unsigned int c, a;
 	vector <int> agecol;
@@ -478,7 +478,7 @@ TABLE loadtable(const string& file, const string& head)
 }
 
 /// Finds a column in a table
-unsigned int findcol(TABLE &tab, const string& name)
+unsigned int findcol(const TABLE &tab, const string& name)
 {
 	unsigned int c;
 	
