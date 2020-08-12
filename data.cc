@@ -25,11 +25,11 @@ using namespace std;
 #endif
 
 /// Initialises data
-DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) : compX(area), compY(area), details(details)
+DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) :
+	datapipeline(dp), datadir(inputs.find_string("datadir","UNSET")),
+	compX(area), compY(area), details(details)
 {
-	datapipeline = dp;
-	
-	datadir = inputs.find_string("datadir","UNSET");                                      // The data directory
+	// The data directory
 	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
 
 	threshold = inputs.find_int("threshold",UNSET);                                       // The threshold (if specified)
