@@ -6,20 +6,20 @@ below on how best to make progress on this project.
 
 ## Pull Request Process
 
- 1. Please branch from the dev branch within
+1. Please branch from the dev branch within
    ScottishCovidResponse/BEEPmbp
 
    - Please **don't** fork this repository to your own
      github.com/username or other organisation.
 
- 2. Read the issues and choose/be assigned an appropriate issue. This
+2. Read the issues and choose/be assigned an appropriate issue. This
    is likely to be either a `Starter issue` or one assigned by
    chatting in `zulip/BEEPmbp`. You could also create an issue if
    there is something you want to work on that has not been mentioned.
 
- 3. Name the branch `username/featurename`
+3. Name the branch `username/featurename`
 
- 4. If referencing the issue from within a commit message then it
+4. If referencing the issue from within a commit message then it
    should have the correct path to the issue on the
    `ScottishCovidResponse/SCRCIssueTracking` repository. An autolink
    reference has been created to make a shortcut;
@@ -33,25 +33,25 @@ below on how best to make progress on this project.
       possible with `export EDITOR=vi` for example, and then just
       doing a `git commit`.
 
- 5. Please run the tests (see [README.md](README.md)) before pushing.
+5. Please run the tests (see [README.md](README.md)) before pushing.
 
- 6. When your feature is ready to merge into the `dev` branch
+6. When your feature is ready to merge into the `dev` branch
    create a pull request against `ScottishCovidResponse/BEEPmbp#dev`
    and assign `ScottishCovidResponse/beepmbp` as reviewers.
 
- 7. Semver will be handled in PRs from `dev` into `master`.
+7. Semver will be handled in PRs from `dev` into `master`.
 
- 8. Thanks for your time and effort!
+8. Thanks for your time and effort!
 
 ## Coding style
 
- - The code uses hard tabs of width 2. Please configure your editor to
+- The code uses hard tabs of width 2. Please configure your editor to
   use this.
 
- - In general, follow the style of the code surrounding the code you
+- In general, follow the style of the code surrounding the code you
   are writing.
 
- - Code documentation is generated using Doxygen.  Please add doxygen
+- Code documentation is generated using Doxygen.  Please add doxygen
   comments to your code if possible.
 
 ## Licensing

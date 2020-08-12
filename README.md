@@ -200,13 +200,13 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
 
 ## Development
 
-  - [Code documentation](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/index.html) -- not yet automatically updated
+- [Code documentation](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/index.html) -- not yet automatically updated
   
-    - [Call tree](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/main_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
+  - [Call tree](https://projectdata.scrc.uk/beepmbp/branches/dev/doxygen/main_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
 
-  - Work on feature branches and then create a PR for merge into dev branch
+- Work on feature branches and then create a PR for merge into dev branch
 
-  - Continuous integration is implemented using Github Actions,
+- Continuous integration is implemented using Github Actions,
   controlled by a [workflow](.github/workflows/ci.yml) file. Whenever
   a branch is pushed to Github, the workflow is run on that
   branch. The workflow compiles and runs the code in both simulation
@@ -215,7 +215,7 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
   [Actions](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions)
   page.
 
-  - Regression tests can be run with
+- Regression tests can be run with
   ```
   make test
   ```
@@ -236,7 +236,7 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
   The tests pass on every Linux platform we have run on, but runs on macOS give sufficiently different results that they fail. See
   [#628](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628).
 
-  - Code tests (unit tests, and other tests which might not be considered unit tests) can be run with
+- Code tests (unit tests, and other tests which might not be considered unit tests) can be run with
   ```
   make codetest
   ```
@@ -244,8 +244,8 @@ generates a file combining the two sets of samples along with Gelman–Rubin con
   There are currently only example tests implemented (1% coverage as of 30-Jul-2020). Coverage is reported in the build logs accessible from the [GitHub Actions Page (dev
   branch)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).
 
-  - Running "make" stores intermediate build objects in the "build"
+- Running "make" stores intermediate build objects in the "build"
   directory, but the executable (for historical and convenience
   reasons) is written to the current directory.
 
-  - Clean the build with `make clean`
+- Clean the build with `make clean`
