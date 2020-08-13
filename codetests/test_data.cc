@@ -30,6 +30,11 @@ TEST_CASE("getint reads '*' as THRESH if threshold is given",suite) {
 	REQUIRE(i == THRESH);
 }
 
+TEST_CASE("getint fails on '*' if no threshold is given",suite) {
+	unsigned int i;
+	REQUIRE_THROWS_AS(i = getint("*", "anon", UNSET),std::runtime_error);
+}
+
 TEST_CASE("getint fails on junk",suite) {
 	unsigned int i;
 	REQUIRE_THROWS_AS(i = getint("xx", "anon", UNSET),std::runtime_error);

@@ -433,9 +433,10 @@ unsigned int getint(
 			if(st == "*"){
 				i = THRESH;
 				if(threshold == UNSET)
-					throw("Since 'NA' is used in file '"+file+"', "
-								"there must be a threshold set with the 'threshold' "
-								"command in the input TOML file.");
+					throw(std::runtime_error(
+									"Since 'NA' is used in file '"+file+"', "
+									"there must be a threshold set with the 'threshold' "
+									"command in the input TOML file."));
 			}
 			else throw (
 				std::runtime_error("In file '"+file+"' the quantity '"+st+
