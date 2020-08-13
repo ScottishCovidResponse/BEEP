@@ -22,9 +22,9 @@ Do we have sufficient confidence in the correctness of the software to trust the
 
 This is your overall judgement on the level of confidence based on all the aspects of the checklist. There is no formulaic way to arrive at this overall assessment based on the individual checklist answers but please explain how the measures in place combine to reach this level of confidence and make clear any caveats (eg applies for certain ways of using the software and not others).
 
-> - [ ] Yes
-> - [ ] Yes, with caveats
-> - [X] No
+> -   [ ] Yes
+> -   [ ] Yes, with caveats
+> -   [X] No
 >
 > The model has been undergoing heavy feature development over the past few weeks, and is now starting to stabilise, with improvements to the inference algorithm. Due to the need for urgent and wide-ranging development by the model owner, it has not been possible to attempt large-scale code cleanup, refactoring, and implementation of units tests due to the problem of conflicts, and this will be necessary to gain confidence in the quality of the software. The software is not yet integrated in the data pipeline.
 
