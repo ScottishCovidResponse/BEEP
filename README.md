@@ -241,7 +241,7 @@ Diagnostic checks: two types of checks can be performed to ensure that the resul
     ```
     There are currently only example tests implemented (1% coverage as of 30-Jul-2020). Coverage is reported in the build logs accessible from the [GitHub Actions Page (dev branch)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).
 
--   Running `make` stores intermediate build objects in the "build"
+-   Running `make` stores intermediate build objects in the `build`
   directory, but the executable (for historical and convenience
   reasons) is written to the current directory.
 
