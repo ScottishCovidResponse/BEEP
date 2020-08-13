@@ -32,6 +32,18 @@ TEST_CASE("normal after seed set to 0 returns result expected for std::mt19937",
 	REQUIRE(r == Approx(1.5708607051));
 }
 
+TEST_CASE("gammasamp with invalid bounds throws",
+					tag_random) {
+	sran(0);
+	double r;
+	emsg_throws = true;
+	
+	CHECK_THROWS_AS(r = gammasamp(-1.,1.),std::runtime_error);
+	CHECK_NOTHROW(r = gammasamp(0.,1.));
+	CHECK_THROWS_AS(r = gammasamp(1.,-1.),std::runtime_error);
+	CHECK_NOTHROW(r = gammasamp(1.,0.));
+}
+
 //////////////////////////////////
 // Probability Distributions
 //////////////////////////////////
