@@ -14,9 +14,8 @@ using namespace std;
 // getint
 ///////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Reads an integer","[DATA::getint]") {
-	//DATA d;
-	unsigned int i = 42; // d.getint("45", "anon");
+TEST_CASE("Reads an integer","[data.cc:getint()]") {
+	unsigned int i = getint("42", "anon", UNSET);
 	REQUIRE(i == 42);
 }
 
