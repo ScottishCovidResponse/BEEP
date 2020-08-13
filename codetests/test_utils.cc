@@ -24,6 +24,14 @@ TEST_CASE("ran after seed set to 0 returns result expected for std::mt19937",
 	REQUIRE(r == 0.5928446159645536229);
 }
 
+TEST_CASE("normal after seed set to 0 returns result expected for std::mt19937",
+					tag_random) {
+	sran(0);
+	double r = normal(1.,1.);
+	
+	REQUIRE(r == Approx(1.5708607051));
+}
+
 //////////////////////////////////
 // Probability Distributions
 //////////////////////////////////
