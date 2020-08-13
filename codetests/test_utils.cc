@@ -168,6 +168,17 @@ TEST_CASE("filebasename with two subdirectories finds last name",tag_string) {
   REQUIRE(filebasename("dir1/dir2/file") == "file");
 }
 
+TEST_CASE("stringhasending with short string doesn't match",tag_string) {
+  REQUIRE(!stringhasending("test.img","lotsandlotsamdlots"));
+}
+
+TEST_CASE("stringhasending with non-matching string doesn't match",tag_string) {
+  REQUIRE(!stringhasending("test.img","lots"));
+}
+TEST_CASE("stringhasending with matching string does match",tag_string) {
+  REQUIRE(stringhasending("test.img","img"));
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // getint
 ///////////////////////////////////////////////////////////////////////////
