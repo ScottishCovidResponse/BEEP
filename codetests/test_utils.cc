@@ -19,6 +19,11 @@ TEST_CASE("ran after seed set to 0 returns result expected for std::mt19937",
 	
 	REQUIRE(r == 0.5928446159645536229);
 }
+const char* suite_distributions = "Distributions";
+TEST_CASE("logged normalprob at mean with variance 1./(2*pi) is 0.",
+					suite_distributions) {
+	REQUIRE(normalprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
+}
 
 
 const char* suite_string = "String utilities";
