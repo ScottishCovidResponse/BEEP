@@ -35,6 +35,13 @@ TEST_CASE("logged normalprob in right wing is tiny",
 	REQUIRE(normalprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
 }
 
+TEST_CASE("logged normalprob throws out of domain",
+					suite_distributions) {
+	double d;
+	emsg_throws = true;
+	REQUIRE_THROWS_AS(d = normalprob(100.0,0.0,-1.0),std::runtime_error);
+}
+
 
 const char* suite_string = "String utilities";
 

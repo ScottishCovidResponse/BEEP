@@ -126,8 +126,11 @@ vector<string> split(const string& s, char delimiter)
 /// @cond EMSG
 
 /// Displays an error message
+bool emsg_throws = false;
 void emsg(const string& msg)
 {
+	if (emsg_throws)
+		throw(std::runtime_error(msg));
 	cout << msg << endl;
 	exit (EXIT_FAILURE);
 }
@@ -135,9 +138,10 @@ void emsg(const string& msg)
 /// Displays an internal error message
 void emsgEC(const string& section, unsigned int ec)
 {
-	cout << "Unfortunately BEEPmbp has generated an internal error. We are very sorry about this!" << endl;
-	cout << "The error occurred in '" << section << "' with code '" << ec << "'" << endl;
-	exit (EXIT_FAILURE);
+	std::ostringstream oss;
+	oss << "Unfortunately BEEPmbp has generated an internal error. We are very sorry about this!" << endl;
+	oss << "The error occurred in '" << section << "' with code '" << ec << "'";
+	emsg(oss.str());
 }
 
 /// Displays an error message on the root core
@@ -145,7 +149,7 @@ void emsgroot(const string& msg)
 {
 	int core;
 	MPI_Comm_rank(MPI_COMM_WORLD,&core);
-	if(core == 0) cout << msg << endl;
+	if(core == 0) emsg(msg);
 	exit (EXIT_FAILURE);
 }
 /// @endcond
