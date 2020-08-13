@@ -215,38 +215,30 @@ Diagnostic checks: two types of checks can be performed to ensure that the resul
   page.
 
 -   Regression tests can be run with
-
 ```sh
 make test
 ```
-
-This will report whether the code gives the same results as when the reference data in `tests/*/refdata` was
-  committed. The output of the tests will be stored in `regression_test_results`.  If the tests fail because you
+    This will report whether the code gives the same results as when the reference data in `tests/*/refdata` was
+    committed. The output of the tests will be stored in `regression_test_results`.  If the tests fail because you
   have made a change which *should* change the results, run
-
 ```sh
 make test-update
 ```
-	
     which will store the new results from `regression_test_results` into `tests/*/refdata'.  If you ran the tests
   with an uncommitted version of the code, this will fail; you need to commit the code changes and rerun "make test"
   before storing the results. This ensures that the reference data corresponds to a committed version of the code.
   You can then commit the new results with
-  
 ```sh
 git add tests/*/refdata
 git commit -m "Regenerate test reference data"
 ```
-	
     The tests pass on every Linux platform we have run on, but runs on macOS give sufficiently different results that they fail. See
   [#628](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/628).
 
 -   Code tests (unit tests, and other tests which might not be considered unit tests) can be run with
-
 ```sh
 make codetest
 ```
-
     There are currently only example tests implemented (1% coverage as of 30-Jul-2020). Coverage is reported in the build logs accessible from the [GitHub Actions Page (dev branch)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).
 
 -   Running "make" stores intermediate build objects in the "build"
