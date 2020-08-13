@@ -20,15 +20,12 @@ TEST_CASE("getint reads an integer",suite) {
 	REQUIRE(i == 42);
 }
 
-TEST_CASE("getint reads UNKNOWN for NA",suite) {
+TEST_CASE("getint reads 'NA' as UNKNOWN",suite) {
 	unsigned int i = getint("NA", "anon", UNSET);
 	REQUIRE(i == UNKNOWN);
 }
 
-/*
-TEST_CASE("DATA::getint *") {
-	DATA d;
-	unsigned int i = d.getint("*", "anon");
+TEST_CASE("getint reads '*' as THRESH if threshold is given",suite) {
+	unsigned int i = getint("*", "anon", 5);
 	REQUIRE(i == THRESH);
 }
-*/
