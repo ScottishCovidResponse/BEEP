@@ -44,6 +44,29 @@ TEST_CASE("gammasamp with invalid bounds throws",
 	CHECK_NOTHROW(r = gammasamp(1.,0.));
 }
 
+TEST_CASE("gammasamp after seed set to 0 returns result expected for small a with std::mt19937",
+					tag_random) {
+	sran(0);
+	double r = gammasamp(0.5,1.);
+	
+	REQUIRE(r == Approx(0.5648378411));
+}
+
+TEST_CASE("gammasamp after seed set to 0 returns result expected for large a with std::mt19937",
+					tag_random) {
+	sran(0);
+	double r = gammasamp(2.,1.);
+	
+	REQUIRE(r == Approx(2.5176090456));
+}
+TEST_CASE("gammasamp after seed set to 0 returns result expected for a at boundary with std::mt19937",
+					tag_random) {
+	sran(0);
+	double r = gammasamp(1.,1.);
+	
+	REQUIRE(r == Approx(1.2498384326));
+}
+
 //////////////////////////////////
 // Probability Distributions
 //////////////////////////////////
