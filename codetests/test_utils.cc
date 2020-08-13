@@ -74,12 +74,12 @@ TEST_CASE("logged lognormprob in left wing is tiny",
 	REQUIRE(lognormprob(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
-#if 0
 TEST_CASE("logged lognormprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormprob(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
+#if 0
 TEST_CASE("logged lognormprob throws out of domain",
 					tag_distributions) {
 	double d;
