@@ -89,15 +89,20 @@ TEST_CASE("logged lognormprob in right wing is tiny",
 	REQUIRE(lognormprob(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
-#if 0
 TEST_CASE("logged gammaprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_THROWS_AS(d = gammaprob(100.0,0.0,0.0),std::runtime_error);
-	REQUIRE_THROWS_AS(d = gammaprob(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_NOTHROW(d = gammaprob(1.0,1.0,1.0));
+	CHECK_THROWS_AS(d = gammaprob(0.0,1.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gammaprob(-1.0,1.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gammaprob(1.0,-1.0,1.0),std::runtime_error);
+	CHECK_NOTHROW(d = gammaprob(1.0,0.0,1.0));
+	CHECK_THROWS_AS(d = gammaprob(1.0,1.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gammaprob(1.0,1.0,0.0),std::runtime_error);
 }
 
+#if 0
 TEST_CASE("logged gammaprob at mean with variance 1./(2*pi) is 0.",
 					tag_distributions) {
 	REQUIRE(gammaprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
