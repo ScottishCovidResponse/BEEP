@@ -194,29 +194,26 @@ unsigned int getint(
 	unsigned int threshold
 	)
 {
-	unsigned int i, j;
-	int n = st.length();  
-  char str[n + 1]; 
-	strcpy(str, st.c_str()); 
-		
-	for(j = 0; j < st.size(); j++) if(!isdigit(str[j])) break;
-	if(j < st.size()) {
-		if(st == "NA") {
-			i = UNKNOWN;
-		} else {
-			if(st == "*") {
-				i = THRESH;
-				if (threshold == UNSET) {
-					throw(std::runtime_error(
-									"since '*' is used "
-									"there must be a threshold set with the 'threshold' "
-									"command in the input TOML file."));
-				}
-			}	else {
-				throw (std::runtime_error("the quantity '"+st+"' is not a number"));
-			}
+	char* endptr;
+	long longi = strtol(&st[0],&endptr,10);
+	ptrdiff_t j = endptr-&st[0];
+	unsigned int i;
+	
+	if (st.length()-j == 0 && longi >= 0
+			&& longi <= std::numeric_limits<unsigned int>::max()) {
+		i = static_cast<unsigned int>(longi);
+	} else if(st == "NA") {
+		i = UNKNOWN;
+	} else if (st == "*") {
+		i = THRESH;
+		if (threshold == UNSET) {
+			throw(std::runtime_error(
+							"since '*' is used "
+							"there must be a threshold set with the 'threshold' "
+							"command in the input TOML file."));
 		}
+	}	else {
+		throw (std::runtime_error("the quantity '"+st+"' is not a number"));
 	}
-  else i = atoi(str);
 	return i;
 }

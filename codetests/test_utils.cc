@@ -204,6 +204,16 @@ TEST_CASE("getint fails on '*' if no threshold is given",tag_string) {
 	REQUIRE_THROWS_AS(i = getint("*", UNSET),std::runtime_error);
 }
 
+TEST_CASE("getint fails on negative",tag_string) {
+	unsigned int i;
+	REQUIRE_THROWS_AS(i = getint("-42", UNSET),std::runtime_error);
+}
+TEST_CASE("getint fails on huge",tag_string) {
+	unsigned int i;
+	REQUIRE_THROWS_AS(i = getint("55555555555555555555", UNSET),
+										std::runtime_error);
+}
+
 TEST_CASE("getint fails on junk",tag_string) {
 	unsigned int i;
 	REQUIRE_THROWS_AS(i = getint("xx", UNSET),std::runtime_error);
