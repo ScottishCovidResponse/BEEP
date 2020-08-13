@@ -99,7 +99,8 @@ double normalprob(double x, double mean, double var)
 double gammaprob(double x, double a, double b)
 {
 	// Was x < 0 -- changed to protect from FPE
-  if(x <= 0 || a < 0 || b <= 0) emsgEC("Utile",3);
+	// Was a < 0 -- changed to protect from FPE
+  if(x <= 0 || a <= 0 || b <= 0) emsgEC("Utile",3);
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
 
