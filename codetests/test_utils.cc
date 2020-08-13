@@ -58,34 +58,34 @@ TEST_CASE("logged normalprob throws out of domain",
 	REQUIRE_THROWS_AS(d = normalprob(100.0,0.0,-1.0),std::runtime_error);
 }
 
-TEST_CASE("logged lognormalprob at mean with variance 1./(2*pi) is -1.0",
+TEST_CASE("logged lognormprob at mean with variance 1./(2*pi) is -1.0",
 					tag_distributions) {
 	REQUIRE(lognormprob(exp(1.0),1.0,1.0/(2*M_PI)) == Approx( -1.0 ));
 }
 
-#if 0
-TEST_CASE("logged normalprob at mean+1sd with variance 1./(2*pi) is -0.5",
+TEST_CASE("logged lognormprob at mean+1sd with variance 1./(2*pi) is -1.8989",
 					tag_distributions) {
 	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
-	REQUIRE(lognormalprob(mean+sd,mean,var) == Approx( -0.5 ));
+	REQUIRE(lognormprob(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
 }
 
-TEST_CASE("logged normalprob in left wing is tiny",
+#if 0
+TEST_CASE("logged lognormprob in left wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormalprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
 }
 
-TEST_CASE("logged normalprob in right wing is tiny",
+TEST_CASE("logged lognormprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormalprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
 }
 
-TEST_CASE("logged normalprob throws out of domain",
+TEST_CASE("logged lognormprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_THROWS_AS(d = lognormalprob(100.0,0.0,0.0),std::runtime_error);
-	REQUIRE_THROWS_AS(d = lognormalprob(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormprob(100.0,0.0,0.0),std::runtime_error);
+	REQUIRE_THROWS_AS(d = lognormprob(100.0,0.0,-1.0),std::runtime_error);
 }
 #endif
 
