@@ -32,5 +32,7 @@ vector<string> split(const string& s, char delimiter);
 void ensuredirectory(const string &path);
 string filebasename(const string &path);
 bool stringhasending (std::string const &fullString, std::string const &ending);
+unsigned int getint(const std::string& st, unsigned int threshold);
+
 
 #endif

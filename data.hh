@@ -7,6 +7,7 @@ using namespace std;
 
 #include "consts.hh"
 #include "details.hh"
+#include "utils.hh"
 
 struct QTENSOR {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
@@ -240,7 +241,5 @@ private:
 	
 	const Details &details;
 };
-
-unsigned int getint(const string& st, unsigned int threshold);
 
 #endif

@@ -8,6 +8,7 @@
 #include "stdlib.h"
 #include "math.h"
 #include <sys/stat.h>
+#include <cstring>
 
 #include "utils.hh"
 #include "consts.hh"
@@ -175,4 +176,36 @@ bool stringhasending (std::string const &fullString, std::string const &ending)
 	} else {
 		return false;
 	}
+}
+/// Gets a positive integer from a string
+unsigned int getint(
+	const std::string& st,
+	unsigned int threshold
+	)
+{
+	unsigned int i, j;
+	int n = st.length();  
+  char str[n + 1]; 
+	strcpy(str, st.c_str()); 
+		
+	for(j = 0; j < st.size(); j++) if(!isdigit(str[j])) break;
+	if(j < st.size()) {
+		if(st == "NA") {
+			i = UNKNOWN;
+		} else {
+			if(st == "*") {
+				i = THRESH;
+				if (threshold == UNSET) {
+					throw(std::runtime_error(
+									"since '*' is used "
+									"there must be a threshold set with the 'threshold' "
+									"command in the input TOML file."));
+				}
+			}	else {
+				throw (std::runtime_error("the quantity '"+st+"' is not a number"));
+			}
+		}
+	}
+  else i = atoi(str);
+	return i;
 }
