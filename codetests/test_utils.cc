@@ -25,6 +25,16 @@ TEST_CASE("logged normalprob at mean with variance 1./(2*pi) is 0.",
 	REQUIRE(normalprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
 }
 
+TEST_CASE("logged normalprob in left wing is tiny",
+					suite_distributions) {
+	REQUIRE(normalprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
+}
+
+TEST_CASE("logged normalprob in right wing is tiny",
+					suite_distributions) {
+	REQUIRE(normalprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
+}
+
 
 const char* suite_string = "String utilities";
 
