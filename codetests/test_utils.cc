@@ -55,9 +55,18 @@ TEST_CASE("gammasamp after seed set to 0 returns result expected for small a wit
 TEST_CASE("gammasamp after seed set to 0 returns result expected for large a with std::mt19937",
 					tag_random) {
 	sran(0);
-	double r = gammasamp(2.,1.);
-	
-	REQUIRE(r == Approx(2.5176090456));
+
+	// Loop sizes are chosen to exercise all code branches
+	// Would be easier to ensure using a mock RNG
+	REQUIRE(gammasamp(2.,1.) == Approx(2.5176090456));
+	for (int i=0; i<11; ++i) {
+		(void) gammasamp(2.,1.);
+	}
+	REQUIRE(gammasamp(2.,1.) == Approx(0.482169407));
+	for (int i=0; i<53; ++i) {
+		(void) gammasamp(2.,1.);
+	}
+	REQUIRE(gammasamp(2.,1.) == Approx(1.4667583414));
 }
 TEST_CASE("gammasamp after seed set to 0 returns result expected for a at boundary with std::mt19937",
 					tag_random) {
