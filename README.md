@@ -224,8 +224,8 @@ Diagnostic checks: two types of checks can be performed to ensure that the resul
     ```sh
     make test-update
     ```
-    which will store the new results from `regression_test_results` into `tests/*/refdata'.  If you ran the tests
-  with an uncommitted version of the code, this will fail; you need to commit the code changes and rerun "make test"
+    which will store the new results from `regression_test_results` into `tests/*/refdata`.  If you ran the tests
+  with an uncommitted version of the code, this will fail; you need to commit the code changes and rerun `make test`
   before storing the results. This ensures that the reference data corresponds to a committed version of the code.
   You can then commit the new results with
     ```sh
