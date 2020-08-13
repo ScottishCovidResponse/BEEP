@@ -102,12 +102,24 @@ TEST_CASE("logged gammaprob throws out of domain",
 	CHECK_THROWS_AS(d = gammaprob(1.0,1.0,0.0),std::runtime_error);
 }
 
-#if 0
-TEST_CASE("logged gammaprob at mean with variance 1./(2*pi) is 0.",
+TEST_CASE("logged gammaprob at (x=1,a=1,b=1) is -1.",
 					tag_distributions) {
-	REQUIRE(gammaprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
+	REQUIRE(gammaprob(1.0,1.0,1.0) == Approx( -1.0 ));
 }
 
+//>>> import scipy.stats as stats
+//>>> import math
+//>>> math.log(stats.gamma(2).pdf(3))
+//-1.9013877113318902
+//(%i) load(distrib)$
+//(%i) log(pdf_gamma(3.0,2.0,1.0));
+//(%o)    - 1.90138771133189
+TEST_CASE("logged gammaprob at (x=3,a=2,b=1) is -1.90138771133189",
+					tag_distributions) {
+	REQUIRE(gammaprob(3.0,2.0,1.0) == Approx( -1.90138771133189 ));
+}
+
+#if 0
 TEST_CASE("logged gammaprob at mean+1sd with variance 1./(2*pi) is -0.5",
 					tag_distributions) {
 	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
