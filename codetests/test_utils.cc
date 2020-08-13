@@ -156,6 +156,18 @@ TEST_CASE("split breaks up const char*",tag_string) {
 	// CHECK(parts.size() == 5);
 }
 
+TEST_CASE("filebasename with no subdirectory finds same name",tag_string) {
+  REQUIRE(filebasename("file") == "file");
+}
+
+TEST_CASE("filebasename with one subdirectory finds last name",tag_string) {
+  REQUIRE(filebasename("dir/file") == "file");
+}
+
+TEST_CASE("filebasename with two subdirectories finds last name",tag_string) {
+  REQUIRE(filebasename("dir1/dir2/file") == "file");
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // getint
 ///////////////////////////////////////////////////////////////////////////
