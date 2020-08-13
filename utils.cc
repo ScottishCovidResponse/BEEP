@@ -87,6 +87,7 @@ double gammasamp(double a, double b)
   }
 }
 
+/// The log of the probability from the normal distribution
 double normalprob(double x, double mean, double var)
 {
 	// Was var < 0 -- changed to protect from FPE
@@ -94,7 +95,8 @@ double normalprob(double x, double mean, double var)
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
-double gammaprob(double x, double a, double b)                                      // The log of the probability from the gamma distribution
+/// The log of the probability from the gamma distribution
+double gammaprob(double x, double a, double b)
 {
 	// Was x < 0 -- changed to protect from FPE
   if(x <= 0 || a < 0 || b <= 0) emsgEC("Utile",3);
@@ -102,7 +104,7 @@ double gammaprob(double x, double a, double b)                                  
 }
 
 
-/// Calculates the log of the lognormal probability distribution
+/// The log of the lognormal probability distribution
 double lognormprob(double x, double mean, double var)
 {
 	double val;
@@ -113,7 +115,7 @@ double lognormprob(double x, double mean, double var)
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
 }
 
-/// Splits up a string
+/// Split up a string at a specified delimiter
 vector<string> split(const string& s, char delimiter)                                                               
 {                                 
   std::vector<std::string> splits;                       
@@ -125,8 +127,11 @@ vector<string> split(const string& s, char delimiter)
 
 /// @cond EMSG
 
-/// Displays an error message
+// Alter error behaviour to throwing exception, which can be caught in unit
+// tests
 bool emsg_throws = false;
+
+/// Displays an error message
 void emsg(const string& msg)
 {
 	if (emsg_throws)
