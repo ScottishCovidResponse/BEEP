@@ -38,7 +38,7 @@ Additionally, for each question please explain the situation and include any rel
 
 -   How is stochasticity handled?
 -   Is sufficient meta-data logged to enable a run to be reproduced: Is the exact code version recorded (and whether the repository was "clean"), including versions of dependent libraries (e.g. an environment.yml file or similar) along with all command line arguments and the content of any configuration files? 
--    Is there up-to-date documentation which explains precisely how to run the code to reproduce existing results? 
+-   Is there up-to-date documentation which explains precisely how to run the code to reproduce existing results? 
 
 > -   [ ] Sufficiently addressed
 > -   [X] Some work remaining or caveats
@@ -143,4 +143,3 @@ Additionally, for each question please explain the situation and include any rel
 > -   [X] Needs to be addressed
 > 
 > The code is not yet using the data pipeline ([#366](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/366) and [#367](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/367)). All parameters are specified in the input file, not the source code.
-
