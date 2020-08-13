@@ -1,13 +1,12 @@
 #include "../catch.hpp"
 
-#include <iostream>
-#include <iomanip>
-#include <string>
+//#include <iostream>
+//#include <iomanip>
+//#include <string>
 
-#define private public
-//#include "../data.hh"
+#include "../data.hh"
 
-#include "../consts.hh"
+//#include "../consts.hh"
 
 using namespace std;
 
