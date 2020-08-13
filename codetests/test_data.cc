@@ -14,21 +14,21 @@ using namespace std;
 // getint
 ///////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Reads an integer","[data.cc:getint()]") {
+const char* suite = "[data.cc:getint()]";
+TEST_CASE("getint reads an integer",suite) {
 	unsigned int i = getint("42", "anon", UNSET);
 	REQUIRE(i == 42);
 }
 
-/*
-TEST_CASE("DATA::getint NA") {
-	DATA d;
-	unsigned int i = d.getint("NA", "anon");
-	CHECK(i == UNKNOWN);
+TEST_CASE("getint reads UNKNOWN for NA",suite) {
+	unsigned int i = getint("NA", "anon", UNSET);
+	REQUIRE(i == UNKNOWN);
 }
 
+/*
 TEST_CASE("DATA::getint *") {
 	DATA d;
 	unsigned int i = d.getint("*", "anon");
-	CHECK(i == THRESH);
+	REQUIRE(i == THRESH);
 }
 */
