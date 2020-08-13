@@ -69,12 +69,12 @@ TEST_CASE("logged lognormprob at mean+1sd with variance 1./(2*pi) is -1.8989",
 	REQUIRE(lognormprob(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
 }
 
-#if 0
 TEST_CASE("logged lognormprob in left wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormprob(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
+#if 0
 TEST_CASE("logged lognormprob in right wing is tiny",
 					tag_distributions) {
 	REQUIRE(lognormprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
