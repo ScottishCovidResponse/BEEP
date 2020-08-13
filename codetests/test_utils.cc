@@ -79,15 +79,15 @@ TEST_CASE("logged lognormprob in right wing is tiny",
 	REQUIRE(lognormprob(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
-#if 0
 TEST_CASE("logged lognormprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
+	CHECK_THROWS_AS(d = lognormprob(0.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormprob(-1.0,0.0,1.0),std::runtime_error);
 	CHECK_THROWS_AS(d = lognormprob(100.0,0.0,0.0),std::runtime_error);
-	REQUIRE_THROWS_AS(d = lognormprob(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormprob(100.0,0.0,-1.0),std::runtime_error);
 }
-#endif
 
 //////////////////////////////////
 // String utilities
