@@ -407,6 +407,16 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 /// Gets a positive integer from a string
 unsigned int DATA::getint(const string& st, const string& file) const
 {
+	return ::getint(st,file,threshold);
+}
+
+/// Gets a positive integer from a string
+unsigned int getint(
+	const string& st,
+	const string& file,
+	unsigned int threshold
+	)
+{
 	unsigned int i, j;
 	int n = st.length();  
   char str[n + 1]; 

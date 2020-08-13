@@ -240,4 +240,8 @@ private:
 	
 	const Details &details;
 };
+
+unsigned int getint(const string& st, const string& file,
+	unsigned int threshold);
+
 #endif
