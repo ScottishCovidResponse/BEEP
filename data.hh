@@ -231,7 +231,7 @@ private:
 	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const;
 	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const;
 	unsigned int findcol(const TABLE &tab, string name) const;
-	unsigned int getint(string st, string file) const;
+	unsigned int getint(const string& st, const string& file) const;
 	
 	void plotrawdata();   // These are temporary function used for analysis (they will be removed later)
 	void generatedeathdata();

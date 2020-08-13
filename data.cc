@@ -405,7 +405,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 }
 
 /// Gets a positive integer from a string
-unsigned int DATA::getint(string st, string file) const
+unsigned int DATA::getint(const string& st, const string& file) const
 {
 	unsigned int i, j;
 	int n = st.length();  
