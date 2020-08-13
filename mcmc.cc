@@ -425,7 +425,6 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 void Mcmc::diagnostic(vector <double> &nac_swap) const
 {
 	unsigned int nparam = model.param.size(), nchaintot = mpi.ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
-	double ntrsum;
 	double Li[nchain], Litot[nchaintot];
 	unsigned int ch[nchain], chtot[nchaintot];
 	long timeprop[nchain], timeproptot[nchaintot];
@@ -484,7 +483,9 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 			
 			diag << "Li average: " <<  model_evidence.average_Li(c) << "  ";
 			
-			ntrsum = 0; for(auto th = 0u; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
+			if (false) {
+				double ntrsum = 0; for(auto th = 0u; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
+			}
 			diag << endl;
 			
 			diag << "MBP Accept: " << endl;

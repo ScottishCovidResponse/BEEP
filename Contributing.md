@@ -29,7 +29,7 @@ below on how best to make progress on this project.
 
    - `git commit -m "pithy description" -m "SCRC-123 and more details"` to refer to issue number 123. 
 
-    - writing the commit message and description in an editor is also
+   - writing the commit message and description in an editor is also
       possible with `export EDITOR=vi` for example, and then just
       doing a `git commit`.
 

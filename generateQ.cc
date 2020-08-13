@@ -35,7 +35,7 @@ struct SPARSEMATRIX {                      // Loads a matrix
 
 TABLE loadtable(const string& file, const string& head);
 TABLE loadarray(const string& file, const string& dir);
-unsigned int findcol(TABLE &tab, const string& name);
+unsigned int findcol(const TABLE &tab, const string& name);
 vector <AREA> loadarea(const TABLE& tab);
 MATRIX matfromtable(const TABLE& tab, unsigned int N);
 SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N);
@@ -52,7 +52,6 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 							 DataPipeline *dp)
 {
 	TABLE tab;
-	MATRIX N_all, N_home, N_other, N_school, N_work;
 	SPARSEMATRIX M, I;
 
 	datapipeline = dp;
@@ -60,19 +59,28 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 	cout << "Generating Q tensors." << endl;
 	
 	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
-	N_all = matfromtable(tab,nage);
+	MATRIX N_all = matfromtable(tab,nage);
 	
 	tab = loadarray(genQ.Nhome, datadir);
-	N_home = matfromtable(tab,nage);
+	MATRIX N_home = matfromtable(tab,nage);
 	
-	tab = loadarray(genQ.Nother, datadir);
-	N_other = matfromtable(tab,nage);
+	if (false) {
+		tab = loadarray(genQ.Nother, datadir);
+		MATRIX N_other = matfromtable(tab,nage);
+		plotmat(N_other,"'Other' matrix");
+	}
 	
-	tab = loadarray(genQ.Nschool, datadir);
-	N_school = matfromtable(tab,nage);
-	
-	tab = loadarray(genQ.Nwork, datadir);
-	N_work = matfromtable(tab,nage);
+	if (false) {
+		tab = loadarray(genQ.Nschool, datadir);
+		MATRIX N_school = matfromtable(tab,nage);
+		plotmat(N_school,"'School' matrix");
+	}
+
+	if (false) {
+		tab = loadarray(genQ.Nwork, datadir);
+		MATRIX N_work = matfromtable(tab,nage);
+		plotmat(N_work,"'Work' matrix");
+	}
 
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
@@ -106,7 +114,7 @@ void plotmat(const MATRIX& mat, const string& title)
 }
 
 /// Loads age stratified population data for areas
-vector <AREA> loadarea(TABLE tab)
+vector <AREA> loadarea(const TABLE& tab)
 {
 	unsigned int c, a;
 	vector <int> agecol;
@@ -475,7 +483,7 @@ TABLE loadtable(const string& file, const string& head)
 }
 
 /// Finds a column in a table
-unsigned int findcol(TABLE &tab, const string& name)
+unsigned int findcol(const TABLE &tab, const string& name)
 {
 	unsigned int c;
 	

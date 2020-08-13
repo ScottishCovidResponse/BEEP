@@ -302,13 +302,13 @@ void MODEL::priorsamp()
 }
 
 /// Gets a parameter value
-double MODEL::getparam(string name)
+double MODEL::getparam(const string& name)
 {	
 	return paramval[findparam(name)];
 }
 
 /// Gets the infectivity of a compartment
-double MODEL::getinfectivity(string name)
+double MODEL::getinfectivity(const string& name)
 {
 	unsigned int c;
 
@@ -318,7 +318,7 @@ double MODEL::getinfectivity(string name)
 }
 
 /// Adds a compartment to the model
-void MODEL::addcomp(string name, double infectivity)
+void MODEL::addcomp(const string& name, double infectivity)
 {
 	COMP co;
 	co.name = name;
@@ -329,7 +329,7 @@ void MODEL::addcomp(string name, double infectivity)
 }
 
 /// Finds a parameter from a string
-unsigned int MODEL::findparam(string name)
+unsigned int MODEL::findparam(const string& name)
 {
 	unsigned int p, pmax;
 	
@@ -341,7 +341,7 @@ unsigned int MODEL::findparam(string name)
 }
 
 /// Adds a parameter to the model
-void MODEL::addparam(string name, double min, double max)
+void MODEL::addparam(const string& name, double min, double max)
 {
 	PARAM par;
 	par.name = name; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = 0.5*(min+max)/10; if(par.jump == 0) par.jump = 0.1;
@@ -351,7 +351,7 @@ void MODEL::addparam(string name, double min, double max)
 }
 
 /// Adds a transition to the model
-void MODEL::addtrans(string from, string to, string prpar, unsigned int type, string mean, string cv)
+void MODEL::addtrans(const string& from, const string& to, const string& prpar, unsigned int type, const string& mean, const string& cv)
 {
 	unsigned int c, cmax, j;
 	
@@ -1096,7 +1096,7 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 }
 
 /// Outputs an event sequence (used for debugging)
-void MODEL::oe(string name, vector <FEV> &ev)
+void MODEL::oe(const string& name, vector <FEV> &ev)
 {
 	unsigned int e, tra;
 	

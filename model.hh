@@ -130,8 +130,8 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	double getparam(string name);
-	double getinfectivity(string name);
+	double getparam(const string& name);
+	double getinfectivity(const string& name);
 	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void print_to_terminal() const;
@@ -141,7 +141,7 @@ public:
 	void copyp();
 	vector <double> R0calc();
 	unsigned int dombpevents();
-	void oe(string name, vector <FEV> &ev);
+	void oe(const string& name, vector <FEV> &ev);
 	void calcprobin();
 	double prior();
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
@@ -150,13 +150,14 @@ public:
 private:
 	void addQ();
 	void checkdata();
-	void addcomp(string name, double infectivity);
-	void addparam(string name, double min, double max);
-	void addtrans(string from, string to, string prpar, unsigned int type, string param1, string param2);
+	void addcomp(const string& name, double infectivity);
+	void addparam(const string& name, double min, double max);
+	void addtrans(const string& from, const string& to, const string& prpar,
+								unsigned int type, const string& param1, const string& param2);
 	void setsus(); 
 	void setarea();
 	void timevariation();
-	unsigned int findparam(string name);
+	unsigned int findparam(const string& name);
 	unsigned int settransprob();
 	double likelihood_prob();
 	double likelihood_dt(vector <double> &paramv);
