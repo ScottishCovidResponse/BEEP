@@ -109,7 +109,7 @@ TEST_CASE("logged gammaprob at (x=1,a=1,b=1) is -1.",
 
 //>>> import scipy.stats as stats
 //>>> import math
-//>>> stats.gamma(2).logpdf(3)
+//>>> x=3;a=2;b=1;stats.gamma(a).logpdf(x*b)+math.log(b)
 //-1.9013877113318902
 //(%i) load(distrib)$
 //(%i) log(pdf_gamma(3.0,2.0,1.0));
@@ -119,30 +119,22 @@ TEST_CASE("logged gammaprob at (x=3,a=2,b=1) is -1.90138771133189",
 	REQUIRE(gammaprob(3.0,2.0,1.0) == Approx( -1.90138771133189 ));
 }
 
-#if 0
-//(%i) log(pdf_gamma(1.0,1.0,2.0));
-//(%o)    - 1.193147180559945
-TEST_CASE("logged gammaprob at (x=1,a=1,b=2) is -1.193147180559945",
+// Note different convention for b parameter in maxima
+//>>> x=1;a=1;b=2;stats.gamma(a).logpdf(x*b)+math.log(b)
+//-1.3068528194400546
+//(%i) load(distrib)$
+//(%i) log(pdf_gamma(1.0,1.0,1./2.0));
+//(%o)    - 1.306852819440054
+TEST_CASE("logged gammaprob at (x=1,a=1,b=2) is -1.3068528194400546",
 					tag_distributions) {
-	REQUIRE(gammaprob(1.0,1.0,2.0) == Approx( -1.90138771133189 ));
-}
-
-TEST_CASE("logged gammaprob at mean+1sd with variance 1./(2*pi) is -0.5",
-					tag_distributions) {
-	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
-	REQUIRE(gammaprob(mean+sd,mean,var) == Approx( -0.5 ));
-}
-
-TEST_CASE("logged gammaprob in left wing is tiny",
-					tag_distributions) {
-	REQUIRE(gammaprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(gammaprob(1.0,1.0,2.0) == Approx( -1.3068528194400546 ));
 }
 
 TEST_CASE("logged gammaprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(gammaprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(gammaprob(200.0,4.0,1.0) < -100.0);
 }
-#endif
+
 
 //////////////////////////////////
 // String utilities

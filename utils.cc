@@ -98,6 +98,7 @@ double normalprob(double x, double mean, double var)
 /// The log of the probability from the gamma distribution
 double gammaprob(double x, double a, double b)
 {
+	// Scale parameter is 1/b in several sources
 	// Was x < 0 -- changed to protect from FPE
 	// Was a < 0 -- changed to protect from FPE
   if(x <= 0 || a <= 0 || b <= 0) emsgEC("Utile",3);
