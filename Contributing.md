@@ -9,7 +9,7 @@ below on how best to make progress on this project.
 1.  Please branch from the dev branch within
    ScottishCovidResponse/BEEPmbp
 
-   -   Please **don't** fork this repository to your own
+-   Please **don't** fork this repository to your own
      github.com/username or other organisation.
 
 2.  Read the issues and choose/be assigned an appropriate issue. This
@@ -27,9 +27,9 @@ below on how best to make progress on this project.
    put the reference in the commit description (not the first line of
    the commit) i.e.:
 
-   -   `git commit -m "pithy description" -m "SCRC-123 and more details"` to refer to issue number 123. 
+-   `git commit -m "pithy description" -m "SCRC-123 and more details"` to refer to issue number 123. 
 
-   -   writing the commit message and description in an editor is also
+-   writing the commit message and description in an editor is also
       possible with `export EDITOR=vi` for example, and then just
       doing a `git commit`.
 
@@ -43,7 +43,7 @@ below on how best to make progress on this project.
 
 8.  Thanks for your time and effort!
 
-##  Coding style
+## Coding style
 
 -   The code uses hard tabs of width 2. Please configure your editor to
   use this.
