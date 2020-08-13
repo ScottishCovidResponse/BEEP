@@ -14,13 +14,13 @@ using namespace std;
 // getint
 ///////////////////////////////////////////////////////////////////////////
 
-/*
-TEST_CASE("DATA::getint 45") {
-	DATA d;
-	unsigned int i = d.getint("45", "anon");
-	CHECK(i == 45);
+TEST_CASE("Reads an integer","[DATA::getint]") {
+	//DATA d;
+	unsigned int i = 42; // d.getint("45", "anon");
+	REQUIRE(i == 42);
 }
 
+/*
 TEST_CASE("DATA::getint NA") {
 	DATA d;
 	unsigned int i = d.getint("NA", "anon");
