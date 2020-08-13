@@ -9,6 +9,10 @@
 
 using namespace std;
 
+//////////////////////////////////
+// Random generators
+//////////////////////////////////
+
 const char* tag_random = "[random]";
 TEST_CASE("ran after seed set to 0 returns result expected for std::mt19937",
 					tag_random) {
@@ -19,10 +23,21 @@ TEST_CASE("ran after seed set to 0 returns result expected for std::mt19937",
 	
 	REQUIRE(r == 0.5928446159645536229);
 }
+
+//////////////////////////////////
+// Probability Distributions
+//////////////////////////////////
 const char* tag_distributions = "[distributions]";
+
 TEST_CASE("logged normalprob at mean with variance 1./(2*pi) is 0.",
 					tag_distributions) {
 	REQUIRE(normalprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
+}
+
+TEST_CASE("logged normalprob at mean+1sd with variance 1./(2*pi) is -0.5",
+					tag_distributions) {
+	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
+	REQUIRE(normalprob(mean+sd,mean,var) == Approx( -0.5 ));
 }
 
 TEST_CASE("logged normalprob in left wing is tiny",
@@ -43,7 +58,9 @@ TEST_CASE("logged normalprob throws out of domain",
 	REQUIRE_THROWS_AS(d = normalprob(100.0,0.0,-1.0),std::runtime_error);
 }
 
-
+//////////////////////////////////
+// String utilities
+//////////////////////////////////
 const char* tag_string = "[string]";
 
 TEST_CASE("split breaks up const char*",tag_string) {
