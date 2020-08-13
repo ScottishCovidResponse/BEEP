@@ -29,3 +29,13 @@ TEST_CASE("getint reads '*' as THRESH if threshold is given",suite) {
 	unsigned int i = getint("*", "anon", 5);
 	REQUIRE(i == THRESH);
 }
+
+TEST_CASE("getint fails on junk",suite) {
+	unsigned int i;
+	REQUIRE_THROWS_AS(i = getint("xx", "anon", UNSET),std::runtime_error);
+}
+
+TEST_CASE("getint fails on trailing junk",suite) {
+	unsigned int i;
+	REQUIRE_THROWS_AS(i = getint("xx", "anon", UNSET),std::runtime_error);
+}

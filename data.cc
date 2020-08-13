@@ -407,7 +407,11 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 /// Gets a positive integer from a string
 unsigned int DATA::getint(const string& st, const string& file) const
 {
-	return ::getint(st,file,threshold);
+	try {
+		return ::getint(st,file,threshold);
+	} catch (const std::runtime_error& e) {
+		emsg(e.what());
+	}
 }
 
 /// Gets a positive integer from a string
@@ -428,9 +432,14 @@ unsigned int getint(
 		else{
 			if(st == "*"){
 				i = THRESH;
-				if(threshold == UNSET) emsg("Since 'NA' is used in file '"+file+"', there must be a threshold set with the 'threshold' command in the input TOML file.");
+				if(threshold == UNSET)
+					throw("Since 'NA' is used in file '"+file+"', "
+								"there must be a threshold set with the 'threshold' "
+								"command in the input TOML file.");
 			}
-			else emsg("In file '"+file+"' the quantity '"+st+"' is not a number");
+			else throw (
+				std::runtime_error("In file '"+file+"' the quantity '"+st+
+													 "' is not a number"));
 		}
 	}
   else i = atoi(str);
