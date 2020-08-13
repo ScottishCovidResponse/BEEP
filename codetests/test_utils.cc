@@ -39,6 +39,7 @@ TEST_CASE("logged normalprob throws out of domain",
 					suite_distributions) {
 	double d;
 	emsg_throws = true;
+	CHECK_THROWS_AS(d = normalprob(100.0,0.0,0.0),std::runtime_error);
 	REQUIRE_THROWS_AS(d = normalprob(100.0,0.0,-1.0),std::runtime_error);
 }
 
