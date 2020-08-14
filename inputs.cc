@@ -153,7 +153,7 @@ double Inputs::find_double(const string &key, double def) const
 			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
 			// Add exception description if it's informative
 			std::string what = e.what();
-			if (what == "stoi") {
+			if (what == "stof") {
 				if (valstr == "")
 					oss << "Should be number, found no value\n";
 			} else {
