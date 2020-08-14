@@ -15,6 +15,7 @@
 using namespace std;
 
 /// @cond EMSG
+extern bool emsg_throws;
 [[ noreturn ]] void emsg(const string& msg);
 [[ noreturn ]] void emsgroot(const string& msg);
 [[ noreturn ]] void emsgEC(const string& section, unsigned int ec);
@@ -32,5 +33,7 @@ vector<string> split(const string& s, char delimiter);
 void ensuredirectory(const string &path);
 string filebasename(const string &path);
 bool stringhasending (std::string const &fullString, std::string const &ending);
+unsigned int getint(const std::string& st, unsigned int threshold);
+
 
 #endif

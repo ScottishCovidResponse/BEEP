@@ -6,7 +6,6 @@
 #include <sstream>
 #include <algorithm>
 #include <math.h> 
-#include <string.h>
 
 using namespace std;
 
@@ -405,26 +404,13 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 }
 
 /// Gets a positive integer from a string
-unsigned int DATA::getint(string st, string file) const
+unsigned int DATA::getint(const string& st, const string& file) const
 {
-	unsigned int i, j;
-	int n = st.length();  
-  char str[n + 1]; 
-	strcpy(str, st.c_str()); 
-		
-	for(j = 0; j < st.size(); j++) if(!isdigit(str[j])) break;
-	if(j < st.size()){
-		if(st == "NA") i = UNKNOWN;
-		else{
-			if(st == "*"){
-				i = THRESH;
-				if(threshold == UNSET) emsg("Since 'NA' is used in file '"+file+"', there must be a threshold set with the 'threshold' command in the input TOML file.");
-			}
-			else emsg("In file '"+file+"' the quantity '"+st+"' is not a number");
-		}
+	try {
+		return ::getint(st,threshold);
+	} catch (const std::runtime_error& e) {
+		emsg("In file '"+file+"', "+e.what());
 	}
-  else i = atoi(str);
-	return i;
 }
 
 /// Loads a table from the data pipeline
