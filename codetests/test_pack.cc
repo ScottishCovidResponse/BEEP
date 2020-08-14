@@ -31,6 +31,7 @@ TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
 	REQUIRE(i == 2u);
 	REQUIRE(packsize() == 2);
 }
+
 #if 0
 TEST_CASE("Pack handles buffer overflow", tag_pack) {
 	packinit();
@@ -40,6 +41,7 @@ TEST_CASE("Pack handles buffer overflow", tag_pack) {
 	REQUIRE(packsize() == MAX_NUMBERS);
 	CHECK_THROWS_AS(pack(2u),std::runtime_error);
 }
+
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 	packinit();
 	emsg_throws = true;
@@ -47,11 +49,33 @@ TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 		pack(1u);
 	REQUIRE(packsize() == MAX_NUMBERS);
 	packinit();
-	emsg_throws = true;
 	unsigned int n;
 	for (long i=0; i<MAX_NUMBERS; ++i)
 		unpack(n);
 	REQUIRE(packsize() == MAX_NUMBERS);
 	CHECK_THROWS_AS(unpack(n),std::runtime_error);
 }
+
+// Other cases to address
+void pack(const unsigned short num);
+void pack(const double num);
+void pack(const string &vec);
+void pack(const vector <unsigned int> &vec);
+void pack(const vector <unsigned short> &vec);
+void pack(const vector <int> &vec);
+void pack(const vector <double> &vec);
+void pack(const vector< vector <unsigned int> > &vec);
+void pack(const vector< vector <double> > &vec);
+void pack(const vector< vector <float> > &vec);
+void pack(const vector< vector< vector <double> > > &vec);
+void pack(const vector <string> &vec);
+void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax);
+void pack(const vector <AREA> &vec);
+void pack(const vector <REGION> &vec);
+void pack(const vector <DEMOCAT> &vec);
+void pack(const vector <vector <EVREF> > &vec);
+void pack(const unsigned short *vec, unsigned int imax);
+void pack(float **vec, unsigned int imax, unsigned int jmax);
+void pack(const vector < vector <vector <unsigned int> > > &vec);
+
 #endif
