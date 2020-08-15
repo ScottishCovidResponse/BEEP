@@ -31,6 +31,20 @@ TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
 	REQUIRE(i == 2u);
 	REQUIRE(packsize() == 2);
 }
+TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
+	packinit();
+	pack(std::numeric_limits<unsigned int>::max());
+	pack(std::numeric_limits<unsigned int>::max()-1u);
+	pack(std::numeric_limits<unsigned int>::max()-2u);
+	packinit();
+	unsigned int i=0;
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned int>::max());
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned int>::max()-1u);
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned int>::max()-2u);
+}
 
 #if 0
 TEST_CASE("Pack handles buffer overflow", tag_pack) {
