@@ -40,88 +40,131 @@ void pack(const unsigned int num)
 
 void pack(const unsigned short num)
 {
-	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsgEC("Pack",2);
+	if(k == MAX_NUMBERS) emsgEC("Pack",2);
+	buffer[k] = num; k++; 
 }
 
 void pack(const double num)
 {
-	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsgEC("Pack",3);
+	if(k == MAX_NUMBERS) emsgEC("Pack",3);
+	buffer[k] = num; k++; 
 }
 
 void pack(const string &vec)
 {
 	unsigned int jmax, j;
-	jmax = vec.length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",4);  
-	for(j = 0; j < jmax; j++){ buffer[k] = vec.at(j); k++; if(k == MAX_NUMBERS) emsgEC("Pack",5);}
+	if(k == MAX_NUMBERS) emsgEC("Pack",4);  
+	jmax = vec.length(); buffer[k] = jmax; k++; 
+	for(j = 0; j < jmax; j++){
+		if(k == MAX_NUMBERS) emsgEC("Pack",5);
+		buffer[k] = vec.at(j); k++;
+	}
 }
 
 void pack(const vector <unsigned int> &vec)
 {
-	unsigned int imax, i; 
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",6); 
-	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",7);}
+	unsigned int imax, i;
+	if(k == MAX_NUMBERS) emsgEC("Pack",6); 
+	imax = vec.size(); buffer[k] = imax; k++;
+	for(i = 0; i < imax; i++) {
+		if(k == MAX_NUMBERS) emsgEC("Pack",7);
+		buffer[k] = vec[i]; k++;
+	}
 }
 
 void pack(const vector <unsigned short> &vec)
 {
 	unsigned short imax, i; 
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",8); 
-	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",9);}
+	if(k == MAX_NUMBERS) emsgEC("Pack",8);
+	imax = vec.size(); buffer[k] = imax; k++;
+	for(i = 0; i < imax; i++) {
+		if(k == MAX_NUMBERS) emsgEC("Pack",9);
+		buffer[k] = vec[i]; k++;
+	}
 }
 
 void pack(const vector <int> &vec)
 {
-	unsigned int imax, i; 
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",10); 
-	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",11);}
+	unsigned int imax, i;
+	if(k == MAX_NUMBERS) emsgEC("Pack",10); 
+	imax = vec.size(); buffer[k] = imax; k++;
+	for(i = 0; i < imax; i++){
+		if(k == MAX_NUMBERS) emsgEC("Pack",11);
+		buffer[k] = vec[i]; k++;
+	}
 }
 
 void pack(const vector <double> &vec)
 {	
-	unsigned int imax, i; 
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",12); 
-	for(i = 0; i < imax; i++){ buffer[k] = vec[i]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",13);}
+	unsigned int imax, i;
+	if(k == MAX_NUMBERS) emsgEC("Pack",12); 
+	imax = vec.size(); buffer[k] = imax; k++;
+	for(i = 0; i < imax; i++) {
+		if(k == MAX_NUMBERS) emsgEC("Pack",13);
+		buffer[k] = vec[i]; k++;
+	}
 }
 
 void pack(const vector< vector <unsigned int> > &vec)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",14); 
+	if(k == MAX_NUMBERS) emsgEC("Pack",14); 
+	imax = vec.size(); buffer[k] = imax; k++; 
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",15);  
-		for(j = 0; j < jmax; j++){ buffer[k] = vec[i][j]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",16);}
+		if(k == MAX_NUMBERS) emsgEC("Pack",15);  
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
+		for(j = 0; j < jmax; j++){
+			if(k == MAX_NUMBERS) emsgEC("Pack",16);
+			buffer[k] = vec[i][j]; k++;
+		}
 	}
 }
 
 void pack(const vector< vector <double> > &vec)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",17); 
+	if(k == MAX_NUMBERS) emsgEC("Pack",17); 
+	imax = vec.size(); buffer[k] = imax; k++; 
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",18);  
-		for(j = 0; j < jmax; j++){ buffer[k] = vec[i][j]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",19);}
+		 if(k == MAX_NUMBERS) emsgEC("Pack",18);  
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
+		for(j = 0; j < jmax; j++) {
+			if(k == MAX_NUMBERS) emsgEC("Pack",19);
+			buffer[k] = vec[i][j]; k++;
+		}
 	}
 }
 
 void pack(const vector< vector <float> > &vec)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",20); 
+	if(k == MAX_NUMBERS) emsgEC("Pack",20); 
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",21);  
-		for(j = 0; j < jmax; j++){ buffer[k] = vec[i][j]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",22);}
+		if(k == MAX_NUMBERS) emsgEC("Pack",21);
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
+		for(j = 0; j < jmax; j++){
+			 if(k == MAX_NUMBERS) emsgEC("Pack",22);
+			 buffer[k] = vec[i][j]; k++;
+		}
 	}
 }
 
 void pack(const vector< vector< vector <double> > > &vec)
 {
 	unsigned int imax, i, jmax, j, nmax, n;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",23); 
+	if(k == MAX_NUMBERS) emsgEC("Pack",23); 
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",24);  
-		for(j = 0; j < jmax; j++){ 
-			nmax = vec[i][j].size(); buffer[k] = nmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",25);  
-			for(n = 0; n < nmax; n++){ buffer[k] = vec[i][j][n]; k++; if(k == MAX_NUMBERS) emsgEC("Pack",26);}
+		if(k == MAX_NUMBERS) emsgEC("Pack",24);
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
+		for(j = 0; j < jmax; j++){
+			if(k == MAX_NUMBERS) emsgEC("Pack",25);
+			nmax = vec[i][j].size(); buffer[k] = nmax; k++;
+			for(n = 0; n < nmax; n++){
+				if(k == MAX_NUMBERS) emsgEC("Pack",26);
+				buffer[k] = vec[i][j][n]; k++;
+			}
 		}
 	}
 }
@@ -129,23 +172,33 @@ void pack(const vector< vector< vector <double> > > &vec)
 void pack(const vector <string> &vec)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",27); 
+	if(k == MAX_NUMBERS) emsgEC("Pack",27);
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].length(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",28);  
-		for(j = 0; j < jmax; j++){ buffer[k] = vec[i].at(j); k++; if(k == MAX_NUMBERS) emsgEC("Pack",29);}
+		if(k == MAX_NUMBERS) emsgEC("Pack",28);  
+		jmax = vec[i].length(); buffer[k] = jmax; k++;
+		for(j = 0; j < jmax; j++){
+			if(k == MAX_NUMBERS) emsgEC("Pack",29);
+			buffer[k] = vec[i].at(j); k++;
+		}
 	}
 }
 
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",30);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",30);
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = fedivmin; i < fedivmax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",31); 
+		if(k == MAX_NUMBERS) emsgEC("Pack",31);
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
 		for(j = 0; j < jmax; j++){
-			buffer[k] = vec[i][j].trans; k++; if(k == MAX_NUMBERS) emsgEC("Pack",32);  
-			buffer[k] = vec[i][j].ind; k++; if(k == MAX_NUMBERS) emsgEC("Pack",33);  
-			buffer[k] = vec[i][j].t; k++; if(k == MAX_NUMBERS) emsgEC("Pack",34);  
+			if(k == MAX_NUMBERS) emsgEC("Pack",32); 
+			buffer[k] = vec[i][j].trans; k++;
+			if(k == MAX_NUMBERS) emsgEC("Pack",33);
+			buffer[k] = vec[i][j].ind; k++;
+			if(k == MAX_NUMBERS) emsgEC("Pack",34);  
+			buffer[k] = vec[i][j].t; k++;
 		}
 	}
 }
@@ -153,7 +206,8 @@ void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int
 void pack(const vector <AREA> &vec)
 {
 	unsigned int imax, i;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",35);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",35);
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
 		pack(vec[i].code);
 		pack(vec[i].region);
@@ -168,7 +222,8 @@ void pack(const vector <AREA> &vec)
 void pack(const vector <REGION> &vec)
 {
 	unsigned int imax, i;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",36);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",36);
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
 		pack(vec[i].name);
 		pack(vec[i].code);
@@ -178,7 +233,8 @@ void pack(const vector <REGION> &vec)
 void pack(const vector <DEMOCAT> &vec)
 {
 	unsigned int imax, i;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",37);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",37);  
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
 		pack(vec[i].name);
 		pack(vec[i].value);
@@ -188,12 +244,16 @@ void pack(const vector <DEMOCAT> &vec)
 void pack(const vector <vector <EVREF> > &vec)
 {
 	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",38);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",38);
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer[k] = jmax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",39); 
+		if(k == MAX_NUMBERS) emsgEC("Pack",39); 
+		jmax = vec[i].size(); buffer[k] = jmax; k++;
 		for(j = 0; j < jmax; j++){
-			buffer[k] = vec[i][j].ind; k++; if(k == MAX_NUMBERS) emsgEC("Pack",40);  
-			buffer[k] = vec[i][j].e; k++; if(k == MAX_NUMBERS) emsgEC("Pack",41);  
+			if(k == MAX_NUMBERS) emsgEC("Pack",40);
+			buffer[k] = vec[i][j].ind; k++;
+			if(k == MAX_NUMBERS) emsgEC("Pack",41);  
+			buffer[k] = vec[i][j].e; k++;
 		}
 	}
 }
@@ -201,7 +261,8 @@ void pack(const vector <vector <EVREF> > &vec)
 void pack(const vector < vector <vector <unsigned int> > > &vec)
 {
 	unsigned int i, imax;
-	imax = vec.size(); buffer[k] = imax; k++; if(k == MAX_NUMBERS) emsgEC("Pack",44);  
+	if(k == MAX_NUMBERS) emsgEC("Pack",44);  
+	imax = vec.size(); buffer[k] = imax; k++;
 	for(i = 0; i < imax; i++){
 		pack(vec[i]);
 	}
