@@ -41,6 +41,16 @@ void pack_item(T t)
 	buffer.push_back(t); k++;
 }
 
+template <>
+void pack_item(const string& vec)
+{
+	unsigned int jmax, j;
+	jmax = vec.length(); buffer.push_back(jmax); k++; 
+	for(j = 0; j < jmax; j++){
+		buffer.push_back(vec.at(j)); k++;
+	}
+}
+
 void pack(const unsigned int num)
 {
 	pack_item(num); 

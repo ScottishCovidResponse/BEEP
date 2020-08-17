@@ -114,6 +114,19 @@ TEST_CASE("Pack can store and read back two doubles", tag_pack) {
 	REQUIRE(i == 2.);
 	REQUIRE(packsize() == 2);
 }
+TEST_CASE("Pack can store and read back an string", tag_pack) {
+	packinit(0);
+	pack(std::string("Hello, world"));
+	REQUIRE(packsize() == 13);
+	packinit(1);
+	CHECK(packsize() == 0);
+	std:: string s;
+	unpack(s);	
+	REQUIRE(s == "Hello, world");
+	REQUIRE(packsize() == 13);
+}
+
+
 TEST_CASE("Pack can store and read back an vector of unsigned int", tag_pack) {
 	std::vector<unsigned int> vec;	
 	vec.push_back(1u);
