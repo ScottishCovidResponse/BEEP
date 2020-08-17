@@ -59,10 +59,11 @@ void pack(const string &vec)
 	}
 }
 
+// Use template to share implementation details between cases
 template <class T>
 void pack_vector(const vector<T>& vec)
 {
-	pack(vec.size());
+	pack((unsigned int)vec.size());
 	for (auto& item : vec) {
 		pack(item);
 	}
@@ -70,11 +71,7 @@ void pack_vector(const vector<T>& vec)
 
 void pack(const vector <unsigned int> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++) {
-		buffer.push_back(vec[i]); k++;
-	}
+	pack_vector(vec);
 }
 
 void pack(const vector <unsigned short> &vec)
@@ -262,11 +259,20 @@ void unpack(string &vec)
 	vec = ss.str();
 }
 
+template <class T>
+void unpack_vector(vector<T>& vec)
+{
+	unsigned int size;
+	unpack(size);
+	vec.resize(size);
+	for (auto& item : vec) {
+		unpack(item);
+	}
+}
+
 void unpack(vector <unsigned int> &vec)
 {
-	unsigned int imax, i; 
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
+	unpack_vector(vec);
 }
 
 void unpack(vector <unsigned short> &vec)
