@@ -35,19 +35,30 @@ double * packbuffer()
 	return &buffer[0];
 }
 
+template <class T>
+void pack_item(T t)
+{
+	buffer.push_back(t); k++;
+}
+
 void pack(const unsigned int num)
 {
-	buffer.push_back(num); k++; 
+	pack_item(num); 
+}
+
+void pack(const int num)
+{
+	pack_item(num); 
 }
 
 void pack(const unsigned short num)
 {
-	buffer.push_back(num); k++; 
+	pack_item(num); 
 }
 
 void pack(const double num)
 {
-	buffer.push_back(num); k++; 
+	pack_item(num); 
 }
 
 void pack(const string &vec)
@@ -61,44 +72,32 @@ void pack(const string &vec)
 
 // Use template to share implementation details between cases
 template <class T>
-void pack_vector(const vector<T>& vec)
+void pack_item(const vector<T>& vec)
 {
-	pack((unsigned int)vec.size());
+	pack_item(vec.size());
 	for (auto& item : vec) {
-		pack(item);
+		pack_item(item);
 	}
 }
 
 void pack(const vector <unsigned int> &vec)
 {
-	pack_vector(vec);
+	pack_item(vec);
 }
 
 void pack(const vector <unsigned short> &vec)
 {
-	unsigned short imax, i; 
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++) {
-		buffer.push_back(vec[i]); k++;
-	}
+	pack_item(vec);
 }
 
 void pack(const vector <int> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		buffer.push_back(vec[i]); k++;
-	}
+	pack_item(vec);
 }
 
 void pack(const vector <double> &vec)
-{	
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++) {
-		buffer.push_back(vec[i]); k++;
-	}
+{
+	pack_item(vec);
 }
 
 void pack(const vector< vector <unsigned int> > &vec)

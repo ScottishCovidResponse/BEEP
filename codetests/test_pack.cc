@@ -130,6 +130,24 @@ TEST_CASE("Pack can store and read back an vector of unsigned int", tag_pack) {
 	REQUIRE(vec[0] == 1u);
 	REQUIRE(vec[1] == 2u);
 }
+TEST_CASE("Pack can store and read back an vector of int", tag_pack) {
+	std::vector<int> vec;	
+	vec.push_back(1);
+	vec.push_back(2);
+	vec.push_back(-2);
+	packinit(0);
+	pack(vec);
+	REQUIRE(packsize() == 4);
+	packinit(4);
+	CHECK(packsize() == 0);
+	vec.resize(0);
+	unpack(vec);	
+	REQUIRE(packsize() == 4);
+	REQUIRE(vec.size() == 3u);
+	REQUIRE(vec[0] == 1);
+	REQUIRE(vec[1] == 2);
+	REQUIRE(vec[2] == -2);
+}
 TEST_CASE("Pack can store and read back an vector of unsigned short", tag_pack) {
 	std::vector<unsigned short> vec;	
 	vec.push_back(1u);
