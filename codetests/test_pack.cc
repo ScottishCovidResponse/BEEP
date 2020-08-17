@@ -48,6 +48,73 @@ TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
 	REQUIRE(i == std::numeric_limits<unsigned int>::max()-2u);
 }
 
+TEST_CASE("Pack can store and read back an unsigned short", tag_pack) {
+	packinit(0);
+	pack((unsigned short) 1);
+	REQUIRE(packsize() == 1);
+	packinit(1);
+	CHECK(packsize() == 0);
+	unsigned short i=0;
+	unpack(i);	
+	REQUIRE(i == (unsigned short) 1);
+	REQUIRE(packsize() == 1);
+}
+TEST_CASE("Pack can store and read back two unsigned shorts", tag_pack) {
+	packinit(0);
+	pack((unsigned short) 1);
+	pack((unsigned short) 2);
+	REQUIRE(packsize() == 2);
+	// Unpack
+	packinit(2);
+	unsigned short i=0;
+	unpack(i);	
+	REQUIRE(i == (unsigned short) 1);
+	unpack(i);	
+	REQUIRE(i == (unsigned short) 2);
+	REQUIRE(packsize() == 2);
+}
+TEST_CASE("Pack can store and read back large unsigned shorts", tag_pack) {
+	packinit(0);
+	pack(std::numeric_limits<unsigned short>::max());
+	pack((unsigned short) (std::numeric_limits<unsigned short>::max()-1));
+	pack((unsigned short) (std::numeric_limits<unsigned short>::max()-2));
+	// Unpack
+	packinit(3);
+	unsigned short i=0;
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned short>::max());
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned short>::max()-(unsigned short) 1);
+	unpack(i);	
+	REQUIRE(i == std::numeric_limits<unsigned short>::max()-(unsigned short) 2);
+}
+
+TEST_CASE("Pack can store and read back an double", tag_pack) {
+	packinit(0);
+	pack(1.);
+	REQUIRE(packsize() == 1);
+	packinit(1);
+	CHECK(packsize() == 0);
+	double i=0;
+	unpack(i);	
+	REQUIRE(i == 1.);
+	REQUIRE(packsize() == 1);
+}
+TEST_CASE("Pack can store and read back two doubles", tag_pack) {
+	packinit(0);
+	pack(1.);
+	pack(2.);
+	REQUIRE(packsize() == 2);
+	// Unpack
+	packinit(2);
+	double i=0;
+	unpack(i);	
+	REQUIRE(i == 1.);
+	unpack(i);	
+	REQUIRE(i == 2.);
+	REQUIRE(packsize() == 2);
+}
+
 #if 0
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 	packinit();
