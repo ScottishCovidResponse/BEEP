@@ -4,14 +4,14 @@
 
 const char* tag_pack = "[pack]";
 TEST_CASE("Pack initializes to zero size", tag_pack) {
-	packinit();
+	packinit(0);
 	REQUIRE(packsize() == 0);
 }
 TEST_CASE("Pack can store and read back an unsigned int", tag_pack) {
-	packinit();
+	packinit(0);
 	pack(1u);
 	REQUIRE(packsize() == 1);
-	packinit();
+	packinit(1);
 	CHECK(packsize() == 0);
 	unsigned int i=0;
 	unpack(i);	
@@ -19,11 +19,12 @@ TEST_CASE("Pack can store and read back an unsigned int", tag_pack) {
 	REQUIRE(packsize() == 1);
 }
 TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
-	packinit();
+	packinit(0);
 	pack(1u);
 	pack(2u);
 	REQUIRE(packsize() == 2);
-	packinit();
+	// Unpack
+	packinit(2);
 	unsigned int i=0;
 	unpack(i);	
 	REQUIRE(i == 1u);
@@ -32,11 +33,12 @@ TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
 	REQUIRE(packsize() == 2);
 }
 TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
-	packinit();
+	packinit(0);
 	pack(std::numeric_limits<unsigned int>::max());
 	pack(std::numeric_limits<unsigned int>::max()-1u);
 	pack(std::numeric_limits<unsigned int>::max()-2u);
-	packinit();
+	// Unpack
+	packinit(3);
 	unsigned int i=0;
 	unpack(i);	
 	REQUIRE(i == std::numeric_limits<unsigned int>::max());
@@ -44,15 +46,6 @@ TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
 	REQUIRE(i == std::numeric_limits<unsigned int>::max()-1u);
 	unpack(i);	
 	REQUIRE(i == std::numeric_limits<unsigned int>::max()-2u);
-}
-
-TEST_CASE("Pack handles buffer overflow", tag_pack) {
-	packinit();
-	emsg_throws = true;
-	for (long i=0; i<MAX_NUMBERS; ++i)
-		pack(1u);
-	REQUIRE(packsize() == MAX_NUMBERS);
-	CHECK_THROWS_AS(pack(2u),std::runtime_error);
 }
 
 #if 0

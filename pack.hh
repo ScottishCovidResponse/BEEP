@@ -5,7 +5,7 @@ using namespace std;
 
 #include "model.hh"
 
-void packinit();
+void packinit(size_t size);
 int packsize();
 double * packbuffer();
 
