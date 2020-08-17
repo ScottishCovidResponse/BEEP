@@ -129,14 +129,7 @@ void pack(const vector< vector< vector <double> > > &vec)
 
 void pack(const vector <string> &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		jmax = vec[i].length(); buffer.push_back(jmax); k++;
-		for(j = 0; j < jmax; j++){
-			buffer.push_back(vec[i].at(j)); k++;
-		}
-	}
+	pack_item(vec);
 }
 
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
@@ -210,22 +203,12 @@ void pack(const vector < vector <vector <unsigned int> > > &vec)
 	}
 }
 
-void unpack(unsigned int &num)
+template<class T>
+void unpack_item(T &num)
 {
 	num = buffer[k]; k++;
 }
-
-void unpack(unsigned short &num)
-{
-	num = buffer[k]; k++;
-}
-
-void unpack(double &num)
-{
-	num = buffer[k]; k++;
-}
-
-void unpack(string &vec)
+void unpack_item(string &vec)
 {
 	unsigned int jmax, j;
 	
@@ -234,95 +217,80 @@ void unpack(string &vec)
 	vec = ss.str();
 }
 
+void unpack(unsigned int &num)
+{
+	unpack_item(num);
+}
+
+void unpack(unsigned short &num)
+{
+	unpack_item(num);
+}
+
+void unpack(double &num)
+{
+	unpack_item(num);
+}
+
+void unpack(string &vec)
+{
+	unpack_item(vec);
+}
+
 template <class T>
-void unpack_vector(vector<T>& vec)
+void unpack_item(vector<T>& vec)
 {
 	unsigned int size;
-	unpack(size);
+	unpack_item(size);
 	vec.resize(size);
 	for (auto& item : vec) {
-		unpack(item);
+		unpack_item(item);
 	}
 }
 
 void unpack(vector <unsigned int> &vec)
 {
-	unpack_vector(vec);
+	unpack_item(vec);
 }
 
 void unpack(vector <unsigned short> &vec)
 {
-	unsigned int imax, i; 
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
+	unpack_item(vec);
 }
 
 void unpack(vector <int> &vec)
 {
-	unsigned int imax, i; 
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
+	unpack_item(vec);
 }
 
 void unpack(vector <double> &vec)
 {
-	unsigned int imax, i;
-	imax = buffer[k]; k++; vec.resize(imax); 
-	for(i = 0; i < imax; i++){ vec[i] = buffer[k]; k++;}
+	unpack_item(vec);
 }
 
 void unpack(vector< vector <unsigned int> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector< vector <double> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector< vector <float> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ vec[i][j] = buffer[k]; k++;}
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector< vector< vector <double> > > &vec)
 {
-	unsigned int imax, i, jmax, j, nmax, n;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ 
-			nmax = buffer[k]; k++; vec[i][j].resize(nmax);
-			for(n = 0; n < nmax; n++){ vec[i][j][n] = buffer[k]; k++;}
-		}
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector <string> &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++;
-		stringstream ss; for(j = 0; j < jmax; j++){ ss << (char) buffer[k]; k++;}
-		vec[i] = ss.str();
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
@@ -389,9 +357,5 @@ void unpack(vector <vector <EVREF> > &vec)
 
 void unpack(vector < vector <vector <unsigned int> > > &vec)
 {
-	unsigned int i, imax;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		unpack(vec[i]);
-	}
+	unpack_item(vec);
 }

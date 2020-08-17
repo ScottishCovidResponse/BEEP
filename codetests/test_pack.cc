@@ -262,6 +262,36 @@ TEST_CASE("Pack can store and read back a vector of vector of float",
 	REQUIRE(vec[1][0] == -3.f);
 }
 
+TEST_CASE("Pack can store and read back a vector^3 of unsigned int",
+					tag_pack) {
+	std::vector<std::vector<std::vector<unsigned int>>> vec;	
+	vec.resize(2);
+	vec[0].resize(1);
+	vec[1].resize(3);
+	vec[0][0].push_back(1u);
+	vec[1][0].push_back(2u);
+	vec[1][1].push_back(3u);
+	vec[1][2].push_back(4u);
+	packinit(0);
+	pack(vec);
+	REQUIRE(packsize() == 11);
+	packinit(6);
+	CHECK(packsize() == 0);
+	vec.resize(0);
+	unpack(vec);	
+	REQUIRE(packsize() == 11);
+	REQUIRE(vec.size() == 2u);
+	REQUIRE(vec[0].size() == 1u);
+	REQUIRE(vec[1].size() == 3u);
+	REQUIRE(vec[0][0].size() == 1u);
+	REQUIRE(vec[1][0].size() == 1u);
+	REQUIRE(vec[1][1].size() == 1u);
+	REQUIRE(vec[1][2].size() == 1u);
+	REQUIRE(vec[0][0][0] == 1u);
+	REQUIRE(vec[1][0][0] == 2u);
+	REQUIRE(vec[1][1][0] == 3u);
+	REQUIRE(vec[1][2][0] == 4u);
+}
 TEST_CASE("Pack can store and read back a vector^3 of double",
 					tag_pack) {
 	std::vector<std::vector<std::vector<double>>> vec;	
@@ -326,16 +356,10 @@ TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 }
 
 // Other cases to address
-void pack(const string &vec);
-void pack(const vector< vector< vector <double> > > &vec);
-void pack(const vector <string> &vec);
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax);
 void pack(const vector <AREA> &vec);
 void pack(const vector <REGION> &vec);
 void pack(const vector <DEMOCAT> &vec);
 void pack(const vector <vector <EVREF> > &vec);
-void pack(const unsigned short *vec, unsigned int imax);
-void pack(float **vec, unsigned int imax, unsigned int jmax);
-void pack(const vector < vector <vector <unsigned int> > > &vec);
 
 #endif
