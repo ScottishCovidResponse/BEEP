@@ -663,7 +663,7 @@ void DATA::copydata(unsigned int core)
 				for(v = vmin; v < vmax; v++){
 					pack(genQ.Qten[k].ntof[v]);
 					pack(genQ.Qten[k].tof[v]);
-					pack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
+					pack(genQ.Qten[k].valf[v]);
 				}
 				si = packsize();
 			}
@@ -676,7 +676,7 @@ void DATA::copydata(unsigned int core)
 				for(v = vmin; v < vmax; v++){
 					unpack(genQ.Qten[k].ntof[v]);
 					unpack(genQ.Qten[k].tof[v]);
-					unpack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
+					unpack(genQ.Qten[k].valf[v]);
 				}
 				if(si != packsize()) emsgEC("Data",2);
 			}
