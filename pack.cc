@@ -107,14 +107,7 @@ void pack(const vector< vector <unsigned int> > &vec)
 
 void pack(const vector< vector <double> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer.push_back(imax); k++; 
-	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer.push_back(jmax); k++;
-		for(j = 0; j < jmax; j++) {
-			buffer.push_back(vec[i][j]); k++;
-		}
-	}
+	pack_item(vec);
 }
 
 void pack(const vector< vector <float> > &vec)
