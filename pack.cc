@@ -59,6 +59,15 @@ void pack(const string &vec)
 	}
 }
 
+template <class T>
+void pack_vector(const vector<T>& vec)
+{
+	pack(vec.size());
+	for (auto& item : vec) {
+		pack(item);
+	}
+}
+
 void pack(const vector <unsigned int> &vec)
 {
 	unsigned int imax, i;
