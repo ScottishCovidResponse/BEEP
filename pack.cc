@@ -16,12 +16,13 @@ using namespace std;
 namespace {
 	unsigned int k;
 
-	double buffer[MAX_NUMBERS];
+	std::vector<double> buffer;
 }
 
 void packinit()
 {
 	k = 0;
+	buffer.resize(MAX_NUMBERS);
 }
 
 int packsize()
@@ -31,7 +32,7 @@ int packsize()
 
 double * packbuffer()
 {
-	return buffer;	
+	return &buffer[0];
 }
 
 void pack(const unsigned int num)
