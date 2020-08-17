@@ -305,20 +305,21 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 	}
 }
 
+void unpack_item(AREA& area)
+{
+	unpack_item(area.code);
+	unpack_item(area.region);
+	unpack_item(area.x);
+	unpack_item(area.y);
+	unpack_item(area.agepop);
+	unpack_item(area.pop);
+	unpack_item(area.covar);
+	unpack_item(area.ind);
+}
+
 void unpack(vector <AREA> &vec)
 {
-	unsigned int imax, i;
-	unpack_item(imax); vec.resize(imax); 
-	for(i = 0; i < imax; i++){
-		unpack(vec[i].code);
-		unpack(vec[i].region);
-		unpack(vec[i].x);
-		unpack(vec[i].y);
-		unpack(vec[i].agepop);
-		unpack(vec[i].pop);
-		unpack(vec[i].covar);  
-		unpack(vec[i].ind);  
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector <REGION> &vec)
