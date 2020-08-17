@@ -223,7 +223,7 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 		}
 	}		
 
-	genQ.Qten[q].valf = new float**[val.size()];
+	genQ.Qten[q].valf.resize(val.size());
 	for(vi = 0; vi < val.size(); vi++){
 		genQ.Qten[q].valf[vi] = new float*[val[vi].size()];
 		for(j = 0; j < val[vi].size(); j++){

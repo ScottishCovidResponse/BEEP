@@ -651,7 +651,7 @@ void DATA::copydata(unsigned int core)
 		if(core != 0){
 			genQ.Qten[k].ntof.resize(num);
 			genQ.Qten[k].tof.resize(num);
-			genQ.Qten[k].valf = new float**[num];
+			genQ.Qten[k].valf.resize(num);
 		}
 		
 		vmin = 0;

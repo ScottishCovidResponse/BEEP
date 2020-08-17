@@ -20,7 +20,7 @@ struct SPARSETENSOR{                       // Stores the Q tensor in a sparse wa
 	string name;                             // The reference name
 	vector <unsigned short> ntof;                 	  // Stores the mixing matrix between areas and ages at different times
 	vector <unsigned short *> tof;
-	float ***valf;
+	vector <float **> valf;
 };
 
 struct GENQ{
