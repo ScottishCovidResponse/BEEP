@@ -163,37 +163,37 @@ void pack(const vector <AREA> &vec)
 	pack_item(vec);
 }
 
+void pack_item(const REGION& r)
+{
+	pack_item(r.name);
+	pack_item(r.code);
+}
+
 void pack(const vector <REGION> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		pack(vec[i].name);
-		pack(vec[i].code);
-	}
+	pack_item(vec);
+}
+
+void pack_item(const DEMOCAT& d)
+{
+	pack_item(d.name);
+	pack_item(d.value);
 }
 
 void pack(const vector <DEMOCAT> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		pack(vec[i].name);
-		pack(vec[i].value);
-	}
+	pack_item(vec);
+}
+
+void pack_item(const EVREF& ev)
+{
+	pack_item(ev.ind);
+	pack_item(ev.e);
 }
 
 void pack(const vector <vector <EVREF> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		jmax = vec[i].size(); buffer.push_back(jmax); k++;
-		for(j = 0; j < jmax; j++){
-			buffer.push_back(vec[i][j].ind); k++;
-			buffer.push_back(vec[i][j].e); k++;
-		}
-	}
+	pack_item(vec);
 }
 
 void pack(const vector < vector <vector <unsigned int> > > &vec)
