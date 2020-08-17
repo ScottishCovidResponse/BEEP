@@ -130,6 +130,38 @@ TEST_CASE("Pack can store and read back an vector of unsigned int", tag_pack) {
 	REQUIRE(vec[0] == 1u);
 	REQUIRE(vec[1] == 2u);
 }
+TEST_CASE("Pack can store and read back an vector of unsigned short", tag_pack) {
+	std::vector<unsigned short> vec;	
+	vec.push_back(1u);
+	vec.push_back(2u);
+	packinit(0);
+	pack(vec);
+	REQUIRE(packsize() == 3);
+	packinit(3);
+	CHECK(packsize() == 0);
+	vec.resize(0);
+	unpack(vec);	
+	REQUIRE(packsize() == 3);
+	REQUIRE(vec.size() == 2u);
+	REQUIRE(vec[0] == 1u);
+	REQUIRE(vec[1] == 2u);
+}
+TEST_CASE("Pack can store and read back an vector of double", tag_pack) {
+	std::vector<double> vec;	
+	vec.push_back(1.);
+	vec.push_back(2.);
+	packinit(0);
+	pack(vec);
+	REQUIRE(packsize() == 3);
+	packinit(3);
+	CHECK(packsize() == 0);
+	vec.resize(0);
+	unpack(vec);	
+	REQUIRE(packsize() == 3);
+	REQUIRE(vec.size() == 2u);
+	REQUIRE(vec[0] == 1.);
+	REQUIRE(vec[1] == 2.);
+}
 
 #if 0
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {
