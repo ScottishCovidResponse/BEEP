@@ -213,7 +213,7 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 
 	genQ.Qten[q].name = name;
 	
-	genQ.Qten[q].tof = new unsigned short*[to.size()];
+	genQ.Qten[q].tof.resize(to.size());
 	genQ.Qten[q].ntof.resize(to.size());
 	for(vi = 0; vi < to.size(); vi++){
 		genQ.Qten[q].ntof[vi] = to[vi].size();
