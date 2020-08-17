@@ -34,7 +34,8 @@ double * packbuffer()
 
 void pack(const unsigned int num)
 {
-	buffer[k] = num; k++; if(k == MAX_NUMBERS) emsgEC("Pack",1);
+	if(k == MAX_NUMBERS) emsgEC("Pack",1);
+	buffer[k] = num; k++; 
 }
 
 void pack(const unsigned short num)

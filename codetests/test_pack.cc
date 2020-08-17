@@ -46,7 +46,6 @@ TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
 	REQUIRE(i == std::numeric_limits<unsigned int>::max()-2u);
 }
 
-#if 0
 TEST_CASE("Pack handles buffer overflow", tag_pack) {
 	packinit();
 	emsg_throws = true;
@@ -56,6 +55,7 @@ TEST_CASE("Pack handles buffer overflow", tag_pack) {
 	CHECK_THROWS_AS(pack(2u),std::runtime_error);
 }
 
+#if 0
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 	packinit();
 	emsg_throws = true;
