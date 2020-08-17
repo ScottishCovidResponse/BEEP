@@ -41,7 +41,8 @@ void pack_item(T t)
 	buffer.push_back(t); k++;
 }
 
-template <>
+// Provide overloads for cases where default behaviour needs
+// to be modified
 void pack_item(const string& vec)
 {
 	unsigned int jmax, j;
@@ -73,11 +74,7 @@ void pack(const double num)
 
 void pack(const string &vec)
 {
-	unsigned int jmax, j;
-	jmax = vec.length(); buffer.push_back(jmax); k++; 
-	for(j = 0; j < jmax; j++){
-		buffer.push_back(vec.at(j)); k++;
-	}
+	pack_item(vec);
 }
 
 // Use template to share implementation details between cases
