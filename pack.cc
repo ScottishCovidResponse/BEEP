@@ -45,10 +45,10 @@ void pack_item(T t)
 // to be modified
 void pack_item(const string& vec)
 {
-	unsigned int jmax, j;
-	jmax = vec.length(); buffer.push_back(jmax); k++; 
-	for(j = 0; j < jmax; j++){
-		buffer.push_back(vec.at(j)); k++;
+	unsigned int jmax = vec.length();
+	pack_item(jmax);
+	for(unsigned int j = 0; j < jmax; j++){
+		pack_item(vec.at(j));
 	}
 }
 
@@ -198,10 +198,10 @@ void pack(const vector <vector <EVREF> > &vec)
 
 void pack(const vector < vector <vector <unsigned int> > > &vec)
 {
-	unsigned int i, imax;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		pack(vec[i]);
+	unsigned int imax = vec.size();
+	pack_item(imax);
+	for(unsigned int i = 0; i < imax; i++){
+		pack_item(vec[i]);
 	}
 }
 
@@ -214,7 +214,7 @@ void unpack_item(string &vec)
 {
 	unsigned int jmax, j;
 	
-	jmax = buffer[k]; k++;
+	unpack_item(jmax);
 	stringstream ss; for(j = 0; j < jmax; j++){ ss << (char) buffer[k]; k++;}
 	vec = ss.str();
 }
@@ -312,7 +312,7 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 void unpack(vector <AREA> &vec)
 {
 	unsigned int imax, i;
-	imax = buffer[k]; k++; vec.resize(imax); 
+	unpack_item(imax); vec.resize(imax); 
 	for(i = 0; i < imax; i++){
 		unpack(vec[i].code);
 		unpack(vec[i].region);
