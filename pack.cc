@@ -13,9 +13,11 @@ using namespace std;
 #include "data.hh"
 #include "model.hh"
 
-static unsigned int k;
+namespace {
+	unsigned int k;
 
-double buffer[MAX_NUMBERS];
+	double buffer[MAX_NUMBERS];
+}
 
 void packinit()
 {
