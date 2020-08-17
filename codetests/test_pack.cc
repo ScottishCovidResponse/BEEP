@@ -89,7 +89,7 @@ TEST_CASE("Pack can store and read back large unsigned shorts", tag_pack) {
 	REQUIRE(i == std::numeric_limits<unsigned short>::max()-(unsigned short) 2);
 }
 
-TEST_CASE("Pack can store and read back an double", tag_pack) {
+TEST_CASE("Pack can store and read back a double", tag_pack) {
 	packinit(0);
 	pack(1.);
 	REQUIRE(packsize() == 1);
@@ -114,20 +114,20 @@ TEST_CASE("Pack can store and read back two doubles", tag_pack) {
 	REQUIRE(i == 2.);
 	REQUIRE(packsize() == 2);
 }
-TEST_CASE("Pack can store and read back an string", tag_pack) {
+TEST_CASE("Pack can store and read back a string", tag_pack) {
 	packinit(0);
 	pack(std::string("Hello, world"));
 	REQUIRE(packsize() == 13);
 	packinit(1);
 	CHECK(packsize() == 0);
-	std:: string s;
+	std::string s;
 	unpack(s);	
 	REQUIRE(s == "Hello, world");
 	REQUIRE(packsize() == 13);
 }
 
 
-TEST_CASE("Pack can store and read back an vector of unsigned int", tag_pack) {
+TEST_CASE("Pack can store and read back a vector of unsigned int", tag_pack) {
 	std::vector<unsigned int> vec;	
 	vec.push_back(1u);
 	vec.push_back(2u);
@@ -143,7 +143,7 @@ TEST_CASE("Pack can store and read back an vector of unsigned int", tag_pack) {
 	REQUIRE(vec[0] == 1u);
 	REQUIRE(vec[1] == 2u);
 }
-TEST_CASE("Pack can store and read back an vector of int", tag_pack) {
+TEST_CASE("Pack can store and read back a vector of int", tag_pack) {
 	std::vector<int> vec;	
 	vec.push_back(1);
 	vec.push_back(2);
@@ -161,7 +161,7 @@ TEST_CASE("Pack can store and read back an vector of int", tag_pack) {
 	REQUIRE(vec[1] == 2);
 	REQUIRE(vec[2] == -2);
 }
-TEST_CASE("Pack can store and read back an vector of unsigned short", tag_pack) {
+TEST_CASE("Pack can store and read back a vector of unsigned short", tag_pack) {
 	std::vector<unsigned short> vec;	
 	vec.push_back(1u);
 	vec.push_back(2u);
@@ -177,7 +177,7 @@ TEST_CASE("Pack can store and read back an vector of unsigned short", tag_pack) 
 	REQUIRE(vec[0] == 1u);
 	REQUIRE(vec[1] == 2u);
 }
-TEST_CASE("Pack can store and read back an vector of double", tag_pack) {
+TEST_CASE("Pack can store and read back a vector of double", tag_pack) {
 	std::vector<double> vec;	
 	vec.push_back(1.);
 	vec.push_back(2.);
@@ -193,7 +193,7 @@ TEST_CASE("Pack can store and read back an vector of double", tag_pack) {
 	REQUIRE(vec[0] == 1.);
 	REQUIRE(vec[1] == 2.);
 }
-TEST_CASE("Pack can store and read back an vector of vector of unsigned int",
+TEST_CASE("Pack can store and read back a vector of vector of unsigned int",
 					tag_pack) {
 	std::vector<std::vector<unsigned int>> vec;	
 	vec.resize(2);
@@ -216,7 +216,7 @@ TEST_CASE("Pack can store and read back an vector of vector of unsigned int",
 	REQUIRE(vec[1][0] == 3u);
 }
 
-TEST_CASE("Pack can store and read back an vector of vector of double",
+TEST_CASE("Pack can store and read back a vector of vector of double",
 					tag_pack) {
 	std::vector<std::vector<double>> vec;	
 	vec.resize(2);
@@ -239,7 +239,7 @@ TEST_CASE("Pack can store and read back an vector of vector of double",
 	REQUIRE(vec[1][0] == -3.);
 }
 
-TEST_CASE("Pack can store and read back an vector of vector of float",
+TEST_CASE("Pack can store and read back a vector of vector of float",
 					tag_pack) {
 	std::vector<std::vector<float>> vec;	
 	vec.resize(2);
@@ -262,7 +262,7 @@ TEST_CASE("Pack can store and read back an vector of vector of float",
 	REQUIRE(vec[1][0] == -3.f);
 }
 
-TEST_CASE("Pack can store and read back an vector^3 of double",
+TEST_CASE("Pack can store and read back a vector^3 of double",
 					tag_pack) {
 	std::vector<std::vector<std::vector<double>>> vec;	
 	vec.resize(2);
@@ -291,6 +291,23 @@ TEST_CASE("Pack can store and read back an vector^3 of double",
 	REQUIRE(vec[1][0][0] == 2.);
 	REQUIRE(vec[1][1][0] == -3.);
 	REQUIRE(vec[1][2][0] == 4.);
+}
+
+TEST_CASE("Pack can store and read back a string vector", tag_pack) {
+	packinit(0);
+	std::vector<std::string> s;
+	s.push_back("Hello");
+	s.push_back("world");
+	pack(s);
+	REQUIRE(packsize() == 13);
+	packinit(13);
+	CHECK(packsize() == 0);
+	s.resize(0);
+	unpack(s);	
+	REQUIRE(s.size() == 2u);
+	REQUIRE(s[0] == "Hello");
+	REQUIRE(s[1] == "world");
+	REQUIRE(packsize() == 13);
 }
 
 #if 0
