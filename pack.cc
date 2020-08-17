@@ -322,37 +322,37 @@ void unpack(vector <AREA> &vec)
 	unpack_item(vec);
 }
 
+void unpack_item(REGION& r)
+{
+	unpack_item(r.name);
+	unpack_item(r.code);
+}
+
 void unpack(vector <REGION> &vec)
 {
-	unsigned int imax, i;
-	imax = buffer[k]; k++; vec.resize(imax); 
-	for(i = 0; i < imax; i++){
-		unpack(vec[i].name);
-		unpack(vec[i].code);
-	}
+	unpack_item(vec);
+}
+
+void unpack_item(DEMOCAT& d)
+{
+	unpack_item(d.name);
+	unpack_item(d.value);
 }
 
 void unpack(vector <DEMOCAT> &vec)
 {
-	unsigned int imax, i;
-	imax = buffer[k]; k++; vec.resize(imax); 
-	for(i = 0; i < imax; i++){
-		unpack(vec[i].name);
-		unpack(vec[i].value);
-	}
+	unpack_item(vec);
+}
+
+void unpack_item(EVREF& ev)
+{
+	unpack_item(ev.ind);
+	unpack_item(ev.e);
 }
 
 void unpack(vector <vector <EVREF> > &vec)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ 
-			vec[i][j].ind = buffer[k]; k++;
-			vec[i][j].e = buffer[k]; k++;
-		}
-	}
+	unpack_item(vec);
 }
 
 void unpack(vector < vector <vector <unsigned int> > > &vec)
