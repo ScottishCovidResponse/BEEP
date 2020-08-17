@@ -649,7 +649,7 @@ void DATA::copydata(unsigned int core)
 		num = narea*nage;
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 		if(core != 0){
-			genQ.Qten[k].ntof = new unsigned short[num];
+			genQ.Qten[k].ntof.resize(num);
 			genQ.Qten[k].tof = new unsigned short*[num];
 			genQ.Qten[k].valf = new float**[num];
 		}
