@@ -339,6 +339,43 @@ TEST_CASE("Pack can store and read back a string vector", tag_pack) {
 	REQUIRE(s[1] == "world");
 	REQUIRE(packsize() == 13);
 }
+TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
+	packinit(0);
+	std::vector<AREA> av;
+	AREA a;
+	a.code = "code";
+	a.region = 1u;
+	a.x = 1.;
+	a.y = 2.;
+	a.agepop = vector<unsigned int>{15,45,75};
+	a.pop = vector<unsigned int>{2,8,4};
+	a.covar = vector<double>{1.,2.,3.};
+	a.ind = vector<vector<unsigned int>>{
+		vector<unsigned int>{1,2,3},
+		vector<unsigned int>{4,5}};
+	av.push_back(a);
+	a.code = "recode";
+	a.region = 2u;
+	a.x = 3.;
+	a.y = 4.;
+	a.agepop = vector<unsigned int>{18,44,78};
+	a.pop = vector<unsigned int>{1,7,3};
+	a.covar = vector<double>{-1.,-2.,-3.};
+	a.ind = vector<vector<unsigned int>>{
+		vector<unsigned int>{6,7,8},
+		vector<unsigned int>{9,10}};	
+	av.push_back(a);
+	pack(av);
+	size_t size = packsize();
+	packinit(size);
+	av.resize(0);
+	unpack(av);
+	REQUIRE(av.size() == 2u);
+	REQUIRE(av[0].code == "code");
+	REQUIRE(av[1].code == "recode");
+	REQUIRE(av[1].ind.size() == 2);
+	REQUIRE(av[1].ind[1][1] == 10);
+}
 
 #if 0
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {

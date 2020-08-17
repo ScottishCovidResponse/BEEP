@@ -146,6 +146,18 @@ void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int
 	}
 }
 
+void pack_item(const AREA& area)
+{
+	pack_item(area.code);
+	pack_item(area.region);
+	pack_item(area.x);
+	pack_item(area.y);
+	pack_item(area.agepop);
+	pack_item(area.pop);
+	pack_item(area.covar);
+	pack_item(area.ind);
+}
+
 void pack(const vector <AREA> &vec)
 {
 	unsigned int imax, i;
@@ -157,7 +169,8 @@ void pack(const vector <AREA> &vec)
 		pack(vec[i].y);
 		pack(vec[i].agepop);
 		pack(vec[i].pop);
-		pack(vec[i].covar);             
+		pack(vec[i].covar);
+		pack(vec[i].ind);
 	}
 }
 
@@ -319,6 +332,7 @@ void unpack(vector <AREA> &vec)
 		unpack(vec[i].agepop);
 		unpack(vec[i].pop);
 		unpack(vec[i].covar);  
+		unpack(vec[i].ind);  
 	}
 }
 
