@@ -58,6 +58,7 @@ void Simulate::multirun()
 		sample.R0 = model.R0calc();
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
+		psamp.push_back(paramsamp);
 	}
 	output.results(psamp,opsamp);
 }
