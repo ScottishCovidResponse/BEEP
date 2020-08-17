@@ -376,6 +376,72 @@ TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 	REQUIRE(av[1].ind.size() == 2);
 	REQUIRE(av[1].ind[1][1] == 10);
 }
+TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
+	packinit(0);
+	std::vector<REGION> rv;
+	REGION r;
+	r.name = "name1";
+	r.code = "code1";
+	rv.push_back(r);
+	r.name = "name2";
+	r.code = "code2";
+	rv.push_back(r);
+	pack(rv);
+	size_t size = packsize();
+	packinit(size);
+	rv.resize(0);
+	unpack(rv);
+	REQUIRE(rv.size() == 2u);
+	REQUIRE(rv[0].code == "code1");
+	REQUIRE(rv[1].code == "code2");
+	REQUIRE(rv[0].name == "name1");
+	REQUIRE(rv[1].name == "name2");
+}
+TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
+	packinit(0);
+	std::vector<DEMOCAT> rv;
+	DEMOCAT r;
+	r.name = "name1";
+	r.value = std::vector<std::string>{"value1a","value1b"};
+	rv.push_back(r);
+	r.name = "name2";
+	r.value = std::vector<std::string>{"value2a","value2b"};
+	rv.push_back(r);
+	pack(rv);
+	size_t size = packsize();
+	packinit(size);
+	rv.resize(0);
+	unpack(rv);
+	REQUIRE(rv.size() == 2u);
+	REQUIRE(rv[0].name == "name1");
+	REQUIRE(rv[1].name == "name2");
+	REQUIRE(rv[0].value[0] == "value1a");
+	REQUIRE(rv[0].value[1] == "value1b");
+	REQUIRE(rv[1].value[0] == "value2a");
+	REQUIRE(rv[1].value[1] == "value2b");
+}
+TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
+	packinit(0);
+	std::vector<std::vector<EVREF>> rv;
+	rv.resize(2);
+	EVREF r;
+	r.ind = 1;
+	r.e = 2;
+	rv[0].push_back(r);
+	r.ind = 3;
+	r.e = 4;
+	rv[1].push_back(r);
+	pack(rv);
+	size_t size = packsize();
+	packinit(size);
+	rv.resize(0);
+	unpack(rv);
+	REQUIRE(rv.size() == 2u);
+	REQUIRE(rv[0][0].ind == 1);
+	REQUIRE(rv[0][0].e == 2);
+	REQUIRE(rv[1][0].ind == 3);
+	REQUIRE(rv[1][0].e == 4);
+}
 
 #if 0
 TEST_CASE("Unpack handles buffer overflow", tag_pack) {
@@ -394,9 +460,4 @@ TEST_CASE("Unpack handles buffer overflow", tag_pack) {
 
 // Other cases to address
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax);
-void pack(const vector <AREA> &vec);
-void pack(const vector <REGION> &vec);
-void pack(const vector <DEMOCAT> &vec);
-void pack(const vector <vector <EVREF> > &vec);
-
 #endif
