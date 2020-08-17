@@ -198,11 +198,7 @@ void pack(const vector <vector <EVREF> > &vec)
 
 void pack(const vector < vector <vector <unsigned int> > > &vec)
 {
-	unsigned int imax = vec.size();
-	pack_item(imax);
-	for(unsigned int i = 0; i < imax; i++){
-		pack_item(vec[i]);
-	}
+	pack_item(vec);
 }
 
 template<class T>
