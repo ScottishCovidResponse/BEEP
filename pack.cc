@@ -160,18 +160,7 @@ void pack_item(const AREA& area)
 
 void pack(const vector <AREA> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
-		pack(vec[i].code);
-		pack(vec[i].region);
-		pack(vec[i].x);
-		pack(vec[i].y);
-		pack(vec[i].agepop);
-		pack(vec[i].pop);
-		pack(vec[i].covar);
-		pack(vec[i].ind);
-	}
+	pack_item(vec);
 }
 
 void pack(const vector <REGION> &vec)
