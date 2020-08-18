@@ -1,8 +1,12 @@
 #ifndef BEEPMBP__OUTPUT_HH
 #define BEEPMBP__OUTPUT_HH
 
-#include "poptree.hh"
 #include <fstream>
+
+using namespace std;
+
+#include "poptree.hh"
+#include "simulate.hh"
 
 struct SAMPLE{                                        // Stores information about a sample from the posterior
 	MEAS meas;                                          // Stores measurements corresponding to the data file
@@ -26,6 +30,7 @@ struct DIST{                                          // Stores a probability di
 };
 
 class Obsmodel;
+struct Generation;
 
 class Output
 {
@@ -43,6 +48,7 @@ public:
 	void simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const;
 	void combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
 	                   string file, string distfile, unsigned int burnin) const;
+	void abcsmc_output(string file, const Generation &gen) const;
 
 private:
 	STAT getstat(const vector <double> &vec) const; 

@@ -6,6 +6,8 @@ Compile using: make
 Simulation:  ./beepmbp inputfile="examples/sim.toml"        
 
 Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
+
+ABC-SMC: ./beepmbp inputfile="examples/inf.toml" mode="abcsmc"  
 */
 
 #include <iostream>
@@ -118,6 +120,13 @@ int main(int argc, char** argv)
 		}
 		break;
 			
+	case abcsmc:
+		{	
+			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			simu.abcsmc();
+		}
+		break;
+		
 	case inf:                                                                // Performs inference on actual data
 		{
 			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,obsmodel);

@@ -3,7 +3,7 @@
 
 using namespace std;
 
-enum Mode { sim, inf, multisim, combinetrace};                                            // Different modes of operation 
+enum Mode { sim, inf, multisim, abcsmc, combinetrace};                                    // Different modes of operation 
 	
 enum Dist { exp_dist, gamma_dist, lognorm_dist, infection_dist, timep_dist};              // Different time distributions
 

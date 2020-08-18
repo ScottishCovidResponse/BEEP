@@ -15,7 +15,8 @@ class Chain                                             // Stores all the things
 {
 public:
 	Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree,	Obsmodel &obsmodel, unsigned int chstart);
-		
+	void sample_from_prior();
+	unsigned int simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 	void standard_prop(unsigned int samp, unsigned int burnin);
 	void setQmapi(unsigned int check);
@@ -74,6 +75,7 @@ private:
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
 	void addrem_prop(unsigned int samp, unsigned int burnin);
+	void proposal_init();
 		
 	double Levi;         																	// The latent process likelihood
 	

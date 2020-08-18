@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <random>
+#include <stdexcept>
 #include "stdlib.h"
 #include "math.h"
 #include <sys/stat.h>
@@ -90,8 +91,7 @@ double gammasamp(double a, double b)
 /// The log of the probability from the normal distribution
 double normalprob(double x, double mean, double var)
 {
-	// Was var < 0 -- changed to protect from FPE
-  if(var <= 0) emsgEC("Utile",2);
+  if(var <= 0) emsgEC("Utils",2);
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
@@ -99,9 +99,7 @@ double normalprob(double x, double mean, double var)
 double gammaprob(double x, double a, double b)
 {
 	// Scale parameter is 1/b in several sources
-	// Was x < 0 -- changed to protect from FPE
-	// Was a < 0 -- changed to protect from FPE
-  if(x <= 0 || a <= 0 || b <= 0) emsgEC("Utile",3);
+  if(x <= 0 || a <= 0 || b <= 0) emsgEC("Utils",3);
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
 
@@ -111,7 +109,6 @@ double lognormprob(double x, double mean, double var)
 {
 	double val;
 	if(x <= 0) emsgEC("Utils",4);
-	// Was var < 0 -- changed to protect from FPE
 	if(var <= 0) emsgEC("Utils",5); 
 	val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;

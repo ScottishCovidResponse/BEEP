@@ -19,7 +19,7 @@ using namespace std;
 MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
 {
 	infmax = inputs.find_int("infmax",large);
-	if(details.mode == inf && infmax == large){
+	if((details.mode == inf || details.mode == abcsmc) && infmax == large){
 		emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}	
 	
@@ -32,7 +32,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],val[th],val[th]);
 	}
 
-	if(details.mode == inf){
+	if(details.mode == inf || details.mode == abcsmc){
 		vector <string> name;
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
@@ -80,7 +80,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	inputs.find_trans(from,to,prpar,type,mean,cv);
 	for(unsigned int tr = 0; tr < from.size(); tr++) addtrans(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
 	
-	if(details.mode == inf){
+	if(details.mode == inf || details.mode == abcsmc){
 		priorcomps = inputs.find_priorcomps(comp);
 	}
 			
@@ -92,7 +92,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	inputs.find_spline(details,splinetype,time,pname);
 	for(unsigned int i = 0; i < time.size(); i++){
 		SPLINEP spl;
-		spl.t = time[i];;
+		spl.t = time[i];
 		spl.param = findparam(pname[i]);
 		betaspline.push_back(spl);
 	}	
@@ -101,7 +101,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	inputs.find_spline(details,splinetype,time,pname);
 	for(unsigned int i = 0; i < time.size(); i++){
 		SPLINEP spl;
-		spl.t = time[i];;
+		spl.t = time[i];
 		spl.param = findparam(pname[i]);
 		phispline.push_back(spl);
 	}	

@@ -35,9 +35,9 @@ Simulate::Simulate(const Details &details, DATA &data, MODEL &model, const POPTR
 void Simulate::run()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
-	proportions(chain.indevi);
+	proportions(chain.indevp);
 	
-	output.simulateddata(chain.trevi,chain.indevi,details.outputdir);
+	output.simulateddata(chain.trevp,chain.indevp,details.outputdir);
 }
 
 /// Runs multiple simulations
@@ -53,9 +53,10 @@ void Simulate::multirun()
 		cout << "Simulating sample " << (s+1) << endl;
 		Chain chain(details,data,model,poptree,obsmodel,0);
 		
-		sample.meas = obsmodel.getmeas(chain.trevi,chain.indevi);
+		sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
 		model.setup(chain.paramval);
 		sample.R0 = model.R0calc();
+		sample.phi = model.phi; 
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
 		psamp.push_back(paramsamp);
@@ -100,3 +101,109 @@ void Simulate::proportions(const vector< vector <FEV> > &indev)
 	}
 	cout << endl;
 }
+
+bool Liord (Particle i,Particle j) { return (i.Li > j.Li); }
+
+/// This is an implementation of an ABC-SMC algorithm, which is used to compare against the MBP-MCMC approach 
+void Simulate::abcsmc()
+{
+	Chain chain(details,data,model,poptree,obsmodel,0);
+		
+	const int N = 100;
+	const int Ngather = 500;
+	const double fac = 0.5;
+	const int G=20;
+	vector <Generation> generation; 
+	
+	double sum; 
+	vector <double> sumst;
+	vector <double> sigma;
+	
+	auto nparam = model.param.size();
+	
+	for(auto g = 0; g < G; g++){
+		if(g > 0){
+			sumst.resize(N);       // Generate particle sampler
+			sum = 0; for(auto i = 0; i < N; i++){ sum += generation[g-1].particle[i].w; sumst[i] = sum;}
+			
+			sigma.resize(nparam);
+			for(auto th = 0u; th < nparam; th++){
+				double av = 0, av2 = 0;
+				for(auto i = 0u; i < N; i++){
+					double val = generation[g-1].particle[i].paramval[th];
+					av += val;
+					av2 += val*val;
+				}
+				double var = av2/N - (av/N)*(av/N);
+				if(var < tiny) var = 0;
+				sigma[th] = sqrt(var);
+			}
+		}
+			
+		Generation gen;
+		for(auto i = 0u; i < Ngather; i++){ 
+			//cout << g << " " << i << " Gathering particles\n";		
+			if(g == 0){ // For the first generation 
+				chain.sample_from_prior();
+			}
+			else{
+				unsigned int fl;
+				do{
+					fl = 0;
+					double z = ran()*sum; int k = 0; while(k < N && z > sumst[k]) k++;
+					if(k == N) emsg("Problem");
+			
+					PARAMSAMP paramsamp;
+					paramsamp.paramval = generation[g-1].particle[k].paramval;
+				
+					model.setup(paramsamp.paramval);
+				
+					for(auto th = 0u; th < nparam; th++){
+						if(sigma[th] != 0){
+							paramsamp.paramval[th] += normal(0,fac*sigma[th]); 
+							if(paramsamp.paramval[th] < model.param[th].min || paramsamp.paramval[th] > model.param[th].max) fl = 1;
+						}
+					}
+				
+					if(fl == 0) fl = chain.simulate(paramsamp.paramval);
+				}while(fl == 1);
+			}
+			
+			Particle part;
+			part.paramval = chain.paramval;
+			part.Li = obsmodel.Lobs(chain.trevp,chain.indevp);
+			part.w = UNSET;
+			gen.particle.push_back(part);
+		}
+		
+		sort(gen.particle.begin(),gen.particle.end(),Liord);
+		
+		cout << "Generation " << g <<  " cuttoff: " << gen.particle[N].Li << endl;
+		gen.particle.resize(N);
+		
+		if(g == 0){
+			for(auto i = 0u; i < N; i++) gen.particle[i].w = 1;
+		}
+		else{
+			for(auto i = 0u; i < N; i++){
+				double sum = 0;
+				for(auto j = 0u; j < N; j++){
+					double logsum = 0;
+					for(auto th = 0u; th < nparam; th++){
+						if(sigma[th] != 0){
+							logsum += normalprob(gen.particle[i].paramval[th],generation[g-1].particle[j].paramval[th],sigma[th]*sigma[th]);
+						}
+					}
+					sum += generation[g-1].particle[j].w*exp(logsum);
+				}
+				gen.particle[i].w = 1.0/sum;
+			}
+		}
+		
+		output.abcsmc_output("Posterior_distributions_"+to_string(g)+".txt",gen);
+		
+		generation.push_back(gen);
+	}
+}
+
+

@@ -296,7 +296,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
 
-		if(details.mode != sim){                                                    // Loads transition data for inference
+		if(details.mode != sim && details.mode != multisim){                                                    // Loads transition data for inference
 			for(td = 0; td < transdata.size(); td++){
 				file = transdata[td].file; 
 				TABLE tab = loadtable(file);
@@ -321,7 +321,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			}
 		}
 		
-		if(details.mode != sim){                                                    // Loads population data for inference
+		if(details.mode != sim && details.mode != multisim){                                                    // Loads population data for inference
 			for(pd = 0; pd < popdata.size(); pd++){
 				file = popdata[pd].file;
 				TABLE tab = loadtable(file);
@@ -344,7 +344,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			}
 		}
 		
-		if(details.mode != sim){                                                    // Loads marginal data for inference
+		if(details.mode != sim && details.mode != multisim){                                                    // Loads marginal data for inference
 			for(md = 0; md < margdata.size(); md++){
 				file = margdata[md].file;
 				TABLE tab = loadtable(file);
