@@ -380,6 +380,8 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 	tr.type = type;
 	if(mean != "") tr.param_mean = findparam(mean);	else tr.param_mean = UNSET;
 	if(cv != "") tr.param_cv = findparam(cv); else tr.param_cv = UNSET;
+	tr.numvisittot = UNSET;
+	tr.dtsum = 0.;
 	
 	trans.push_back(tr);
 }
