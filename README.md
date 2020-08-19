@@ -2,9 +2,9 @@
 
 | Branch        | Test status   | Codacy grade |
 | ------------- | ------------- | ------------ |
-| master        | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=master)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=master)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=master) |
-| dev           | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=dev)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=dev)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=dev) |
-| chrispooley   | [![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=chrispooley)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=chrispooley)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=chrispooley) |
+| master        | [![](https://github.com/ScottishCovidResponse/BEEPmbp/workflows/CI/badge.svg?branch=master)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=workflow%3ACI)      |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=master)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=master)           |
+| dev           | [![](https://github.com/ScottishCovidResponse/BEEPmbp/workflows/CI/badge.svg?branch=dev)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=workflow%3ACI)         |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=dev)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=dev)                 |
+| chrispooley   | [![](https://github.com/ScottishCovidResponse/BEEPmbp/workflows/CI/badge.svg?branch=chrispooley)](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=workflow%3ACI) |[![Codacy Badge](https://app.codacy.com/project/badge/Grade/f6b91cb37e62409ab926da36727e6f61?branch=chrispooley)](https://www.codacy.com/gh/ScottishCovidResponse/BEEPmbp?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ScottishCovidResponse/BEEPmbp&amp;utm_campaign=Badge_Grade?branch=chrispooley) |
 
 C. M. Pooley† \[1\], I. Hinder \[2\], R. Bailey \[3\], R. Williams\[4\], S. Catterall \[1\],  A. Doeschl-Wilson \[3\] and Glenn Marion \[1\]
 
@@ -211,7 +211,7 @@ Diagnostic checks: two types of checks can be performed to ensure that the resul
   branch. The workflow compiles and runs the code in both simulation
   and inference mode. The results of the CI run should be emailed to
   the committer.  They are also visible on the
-  [Actions](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions)
+  [Actions](https://github.com/ScottishCovidResponse/BEEPmbp/actions)
   page.
 
 -   Regression tests can be run with
