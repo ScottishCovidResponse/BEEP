@@ -4,6 +4,20 @@
 #include "data.hh"
 #include "model.hh"
 
+struct PARAMSAMP;
+
+struct Particle
+{
+	vector <double> paramval;
+	double w;
+	double Li;
+};
+
+struct Generation
+{
+	vector <Particle> particle;
+};
+
 class DATA;
 class MODEL;
 class POPTREE;
@@ -17,10 +31,10 @@ public:
 	
 	void run();
 	void multirun();
+	void abcsmc();
 	
 private:
 	void proportions(const vector< vector <FEV> > &indev);
-
 	unsigned int nsamp;                                   // The number of simulations 
 	
 	const Details &details;

@@ -21,9 +21,8 @@ using namespace std;
 /// Initialises a single mcmc chain
 Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
-	unsigned int th, nparam, v, q, j, sett, i, tra, loop, loopmax=100;
+	unsigned int v, q, sett, i, tra;
 	int l;
-	vector <double> paramvalinit;
 
 	ch = chstart;
 
@@ -58,18 +57,42 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	Rtot.resize(poptree.level); for(l = 0; l < (int)poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
-	loop = 0;
+	sample_from_prior();
+
+	if(details.mode != inf) return;
+	
+	trevi = trevp;
+	Qmapi = Qmapp;	
+	indevi = indevp;
+	xi = xp;
+	
+	Li = obsmodel.Lobs(trevi,indevi);
+	Pri = model.prior();
+
+	setQmapi(1);
+
+	proposal_init();
+
+	popw.resize(data.nardp);                                        // Used for event based changes
+	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
+}
+
+/// Randomly samples from prior and generates an event sequence
+void Chain::sample_from_prior()
+{
+	const auto loopmax = 100;
+	auto loop = 0;
 	do{
 		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
 		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
 
-		nparam = model.param.size();                   
-		paramval.resize(nparam); for(th = 0; th < nparam; th++) paramval[th] = model.paramval[th];
-		paramvalinit = paramval;
-		
+		auto nparam = model.param.size();                   
+		paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
+		vector <double> paramvalinit = paramval;
+
 		 // Sets the initial state to zero force of infection
-		for(j = 0; j < model.betaspline.size(); j++) paramvalinit[model.betaspline[j].param] = 0; 
-		for(j = 0; j < model.phispline.size(); j++) paramvalinit[model.phispline[j].param] = 0;
+		for(auto j = 0u; j < model.betaspline.size(); j++) paramvalinit[model.betaspline[j].param] = 0; 
+		for(auto j = 0u; j < model.phispline.size(); j++) paramvalinit[model.phispline[j].param] = 0;
 			
 		model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 		model.copyi();
@@ -80,24 +103,39 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 
 		loop++;
 	}while(loop < loopmax);                          // Checks not too many infected (based on prior)
-
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 	
-	trevi = trevp;
-	Qmapi = Qmapp;	
-	indevi = indevp;
-	xi = xp;
-	
-	if(details.mode != inf) return;
-	
-	Li = obsmodel.Lobs(trevi,indevi);
-	Pri = model.prior();
+}
 
-	setQmapi(1);
+/// Simulates an event sequence given a 
+unsigned int Chain::simulate(const vector <double>& paramv)
+{
+	if(model.setup(paramv) == 1) return 1;
+	
+	auto nparam = model.param.size();                   
+	paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
+	vector <double> paramvalinit = paramval;
 
+	 // Sets the initial state to zero force of infection
+	for(auto j = 0u; j < model.betaspline.size(); j++) paramvalinit[model.betaspline[j].param] = 0; 
+	for(auto j = 0u; j < model.phispline.size(); j++) paramvalinit[model.phispline[j].param] = 0;
+		
+	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
+	model.copyi();
+	model.setup(paramval);
+	model.copyp();
+
+	if(mbp() == 1) return 1;
+
+	return 0;
+}
+
+void Chain::proposal_init()
+{
+	auto nparam = model.param.size();
 	paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);         // Initialises proposal and diagnostic information
 	paramjumpxi.resize(nparam); ntrxi.resize(nparam); nacxi.resize(nparam);
-	for(th = 0; th < nparam; th++){
+	for(auto th = 0u; th < nparam; th++){
 		paramval[th] = model.paramval[th];
 		paramjump[th] = paramval[th]/2; if(paramjump[th] == 0) paramjump[th] = 0.1;
 		ntr[th] = 0; nac[th] = 0;
@@ -113,9 +151,6 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	
 	numaddrem = 20;
 	ntr_addrem = 0; nac_addrem = 0;
-	
-	popw.resize(data.nardp);                                        // Used for event based changes
-	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
 }
 
 struct EVREFT {                
