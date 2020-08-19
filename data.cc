@@ -593,7 +593,7 @@ void DATA::copydata(unsigned int core)
 	int si;
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
-		packinit();
+		packinit(0);
 		pack(nregion);
 		pack(region);
 		pack(narea);
@@ -618,10 +618,12 @@ void DATA::copydata(unsigned int core)
 	}
 
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	if(core != 0){
+		packinit(si);
+	}
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 	if(core != 0){
-		packinit();
 		unpack(nregion);
 		unpack(region);
 		unpack(narea);
@@ -649,9 +651,9 @@ void DATA::copydata(unsigned int core)
 		num = narea*nage;
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 		if(core != 0){
-			genQ.Qten[k].ntof = new unsigned short[num];
-			genQ.Qten[k].tof = new unsigned short*[num];
-			genQ.Qten[k].valf = new float**[num];
+			genQ.Qten[k].ntof.resize(num);
+			genQ.Qten[k].tof.resize(num);
+			genQ.Qten[k].valf.resize(num);
 		}
 		
 		vmin = 0;
@@ -659,24 +661,26 @@ void DATA::copydata(unsigned int core)
 			vmax = vmin+1000; if(vmax > num) vmax = num;
 			
 			if(core == 0){
-				packinit();
+				packinit(0);
 				for(v = vmin; v < vmax; v++){
 					pack(genQ.Qten[k].ntof[v]);
-					pack(genQ.Qten[k].tof[v],genQ.Qten[k].ntof[v]);
-					pack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
+					pack(genQ.Qten[k].tof[v]);
+					pack(genQ.Qten[k].valf[v]);
 				}
 				si = packsize();
 			}
 
 			MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+			if(core != 0){
+				packinit(si);
+			}
 			MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 			if(core != 0){
-				packinit();	
 				for(v = vmin; v < vmax; v++){
 					unpack(genQ.Qten[k].ntof[v]);
-					unpack(genQ.Qten[k].tof[v],genQ.Qten[k].ntof[v]);
-					unpack(genQ.Qten[k].valf[v],genQ.Qten[k].ntof[v],nage);
+					unpack(genQ.Qten[k].tof[v]);
+					unpack(genQ.Qten[k].valf[v]);
 				}
 				if(si != packsize()) emsgEC("Data",2);
 			}

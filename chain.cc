@@ -291,8 +291,6 @@ void Chain::setQmapi(unsigned int check)
 {
 	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop, qt;
 	double val, fac;
-	unsigned short *cref;
-	float **valref;	
 	FEV fev;
 
 	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
@@ -325,8 +323,8 @@ void Chain::setQmapi(unsigned int check)
 						
 						qt = data.Q[q].Qtenref;
 						kmax = data.genQ.Qten[qt].ntof[v];
-						cref = data.genQ.Qten[qt].tof[v];
-						valref = data.genQ.Qten[qt].valf[v];
+						auto& cref = data.genQ.Qten[qt].tof[v];
+						auto& valref = data.genQ.Qten[qt].valf[v];
 						if(nage == 1){
 							for(k = 0; k < kmax; k++){
 								dQmap[cref[k]*nage] += fac*valref[k][0];
@@ -605,8 +603,6 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 {
 	unsigned int j, jmax, k, kmax, i, tra, v, dq, q, vv, a, nage, loop, qt;
 	double fac;
-	unsigned short *cref;
-	float **valref;	
 
 	timers.timembpQmap -= clock();
 	
@@ -679,8 +675,8 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		if(fac < -vtiny || fac > vtiny){
 			kmax = data.genQ.Qten[qt].ntof[v];
 			
-			cref = data.genQ.Qten[qt].tof[v];
-			valref = data.genQ.Qten[qt].valf[v];
+			auto& cref = data.genQ.Qten[qt].tof[v];
+			auto& valref = data.genQ.Qten[qt].valf[v];
 			if(nage == 1){
 				for(k = 0; k < kmax; k++){
 					dQmap[cref[k]] += fac*valref[k][0];

@@ -213,21 +213,21 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 
 	genQ.Qten[q].name = name;
 	
-	genQ.Qten[q].tof = new unsigned short*[to.size()];
-	genQ.Qten[q].ntof = new unsigned short[to.size()];
+	genQ.Qten[q].tof.resize(to.size());
+	genQ.Qten[q].ntof.resize(to.size());
 	for(vi = 0; vi < to.size(); vi++){
 		genQ.Qten[q].ntof[vi] = to[vi].size();
-		genQ.Qten[q].tof[vi] = new unsigned short[to[vi].size()];
+		genQ.Qten[q].tof[vi].resize(to[vi].size());
 		for(j = 0; j < to[vi].size(); j++){
 			genQ.Qten[q].tof[vi][j] = to[vi][j];
 		}
 	}		
 
-	genQ.Qten[q].valf = new float**[val.size()];
+	genQ.Qten[q].valf.resize(val.size());
 	for(vi = 0; vi < val.size(); vi++){
-		genQ.Qten[q].valf[vi] = new float*[val[vi].size()];
+		genQ.Qten[q].valf[vi].resize(val[vi].size());
 		for(j = 0; j < val[vi].size(); j++){
-			genQ.Qten[q].valf[vi][j] = new float[val[vi][j].size()];
+			genQ.Qten[q].valf[vi][j].resize(val[vi][j].size());
 			for(a = 0; a < nage; a++) genQ.Qten[q].valf[vi][j][a] = val[vi][j][a];
 		}
 	}

@@ -326,10 +326,10 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 		}
 		else{
 			MPI_Status status;
+			packinit(MAX_NUMBERS);
 			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
 			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer is not big enough");
 		
-			packinit();
 			unpack(paramsamp.paramval);
 			unpack(L);
 			unpack(Pr);
@@ -343,7 +343,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 		if(mpi.core == ppost/nchain){
 			auto p = ppost%nchain;
 		
-			packinit();
+			packinit(0);
 			pack(chain[p].paramval);
 			pack(chain[p].Li);
 			pack(chain[p].Pri);
@@ -388,10 +388,10 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 		}
 		else{
 			MPI_Status status;
+			packinit(MAX_NUMBERS);
 			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
 			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer not big enough.");
 		
-			packinit();
 			unpack(sample.meas.transnum);
 			unpack(sample.meas.popnum);
 			unpack(sample.meas.margnum);
@@ -408,7 +408,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			model.setup(chain[p].paramval);
 			R0 = model.R0calc();
 	
-			packinit();
+			packinit(0);
 			pack(meas.transnum);
 			pack(meas.popnum);
 			pack(meas.margnum);
