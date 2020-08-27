@@ -38,6 +38,8 @@ private:
 	
 	vector <vector <double> > invert_matrix(const vector <vector <double> > &mat) const;
 
+	unsigned int total_time;                 // The time the algorithm is run for
+		
 	unsigned int nvar;                       // The number of variables which can change
 	vector <unsigned int> param_not_fixed;   // A list of all parameters which actualy change 
 	

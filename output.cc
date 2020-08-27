@@ -822,7 +822,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 	long timestart = generation[0].time;
 	for(auto g = 0u; g < generation.size(); g++){
 		const Generation &gen=generation[g];
-		genout << g << " " << genout << (gen.time - timestart)/(60*CLOCKS_PER_SEC) << " " << gen.EFcut;
+		genout << g << " " << (gen.time - timestart)/(60*CLOCKS_PER_SEC) << " " << gen.EFcut;
 		
 		for(auto th = 0u; th < nparam; th++){
 			vector <PW> vec;

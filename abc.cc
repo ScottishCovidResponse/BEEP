@@ -37,13 +37,13 @@ ABC::ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptre
 		if(model.param[th].min != model.param[th].max) param_not_fixed.push_back(th);
 	}
 	nvar = param_not_fixed.size();
+	
+	total_time = inputs.find_int("cputime",1000);  
 }
 
 /// Implements a version of abc which uses model-based proposals in MCMC
 void ABC::mbp()
 {
-	const auto total_time = 1000;
-	
 	Chain chain(details,data,model,poptree,obsmodel,0);
 	
 	const int N = 10;
