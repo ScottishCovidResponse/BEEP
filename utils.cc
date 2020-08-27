@@ -103,7 +103,6 @@ double gammaprob(double x, double a, double b)
   return (a-1)*log(x) - b*x + a*log(b) - lgamma(a);
 }
 
-
 /// The log of the lognormal probability distribution
 double lognormprob(double x, double mean, double var)
 {

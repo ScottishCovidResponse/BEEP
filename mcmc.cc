@@ -131,7 +131,7 @@ void Mcmc::run()
 			for(auto co = 0u; co < mpi.ncore; co++){ timeproptotsum += timeproptot[co]; ntimeproptotsum += ntimeproptot[co];}
             
 			// Update the time to run only if some proposals have run (otherwise it runs forever)
-			if (ntimeproptotsum > 0 && timeproptotsum > 0) {
+			if(ntimeproptotsum > 0 && timeproptotsum > 0) {
 				timeloop = 20*double(timeproptotsum)/(ntimeproptotsum*CLOCKS_PER_SEC);
 			}
 		}

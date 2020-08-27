@@ -81,6 +81,24 @@ struct SPLINEP{                            // Stores information about a spline 
 	unsigned int param;                      // The parameter which defines the value
 };
 
+struct Particle
+{
+	vector <double> paramval;                // The parameter values for the particle
+	vector <FEV> ev;                         // The event sequence for the particle
+	double EF;                               // The value of the error function
+};
+
+struct Generation
+{
+	vector < vector <double> > param_samp;   // Parameter samples generated
+	vector <double> EF_samp;                 // Likelihood samples generated
+	vector <unsigned int> partcopy;          // Shows which are copies particles
+	vector <double> w;                       // The weight of parameter samples (used in ABC-SMC)
+	
+	double EFcut;                            // The cut off likelihood used 
+	
+	long time;                               // The clock time
+};
 
 class MODEL                                // Stores all the information about the model
 {

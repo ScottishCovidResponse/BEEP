@@ -3,7 +3,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-
+#include <cmath>
+ 
 #include "timers.hh"
 #include "math.h"
 
@@ -19,7 +20,7 @@ using namespace std;
 MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
 {
 	infmax = inputs.find_int("infmax",large);
-	if((details.mode == inf || details.mode == abcsmc) && infmax == large){
+	if((details.mode == inf || details.mode == abcsmc || details.mode == abcmbp) && infmax == large){
 		emsgroot("Input file must contain a limit on the maximum number of individuals through 'infmax'.");
 	}	
 	
@@ -32,7 +33,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],val[th],val[th]);
 	}
 
-	if(details.mode == inf || details.mode == abcsmc){
+	if(details.mode == inf || details.mode == abcsmc || details.mode == abcmbp){
 		vector <string> name;
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
@@ -57,7 +58,19 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 			}
 		}
 	}
+	
+	if(regioneffect == 0){
+		regioneffect = 2;
 		
+		regioneff_param.resize(data.nregion);
+		for(unsigned int r = 0; r < data.nregion; r++){
+			regioneff_param[r] = param.size();
+			stringstream ss; ss << "reff_" << data.region[r].code;
+			addparam(ss.str(),-0.2,0.2);
+			param[param.size()-1].used = 1;
+		}
+	}
+
 	unsigned int th;
 	for(th = 0; th < param.size(); th++){
 		if(param[th].name == "logbeta"){
@@ -80,7 +93,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	inputs.find_trans(from,to,prpar,type,mean,cv);
 	for(unsigned int tr = 0; tr < from.size(); tr++) addtrans(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
 	
-	if(details.mode == inf || details.mode == abcsmc){
+	if(details.mode == inf || details.mode == abcsmc || details.mode == abcmbp){
 		priorcomps = inputs.find_priorcomps(comp);
 	}
 			
@@ -288,16 +301,43 @@ void MODEL::addQ()
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
 void MODEL::priorsamp()
 {
-	unsigned int th, r;
-
-	for(th = 0; th < param.size(); th++){	
+	for(auto th = 0u; th < param.size(); th++){	
 		paramval[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 	
 	if(regioneffect == 1){
-		for(r = 0; r < data.nregion; r++) paramval[regioneff_param[r]] = normal(0,paramval[sigma_param]);
+		for(auto r = 0u; r < data.nregion; r++) paramval[regioneff_param[r]] = normal(0,paramval[sigma_param]);
 	}
 	
+	if(smooth_spline == 1){
+		for(auto i = 0u; i < betaspline.size()-1; i++){
+			auto th1 = betaspline[i].param;
+			auto th2 = betaspline[i+1].param;
+			
+			if(betaspline[i].t != betaspline[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
+				double val;
+				do{
+					double fac = exp(normal(0,smooth));
+					val = paramval[th1]*fac;
+				}while(val <= param[th2].min || val >= param[th2].max);
+			  paramval[th2] = val;
+			}
+		}
+		
+		for(auto i = 0u; i < phispline.size()-1; i++){
+			auto th1 = phispline[i].param;
+			auto th2 = phispline[i+1].param;
+			
+			if(phispline[i].t != phispline[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
+				double val;
+				do{
+					double fac = exp(normal(0,smooth));
+					val = paramval[th1]*fac;
+				}while(val <= param[th2].min || val >= param[th2].max);
+			  paramval[th2] = val;
+			}
+		}
+	}
 	//for(th = 0; th < param.size(); th++) cout << "paramval[" << th <<"] = " << paramval[th] << ";" << endl;
 }
 
@@ -695,9 +735,15 @@ void MODEL::setarea()
 		sum = paramval[logbeta_param];
 		for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
 		
-		if(regioneffect == 1) sum += paramval[regioneff_param[data.area[c].region]];
+		if(regioneffect != 0) sum += paramval[regioneff_param[data.area[c].region]];
 		
 		areafac[c] = exp(sum);
+		if(std::isnan(areafac[c])){
+			cout << sum << " " <<  paramval[logbeta_param] << " be\n";
+			for(j = 0; j < data.ncovar; j++) cout << paramval[covar_param[j]]*data.area[c].covar[j] << "covar\n";
+			if(regioneffect != 0) cout <<  paramval[regioneff_param[data.area[c].region]] << "region ef\n";
+			emsgEC("Model",90);
+		}
 	}
 }
 
@@ -756,6 +802,22 @@ double MODEL::prior()
 		sd = paramval[sigma_param];
 		for(r = 0; r < data.nregion; r++){
 			Pr += normalprob(paramval[regioneff_param[r]],0,sd*sd);
+		}
+	}
+	
+	if(smooth_spline == 1){
+		for(auto i = 0u; i < betaspline.size()-1; i++){
+			if(betaspline[i].t != betaspline[i+1].t){
+				double dval = log(paramval[betaspline[i+1].param]/paramval[betaspline[i].param])/smooth;
+				Pr += -dval*dval/2;
+			}
+		}
+		
+		for(auto i = 0u; i < phispline.size()-1; i++){
+			if(phispline[i].t != phispline[i+1].t){
+				double dval = log(paramval[phispline[i+1].param]/paramval[phispline[i].param])/smooth;
+				Pr += -dval*dval/2;
+			}
 		}
 	}
 	

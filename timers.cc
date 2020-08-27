@@ -27,5 +27,7 @@ void timersinit()
 	timers.timembpconRtot = 0;
 	
 	timers.timeswap = 0;
-	timers.timeoutput = 0;
+	timers.timeoutput = 0;	
+	timers.timeabc = 0;
+	timers.timeabcprop = 0;
 }

@@ -22,6 +22,8 @@ struct TIMERS {
 	long timembpconRtot;
 	long timeswap;
 	long timeoutput;
+	long timeabc;
+	long timeabcprop;
 };
 
 extern TIMERS timers;
