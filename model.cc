@@ -59,6 +59,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		}
 	}
 	
+	/*
 	if(regioneffect == 0){
 		regioneffect = 2;
 		
@@ -70,6 +71,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 			param[param.size()-1].used = 1;
 		}
 	}
+	*/
 
 	unsigned int th;
 	for(th = 0; th < param.size(); th++){
