@@ -3,7 +3,7 @@
 
 using namespace std;
 
-enum Mode { sim, inf, multisim, abcsmc, combinetrace};                                    // Different modes of operation 
+enum Mode { sim, inf, multisim, abcsmc, abcmbp, combinetrace};                                    // Different modes of operation 
 	
 enum Dist { exp_dist, gamma_dist, lognorm_dist, infection_dist, timep_dist};              // Different time distributions
 
@@ -32,5 +32,8 @@ const unsigned int duplicate = 0;                                // Set to one t
 const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
 
 const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions
-	
+
+const unsigned int smooth_spline = 1;                            // Set to 1 if smoothing on splines is being done
+const double smooth = 0.2;                                       // Used for the smoothing priors on splines
+
 #endif

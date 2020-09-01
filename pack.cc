@@ -25,9 +25,20 @@ void packinit(size_t size)
 	buffer.resize(size);
 }
 
-int packsize()
+size_t packsize()
 {
 	return k;
+}
+
+vector <double> copybuffer()
+{
+	return buffer;
+}
+
+void setbuffer(const vector <double> &vec)
+{
+	k = 0;
+	buffer = vec;
 }
 
 double * packbuffer()
@@ -132,6 +143,18 @@ void pack(const vector <string> &vec)
 	pack_item(vec);
 }
 
+void pack(const vector <FEV> &vec)
+{
+	unsigned int imax, i;
+	imax = vec.size(); buffer.push_back(imax); k++;
+	for(i = 0; i < imax; i++){
+		buffer.push_back(vec[i].trans); k++;
+		buffer.push_back(vec[i].ind); k++;
+		buffer.push_back(vec[i].t); k++;
+		buffer.push_back(vec[i].timep); k++;
+	}
+}
+
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
 	unsigned int imax, i, jmax, j;
@@ -142,8 +165,16 @@ void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int
 			buffer.push_back(vec[i][j].trans); k++;
 			buffer.push_back(vec[i][j].ind); k++;
 			buffer.push_back(vec[i][j].t); k++;
+			buffer.push_back(vec[i][j].timep); k++;
 		}
 	}
+}
+
+void pack(const Particle &part)
+{
+	pack(part.paramval);
+	pack(part.ev);
+	pack(part.EF);
 }
 
 void pack_item(const AREA& area)
@@ -291,6 +322,18 @@ void unpack(vector <string> &vec)
 	unpack_item(vec);
 }
 
+void unpack(vector <FEV> &vec)
+{
+	unsigned int imax, i;
+	imax = buffer[k]; k++; vec.resize(imax);
+	for(i = 0; i < imax; i++){
+		vec[i].trans = buffer[k]; k++;
+		vec[i].ind = buffer[k]; k++;
+		vec[i].t = buffer[k]; k++;
+		vec[i].timep = buffer[k]; k++;
+	}
+}
+
 void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
 	unsigned int imax, i, jmax, j;
@@ -301,8 +344,16 @@ void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fed
 			vec[i][j].trans = buffer[k]; k++;
 			vec[i][j].ind = buffer[k]; k++;
 			vec[i][j].t = buffer[k]; k++;
+			vec[i][j].timep = buffer[k]; k++;
 		}
 	}
+}
+
+void unpack(Particle &part)
+{
+	unpack(part.paramval);
+	unpack(part.ev);
+	unpack(part.EF);
 }
 
 void unpack_item(AREA& area)

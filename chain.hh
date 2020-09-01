@@ -8,6 +8,7 @@ using namespace std;
 #include "model.hh"
 #include "poptree.hh"
 #include "data.hh"
+#include "simulate.hh"
 
 class Obsmodel;
 
@@ -20,10 +21,16 @@ public:
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 	void standard_prop(unsigned int samp, unsigned int burnin);
 	void setQmapi(unsigned int check);
-	 				
+	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
+	void initialise_from_particle(const Particle &part);
+	void generate_particle(Particle &part) const;
+	int abcmbp_proposal(const vector <double> param_propose, double EFcut);
+	
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	
 	double Li; 																						// The observation likelihood for the current state
+	
+	double EF; 																						// The error function (used in abc methods)
 
 	double Pri; 																				  // The prior probability
 	

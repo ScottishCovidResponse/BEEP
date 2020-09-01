@@ -111,13 +111,18 @@ double Obsmodel::singobs(unsigned int mean, unsigned int val) const
 	switch(mean){
 	case UNKNOWN: return 0;     // The data value is unknown
 	case THRESH:                // The case in which there is a threshold applied to the observation
-		if(val <= data.threshold) return data.thres_h;
+		if(val <= data.threshold){
+			if(details.mode == abcmbp || details.mode == abcsmc) return 0;
+			else return data.thres_h;
+		}
 		else{
 			var = minvar;
-			return data.thres_h - double((val-data.threshold)*(val-data.threshold))/(2*var);
+			if(details.mode == abcmbp || details.mode == abcsmc) return (val-data.threshold)*(val-data.threshold)/var;
+			else return data.thres_h - (val-data.threshold)*(val-data.threshold)/(2*var);
 		}
 	default:                    // A measurement is made
 		var = mean; if(var < minvar) var = minvar;
+		if(details.mode == abcmbp || details.mode == abcsmc) return (val-mean)*(val-mean)/var;
 		return normalprob(val,mean,var);
 	}
 }
@@ -157,7 +162,8 @@ double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vect
 				val = meas.margnum[md][row][r];
 				mean = data.margdata[md].percent[r][row]*sum/100.0;
 				var = mean; if(var < minvar) var = minvar;
-				L += normalprob(val,mean,var);
+				if(details.mode == abcmbp || details.mode == abcsmc) L += (val-mean)*(val-mean)/var;
+				else L += normalprob(val,mean,var);
 			}
 		}
 	}

@@ -461,7 +461,7 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
 	string used_file;
 	
 	if(dir != ""){
-    used_file =dir+"/"+file;
+    used_file = dir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
 	}
@@ -469,9 +469,9 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
     used_file = details.outputdir+"/"+file;
 		in.open(used_file.c_str());
 		if(!in){
-      used_file = (datadir+"/"+file);
+      used_file = datadir+"/"+file;
 			in.open(used_file.c_str());
-			if(!in) emsg("Cannot open the file '"+file+"'");
+			if(!in) emsg("Cannot open the file '"+used_file+"'");
 		}
 	}
 	
@@ -590,7 +590,7 @@ unsigned int DATA::findcol(const TABLE &tab, string name) const
 void DATA::copydata(unsigned int core)
 {
 	unsigned int td, pd, md, k, kmax, v, vmin, vmax, num;
-	int si;
+	size_t si;
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit(0);
