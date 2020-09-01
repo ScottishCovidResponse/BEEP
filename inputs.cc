@@ -244,6 +244,8 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
 				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+transdata.file+"' cannot be generated because the time period is not sufficiently long.");
+			} else {
+				transdata.rows = UNSET;
 			}
 			
 			transdatavec.push_back(transdata);
@@ -285,6 +287,8 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
 				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+popdata.file+"' cannot be generated because the time period is not sufficiently long.");
+			} else {
+				popdata.rows = UNSET;
 			}
 			
 			popdatavec.push_back(popdata);
