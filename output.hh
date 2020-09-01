@@ -7,6 +7,7 @@ using namespace std;
 
 #include "poptree.hh"
 #include "simulate.hh"
+#include "model.hh"
 
 struct SAMPLE{                                        // Stores information about a sample from the posterior
 	MEAS meas;                                          // Stores measurements corresponding to the data file
@@ -29,6 +30,11 @@ struct DIST{                                          // Stores a probability di
 	vector <string> prob;
 };
 
+struct PW{                                            // A weighted point
+	double val;
+	double w;
+};
+
 class Obsmodel;
 struct Generation;
 
@@ -48,10 +54,13 @@ public:
 	void simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const;
 	void combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
 	                   string file, string distfile, unsigned int burnin) const;
-	void abcsmc_output(string file, const Generation &gen) const;
+	void plot_distribution(string file, const Generation &gen) const;
+	void generation_plot(string file, const vector <Generation> generation) const;
+	double model_evidence_plot(string file, const vector <Generation> &generation) const;
 
 private:
-	STAT getstat(const vector <double> &vec) const; 
+	STAT getstat(const vector <double> &vec) const;
+	STAT getstat_with_w(vector <PW> vec) const;	
 	DIST getdist(const vector <double> &vec) const;
 	void posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const;
 

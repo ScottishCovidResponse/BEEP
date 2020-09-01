@@ -203,7 +203,7 @@ Mode Inputs::mode() const
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"abcsmc", abcsmc}, {"combinetrace", combinetrace}};
+	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"abcsmc", abcsmc}, {"abcmbp", abcmbp}, {"combinetrace", combinetrace}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	
@@ -241,7 +241,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 				else emsgroot("Units in 'transdata' not recognised");
 			}
 			
-			if(details.mode != inf && details.mode != abcsmc){
+			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
 				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+transdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			} else {
@@ -284,7 +284,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 				else emsgroot("Units in 'popdata' not recognised");
 			}
 			
-			if(details.mode != inf && details.mode != abcsmc){
+			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
 				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+popdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			} else {

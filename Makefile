@@ -39,6 +39,7 @@ endif
 
 # Please keep these in lexicographic order to aid merging
 srcs := \
+ abc.cc \
  chain.cc \
  combinetrace.cc \
  data.cc \

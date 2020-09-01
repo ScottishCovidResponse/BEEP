@@ -8,6 +8,11 @@ Simulation:  ./beepmbp inputfile="examples/sim.toml"
 Inference:    mpirun -n 20 ./beepmbp inputfile="examples/inf.toml" nchain=20
 
 ABC-SMC: ./beepmbp inputfile="examples/inf.toml" mode="abcsmc"  
+
+ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
+ mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
+  mpirun -n 20 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
+ mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
 */
 
 #include <iostream>
@@ -33,6 +38,7 @@ ABC-SMC: ./beepmbp inputfile="examples/inf.toml" mode="abcsmc"
 #include "timers.hh"
 
 #include "simulate.hh"
+#include "abc.hh"
 #include "mcmc.hh"
 #include "consts.hh"
 
@@ -120,10 +126,17 @@ int main(int argc, char** argv)
 		}
 		break;
 			
-	case abcsmc:
+	case abcsmc:                                                             // Performs the ABC-SMC algorithm
 		{	
-			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel);
-			simu.abcsmc();
+			ABC abc(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			abc.smc();
+		}
+		break;
+		
+	case abcmbp:                                                             // Peforms the ABC-MBP algorithm
+		{	
+			ABC abc(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			abc.mbp();
 		}
 		break;
 		

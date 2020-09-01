@@ -210,7 +210,7 @@ unsigned int Chain::mbp()
 
 		for(v = 0; v < data.narage; v++){
 			val = Qmapi[sett][v] + dQmap[v];
-			if(val < -tiny) emsgEC("Chain",1);
+			if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
 		}
@@ -368,6 +368,10 @@ void Chain::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 			lami[w] = model.susi[dp]*(faci*Qmi[v+a] + phii);
 			lamp[w] = model.susp[dp]*(facp*Qmp[v+a] + phip);
 			dlam = nindbothlist[w]*(lamp[w] - lami[w]); if(dlam < 0) dlam = 0;
+			
+				if(std::isnan(dlam)){ cout <<   model.susi[dp] << " " << faci << " " << Qmi[v+a] << " " << phii << " g " <<  model.susp[dp] << " " << facp << " " << Qmp[v+a] << " " << phip << " g1\n"; emsgEC("Chain",400);}// zz
+				
+					if(std::isnan(lamp[w])){ cout <<   model.susi[dp] << " " << faci << " " << Qmi[v+a] << " " << phii << " g " <<  model.susp[dp] << " " << facp << " " << Qmp[v+a] << " " << phip << " g2\n"; emsgEC("Chain",401);}
 			sum += dlam + nindponlylist[w]*lamp[w];
 			dp++;
 		}
@@ -773,9 +777,8 @@ void Chain::check(unsigned int /* num */, double t, unsigned int sett)
 
 	for(j = 0; j < xp.size(); j++){ // Checks order
 		i = xp[j].ind; e = xp[j].e;
-		// Unsigned quantities always >= 0
-		if( /* i < 0 || */ i >= indevp.size()) emsgEC("Chain",16);
-		if( /* e < 0 || */ e >= indevp[i].size()) emsgEC("Chain",17);
+		if(i >= indevp.size()) emsgEC("Chain",16);
+		if(e >= indevp[i].size()) emsgEC("Chain",17);
 		if(j < xp.size()-1){
 			if(indevp[i][e].t > indevp[xp[j+1].ind][xp[j+1].e].t) emsgEC("Chain",18);
 		}
@@ -1539,3 +1542,106 @@ void Chain::infsampler(vector< vector<double> > &Qmap)
 		}
 	}
 }
+
+/// Compresses the events to take up as little memory as possible (used for abcmbp)
+vector <FEV> Chain::event_compress(const vector < vector <FEV> > &indev) const
+{
+	vector <FEV> store;
+	
+	for(auto i = 0u; i < indev.size(); i++){
+		for(auto e = 0u; e < indev[i].size(); e++){
+			store.push_back(indev[i][e]);
+		}
+	}
+	
+	return store;
+}
+
+/// Initialises the chain based on a particle (used for abcmbp)
+void Chain::initialise_from_particle(const Particle &part)
+
+{
+	auto jmax = xi.size(); for(auto j = 0u; j < jmax; j++) indevi[xi[j].ind].clear();   // Removes the exisiting initial sequence 
+	xi.clear();
+	
+	trevi.clear(); trevi.resize(details.nsettime); 
+	
+	vector <int> indlist;
+	for(auto e = 0u; e < part.ev.size(); e++){
+		int i = part.ev[e].ind;
+		if(indevi[i].size() == 0) indlist.push_back(i);
+		indevi[i].push_back(part.ev[e]);
+	}	
+	
+	for(int i : indlist) addindev(i,indevi[i],xi,trevi);
+	
+	sortx(xi,indevi);
+	
+	setQmapi(0);
+
+	EF = part.EF;
+	Pri = model.prior();
+	
+	if(EF != obsmodel.Lobs(trevi,indevi)) emsg("Observation does not agree");
+	
+	paramval = part.paramval;
+}
+
+/// Generates a particle (used for abcmbp)
+void Chain::generate_particle(Particle &part) const
+{
+	part.EF = EF;
+	part.paramval = paramval;
+	part.ev = event_compress(indevi);
+}
+
+int Chain::abcmbp_proposal(const vector <double> param_propose, double EFcut)  
+{
+	model.setup(paramval);
+	model.copyi();
+			
+	vector <double> valst = paramval;
+	paramval = param_propose;
+	
+	auto al = 1.0;
+	for(auto th = 0u; th < model.param.size(); th++){
+		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+	}
+
+	double EFp = EF, Prp = Pri;
+	if(al == 1){
+		if(model.setup(paramval) == 1) al = 0;
+		else{
+			model.copyp();
+			if(mbp() == 1) al = 0;
+			else{
+				EFp = obsmodel.Lobs(trevp,indevp);
+				if(EFp >= EFcut) al = 0;
+				else{
+					Prp = model.prior();
+					al = exp(Prp-Pri);
+					//cout << al << " " << Prp << " " << Pri <<  "al\n";
+				}
+			}
+		}
+	}
+	
+	if(ran() < al){
+		EF = EFp;
+		Pri = Prp;
+		trevi = trevp;
+		Qmapi = Qmapp;
+		
+		auto jmax = xi.size(); for(auto j = 0u; j < jmax; j++) indevi[xi[j].ind].clear();
+		jmax = xp.size(); for(auto j = 0u; j < jmax; j++) indevi[xp[j].ind] = indevp[xp[j].ind];
+		//indevi = indevp;
+		
+		xi = xp;
+		return 1;
+	}
+	else{
+		paramval = valst;
+	}
+	return 0;
+}
+

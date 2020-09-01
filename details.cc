@@ -54,7 +54,6 @@ Details::Details(Inputs &inputs)
 	for(unsigned int s = 0; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
 			
 	fediv = nsettime*fepertime;
-	
 }
 
 /// Gets the time from a string
