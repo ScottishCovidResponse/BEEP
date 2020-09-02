@@ -72,7 +72,7 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	xi = xp;
 	
 	Li = obsmodel.Lobs(trevi,indevi);
-	Pri = model.prior();
+	Pri = model.prior(paramval);
 
 	setQmapi(1);
 }
@@ -84,10 +84,11 @@ void Chain::sample_from_prior()
 	auto loop = 0;
 	do{
 		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
-		do{	model.priorsamp(); }while(model.setup(model.paramval) == 1);             // Randomly samples parameters from the prior	
+		do{	paramval = model.priorsamp(); }while(model.setup(paramval) == 1);             // Randomly samples parameters from the prior	
 
-		auto nparam = model.param.size();                   
-		paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
+		//auto nparam = model.param.size();                   
+		//paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
+		
 		vector <double> paramvalinit = paramval;
 
 		 // Sets the initial state to zero force of infection
@@ -95,25 +96,25 @@ void Chain::sample_from_prior()
 		for(auto j = 0u; j < model.phispline.size(); j++) paramvalinit[model.phispline[j].param] = 0;
 			
 		model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
-		model.copyi();
+		model.copyi(paramvalinit);
 		model.setup(paramval);
-		model.copyp();
+		model.copyp(paramval);
 
 		if(mbp() == 0) break;
 
 		loop++;
-	}while(loop < loopmax);                          // Checks not too many infected (based on prior)
+	}while(loop < loopmax);                                           // Checks not too many infected individuals (based on prior)
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 	
 }
 
-/// Simulates an event sequence given a 
+/// Simulates an event sequence given a parameter set
 unsigned int Chain::simulate(const vector <double>& paramv)
 {
 	if(model.setup(paramv) == 1) return 1;
 	
 	auto nparam = model.param.size();                   
-	paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
+	paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = paramv[th];
 	vector <double> paramvalinit = paramval;
 
 	 // Sets the initial state to zero force of infection
@@ -121,9 +122,9 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 	for(auto j = 0u; j < model.phispline.size(); j++) paramvalinit[model.phispline[j].param] = 0;
 		
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
-	model.copyi();
+	model.copyi(paramvalinit);
 	model.setup(paramval);
-	model.copyp();
+	model.copyp(paramval);
 
 	if(mbp() == 1) return 1;
 
@@ -136,7 +137,6 @@ void Chain::proposal_init()
 	paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);         // Initialises proposal and diagnostic information
 	paramjumpxi.resize(nparam); ntrxi.resize(nparam); nacxi.resize(nparam);
 	for(auto th = 0u; th < nparam; th++){
-		paramval[th] = model.paramval[th];
 		paramjump[th] = paramval[th]/2; if(paramjump[th] == 0) paramjump[th] = 0.1;
 		ntr[th] = 0; nac[th] = 0;
 		
@@ -401,7 +401,7 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	timers.timembpprop -= clock();
 	
 	model.setup(paramval);
-	model.copyi();
+	model.copyi(paramval);
 			
 	valst = paramval[th];
 
@@ -411,11 +411,11 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	else{
 		if(model.setup(paramval) == 1) al = 0;
 		else{
-			model.copyp();
+			model.copyp(paramval);
 			if(mbp() == 1) al = 0;
 			else{
 				Lp = obsmodel.Lobs(trevp,indevp);
-				Prp = model.prior();
+				Prp = model.prior(paramval);
 				
 				al = exp(Prp-Pri + invT*(Lp-Li));		
 				if(checkon == 1) cout << al << " " << invT << " " << Lp << " " << Li << " al" << endl;
@@ -446,7 +446,7 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	if(checkon == 1){
 		model.setup(paramval);
 		dd = Li - obsmodel.Lobs(trevi,indevi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",5);
-		dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny) emsgEC("Chain",6);
+		dd = Pri - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("Chain",6);
 	}
 	
 	timers.timembpprop += clock();
@@ -762,7 +762,7 @@ void Chain::addinfc(unsigned int c, double t)
 	
 	changestat(i,not_sus,1);
 	
-	model.simmodel(indevp[i],i,0,t);
+	model.simmodel(paramval,indevp[i],i,0,t);
 
 	addindev(i,indevp[i],xp,trevp);
 }
@@ -994,7 +994,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 
 	model.setup(paramval);
 	
-	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
+	if(checkon == 1){ double dd = Pri - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
 	timers.timembptemp -= clock();
 	Levi = likelihood(Qmapi,xi,indevi);
@@ -1017,7 +1017,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",50);}
 	}
 	
-	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
+	if(checkon == 1){ double dd = Pri - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
 	timers.timestandard += clock();
 }
@@ -1051,7 +1051,6 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	
 	t = 0; n = 0;
 	for(sett = 0; sett < details.nsettime; sett++){
-		//beta = model.beta[sett]; phi = model.phi[sett];
 		tmax = details.settime[sett+1];
 
 		lcontlist.clear();
@@ -1142,7 +1141,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 						if(std::isnan(Levp)) emsgEC("Chain",52);
 					}
 					
-					if(smooth_spline == 1) Prp = model.prior();
+					if(smooth_spline == 1) Prp = model.prior(paramval);
 					al = exp(Prp - Pri + Levp-Levi);
 				}
 			
@@ -1280,7 +1279,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 		}
 		if(std::isnan(Levp)) emsgEC("Chain",53);
 	
-	  Prp = model.prior();
+	  Prp = model.prior(paramval);
 		al = exp(Prp-Pri + Levp-Levi);
 	}
 
@@ -1376,6 +1375,9 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 			sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsgEC("Chain",56);
 			z = ran()*sumtot;
 			
+			//k = 0; while(k < data.nsettardp && z > lamsum[k]) k += 1;
+			//if(k == data.nsettardp) emsg("pr"); 
+			
 			k = 0; dk = data.nsettardp/10; if(dk == 0) dk = 1;
 			do{
 				while(k < data.nsettardp && z > lamsum[k]) k += dk;
@@ -1389,6 +1391,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 				if(k >= lamsum.size()) emsgEC("Chain",58);
 				if(!(z < lamsum[k] && z > lamsum[k-1])) emsgEC("Chain",59);
 			}
+			
 			
 			probif += log(lam[k]/sumtot);
 
@@ -1404,7 +1407,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 			t = details.settime[sett] + ran()*dt;
 			probif += log(1.0/dt);
 			
-			model.simmodel(indevp[i],i,0,t);
+			model.simmodel(paramval,indevp[i],i,0,t);
 			addindev(i,indevp[i],xp,trevp);
 			
 			probfi += log(1.0/xp.size());
@@ -1463,7 +1466,8 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		infsampler(Qmapp);
 		timers.timembptemp2 += clock();
 		
-		for(j = 0; j < numaddrem; j++) probfi += log(lam[kst[j]]/lamsum[data.nsettardp-1]);
+		sumtot = lamsum[data.nsettardp-1]; 
+		for(j = 0; j < numaddrem; j++) probfi += log(lam[kst[j]]/sumtot);
 	}
 	
 	timers.timembptemp4 -= clock();
@@ -1484,7 +1488,6 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	}
 	timers.timembptemp4 += clock();
 	
-	 
 	ntr_addrem++;
 	if(ran() < al){
 		Levi = Levp;
@@ -1577,7 +1580,7 @@ void Chain::initialise_from_particle(const Particle &part)
 	setQmapi(0);
 
 	EF = part.EF;
-	Pri = model.prior();
+	Pri = model.prior(paramval);
 	
 	if(EF != obsmodel.Lobs(trevi,indevi)) emsg("Observation does not agree");
 }
@@ -1593,7 +1596,7 @@ void Chain::generate_particle(Particle &part) const
 int Chain::abcmbp_proposal(const vector <double> param_propose, double EFcut)  
 {
 	model.setup(paramval);
-	model.copyi();
+	model.copyi(paramval);
 			
 	vector <double> valst = paramval;
 	paramval = param_propose;
@@ -1607,13 +1610,13 @@ int Chain::abcmbp_proposal(const vector <double> param_propose, double EFcut)
 	if(al == 1){
 		if(model.setup(paramval) == 1) al = 0;
 		else{
-			model.copyp();
+			model.copyp(paramval);
 			if(mbp() == 1) al = 0;
 			else{
 				EFp = obsmodel.Lobs(trevp,indevp);
 				if(EFp >= EFcut) al = 0;
 				else{
-					Prp = model.prior();
+					Prp = model.prior(paramval);
 					al = exp(Prp-Pri);
 					//cout << al << " " << Prp << " " << Pri <<  "al\n";
 				}

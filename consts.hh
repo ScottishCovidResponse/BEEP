@@ -7,6 +7,8 @@ enum Mode { sim, inf, multisim, abcsmc, abcmbp, combinetrace};                  
 	
 enum Dist { exp_dist, gamma_dist, lognorm_dist, infection_dist, timep_dist};              // Different time distributions
 
+enum ParamType { other_paramtype, distval_paramtype, branchprob_paramtype}; 
+	
 enum DataType { trans_data, pop_data, marg_data};                                         // Different types of data
 
 enum TimeFormat { tform_num, tform_ymd };                                                 // Different type of time format

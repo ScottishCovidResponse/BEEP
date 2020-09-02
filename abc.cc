@@ -51,6 +51,29 @@ void ABC::mbp()
 	vector <Particle> part;					
 	part.resize(N);
 	
+	/*
+	auto i=0u;
+		chain.sample_from_prior();
+				double EF = obsmodel.Lobs(chain.trevp,chain.indevp);
+
+				part[i].paramval = chain.paramval;
+				part[i].EF = EF;
+				part[i].ev = chain.event_compress(chain.indevp);
+				
+				
+	chain.initialise_from_particle(part[i]);
+	
+	output.trace_plot_init();
+	for(auto loop = 0u; loop < 1000; loop++){
+cout << loop << " loo\n";
+
+		output.trace_plot(loop,chain.EF,chain.Pri,chain.xi.size(),chain.paramval);
+		chain.standard_prop(0,1);
+	}
+	
+	 emsg("doe");
+	 */
+	
 	unsigned int partcopy[N*mpi.ncore];
 	//total_time = 10;
 	const int G = 300;
@@ -360,8 +383,8 @@ void ABC::calculate_w(vector <Generation> &generation, double jump)
 				double sum = 0;
 				for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jump);
 				
-				model.setup(gen.param_samp[i]);
-				w = exp(model.prior())/sum;
+				//model.setup(gen.param_samp[i]);
+				w = exp(model.prior(gen.param_samp[i]))/sum;
 			}
 			gen.w[i] = w;
 		}	
@@ -450,7 +473,7 @@ SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 	chain.initialise_from_particle(part);
 	sample.meas = obsmodel.getmeas(chain.trevi,chain.indevi);
 	model.setup(chain.paramval);
-	sample.R0 = model.R0calc();
+	sample.R0 = model.R0calc(chain.paramval);
 	sample.phi = model.phi; 
 	
 	return sample;

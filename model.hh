@@ -39,7 +39,7 @@ struct PARAM{                              // Store information about a model pa
 	unsigned int used;                       // Determins if the parameter is used in the model.
 	unsigned int ntr, nac;                   // Stores the number of proposals tried and accepted	
 	double jump;                             // Stores the size of jumps in parameter space
-	unsigned int type;                       // Set to one if parameter used for transition times and 2 for branching probabilities
+	ParamType type;                          // Set to one if parameter used for transition times and 2 for branching probabilities
 };
 
 struct COMP{                               // Stores information about a compartment in the model
@@ -108,7 +108,6 @@ public:
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
-	
 	vector <double> beta;                    // The value for beta at the various times
 	vector <SPLINEP> betaspline;             // The spline used to define beta
 	
@@ -127,7 +126,7 @@ public:
 				
 	vector <PARAM> param;                    // Information about parameters in the model
 	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
-	vector <double> paramval;                // The values of the parameters
+	//vector <double> paramval;                // The values of the parameters
 	vector <TRANS> trans;                    // Stores model transitions
 	vector <COMP> comp;	                     // Stores model compartments
 
@@ -139,7 +138,6 @@ public:
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
 	unsigned int regioneffect;               // Set to 1 if a regional random effect is put in the force of infection
-	//unsigned int logbeta_param;                 // The parameter for the base beta transmission rate
 	unsigned int sigma_param;                // The standard deviation of the regional effect
 	vector <unsigned int> regioneff_param;   // The parameters related to regional effects
 
@@ -148,20 +146,20 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	double getparam(const string& name);
+	//double getparam(const string& name);
 	double getinfectivity(const string& name);
-	void simmodel(vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
+	void simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	void print_to_terminal() const;
-	void priorsamp();
+	vector <double> priorsamp();
 	unsigned int setup(const vector <double> &paramval);
-	void copyi();
-	void copyp();
-	vector <double> R0calc();
+	void copyi(const vector<double> &paramv);
+	void copyp(const vector<double> &paramv);
+	vector <double> R0calc(const vector<double> &paramv);
 	unsigned int dombpevents();
 	void oe(const string& name, vector <FEV> &ev);
 	void calcprobin();
-	double prior();
+	double prior(const vector<double> &paramv);
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
 													 
@@ -172,11 +170,11 @@ private:
 	void addparam(const string& name, double min, double max);
 	void addtrans(const string& from, const string& to, const string& prpar,
 								unsigned int type, const string& param1, const string& param2);
-	void setsus(); 
-	void setarea();
-	void timevariation();
+	void setsus(const vector<double> &paramv); 
+	void setarea(const vector<double> &paramv);
+	void timevariation(const vector<double> &paramv);
 	unsigned int findparam(const string& name);
-	unsigned int settransprob();
+	unsigned int settransprob(const vector<double> &paramv);
 	double likelihood_prob();
 	double likelihood_dt(vector <double> &paramv);
 	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);

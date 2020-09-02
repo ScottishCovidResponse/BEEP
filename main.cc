@@ -28,6 +28,8 @@ ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"
 		
  nohup  mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  outputdir="OutputMSOATest" &     beta=2
 		
+		
+		 mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcmbp"  
  */
 
 #include <iostream>

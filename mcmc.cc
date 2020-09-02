@@ -383,7 +383,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 		if(ppost < nchain){
 			sample.meas = obsmodel.getmeas(chain[ppost].trevi,chain[ppost].indevi);
 			model.setup(chain[ppost].paramval);
-			sample.R0 = model.R0calc();
+			sample.R0 = model.R0calc(chain[ppost].paramval);
 			sample.phi = model.phi; 
 		}
 		else{
@@ -406,7 +406,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			
 			meas = obsmodel.getmeas(chain[p].trevi,chain[p].indevi);
 			model.setup(chain[p].paramval);
-			R0 = model.R0calc();
+			R0 = model.R0calc(chain[p].paramval);
 	
 			packinit(0);
 			pack(meas.transnum);
