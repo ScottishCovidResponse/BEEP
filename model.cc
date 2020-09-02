@@ -30,14 +30,22 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		vector <string> name;
 		vector <double> val;
 		inputs.find_param(name,val);
-		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],val[th],val[th]);
+		for(unsigned int th = 0; th < name.size(); th++){
+			//if(name[th].substr(0,4) == "beta") val[th] *= 0.307;   // THIS IS TEMPORARY
+			if(name[th].substr(0,4) == "beta") val[th] *= 0.4;   // THIS IS TEMPORARY
+			addparam(name[th],val[th],val[th]);
+		}
 	}
 
 	if(details.mode == inf || details.mode == abcsmc || details.mode == abcmbp){
 		vector <string> name;
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
-		for(unsigned int th = 0; th < name.size(); th++) addparam(name[th],min[th],max[th]);
+		for(unsigned int th = 0; th < name.size(); th++){
+			//if(name[th].substr(0,4) == "beta") max[th] *= 0.4;   // THIS IS TEMPORARY
+				if(name[th].substr(0,4) == "beta") max[th] *= 0.5;   // THIS IS TEMPORARY
+			addparam(name[th],min[th],max[th]);
+		}
 	}
 	
 	regioneffect = 0;
@@ -59,7 +67,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		}
 	}
 	
-	/*
+	
 	if(regioneffect == 0){
 		regioneffect = 2;
 		
@@ -71,17 +79,6 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 			param[param.size()-1].used = 1;
 		}
 	}
-	*/
-
-	unsigned int th;
-	for(th = 0; th < param.size(); th++){
-		if(param[th].name == "logbeta"){
-			param[th].used = 1;
-			logbeta_param = th;
-			break;
-		}
-	}
-	if(th == param.size()) emsg("In the input TOML file a 'logbeta' parameter must be specified");
 	
 	addparam("zero",tiny,tiny);
 
@@ -734,18 +731,13 @@ void MODEL::setarea()
 	
 	areafac.resize(data.narea);
 	for(c = 0; c < data.narea; c++){
-		sum = paramval[logbeta_param];
+		sum = 0;
 		for(j = 0; j < data.ncovar; j++) sum += paramval[covar_param[j]]*data.area[c].covar[j];
 		
 		if(regioneffect != 0) sum += paramval[regioneff_param[data.area[c].region]];
 		
 		areafac[c] = exp(sum);
-		if(std::isnan(areafac[c])){
-			cout << sum << " " <<  paramval[logbeta_param] << " be\n";
-			for(j = 0; j < data.ncovar; j++) cout << paramval[covar_param[j]]*data.area[c].covar[j] << "covar\n";
-			if(regioneffect != 0) cout <<  paramval[regioneff_param[data.area[c].region]] << "region ef\n";
-			emsgEC("Model",90);
-		}
+		if(std::isnan(areafac[c])) emsgEC("Model",90);
 	}
 }
 
@@ -811,13 +803,15 @@ double MODEL::prior()
 		for(auto i = 0u; i < betaspline.size()-1; i++){
 			if(betaspline[i].t != betaspline[i+1].t){
 				double dval = log(paramval[betaspline[i+1].param]/paramval[betaspline[i].param])/smooth;
+			
 				Pr += -dval*dval/2;
 			}
 		}
-		
+
 		for(auto i = 0u; i < phispline.size()-1; i++){
 			if(phispline[i].t != phispline[i+1].t){
 				double dval = log(paramval[phispline[i+1].param]/paramval[phispline[i].param])/smooth;
+					
 				Pr += -dval*dval/2;
 			}
 		}

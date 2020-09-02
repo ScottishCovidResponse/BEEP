@@ -59,6 +59,11 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	
 	sample_from_prior();
 
+	proposal_init();
+
+	popw.resize(data.nardp);                                        // Used for event based changes
+	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
+	
 	if(details.mode != inf) return;
 	
 	trevi = trevp;
@@ -70,11 +75,6 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	Pri = model.prior();
 
 	setQmapi(1);
-
-	proposal_init();
-
-	popw.resize(data.nardp);                                        // Used for event based changes
-	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
 }
 
 /// Randomly samples from prior and generates an event sequence
@@ -144,7 +144,6 @@ void Chain::proposal_init()
 		ntrxi[th] = 0; nacxi[th] = 0;
 	}
 	
-	logbetajump = 0.01;
 	sigmajump = 0.01;
 		
 	timeprop = 0;
@@ -987,13 +986,15 @@ void Chain::calcQmapp()
 }
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
-void Chain::standard_prop(unsigned int samp, unsigned int burnin)
+void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	unsigned int loop, loopmax = 1;
 	
 	timers.timestandard -= clock();
-	
+
 	model.setup(paramval);
+	
+	if(checkon == 1){ double dd = Pri - model.prior(); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
 	timers.timembptemp -= clock();
 	Levi = likelihood(Qmapi,xi,indevi);
@@ -1010,7 +1011,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin)
 		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",49);}
 
 		timers.timeaddrem -= clock();
-		if(loop%2 == 0) addrem_prop(samp,burnin);
+		if(loop%2 == 0) addrem_prop(samp,burnin,EFcut);
 		timers.timeaddrem += clock();
 		
 		if(checkon == 1){ double dd = likelihood(Qmapi,xi,indevi) - Levi; if(dd*dd > tiny) emsgEC("Chain",50);}
@@ -1122,6 +1123,8 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 				valst = paramval[th];	
 				paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
 
+				double Prp = Pri;
+				
 				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Levp = -large;}
 				else{
 					model.setup(paramval);
@@ -1138,11 +1141,14 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 						}
 						if(std::isnan(Levp)) emsgEC("Chain",52);
 					}
-					al = exp(Levp-Levi);
+					
+					if(smooth_spline == 1) Prp = model.prior();
+					al = exp(Prp - Pri + Levp-Levi);
 				}
 			
 				ntrxi[th]++;
 				if(ran() < al){
+					Pri = Prp;
 					Levi = Levp;
 					nacxi[th]++;
 					if(samp < burnin){ if(samp < 50) paramjumpxi[th] *= 1.05; else paramjumpxi[th] *= 1.01;}
@@ -1235,9 +1241,6 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 	loopmax = 12/num; if(loopmax == 0) loopmax = 1;
 	
 	for(loop = 0; loop < loopmax; loop++){
-		th = model.logbeta_param;
-		if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
-		
 		for(j = 0; j < model.covar_param.size(); j++){ 
 			th = model.covar_param[j];
 			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
@@ -1298,30 +1301,9 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 {
 	unsigned int th, r, loop, loopmax=10;
-	double al, Prp, sd, dlogbeta, valst;
+	double al, Prp, sd, valst;
 	
-	for(loop = 0; loop < loopmax; loop++){
-		th = model.logbeta_param;
-		dlogbeta = normal(0,logbetajump);
-		paramval[th] += dlogbeta;
-		for(r = 0; r < data.nregion; r++) paramval[model.regioneff_param[r]] -= dlogbeta;
-	
-		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max){ al = 0; Prp = Pri;}
-		else{
-			sd = paramval[model.sigma_param]; Prp = 0; for(r = 0; r < data.nregion; r++) Prp += normalprob(paramval[model.regioneff_param[r]],0,sd*sd);
-			al = exp(Prp-Pri);
-		}
-
-		if(ran() < al){
-			Pri = Prp;
-			if(samp < burnin){ if(samp < 50) logbetajump *= 1.05; else logbetajump *= 1.01;}
-		}
-		else{
-			paramval[th] -= dlogbeta;
-			for(r = 0; r < data.nregion; r++) paramval[model.regioneff_param[r]] += dlogbeta;
-			if(samp < burnin){ if(samp < 50) logbetajump *= 0.975; else logbetajump *= 0.995;}
-		}
-		
+	for(loop = 0; loop < loopmax; loop++){	
 		th = model.sigma_param;
 		valst = paramval[th];
 		paramval[th] += normal(0,sigmajump);
@@ -1364,10 +1346,10 @@ void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 }
 
 /// Adds and removes infectious individuals
-void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
+void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	unsigned int j, jmax, k, dk, sett, w, c, i, l;
-	double z, probif, probfi, Levp, Lp, t, dt, al, dd, sumtot;
+	double z, probif, probfi, Levp, Lp, EFp, t, dt, al, dd, sumtot;
 	vector <int> kst;
 	
 	model.setup(paramval);
@@ -1487,16 +1469,28 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin)
 	timers.timembptemp4 -= clock();
 	Levp = likelihood(Qmapp,xp,indevp);
 	
-	Lp = obsmodel.Lobs(trevp,indevp);
+	if(details.mode == abcmbp){
+		Lp = 0;
+		EFp = obsmodel.Lobs(trevp,indevp);
+		if(EFp > EFcut) al = 0;
+		else al = exp(Levp-Levi + probfi - probif);
+		if(checkon == 1) cout << al << " " << EF << " " << EFp << " " << Levi << " " << Levp <<  " " << EFcut << "al" << endl;		
+	}
+	else{
+		EFp = 0;
+		Lp = obsmodel.Lobs(trevp,indevp);
+		al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);
+		if(checkon == 1) cout << al << " " << Li << " " << Lp << " " << Levi << " " << Levp << "al" << endl;		
+	}
 	timers.timembptemp4 += clock();
-		
-	al = exp(invT*(Lp-Li) + Levp-Levi + probfi - probif);
-	if(checkon == 1) cout << al << " " << Li << " " << Lp << " " << Levi << " " << Levp << "al" << endl;		
+	
 	 
 	ntr_addrem++;
 	if(ran() < al){
 		Levi = Levp;
-		Li = Lp;
+		if(details.mode == abcmbp) EF = EFp;
+		else Li = Lp;
+		
 		trevi = trevp;
 		Qmapi = Qmapp;
 		
@@ -1561,6 +1555,9 @@ vector <FEV> Chain::event_compress(const vector < vector <FEV> > &indev) const
 void Chain::initialise_from_particle(const Particle &part)
 
 {
+	paramval = part.paramval;
+	model.setup(paramval);
+	
 	auto jmax = xi.size(); for(auto j = 0u; j < jmax; j++) indevi[xi[j].ind].clear();   // Removes the exisiting initial sequence 
 	xi.clear();
 	
@@ -1583,8 +1580,6 @@ void Chain::initialise_from_particle(const Particle &part)
 	Pri = model.prior();
 	
 	if(EF != obsmodel.Lobs(trevi,indevi)) emsg("Observation does not agree");
-	
-	paramval = part.paramval;
 }
 
 /// Generates a particle (used for abcmbp)

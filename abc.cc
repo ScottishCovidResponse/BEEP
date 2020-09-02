@@ -28,7 +28,6 @@ struct PartEF                                                              // St
 
 bool PartEF_ord (PartEF p1,PartEF p2) { return (p1.EF < p2.EF); }          // Used to order by EF
 
-
 /// Initilaises the ABC class
 ABC::ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
@@ -38,7 +37,9 @@ ABC::ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptre
 	}
 	nvar = param_not_fixed.size();
 	
-	total_time = inputs.find_int("cputime",1000);  
+	jumpv.resize(nvar); for(auto v = 0u; v < nvar; v++) jumpv[v] = 1;
+	
+	total_time = inputs.find_int("cputime",1000000);  
 }
 
 /// Implements a version of abc which uses model-based proposals in MCMC
@@ -46,22 +47,19 @@ void ABC::mbp()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
 	
-	const int N = 10;
+	const int N = 4;
 	vector <Particle> part;					
 	part.resize(N);
 	
 	unsigned int partcopy[N*mpi.ncore];
+	//total_time = 10;
+	const int G = 300;
 	
-	double jump = 0.1;
-	
-	const int G = 100;
 	vector <Generation> generation; 
-	vector <PARAMSAMP> param_samp;
 	
-	output.trace_plot_init();
+	for(auto g = 0; g < G; g++){
+		timers.timeabc -= clock();
 
-	timers.timeabc -= clock();
-	for(auto g = 0; g < G; g++){		
 		Generation gen;
 		gen.time = clock();
 		
@@ -80,35 +78,74 @@ void ABC::mbp()
 				gen.EF_samp.push_back(EF);
 			}
 		}
-		else{	
+		else{
 			gen.EFcut = next_generation_mpi(part,partcopy);
 			
-			double ac_rate = mcmc_updates(gen,part,chain,jump);
-	
-			double mi = mix(part,partcopy);
+			mcmc_updates(gen,part,chain);
+
+			//double mi = mix(part,partcopy);
 		
 			if(mpi.core == 0){
-				cout << "Generation " << g << ": EFcut " << gen.EFcut << "  Acceptance " << ac_rate << "  Jump " << jump << "  Mix " << mi << endl;
+				//cout << "Generation " << g << ": EFcut " << gen.EFcut << "  Mix " << mi << endl;
+				cout << "Generation " << g << ": EFcut " << gen.EFcut << endl;
 			}
 		}
+
 		generation.push_back(gen);
-	
+
 		exchange_samples_mpi(generation[g]);	
 		cholesky(generation[g].param_samp);
 			
-		if(mpi.core == 0){
-			string file = "generation_mbp.txt";
-			output.generation_plot(file,generation);
+		timers.timeabc += clock();
+		
+		if(g%5 == 0){
+			if(mpi.core == 0){
+				string file = "generation_mbp.txt";
+				output.generation_plot(file,generation);
+			}
 		}
 		
-		if(g%5 == 0) results_mpi(generation,part,chain);
+		if(g%5 == 0){
+			results_mpi(generation,part,chain);
+			if(mpi.core == 0){
+				cout << int((100.0*timers.timeabcprop)/timers.timeabc) << "% CPU time on proposals\n";
+				cout << int((100.0*timers.timestandard)/timers.timeabc) << "% CPU time on standard\n";
+			}
+		}
+
+		if(g%5 == 0 && mpi.core == 0){
+			string file = details.outputdir+"/M.txt";
+			ofstream Mpl(file.c_str());
+		
+			for(auto i1 = 0u; i1 < nvar; i1++){
+				for(auto i2 = 0u; i2 < nvar; i2++){
+					Mpl << M[i1][i2] << " ";
+				}
+				Mpl << "M\n";
+			}		
 			
-		if((timers.timeabc+clock())/(60.0*CLOCKS_PER_SEC) > total_time) break;
+			Mpl << "coorela\n";
+			for(auto i1 = 0u; i1 < nvar; i1++){
+				for(auto i2 = 0u; i2 < nvar; i2++){
+					if(i1 == i2) Mpl  << "--- ";
+					else Mpl << M[i1][i2]/sqrt(M[i1][i1]*M[i2][i2]) << " ";
+				}
+				Mpl << "M\n";
+			}		
+		}
+	
+	
+	
+		double timetaken = timers.timeabc/(60.0*CLOCKS_PER_SEC);
+		
+		MPI_Bcast(&timetaken,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+		if(timetaken > total_time) break;
 	}
-	timers.timeabc += clock();
 	
 	if(mpi.core == 0) cout << int((100.0*timers.timeabcprop)/timers.timeabc) << "% CPU time on proposals\n";
 	
+
 	results_mpi(generation,part,chain);
 	
 	if(mpi.core == 0){
@@ -119,22 +156,23 @@ void ABC::mbp()
  
 /// This is an implementation of an ABC-SMC algorithm, which is used to compare against the MBP-MCMC approach 
 void ABC::smc()
-{
-	const auto total_time = 10;
-		
+{	
 	Chain chain(details,data,model,poptree,obsmodel,0);
 	
-	const unsigned int N = 100;
+	const unsigned int N = 400;
 	const unsigned int Ntot = N*mpi.ncore;
 	const double jump = 1;
 	const int G = 100;
 
 	vector <Generation> generation; 
 	
+	//total_time = 10;
+	
 	auto nparam = model.param.size();
 
-	timers.timeabc -= clock();
 	for(auto g = 0; g < G; g++){
+		timers.timeabc -= clock();
+			
 		Generation gen;
 		gen.time = clock();
 		if(g == 0){
@@ -196,15 +234,16 @@ void ABC::smc()
 		
 		calculate_w(generation,jump);  // Calculates the weights for the next generation
 		
+		timers.timeabc += clock();
+			
 		if(mpi.core == 0){
 			string file = "generation_smc.txt";
 			output.generation_plot(file,generation);
 		}
 		
-		if((timers.timeabc+clock())/(60.0*CLOCKS_PER_SEC) > total_time) break;
+		if(timers.timeabc/(60.0*CLOCKS_PER_SEC) > total_time) break;
 	}
-	timers.timeabc += clock();
-		
+
 	if(mpi.core == 0){
 		string file = "Posterior_parameters.txt";
 		output.plot_distribution(file,generation[generation.size()-1]);
@@ -212,60 +251,68 @@ void ABC::smc()
 }
 
 /// Updates particles using MBPs
-double ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain, double &jump)
+void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 {	
-	const double beta = 1;
+	const auto p_mbp = 0.9;
+	const auto sampstep = 5u;
+	const double beta = 2;
 	const double facup = 1.2, facdown = 0.8;
-	const int jumpMVN = 1;
-	
-	auto ntr = 0u;
-	auto nac = 0u;
+
 	unsigned int ntr_v[nvar], nac_v[nvar];
 	for(auto v = 0u; v < nvar; v++){ ntr_v[v] = 0; nac_v[v] = 0;}
 	
 	double EFcut = gen.EFcut;
 	auto N = part.size();
 	
+	auto jmax = 0u;
+	for(auto v = 0u; v < nvar; v++){
+		auto num = 1.0/(jumpv[v]*jumpv[v]);
+		if(num < 1) num = 1;
+		jmax += beta*num;
+	}
+	
+	if(jmax < 1) jmax = 1;
+	if(mpi.core == 0) cout << jmax << "jmax\n";
+	
 	for(auto i = 0u; i < N; i++){
 		chain.initialise_from_particle(part[i]);
-	
-		if(jumpMVN == 1){  // Uses MVN jumping
-			unsigned int jmax = beta/(jump*jump); if(jmax < 1) jmax = 1;
-			for(auto j = 0u; j < jmax; j++){
-				if(j%10 == 0) gen.param_samp.push_back(chain.paramval);				
+
+		for(auto j = 0u; j < jmax; j++){
+			if(j%sampstep == 0){
+				gen.param_samp.push_back(chain.paramval);				
 				gen.EF_samp.push_back(chain.EF);
-			
-				vector <double> param_propose = chain.paramval;
-				cholesky_propose(param_propose,jump);	
-				ntr++;
-				timers.timeabcprop -= clock();
-				if(chain.abcmbp_proposal(param_propose,EFcut) == 1) nac++;
-				timers.timeabcprop += clock();
 			}
-		}
-		else{   // jumps individuals variables
-			gen.param_samp.push_back(chain.paramval);				
-			gen.EF_samp.push_back(chain.EF);
-			for(auto v = 0u; v < nvar; v++){
+			
+			if(ran() < p_mbp){
+				auto v = (unsigned int)(ran()*nvar);
 				auto th = param_not_fixed[v];
-				
-				vector <double> param_propose = chain.paramval;
-				param_propose[th] += normal(0,sqrt(M[v][v]));
 					
+				vector <double> param_propose = chain.paramval;
+				param_propose[th] += normal(0,jumpv[v]*sqrt(M[v][v]));
+						
+				timers.timeabcprop -= clock();
 				ntr_v[v]++;
 				if(chain.abcmbp_proposal(param_propose,EFcut) == 1) nac_v[v]++;
+				timers.timeabcprop += clock();
+			}
+			else{
+				chain.standard_prop(0,1,EFcut);
 			}
 		}
+			
 		chain.generate_particle(part[i]);
 	}	
 			
-	double ac_rate = acceptance(double(nac)/ntr);
-	if(ac_rate > 0.4) jump *= facup;
-	else{
-		if(ac_rate < 0.3) jump *= facdown;
+	for(auto v = 0u; v < nvar; v++){
+		double ac_rate = acceptance(double(nac_v[v])/(ntr_v[v]+0.01));
+		
+		//if(mpi.core == 0) cout << int(100.0*jumpv[v]) << " " <<int(100.0*ac_rate) << ", ";
+		if(ac_rate > 0.4){ jumpv[v] *= facup; if(jumpv[v] > 2) jumpv[v] = 2;}
+		else{
+			if(ac_rate < 0.3) jumpv[v] *= facdown; 
+		}
 	}
-	
-	return ac_rate;
+	//if(mpi.core == 0) cout << "acc\n";
 }
 
 /// Finds the effective number of particles
@@ -309,15 +356,12 @@ void ABC::calculate_w(vector <Generation> &generation, double jump)
 			double w;
 			if(gen.EF_samp[i] >= EFcut) w = 0;
 			else{
-				if(g == 0) w = 1;
-				else{
-					double sum = 0;
-					for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jump);
-					
-					model.setup(gen.param_samp[i]);
-					//cout << model.prior()
-					w = exp(model.prior())/sum;
-				}
+				
+				double sum = 0;
+				for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jump);
+				
+				model.setup(gen.param_samp[i]);
+				w = exp(model.prior())/sum;
 			}
 			gen.w[i] = w;
 		}	
@@ -328,8 +372,13 @@ void ABC::calculate_w(vector <Generation> &generation, double jump)
 	wsum /= Ncut;
 	for(auto i = 0u; i < Ntot; i++) gen.w[i] /= wsum;
 			
-	//for(auto i = 0u; i < Ntot; i++) cout << i << " " << gen.EF_samp[i] << " " <<  gen.w[i] << " w\n";			
-	//for(auto i = 0u; i < Ntot; i++) cout << gen.w[i] << " "; cout << " w\n";			
+	//for(auto i = 0u; i < Ntot; i++) cout << i << " " << gen.EF_samp[i] << " " <<  gen.w[i] << " w\n";		
+/*	
+	if(mpi.core == 0){
+		for(auto i = 0u; i < Ntot; i++) cout << gen.w[i] << " "; cout << " w\n";		
+		for(auto i = 0u; i < Ntot; i++){ 	model.setup(gen.param_samp[i]); cout <<  exp(model.prior()) << " "; cout << " pri\n";		}
+	}
+*/	
 }
 
 /// Calculate a measure of how well a generation is mixed (by comparing the similarity between the two sets of copied particles)
@@ -511,6 +560,8 @@ double ABC::next_generation_mpi(vector<Particle> &part, unsigned int *partcopy)
 		for(auto i = 0u; i < Ntot; i++){ partef[i].i = i; partef[i].EF = EFtot[i];}
 		
 		sort(partef,partef+Ntot,PartEF_ord);
+		
+		if(Ntot%2 != 0) emsg("The number of particles must be even.");
 		
 		auto mid = Ntot/2;
 		EFcut = 0.5*(partef[mid-1].EF + partef[mid].EF);

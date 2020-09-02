@@ -21,7 +21,7 @@ public:
 	void mbp();
 	
 private:
-	double mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain, double &jump);
+	void mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain);
 	void cholesky(const vector <vector <double> > &param_samp);
 	void cholesky_propose(vector <double> &paramval, double fac);
 	double mix(const vector <Particle> &part, unsigned int *partcopy) const;
@@ -47,6 +47,8 @@ private:
 	vector < vector <double> > M; 
 	vector < vector <double> > inv; 
 		
+	vector <double> jumpv;
+	
 	const Details &details;
 	DATA &data;
 	MODEL &model;

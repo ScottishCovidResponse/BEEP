@@ -19,7 +19,7 @@ public:
 	void sample_from_prior();
 	unsigned int simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
-	void standard_prop(unsigned int samp, unsigned int burnin);
+	void standard_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	void setQmapi(unsigned int check);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
 	void initialise_from_particle(const Particle &part);
@@ -47,7 +47,6 @@ public:
 	vector <float> paramjumpxi;                           // The size of jumps in parameter space (fixed event sequence)
 	vector <unsigned int> ntrxi, nacxi;                   // The number of jumps tried and accepted
 
-	float logbetajump;                                    // Used for jumping in logbetajump
 	float sigmajump;                                      // Used for jumping in sigma
 	
 	vector < vector <FEV> > indevi;                       // The individual event sequences for the initial state
@@ -81,7 +80,7 @@ private:
 	void area_prop(unsigned int samp, unsigned int burnin);
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
-	void addrem_prop(unsigned int samp, unsigned int burnin);
+	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	void proposal_init();
 		
 	double Levi;         																	// The latent process likelihood

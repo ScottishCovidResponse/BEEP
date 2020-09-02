@@ -71,6 +71,7 @@ const vector<string> definedparams = {       // A list of all supported paramete
 		"burnin",
 		"comps",
 		"covars",
+		"cputime",
 		"datadir",
 		"democats",
 		"distribution",

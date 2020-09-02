@@ -252,7 +252,7 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 		if(data.margdata[d].type == "reg"){ for(r = 0; r < data.nregion; r++) posterior_plot(opsamp,d,r,marg_data);}
 		if(data.margdata[d].type == "all") posterior_plot(opsamp,d,UNSET,marg_data);
 	}
-		
+
 	file = "Posterior_R0.txt";
 	filefull = details.outputdir+"/"+file;
 	ofstream R0out(filefull.c_str());
@@ -303,12 +303,13 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 	paramout << "# Name, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
 	paramav.resize(model.param.size());
-	for(p = 0; p < model.param.size()-1; p++){
+	for(p = 0; p < model.param.size(); p++){
 		vec.clear(); for(s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
 		stat = getstat(vec);
 		paramav[p] = atof(stat.mean.c_str());
-		
-		paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
+		if(p < model.param.size()-1){
+			paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
+		}
 	}
 	
 	file = "Posterior_distributions.txt";
@@ -338,8 +339,7 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 		}
 		distout << endl;
 	}
-			
-				
+	
 	file = "Posterior_Rmap.txt";
 	filefull = details.outputdir+"/"+file;
 	ofstream Rmapout(filefull.c_str());
@@ -547,7 +547,14 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		ofstream transout(filefull);
 		if(!transout) emsg("Cannot output the file '"+filefull+"'");
 		
-		cout << "  '" << file << "' gives the observed weekly number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
+		cout << "  '" << file << "' gives the observed ";
+		switch(data.transdata[td].units){
+		case 1: cout << "daily"; break;
+		case 7: cout << "weekly"; break;
+		default: emsg("Problem with units"); break;
+		}
+		
+		cout << " number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
 		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
@@ -762,6 +769,8 @@ void Output::plot_distribution(string file, const Generation &gen) const
 {
 	const int smax = 100000;
 	
+	ensuredirectory(details.outputdir);
+		
 	if(details.mode != abcsmc) emsg("The mode should be ANC-SMC");
 	
 	string filefull = details.outputdir+"/"+file;
@@ -811,6 +820,8 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 {
 	auto nparam = model.param.size(); 
 	
+	ensuredirectory(details.outputdir);
+		
 	string filefull = details.outputdir+"/"+file;
 	ofstream genout(filefull.c_str());
 	if(!genout) emsg("Cannot output the file '"+filefull+"'");
@@ -822,7 +833,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 	long timestart = generation[0].time;
 	for(auto g = 0u; g < generation.size(); g++){
 		const Generation &gen=generation[g];
-		genout << g << " " << (gen.time - timestart)/(60*CLOCKS_PER_SEC) << " " << gen.EFcut;
+		genout << g << " " << (gen.time - timestart)/(60.0*CLOCKS_PER_SEC) << " " << gen.EFcut;
 		
 		for(auto th = 0u; th < nparam; th++){
 			vector <PW> vec;
@@ -850,6 +861,8 @@ double Output::model_evidence_plot(string file, const vector<Generation> &genera
 {
 	cout << "'" << file << "' gives the log model evidence as a function of the cutoff in the log of the observation probability." << endl;
 
+	ensuredirectory(details.outputdir);
+		
 	string filefull = details.outputdir+"/"+file;
 	ofstream MEout(filefull.c_str());
 	if(!MEout) emsg("Cannot output the file '"+filefull+"'");
@@ -863,7 +876,7 @@ double Output::model_evidence_plot(string file, const vector<Generation> &genera
 		
 		for(auto gg = 0u; gg <= g; gg++){
 			for(auto EF : generation[gg].EF_samp){
-				if(gg == g && EF > EF_upper_limit) emsgEC("Output",10);
+				if(gg == g && EF > EF_upper_limit){ cout << g << " " << EF << " " << EF_upper_limit << " y\n";  emsgEC("Output",10);}
 				if(EF < EF_upper_limit){
 					num++;
 					if(EF < EFcut) num_cut++;
@@ -871,8 +884,7 @@ double Output::model_evidence_plot(string file, const vector<Generation> &genera
 			}
 		}
 		ME += log(double(num_cut)/num);
-		cout << num_cut << " "<< num << " " << ME << "md\n";
-	
+
 		MEout << EFcut << " " << ME << endl;
 	}
 	

@@ -11,9 +11,24 @@ ABC-SMC: ./beepmbp inputfile="examples/inf.toml" mode="abcsmc"
 
 ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
  mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
-  mpirun -n 20 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
+ mpirun -n 20 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
+ mpirun -n 20 ./beepmbp inputfile="examples/infMSOAnewsim.toml" mode="abcmbp"  
+  ./beepmbp inputfile="examples/infMSOAnewsim.toml" mode="sim"  outputdir="Outputnew"
+
  mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
-*/
+
+  ./beepmbp inputfile="examples/inftest.toml" mode="sim" outputdir="OutputTest"
+	
+ mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcmbp" 
+  mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcsmc"  outputdir="OutputTest4" 
+	
+	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="sim"
+	 nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  outputdir="OutputMSOATest" &
+		nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcsmc"  outputdir="OutputMSOATest1" &
+		
+ nohup  mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  outputdir="OutputMSOATest" &     beta=2
+		
+ */
 
 #include <iostream>
 #include <sstream>

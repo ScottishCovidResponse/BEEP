@@ -38,6 +38,20 @@ void Simulate::run()
 	proportions(chain.indevp);
 	
 	output.simulateddata(chain.trevp,chain.indevp,details.outputdir);
+	SAMPLE sample;   // TEMP
+	PARAMSAMP paramsamp;		
+	vector <SAMPLE> opsamp; 
+  vector <PARAMSAMP> psamp;
+	
+	sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
+	model.setup(chain.paramval);
+	sample.R0 = model.R0calc();
+	sample.phi = model.phi; 
+	paramsamp.paramval = chain.paramval;
+	opsamp.push_back(sample);
+	psamp.push_back(paramsamp);
+	
+	output.results(psamp,opsamp);
 }
 
 /// Runs multiple simulations

@@ -34,6 +34,6 @@ const unsigned int MAX_NUMBERS = 15000000;                       // The maximum 
 const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions
 
 const unsigned int smooth_spline = 1;                            // Set to 1 if smoothing on splines is being done
-const double smooth = 0.2;                                       // Used for the smoothing priors on splines
+const double smooth = 0.4;                                       // Used for the smoothing priors on splines
 
 #endif

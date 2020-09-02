@@ -139,7 +139,7 @@ public:
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
 	unsigned int regioneffect;               // Set to 1 if a regional random effect is put in the force of infection
-	unsigned int logbeta_param;                 // The parameter for the base beta transmission rate
+	//unsigned int logbeta_param;                 // The parameter for the base beta transmission rate
 	unsigned int sigma_param;                // The standard deviation of the regional effect
 	vector <unsigned int> regioneff_param;   // The parameters related to regional effects
 
