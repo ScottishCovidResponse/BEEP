@@ -126,7 +126,6 @@ public:
 				
 	vector <PARAM> param;                    // Information about parameters in the model
 	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
-	//vector <double> paramval;                // The values of the parameters
 	vector <TRANS> trans;                    // Stores model transitions
 	vector <COMP> comp;	                     // Stores model compartments
 

@@ -58,10 +58,9 @@ trans   	=	[{from="S", to="E", dist="infection"},
 	
 # Defines the parameters in the model
 
-priors		= [{name="f0", type="uniform", value=1.0},                # The values for f in the beta spline
-						 {name="f1", type="uniform", min=0.0, max=1.0},
+priors		= [{name="beta0", type="uniform", min=0.0, max=0.5},                # The values for f in the beta spline
+						 {name="beta1", type="uniform", min=0.0, max=0.5},
 						 {name="phi", type="uniform", min=0.0, max=10.0},       # The values for the phi spline
-						 {name="logbeta", type="uniform", min=-3.0, max=0.0},   # The value of the log of the mean transmission rate
 						 {name="muE", value=4.5},           # The latent period
 						 {name="cvE", value=0.533},	        # The standard deviation in latent period			 
 						 {name="tA", value=8.0},            # Mean time spend in asymptomatic state
@@ -89,10 +88,10 @@ infmax 		= 20000
 # Defines the linear spline used to represent disease transmission parameter beta.
 # Format: The name of the parameter followed by the time of the spline point.
 	
-betaspline= [{param="f0", time="0"}, 
-						 {param="f0", time="56"},
-						 {param="f1", time="56"}, 
-						 {param="f1", time="112"}]				
+betaspline= [{param="beta0", time="0"}, 
+						 {param="beta0", time="56"},
+						 {param="beta1", time="56"}, 
+						 {param="beta1", time="112"}]				
 
 # Defines the linear spline used to represent external force of infection phi.
 # Format: The name of the parameter followed by the time of the spline point. Note, The parameter 'zero' sets the value to zero.

@@ -31,8 +31,6 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		vector <double> val;
 		inputs.find_param(name,val);
 		for(unsigned int th = 0; th < name.size(); th++){
-			//if(name[th].substr(0,4) == "beta") val[th] *= 0.307;   // THIS IS TEMPORARY
-			if(name[th].substr(0,4) == "beta") val[th] *= 0.4;   // THIS IS TEMPORARY
 			addparam(name[th],val[th],val[th]);
 		}
 	}
@@ -42,8 +40,6 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
 		for(unsigned int th = 0; th < name.size(); th++){
-			//if(name[th].substr(0,4) == "beta") max[th] *= 0.4;   // THIS IS TEMPORARY
-			if(name[th].substr(0,4) == "beta") max[th] *= 0.5;   // THIS IS TEMPORARY
 			addparam(name[th],min[th],max[th]);
 		}
 	}
@@ -340,42 +336,7 @@ vector <double> MODEL::priorsamp()
 		}
 	}
 	//for(auto th = 0u; th < param.size(); th++) cout << "paramv[" << th <<"] = " << paramv[th] << ";" << endl;
-	/*
-	paramval[0] = 0.4;
-paramval[1] = 0.36;
-paramval[2] = 0.32;
-paramval[3] = 0.28;
-paramval[4] = 0.28;
-paramval[5] = 0.08;
-paramval[6] = 0.08;
-paramval[7] = 0.1;
-paramval[8] = 0.12;
-paramval[9] = 0.14;
-paramval[10] = 0.16;
-paramval[11] = 0.18;
-paramval[12] = 1;
-paramval[13] = 4.5;
-paramval[14] = 0.533;
-paramval[15] = 8;
-paramval[16] = 1.5;
-paramval[17] = 10;
-paramval[18] = 20;
-paramval[19] = 0.5;
-paramval[20] = 25;
-paramval[21] = 2;
-paramval[22] = 18;
-paramval[23] = 0.8;
-paramval[24] = 0.75;
-paramval[25] = 0.5;
-paramval[26] = 0.21;
-paramval[27] = 0.35;
-paramval[28] = 0.2;
-paramval[29] = -0.0105598;
-paramval[30] = -0.125467;
-paramval[31] = 0.0947673;
-paramval[32] = -0.11338;
-paramval[33] = 1e-08;
-*/
+
 	return paramv;
 }
 
@@ -1008,7 +969,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 
 	for(loop = 0; loop < loopmax; loop++){
 		for(th = 0; th < param.size(); th++){
-			if((param[th].type == distval_paramtype || branchprob_paramtype) && param[th].min != param[th].max){
+			if((param[th].type == distval_paramtype || param[th].type == branchprob_paramtype) && param[th].min != param[th].max){
 				vector <double> paramst = paramv;	
 			
 				paramv[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
@@ -1044,8 +1005,12 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				else{
 					paramv = paramst;
 					if(samp < burnin) paramjumpxi[th] *= 0.995;
-				}
+				}	
 			}
+			
+		dd = likelihood_dt(paramv)-Li_dt; if(dd*dd > tiny) emsgEC("Model",13);
+		settransprob(paramv);
+		dd = likelihood_prob()-Li_prob; if(dd*dd > tiny) emsgEC("Model",14);
 		}
 	}
 	

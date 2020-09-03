@@ -64,53 +64,19 @@ trans   	=	[{from="S", to="E", dist="infection"},
 						 
 # Defines the parameters in the model
 
-params		= [{name="beta0", value=1.0},        # The values for the beta spline (a step function in this case)
-						 {name="beta1", value=0.9},
-						 {name="beta2", value=0.8},        # The values for the beta spline (a step function in this case)
-						 {name="beta3", value=0.75},
-						 {name="beta4", value=0.7},
-						 {name="beta5", value=0.1},
-						 {name="beta6", value=0.1},
-						 {name="beta7", value=0.12},
-						 {name="beta8", value=0.2},
-						 {name="beta9", value=0.30},
-						 {name="beta10", value=0.44},
-						 {name="beta11", value=0.6},
-						 {name="phi", value=1.0},          # The values for the phi spline (a step function to zero)
-						 {name="muE", value=4.5},                                  # The latent period
-						 {name="cvE", value=0.533},	                               # The coefficent of variation for latent period			 
-						 {name="tA", value=8.0},                                   # Mean time spend in asymptomatic state
-						 {name="tP", value=1.5},                                   # Mean time spend in pre-symptomatic state
-						 {name="tI",  value=10.0},         # Mean time spend in infectious state
-					   {name="muHD", value=20.0},         # Mean time for hospital deaths
-						 {name="cvHD", value=0.5},          # The coefficent of variation for hospital deaths
-						 {name="muHR", value=25.0},         # Mean time for hospital recoveries
-						 {name="cvHR", value=2.0},          # The coefficent of variation for hospital recoveries
-						 {name="muC", value=18.0},          # Mean time spend in critical compartment
-						 {name="cvC", value=0.8},           # The coefficent of variation in critical compartment
-						 {name="probEP", value=0.75},                              # Probability of being symptomatic
-						 {name="probIH", value=0.2},                               # Probability of hospitalised given in I state
-						 {name="probIC", value=0.21},        # Probability of death in community 
-						 {name="probHD", value=0.35},       # Probability of death given hospitalised 
-						 {name="den_slope", value=0.2}     # The dependency of contact rate on log(population density)
-						 #{name="regeff_sigma", value=0.05}   # The standard deviation in the regional effect
-						 ]   
-# {name="logbeta", value=-1.18}, 
-						
-
 	
-priors		= [{name="beta0", type="uniform", min=0.0, max=1.0},        # The values for the beta spline (a step function in this case)
-						 {name="beta1", type="uniform", min=0.0, max=1.0},
-						 {name="beta2", type="uniform", min=0.0, max=1.0},
-						 {name="beta3", type="uniform", min=0.0, max=1.0},
-						 {name="beta4", type="uniform", min=0.0, max=1.0},
-						 {name="beta5", type="uniform", min=0.0, max=1.0},
-						 {name="beta6", type="uniform", min=0.0, max=1.0},
-						 {name="beta7", type="uniform", min=0.0, max=1.0},
-						 {name="beta8", type="uniform", min=0.0, max=1.0},
-						 {name="beta9", type="uniform", min=0.0, max=1.0},
-						 {name="beta10", type="uniform", min=0.0, max=1.0},
-						 {name="beta11", type="uniform", min=0.0, max=1.0},
+priors		= [{name="beta0", type="uniform", min=0.0, max=0.5},        # The values for the beta spline (a step function in this case)
+						 {name="beta1", type="uniform", min=0.0, max=0.5},
+						 {name="beta2", type="uniform", min=0.0, max=0.5},
+						 {name="beta3", type="uniform", min=0.0, max=0.5},
+						 {name="beta4", type="uniform", min=0.0, max=0.5},
+						 {name="beta5", type="uniform", min=0.0, max=0.5},
+						 {name="beta6", type="uniform", min=0.0, max=0.5},
+						 {name="beta7", type="uniform", min=0.0, max=0.5},
+						 {name="beta8", type="uniform", min=0.0, max=0.5},
+						 {name="beta9", type="uniform", min=0.0, max=0.5},
+						 {name="beta10", type="uniform", min=0.0, max=0.5},
+						 {name="beta11", type="uniform", min=0.0, max=0.5},
 						 {name="phi", type="uniform", min=0.0, max=10.0},          # The values for the phi spline (a step function to zero)
 						 {name="muE", value=4.5},                                  # The latent period
 						 {name="cvE", value=0.533},	                               # The coefficent of variation for latent period			 

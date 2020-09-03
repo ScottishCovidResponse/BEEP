@@ -7,5 +7,5 @@ using namespace std;
 
 string gitversion()
 {
-	return GIT_VERSION;
+    return GIT_VERSION;
 }

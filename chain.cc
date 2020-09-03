@@ -1593,7 +1593,7 @@ void Chain::generate_particle(Particle &part) const
 	part.ev = event_compress(indevi);
 }
 
-int Chain::abcmbp_proposal(const vector <double> param_propose, double EFcut)  
+int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)  
 {
 	model.setup(paramval);
 	model.copyi(paramval);

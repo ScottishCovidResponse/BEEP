@@ -24,7 +24,7 @@ public:
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
 	void initialise_from_particle(const Particle &part);
 	void generate_particle(Particle &part) const;
-	int abcmbp_proposal(const vector <double> param_propose, double EFcut);
+	int abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 	
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 	
