@@ -1,0 +1,12 @@
+1,5c1,5
+< # The I→H transitions stratified by 'age'.
+< category, data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
+< age0-19 34.4828 26.530612 26.530612 26.530612 ---
+< age20-64 56.5923 61.224490 61.224490 61.224490 ---
+< age65+ 8.92495 12.244898 12.244898 12.244898 ---
+---
+> # The I→H transitions stratified by 'age'.
+> category, data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size
+> age0-19 34.4828 36.528497 36.528497 36.528497 ---
+> age20-64 56.5923 55.181347 55.181347 55.181347 ---
+> age65+ 8.92495 8.290155 8.290155 8.290155 ---
