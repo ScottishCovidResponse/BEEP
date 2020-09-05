@@ -38,20 +38,23 @@ void Simulate::run()
 	proportions(chain.indevp);
 	
 	output.simulateddata(chain.trevp,chain.indevp,details.outputdir);
-	SAMPLE sample;   // TEMP
-	PARAMSAMP paramsamp;		
-	vector <SAMPLE> opsamp; 
-  vector <PARAMSAMP> psamp;
 	
-	sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
-	model.setup(chain.paramval);
-	sample.R0 = model.R0calc(chain.paramval);
-	sample.phi = model.phi; 
-	paramsamp.paramval = chain.paramval;
-	opsamp.push_back(sample);
-	psamp.push_back(paramsamp);
-	
-	output.results(psamp,opsamp);
+	if(1 == 0){ // This is switched on to see distribution for R and eta from the simulated data
+		SAMPLE sample; 
+		PARAMSAMP paramsamp;		
+		vector <SAMPLE> opsamp; 
+		vector <PARAMSAMP> psamp;
+		
+		sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
+		model.setup(chain.paramval);
+		sample.R0 = model.R0calc(chain.paramval);
+		sample.phi = model.phi; 
+		paramsamp.paramval = chain.paramval;
+		opsamp.push_back(sample);
+		psamp.push_back(paramsamp);
+		
+		output.results(psamp,opsamp);
+	}
 }
 
 /// Runs multiple simulations

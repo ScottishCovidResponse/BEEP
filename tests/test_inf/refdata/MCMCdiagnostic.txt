@@ -1,17 +1,16 @@
 -------- Chain: 0 ----------
 
-invT: 0.25  Li average: -2337.77  
+invT: 0.25  Li average: -4540.34  
 MBP Accept: 
-f0: --- 
-f1: --- 
-phi: --- 
-logbeta: 0 jump:-0.855516, 
+beta0: --- 
+beta1: 0 jump:0.0425205, 
+phi: 0.333333 jump:2.30823, 
 muE: --- 
 cvE: --- 
 tA: --- 
 tP: --- 
 tI: --- 
-tH: 0 jump:5.83076, 
+tH: 0 jump:5.12751, 
 probEP: --- 
 probIH_C: --- 
 probIH_A: --- 
@@ -19,25 +18,28 @@ probIH_E: ---
 probID_C: --- 
 probID_A: --- 
 probID_E: --- 
-probHD_C: --- 
-probHD_A: 1 jump:0.00222652, 
-probHD_E: 0.5 jump:0.2041, 
+probHD_C: 0 jump:0.332864, 
+probHD_A: 1 jump:0.472008, 
+probHD_E: --- 
 sus_adult: --- 
 sus_elderly: --- 
-den_slope: 0 jump:0.0753992, 
+den_slope: 1 jump:0.085575, 
+reff_r0: --- 
+reff_r1: --- 
+reff_r2: 0 jump:0.072568, 
+reff_r3: 1 jump:-0.0588462, 
 zero: --- 
 
 Standard Accept: 
-f0: --- 
-f1: 0.5 jump:0.0751252, 
-phi: 1 jump:0.0322886, 
-logbeta: 0.25 jump:-0.171103, 
+beta0: 0 jump:0.0293512, 
+beta1: 0.5 jump:0.00850409, 
+phi: 0.75 jump:0.461646, 
 muE: --- 
 cvE: --- 
 tA: --- 
 tP: --- 
 tI: --- 
-tH: 1 jump:1.16615, 
+tH: 1 jump:1.0255, 
 probEP: --- 
 probIH_C: --- 
 probIH_A: --- 
@@ -45,12 +47,16 @@ probIH_E: ---
 probID_C: --- 
 probID_A: --- 
 probID_E: --- 
-probHD_C: 1 jump:0.00958484, 
-probHD_A: 1 jump:0.000445305, 
-probHD_E: 0.5 jump:0.0408199, 
+probHD_C: 1 jump:0.0665729, 
+probHD_A: 0.5 jump:0.0944017, 
+probHD_E: 0.5 jump:0.0980149, 
 sus_adult: --- 
 sus_elderly: --- 
-den_slope: 0.958333 jump:0.0150798, 
+den_slope: 0.875 jump:0.017115, 
+reff_r0: --- 
+reff_r1: --- 
+reff_r2: --- 
+reff_r3: --- 
 zero: --- 
 
 Add / remove infected: 

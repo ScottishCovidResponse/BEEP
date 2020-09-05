@@ -1,26 +1,28 @@
-/home/user/BEEPmbp
+/nfs/home/cpooley/BEEPmbp
 Runing test with input file tests/test_inf/test_inf.toml and output directory regression_test_results/test_inf
+BEEPmbp version lastgood-500-g925a7df-dirty
 
-Settings:
-  mode = inf
-  nchain = 1
-  nsamp = 2
-  infmax = 20000
-  timeformat = number
-  start = 0
-  end = 112
-  seed = 0
-  propsmethod = fixednum
-  outputdir = regression_test_results/test_inf
-  datadir = examples/Data_example
-  regions = regiondata.txt
-  areas = areadata.txt
-
-Age categories: 
-  age0-19 sus='zero', age20-64 sus='sus_adult', age65+ sus='sus_elderly'
+Loaded table regiondata.txt from file examples/Data_example/regiondata.txt
+Loaded table areadata.txt from file examples/Data_example/areadata.txt
+Loaded table IH.txt from file examples/Data_example/IH.txt
+Loaded table ID.txt from file examples/Data_example/ID.txt
+Loaded table IR.txt from file examples/Data_example/IR.txt
+Loaded table HD.txt from file examples/Data_example/HD.txt
+Loaded table H.txt from file examples/Data_example/H.txt
+Loaded table IH_age.txt from file examples/Data_example/IH_age.txt
+Loaded table ID_age.txt from file examples/Data_example/ID_age.txt
+Loaded table IR_age.txt from file examples/Data_example/IR_age.txt
+Loaded table HD_age.txt from file examples/Data_example/HD_age.txt
+Generating Q tensors.
+Loaded array examples/Data_example/Ndata_all.txt from file examples/Data_example/Ndata_all.txt
+Loaded array examples/Data_example/Ndata_home.txt from file examples/Data_example/Ndata_home.txt
+Loaded sparse matrix examples/Data_example/Mdata.txt from file
 
 Area covariates: 
   density   param='den_slope'
+
+Age categories: 
+  age0-19 sus='zero', age20-64 sus='sus_adult', age65+ sus='sus_elderly'
 
 Time periods defined:
   beforeLD: 0 - 56
@@ -34,30 +36,11 @@ Q tensors loaded:
     timep: beforeLD  compartment: A  name: Q_flow_all_data  
     timep: afterLD  compartment: A  name: Q_local_home_data  
 
-Loaded examples/Data_example/regiondata.txt
-Region data loaded.
-Loaded examples/Data_example/areadata.txt
-
-Area data loaded.
-Loaded examples/Data_example/IH.txt
-Loaded examples/Data_example/ID.txt
-Loaded examples/Data_example/IR.txt
-Loaded examples/Data_example/HD.txt
-Loaded examples/Data_example/H.txt
-Loaded examples/Data_example/IH_age.txt
-Loaded examples/Data_example/ID_age.txt
-Loaded examples/Data_example/IR_age.txt
-Loaded examples/Data_example/HD_age.txt
-Generating Q tensors.
-
-
-Number of areas: 100
 
 Priors:
-  f0 = 1
-  f1 = Uniform(0 - 1)
+  beta0 = Uniform(0 - 0.5)
+  beta1 = Uniform(0 - 0.5)
   phi = Uniform(0 - 10)
-  logbeta = Uniform(-3 - 0)
   muE = 4.5
   cvE = 0.533
   tA = 8
@@ -77,6 +60,10 @@ Priors:
   sus_adult = 0
   sus_elderly = 0
   den_slope = Uniform(0 - 0.2)
+  reff_r0 = Uniform(-0.2 - 0.2)
+  reff_r1 = Uniform(-0.2 - 0.2)
+  reff_r2 = Uniform(-0.2 - 0.2)
+  reff_r3 = Uniform(-0.2 - 0.2)
 
 Compartments:
   S  Infectivity: 0
@@ -90,14 +77,14 @@ Compartments:
 
 Transitions:
   S → E Infection
-  E → P  with probability probEP, probEP, probEP Lognormal mean=muE cv=cvE
+  E → P with probability probEP, probEP, probEP   Lognormal mean=muE cv=cvE
   E → A Lognormal mean=muE cv=cvE
   A → R Exponential  mean=tA
   P → I Exponential  mean=tP
-  I → H  with probability probIH_C, probIH_A, probIH_E Exponential  mean=tI
-  I → D  with probability probID_C, probID_A, probID_E Exponential  mean=tI
+  I → H with probability probIH_C, probIH_A, probIH_E   Exponential  mean=tI
+  I → D with probability probID_C, probID_A, probID_E   Exponential  mean=tI
   I → R Exponential  mean=tI
-  H → D  with probability probHD_C, probHD_A, probHD_E Exponential  mean=tH
+  H → D with probability probHD_C, probHD_A, probHD_E   Exponential  mean=tH
   H → R Exponential  mean=tH
 
 Running....
@@ -127,7 +114,7 @@ Posterior outputs in directory 'regression_test_results/test_inf':
 'Posterior_parameters.txt' gives the model parameters.
 'Posterior_distributions.txt' gives the probability distributions for parameters.
 'Posterior_Rmap.txt' gives the time and spatial variation in R0.
-'regression_test_results/test_inf/trace.txt' gives trace plots for model parameters.
-'regression_test_results/test_inf/traceLi.txt' gives trace plots for the observation likelihoods on different chains.
+'trace.txt' gives trace plots for model parameters.
+'traceLi.txt' gives trace plots for the observation likelihoods on different chains.
 Model evidence: 0
-0.137041 Total time (seconds)
+0.29 Total time (seconds)
