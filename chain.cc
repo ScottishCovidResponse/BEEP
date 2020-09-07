@@ -282,16 +282,12 @@ void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vec
 /// Based on the the event sequence in xi, this sets Qmapi
 void Chain::setQmapi(unsigned int check)
 {
-	unsigned int v, dq, q, j, jmax, k, kmax, i, sett, a, nage, vv, loop, qt;
-	double val, fac;
-	FEV fev;
+	for(auto v = 0u; v < data.narage; v++) dQmap[v] = 0;
 
-	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
-
-	nage = data.nage;
-	for(sett = 0; sett < details.nsettime; sett++){
-		for(v = 0; v < data.narage; v++){
-			val = dQmap[v];
+	auto nage = data.nage;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		for(auto v = 0u; v < data.narage; v++){
+			auto val = dQmap[v];
 			if(check == 1){
 				if(val < -tiny) emsgEC("Chain",2);
 				if(val < Qmapi[sett][v]-tiny || val > Qmapi[sett][v]+tiny) emsgEC("Chain",3);
@@ -301,32 +297,32 @@ void Chain::setQmapi(unsigned int check)
 			Qmapi[sett][v] = val;
 		}
 		
-		jmax = trevi[sett].size();
-		for(j = 0; j < jmax; j++){
-			i = trevi[sett][j].ind;
-			fev = indevi[i][trevi[sett][j].e];
+		auto jmax = trevi[sett].size();
+		for(auto j = 0u; j < jmax; j++){
+			auto i = trevi[sett][j].ind;
+			FEV fev = indevi[i][trevi[sett][j].e];
 
-			v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
-			dq = trans[fev.trans].DQ[fev.timep];
+			auto v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			auto dq = trans[fev.trans].DQ[fev.timep];
 			if(dq != UNSET){
-				for(loop = 0; loop < 2; loop++){
-					q = model.DQ[dq].q[loop];
+				for(auto loop = 0u; loop < 2; loop++){
+					auto q = model.DQ[dq].q[loop];
 					if(q != UNSET){
-						fac = model.DQ[dq].fac[loop];
+						auto fac = model.DQ[dq].fac[loop];
 						
-						qt = data.Q[q].Qtenref;
-						kmax = data.genQ.Qten[qt].ntof[v];
+						auto qt = data.Q[q].Qtenref;
+						auto kmax = data.genQ.Qten[qt].ntof[v];
 						auto& cref = data.genQ.Qten[qt].tof[v];
 						auto& valref = data.genQ.Qten[qt].valf[v];
 						if(nage == 1){
-							for(k = 0; k < kmax; k++){
+							for(auto k = 0u; k < kmax; k++){
 								dQmap[cref[k]*nage] += fac*valref[k][0];
 							}
 						}
 						else{
-							for(k = 0; k < kmax; k++){
-								vv = cref[k]*nage;	
-								for(a = 0; a < nage; a++){
+							for(auto k = 0u; k < kmax; k++){
+								auto vv = cref[k]*nage;	
+								for(auto a = 0u; a < nage; a++){
 									dQmap[vv] += fac*valref[k][a];
 									vv++;
 								}
