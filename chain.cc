@@ -211,8 +211,8 @@ unsigned int Chain::mbp()
 		do{
 			double txi;
 			FEV ev;
-			if(n < xi.size()){ FEV ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
-			
+			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
+		
 			double v; v = ran();
 			double tinf;
 			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(v)/Rtot[0][0];
@@ -227,10 +227,10 @@ unsigned int Chain::mbp()
 			else{            // An event on initial sequence 
 				t = txi;
 				auto i = ev.ind;
-			
+		
 				if(stat[i] == both_sus){
 					auto w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
-		
+	
 					auto al = lamp[w]/lami[w];
 					if(ran() < al){                                    // Keeps the infection event
 						changestat(i,not_sus,1);
