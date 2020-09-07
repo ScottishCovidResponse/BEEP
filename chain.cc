@@ -18,12 +18,27 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
+struct EVREFT {                
+	unsigned int ind;                   
+	unsigned int e;	              
+	double t;	 
+};
+
+static bool compEVREFT(EVREFT lhs, EVREFT rhs)
+{
+	return lhs.t < rhs.t;
+};
+
+struct LCONT {                
+	unsigned int w;       
+	unsigned int num;       	
+	double betafac;	              
+	double phifac;	 
+};
+
 /// Initialises a single mcmc chain
 Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
-	unsigned int v, q, sett, i, tra;
-	int l;
-
 	ch = chstart;
 
 	xi.clear();
@@ -34,27 +49,27 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	setuplists();
 	
 	indmap.resize(data.popsize);
-	for(i = 0; i < data.popsize; i++){
+	for(auto i = 0u; i < data.popsize; i++){
 		indmap[i].resize(model.trans.size());
-		for(tra = 0; tra < model.trans.size(); tra++) indmap[i][tra] = 0;
+		for(auto tra = 0u; tra < model.trans.size(); tra++) indmap[i][tra] = 0;
 	}
 	
 	dQmap.resize(data.narage);                                                 // Initialises vectors
 	
 	dQbuf.resize(data.narage);
-	for(v = 0; v < data.narage; v++){
-		dQbuf[v].resize(data.Q.size()); for(q = 0; q < data.Q.size(); q++) dQbuf[v][q] = 0;
+	for(auto v = 0u; v < data.narage; v++){
+		dQbuf[v].resize(data.Q.size()); for(auto q = 0u; q < data.Q.size(); q++) dQbuf[v][q] = 0;
 	}
 	dQbuflistv.clear(); dQbuflistq.clear();
 	
 	Qmapi.resize(details.nsettime); Qmapp.resize(details.nsettime); 
-	for(sett = 0; sett < details.nsettime; sett++){
-		Qmapi[sett].resize(data.narage); for(v = 0; v < data.narage; v++) Qmapi[sett][v] = 0;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		Qmapi[sett].resize(data.narage); for(auto v = 0u; v < data.narage; v++) Qmapi[sett][v] = 0;
 		Qmapp[sett].resize(data.narage); 
 	}
 
 	lami.resize(data.nardp); lamp.resize(data.nardp);
-	Rtot.resize(poptree.level); for(l = 0; l < (int)poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
+	Rtot.resize(poptree.level); for(auto l = 0u; l < poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
 	sample_from_prior();
@@ -86,9 +101,6 @@ void Chain::sample_from_prior()
 		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
 		do{	paramval = model.priorsamp(); }while(model.setup(paramval) == 1);             // Randomly samples parameters from the prior	
 
-		//auto nparam = model.param.size();                   
-		//paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = model.paramval[th];
-		
 		vector <double> paramvalinit = paramval;
 
 		 // Sets the initial state to zero force of infection
@@ -152,63 +164,42 @@ void Chain::proposal_init()
 	ntr_addrem = 0; nac_addrem = 0;
 }
 
-struct EVREFT {                
-	unsigned int ind;                   
-	unsigned int e;	              
-	double t;	 
-};
-
-static bool compEVREFT(EVREFT lhs, EVREFT rhs)
-{
-	return lhs.t < rhs.t;
-};
-
-struct LCONT {                
-	unsigned int w;       
-	unsigned int num;       	
-	double betafac;	              
-	double phifac;	 
-};
-
 /// Performs a MBP
 unsigned int Chain::mbp()
 {
-	unsigned int j, jmax, c, v, sett, n, i, w, doev;
-	double t, tmax, val, txi, tinf, al;
-	FEV ev;
-
 	timers.timembpinit -= clock();
 
-	doev = model.dombpevents();
+	unsigned int doev = model.dombpevents();
 
-	for(c = 0; c < comp.size(); c++) N[c] = 0;
+	for(auto c = 0u; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	jmax = xp.size(); for(j = 0; j < jmax; j++) indevp[xp[j].ind].clear();
+	unsigned int jmax = xp.size(); for(auto j = 0u; j < jmax; j++) indevp[xp[j].ind].clear();
 	//indevp.clear(); indevp.resize(data.popsize);	
 	
 	xp.clear();
 	trevp.clear(); trevp.resize(details.nsettime);
 	
-	for(v = 0; v < data.narage; v++) dQmap[v] = 0;
+	for(auto v = 0u; v < data.narage; v++) dQmap[v] = 0;
 	
 	timers.timembpinit += clock();
 	
 	timers.timembp -= clock();
 		
-	t = 0; n = 0;
-	for(sett = 0; sett < details.nsettime; sett++){
+	unsigned int n = 0;
+	double t = 0;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
 		if(details.mode == sim){
 			cout  << "  Time: " << details.settime[t];
-			for(c = 0; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
+			for(auto c = 0u; c < comp.size(); c++) cout << "  " << comp[c].name << ":"	<< N[c];
 			cout << endl;	
 		}
 		
 		phii = model.phii[sett]; phip = model.phip[sett];	
 		betai = model.betai[sett]; betap = model.betap[sett];
 
-		for(v = 0; v < data.narage; v++){
-			val = Qmapi[sett][v] + dQmap[v];
+		for(auto v = 0u; v < data.narage; v++){
+			double val = Qmapi[sett][v] + dQmap[v];
 			if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
 			if(val < 0) val = 0;	
 			Qmapp[sett][v] = val;
@@ -216,28 +207,31 @@ unsigned int Chain::mbp()
 
 		constructRtot(Qmapi[sett],Qmapp[sett]);
 	
-		tmax = details.settime[sett+1];
+		double tmax = details.settime[sett+1];
 		do{
-			if(n < xi.size()){ ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
+			double txi;
+			FEV ev;
+			if(n < xi.size()){ FEV ev = indevi[xi[n].ind][xi[n].e]; txi = ev.t;} else{ ev.ind = UNSET; txi = tmax;}
 			
 			double v; v = ran();
+			double tinf;
 			if(Rtot[0][0] <= 0) tinf = tmax; else tinf = t - log(v)/Rtot[0][0];
 				
 			if(txi >= tmax && tinf >= tmax){ t = tmax; break;}
 			
 			if(tinf < txi){  // A new infection appears
 				t = tinf;
-				c = nextinfection();
+				auto c = nextinfection();
 				addinfc(c,t);	
 			}
 			else{            // An event on initial sequence 
 				t = txi;
-				i = ev.ind;
+				auto i = ev.ind;
 			
 				if(stat[i] == both_sus){
-					w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
+					auto w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
-					al = lamp[w]/lami[w];
+					auto al = lamp[w]/lami[w];
 					if(ran() < al){                                    // Keeps the infection event
 						changestat(i,not_sus,1);
 						

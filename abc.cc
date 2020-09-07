@@ -91,12 +91,7 @@ void ABC::mbp()
 			
 			mcmc_updates(gen,part,chain);
 
-			//double mi = mix(part,partcopy);
-		
-			if(mpi.core == 0){
-				//cout << "Generation " << g << ": EFcut " << gen.EFcut << "  Mix " << mi << endl;
-				cout << "Generation " << g << ": EFcut " << gen.EFcut << endl;
-			}
+			if(mpi.core == 0) cout << "Generation " << g << ": EFcut " << gen.EFcut << endl;
 		}
 
 		generation.push_back(gen);
@@ -152,7 +147,6 @@ void ABC::mbp()
 	}
 	
 	if(mpi.core == 0) cout << int((100.0*timers.timeabcprop)/timers.timeabc) << "% CPU time on proposals\n";
-	
 
 	results_mpi(generation,part,chain);
 	
@@ -309,13 +303,11 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	for(auto v = 0u; v < nvar; v++){
 		double ac_rate = acceptance(double(nac_v[v])/(double(ntr_v[v])+0.01));
 		
-		//if(mpi.core == 0) cout << int(100.0*jumpv[v]) << " " <<int(100.0*ac_rate) << ", ";
 		if(ac_rate > 0.4){ jumpv[v] *= facup; if(jumpv[v] > 2) jumpv[v] = 2;}
 		else{
 			if(ac_rate < 0.3) jumpv[v] *= facdown; 
 		}
 	}
-	//if(mpi.core == 0) cout << "acc\n";
 }
 
 /// Finds the effective number of particles
@@ -374,22 +366,12 @@ void ABC::calculate_w(vector <Generation> &generation, double jump)
 	for(auto i = 0u; i < Ntot; i++) wsum += gen.w[i];
 	wsum /= Ncut;
 	for(auto i = 0u; i < Ntot; i++) gen.w[i] /= wsum;
-			
-	//for(auto i = 0u; i < Ntot; i++) cout << i << " " << gen.EF_samp[i] << " " <<  gen.w[i] << " w\n";		
-/*	
-	if(mpi.core == 0){
-		for(auto i = 0u; i < Ntot; i++) cout << gen.w[i] << " "; cout << " w\n";		
-		for(auto i = 0u; i < Ntot; i++){ 	model.setup(gen.param_samp[i]); cout <<  exp(model.prior()) << " "; cout << " pri\n";		}
-	}
-*/	
 }
 
 /// Calculate a measure of how well a generation is mixed (by comparing the similarity between the two sets of copied particles)
 double ABC::mix(const vector <Particle> &part, unsigned int *partcopy) const
 {
 	auto nparam = model.param.size();
-	auto N = part.size();
-	auto Ntot = N*mpi.ncore;
 	auto nparamgen = nparam*N;
 	auto nparamgentot = nparam*Ntot;
 	double paramval[nparamgen], paramvaltot[nparamgentot];
