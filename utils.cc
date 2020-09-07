@@ -135,6 +135,7 @@ void emsg(const string& msg)
 	if (emsg_throws)
 		throw(std::runtime_error(msg));
 	cout << msg << endl;
+	MPI_Barrier(MPI_COMM_WORLD);
 	exit (EXIT_FAILURE);
 }
 
@@ -153,6 +154,7 @@ void emsgroot(const string& msg)
 	int core;
 	MPI_Comm_rank(MPI_COMM_WORLD,&core);
 	if(core == 0) emsg(msg);
+	MPI_Barrier(MPI_COMM_WORLD);
 	exit (EXIT_FAILURE);
 }
 /// @endcond

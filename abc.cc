@@ -31,6 +31,19 @@ bool PartEF_ord (PartEF p1,PartEF p2) { return (p1.EF < p2.EF); }          // Us
 /// Initilaises the ABC class
 ABC::ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
+	total_time = inputs.find_int("cputime",UNSET);  
+	
+	G = inputs.find_int("ngeneration",UNSET);                  
+	
+	if(total_time == UNSET && G == UNSET) emsgroot("The algorithm must be limited by either 'cputime' or 'generation'");
+
+	Ntot = inputs.find_int("nparticle",UNSET);                                            // Sets the total number of mcmc chains
+	if(Ntot == UNSET) emsgroot("The number of particles must be set");
+	if(Ntot%mpi.ncore != 0) emsgroot("The number of particles must be a multiple of the number of cores");
+
+	N = Ntot/mpi.ncore;                                                           // The number of particles per core
+	if(N == 0) emsgroot("'nparticle' must be non-zero");
+	
 	param_not_fixed.clear();                                                           // Finds the list of model parameteres that change
 	for(auto th = 0u; th < model.param.size(); th++){
 		if(model.param[th].min != model.param[th].max) param_not_fixed.push_back(th);
@@ -38,8 +51,6 @@ ABC::ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptre
 	nvar = param_not_fixed.size();
 	
 	jumpv.resize(nvar); for(auto v = 0u; v < nvar; v++) jumpv[v] = 1;
-	
-	total_time = inputs.find_int("cputime",1000000);  
 }
 
 /// Implements a version of abc which uses model-based proposals in MCMC
@@ -47,40 +58,14 @@ void ABC::mbp()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
 	
-	const int N = 4;
 	vector <Particle> part;					
 	part.resize(N);
 	
-	/*
-	auto i=0u;
-		chain.sample_from_prior();
-				double EF = obsmodel.Lobs(chain.trevp,chain.indevp);
+	unsigned int partcopy[Ntot];
 
-				part[i].paramval = chain.paramval;
-				part[i].EF = EF;
-				part[i].ev = chain.event_compress(chain.indevp);
-				
-				
-	chain.initialise_from_particle(part[i]);
-	
-	output.trace_plot_init();
-	for(auto loop = 0u; loop < 1000; loop++){
-cout << loop << " loo\n";
-
-		output.trace_plot(loop,chain.EF,chain.Pri,chain.xi.size(),chain.paramval);
-		chain.standard_prop(0,1);
-	}
-	
-	 emsg("doe");
-	 */
-	
-	unsigned int partcopy[N*mpi.ncore];
-	//total_time = 10;
-	const int G = 300;
-	
 	vector <Generation> generation; 
 	
-	for(auto g = 0; g < G; g++){
+	for(auto g = 0u; g < G; g++){
 		timers.timeabc -= clock();
 
 		Generation gen;
@@ -182,18 +167,13 @@ void ABC::smc()
 {	
 	Chain chain(details,data,model,poptree,obsmodel,0);
 	
-	const unsigned int N = 400;
-	const unsigned int Ntot = N*mpi.ncore;
 	const double jump = 1;
-	const int G = 100;
-
-	vector <Generation> generation; 
 	
-	//total_time = 10;
+	vector <Generation> generation; 
 	
 	auto nparam = model.param.size();
 
-	for(auto g = 0; g < G; g++){
+	for(auto g = 0u; g < G; g++){
 		timers.timeabc -= clock();
 			
 		Generation gen;
@@ -216,7 +196,7 @@ void ABC::smc()
 			double sumst[Ntot];	           // Generate particle sampler
 			double sum = 0; for(auto i = 0u; i < Ntot; i++){ sum += gen_last.w[i]; sumst[i] = sum;}
 			
-			double EF;
+			double EF=UNSET;
 			auto ntr = 0u;
 			auto nac = 0u;
 			for(auto i = 0u; i < N; i++){ 
@@ -327,7 +307,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	}	
 			
 	for(auto v = 0u; v < nvar; v++){
-		double ac_rate = acceptance(double(nac_v[v])/(ntr_v[v]+0.01));
+		double ac_rate = acceptance(double(nac_v[v])/(double(ntr_v[v])+0.01));
 		
 		//if(mpi.core == 0) cout << int(100.0*jumpv[v]) << " " <<int(100.0*ac_rate) << ", ";
 		if(ac_rate > 0.4){ jumpv[v] *= facup; if(jumpv[v] > 2) jumpv[v] = 2;}
@@ -754,9 +734,11 @@ void ABC::cholesky(const vector <vector <double> > &param_samp)
 	
 	auto fl=0u;
 	do{
-		double A[nvar][nvar];
+		vector <vector <double> > A;
+		A.resize(nvar);
 		Zchol.resize(nvar);
 		for(auto v1 = 0u; v1 < nvar; v1++){
+			A[v1].resize(nvar);
 			Zchol[v1].resize(nvar);
 			for(auto v2 = 0u; v2 < nvar; v2++){
 				A[v1][v2] = M[v1][v2];

@@ -88,6 +88,8 @@ const vector<string> definedparams = {       // A list of all supported paramete
 		"mode",
 		"model",
 		"nchain",
+		"ngeneration",
+		"nparticle",
 		"nsamp",
 		"output",
 		"outputdir",
