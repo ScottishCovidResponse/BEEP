@@ -22,7 +22,7 @@ Inputs::~Inputs()
 }
 
 /// /// Reads TOML and command line parameters
-Inputs::Inputs(int argc, char** argv, bool /* verbose */) 
+Inputs::Inputs(int argc, char** argv) 
 {
 	set_command_line_params(argc,argv);                          // Loads up the command line parameters
 	
@@ -51,7 +51,7 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 	
 	for(int op = 1; op < argc; op++){ 
 		string str = string(argv[op]);
-		unsigned int n = commandlist.size();
+		auto n = commandlist.size();
 		if(n > 0 && (str.substr(0,1) == "=" || commandlist[n-1].substr(commandlist[n-1].length()-1,1) == "=")) commandlist[n-1] += str;
 		else{
 			commandlist.push_back(str);
@@ -59,9 +59,9 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 	}
 	
 	// Store the parameters passed on the command line in cmdlineparams
-	for(unsigned int op = 0; op < commandlist.size(); op++){ // Goes the various input options
+	for(auto op = 0u; op < commandlist.size(); op++){ // Goes the various input options
 		string str = commandlist[op];
-		int j = 0; int jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
+		auto j = 0u; auto jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 
 			emsgroot(ss.str());
@@ -70,12 +70,8 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 		string command = str.substr(0,j);
 		string value = str.substr(j+1,jmax-(j+1));
 		
-		if (cmdlineparams.count(command) == 0) {
-			cmdlineparams[command] = value;
-		} else {
-			// Encode repeated parameters as space-separatedd
-			cmdlineparams[command] += " " + value;
-		}
+		if (cmdlineparams.count(command) == 0) cmdlineparams[command] = value;
+		else cmdlineparams[command] += " " + value;
 	}
 }
 
@@ -144,29 +140,25 @@ double Inputs::find_double(const string &key, double def) const
 			size_t idx;
 			val = stof(valstr,&idx);
 			if (idx != valstr.length()) {
-				std::ostringstream oss;
-				oss << "Should be number, found '"<< valstr;
+				ostringstream oss;
+				oss << "Should be number, found '" << valstr;
 				throw std::invalid_argument(oss.str());
 			}
 		} catch (const std::exception& e) {
-			std::ostringstream oss;
+			ostringstream oss;
 			oss << "Bad command-line parameter value for key '"<< key <<"'\n";
 			// Add exception description if it's informative
 			std::string what = e.what();
-			if (what == "stof") {
-				if (valstr == "")
-					oss << "Should be number, found no value\n";
-			} else {
-				oss << what;
-			}
+			if(what == "stof"){
+				if (valstr == "") oss << "Should be number, found no value\n";
+			} 
+			else oss << what;
 			emsgroot(oss.str());
 		}
-	} else {
-		if (basedata->contains(key)) {
-			val = basedata->data.numberfield_unchecked(key);
-		} else {
-			val = def;
-		}
+	} 
+	else {
+		if(basedata->contains(key)) val = basedata->data.numberfield_unchecked(key);
+		else val = def;
 	}
 	
 	return val;

@@ -25,7 +25,7 @@ class InputData;
 class Inputs
 {
 public:
-	Inputs(int argc, char** argv, bool verbose);
+	Inputs(int argc, char** argv);
 	~Inputs();
 	Inputs(const Inputs&) = delete;
 	Inputs(Inputs&&) = delete;

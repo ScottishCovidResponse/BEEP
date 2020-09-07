@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 		
 	if(verbose) cout << "BEEPmbp version " << gitversion() << endl << endl;  // Outputs the git version
 
-	Inputs inputs(argc,argv,verbose);                                        // Loads command line arguments and TOML file into inputs
+	Inputs inputs(argc,argv);                                        // Loads command line arguments and TOML file into inputs
 		
 	Details details(inputs);                                                 // Loads up various details of the model
 	

@@ -59,35 +59,30 @@ Details::Details(Inputs &inputs)
 /// Gets the time from a string
 unsigned int Details::gettime(string st) const 
 {
-	unsigned int t;
-	const char *buf = st.c_str();
-	struct tm result;
-			
 	if(st == "start") return start;
 	if(st == "end") return end;
-			
+	
+	auto t = 0u;
+	const char *buf = st.c_str();
+	
 	switch(tform){
 	case tform_num:
 		t = atoi(buf);
-		//if(std::isnan(t)) emsg("The time '"+st+"' is not a number");
 		if(isnan(t)) emsg("The time '"+st+"' is not a number");
 		break;
 
 	case tform_ymd:
+		struct tm result;		
 		memset(&result, 0, sizeof(result));
 		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
 			time_t tt = mktime(&result);
 			t = tt/(60*60*24);
 		}
-		else{ 
-			emsg("'"+st+"' is not regonised as Year-Month-Day format.");
-			t = 0;
-		}
+		else emsg("'"+st+"' is not regonised as Year-Month-Day format.");
 		break;
 		
 	default:
 		emsg("The time format is not recognised.");
-		t = 0;
 		break;
 	}
 
@@ -97,22 +92,21 @@ unsigned int Details::gettime(string st) const
 /// Returns a date from a time
 string Details::getdate(unsigned int t) const
 {
-	time_t tt;
-	string st;
-	stringstream ss; 
-	char buffer[80];
-  struct tm *timeinfo;
-	
 	t += start;
 
+	stringstream ss; 
 	switch(tform){
 	case tform_num:
 		ss << t;
 		break;
 		
 	case tform_ymd:
-		tt = (t + 0.5)*(60*60*24);	
+		time_t tt = (t + 0.5)*(60*60*24);	
+		
+		struct tm *timeinfo;
 		timeinfo = localtime(&tt);
+		
+		char buffer[80];
 		strftime(buffer,80,"%Y-%m-%d",timeinfo);
 		ss << buffer;
 		break;

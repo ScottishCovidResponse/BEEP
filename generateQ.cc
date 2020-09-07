@@ -51,13 +51,11 @@ DataPipeline *datapipeline;             // DataPipeline object
 void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <AREA> &area,
 							 DataPipeline *dp)
 {
-	TABLE tab;
-	SPARSEMATRIX M, I;
-
 	datapipeline = dp;
 
 	cout << "Generating Q tensors." << endl;
 	
+	TABLE tab;
 	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
 	MATRIX N_all = matfromtable(tab,nage);
 	
@@ -85,9 +83,9 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
 	
-	M = loadsparse(genQ.M,datadir,area.size());
+	SPARSEMATRIX M = loadsparse(genQ.M,datadir,area.size());
 	
-	I = identity(area.size());                                 // Generates the identity matrix
+	SPARSEMATRIX I = identity(area.size());                                 // Generates the identity matrix
 	
 	//plotmat(N_all,"'All' matrix");                             // Outputs matrices to the terminal
 	//plotmat(N_home,"'Home' matrix");
@@ -103,11 +101,9 @@ void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <ARE
 /// Outputs a matrix
 void plotmat(const MATRIX& mat, const string& title)
 {
-	unsigned int i, j;
-	
 	cout << title << ":" << endl;
-	for(j = 0; j < mat.N; j++){
-		for(i = 0; i < mat.N; i++) cout << mat.ele[j][i] << "\t";
+	for(auto j = 0u; j < mat.N; j++){
+		for(auto i = 0u; i < mat.N; i++) cout << mat.ele[j][i] << "\t";
 		cout << endl;
 	}
 	cout << endl;
@@ -116,11 +112,7 @@ void plotmat(const MATRIX& mat, const string& title)
 /// Loads age stratified population data for areas
 vector <AREA> loadarea(const TABLE& tab)
 {
-	unsigned int c, a;
 	vector <int> agecol;
-	AREA are;
-	vector <AREA> area;
-	
 	switch(nage){
 	case 1:
 		agecol.push_back(findcol(tab,"age0-14"));
@@ -142,37 +134,38 @@ vector <AREA> loadarea(const TABLE& tab)
 	default: emsg("The number of age categories 'nage' is not recognised"); break;	
 	}
 	
-	for(c = 0; c < tab.nrow; c++){
+	vector <AREA> area;
+	for(auto c = 0u; c < tab.nrow; c++){
+		AREA are;
 		are.agepop.resize(nage);
-		for(a = 0; a < nage; a++) are.agepop[a] = atoi(tab.ele[c][agecol[a]].c_str());
+		for(auto a = 0u; a < nage; a++) are.agepop[a] = atoi(tab.ele[c][agecol[a]].c_str());
 		area.push_back(are);
 	}
 	
 	return area;
 }
 
+/// Generates genQ 
 void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, vector <AREA> &area)
 {
-	unsigned int nage = N.N, narea = M.N, k, c, cc, a, aa, vi, j, jmax, q;
-	double v, sum, sum2;
-	vector <float> vec;
+	auto nage = N.N, narea = M.N;
+
 	vector <vector <unsigned short> > to;      // Stores the mixing matrix between areas and ages at different times
 	vector <vector< vector <float> > > val;
-	
-	vec.resize(nage);
 	to.resize(nage*narea);
 	val.resize(nage*narea);
 
-	long num = 0;
-	for(k = 0; k < M.val.size(); k++){
-		c = M.i[k]; cc = M.j[k]; v = M.val[k];
-		for(a = 0; a < nage; a++){
-			for(aa = 0; aa < nage; aa++){
+	for(auto k = 0u; k < M.val.size(); k++){
+		auto c = M.i[k], cc = M.j[k];
+		auto v = M.val[k];
+		for(auto a = 0u; a < nage; a++){
+			vector <float> vec(nage);
+			for(auto aa = 0u; aa < nage; aa++){
 				vec[aa] = v*N.ele[a][aa];
 				if(std::isnan(vec[aa])) emsg("Raw value in '"+name+"' not a number");
 			}
 
-			to[c*nage+a].push_back(cc); num++;
+			to[c*nage+a].push_back(cc);
 			val[c*nage+a].push_back(vec);
 					
 			if(c < cc){
@@ -182,25 +175,25 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 		}
 	}
 
-	for(c = 0; c < narea; c++){                       // Normalises the tensor
-		sum = 0; sum2 = 0;
-		for(a = 0; a < nage; a++){
+	for(auto c = 0u; c < narea; c++){                       // Normalises the tensor
+		auto sum = 0.0, sum2 = 0.0;
+		for(auto a = 0u; a < nage; a++){
 			sum2 += area[c].agepop[a];
-			vi = c*nage + a;
+			auto vi = c*nage + a;
 		
-			jmax = to[vi].size();
-			for(j = 0; j < jmax; j++){
-				cc = to[vi][j];
-				for(aa = 0; aa < nage; aa++) sum += area[c].agepop[a]*val[vi][j][aa]*area[cc].agepop[aa];
+			auto jmax = to[vi].size();
+			for(auto j = 0u; j < jmax; j++){
+				auto cc = to[vi][j];
+				for(auto aa = 0u; aa < nage; aa++) sum += area[c].agepop[a]*val[vi][j][aa]*area[cc].agepop[aa];
 			}
 		}
 		sum /= sum2;
 		
-		for(a = 0; a < nage; a++){
-			vi = c*nage + a;
-			jmax = to[vi].size();
-			for(j = 0; j < jmax; j++){
-				for(aa = 0; aa < nage; aa++){
+		for(auto a = 0u; a < nage; a++){
+			auto vi = c*nage + a;
+			auto jmax = to[vi].size();
+			for(auto j = 0u; j < jmax; j++){
+				for(auto aa = 0u; aa < nage; aa++){
 					val[vi][j][aa] /= sum;
 					if(std::isnan(val[vi][j][aa])) emsg("Value in '"+name+"' not a number");
 				}
@@ -208,27 +201,27 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 		}
 	}
 	
-	q = genQ.Qten.size();
+	auto q = genQ.Qten.size();
 	genQ.Qten.push_back(SPARSETENSOR ());
 
 	genQ.Qten[q].name = name;
 	
 	genQ.Qten[q].tof.resize(to.size());
 	genQ.Qten[q].ntof.resize(to.size());
-	for(vi = 0; vi < to.size(); vi++){
+	for(auto vi = 0u; vi < to.size(); vi++){
 		genQ.Qten[q].ntof[vi] = to[vi].size();
 		genQ.Qten[q].tof[vi].resize(to[vi].size());
-		for(j = 0; j < to[vi].size(); j++){
+		for(auto j = 0u; j < to[vi].size(); j++){
 			genQ.Qten[q].tof[vi][j] = to[vi][j];
 		}
 	}		
 
 	genQ.Qten[q].valf.resize(val.size());
-	for(vi = 0; vi < val.size(); vi++){
+	for(auto vi = 0u; vi < val.size(); vi++){
 		genQ.Qten[q].valf[vi].resize(val[vi].size());
-		for(j = 0; j < val[vi].size(); j++){
+		for(auto j = 0u; j < val[vi].size(); j++){
 			genQ.Qten[q].valf[vi][j].resize(val[vi][j].size());
-			for(a = 0; a < nage; a++) genQ.Qten[q].valf[vi][j][a] = val[vi][j][a];
+			for(auto a = 0u; a < nage; a++) genQ.Qten[q].valf[vi][j][a] = val[vi][j][a];
 		}
 	}
 }
@@ -236,12 +229,10 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 /// Generates the identity matrix
 SPARSEMATRIX identity(unsigned int N)
 {
-	unsigned int k;
 	SPARSEMATRIX M;
-	
 	M.N = N;
 	M.i.resize(N); M.j.resize(N); M.val.resize(N);
-	for(k = 0; k < N; k++){
+	for(auto k = 0u; k < N; k++){
 		M.i[k] = k; M.j[k] = k; M.val[k] = 1; 
 	}
 	
@@ -251,11 +242,7 @@ SPARSEMATRIX identity(unsigned int N)
 /// Creates a matrix from a table
 MATRIX matfromtable(const TABLE& tab, unsigned int N)
 {
-	unsigned int i, j, ii, jj;
-	double sum, val;
-	MATRIX mat;
 	vector <unsigned int> div;
-	
 	switch(N){
 	case 1:
 		div.push_back(0); div.push_back(16);
@@ -274,15 +261,16 @@ MATRIX matfromtable(const TABLE& tab, unsigned int N)
 
 	if(tab.nrow != 16 || tab.ncol != 16) emsg("For the file '"+tab.file+"' the table size is not right");
 	
+	MATRIX mat;
 	mat.N = N;
 	mat.ele.resize(N);
-	for(j = 0; j < N; j++){
+	for(auto j = 0u; j < N; j++){
 		mat.ele[j].resize(N);
-		for(i = 0; i < N; i++){
-			sum = 0;
-			for(jj = div[j]; jj < div[j+1]; jj++){
-				for(ii = div[i]; ii < div[i+1]; ii++){
-					val = atof(tab.ele[jj][ii].c_str());
+		for(auto i = 0u; i < N; i++){
+			auto sum = 0.0;
+			for(auto jj = div[j]; jj < div[j+1]; jj++){
+				for(auto ii = div[i]; ii < div[i+1]; ii++){
+					auto val = atof(tab.ele[jj][ii].c_str());
 					if(std::isnan(val)) emsg("For the file '"+tab.file+"' the value '"+to_string(val)+"' is not a number.");
 					sum += val;
 				}
@@ -299,25 +287,20 @@ SPARSEMATRIX loadsparsefromdatapipeline(const string& file, unsigned int N)
 {
 	SPARSEMATRIX mat;
 #ifdef USE_DATA_PIPELINE
-
-	unsigned int a1, a2;
-	double v;
-	string line;
-	
 	mat.N = N;	
 
-	Table  dptable = datapipeline->read_table(file, "default");
+	Table dptable = datapipeline->read_table(file, "default");
 
-	int nrows = dptable.get_column_size();
+	auto nrows = dptable.get_column_size();
 	
 	vector<long> area1 = dptable.get_column<long>("area1");
 	vector<long> area2 = dptable.get_column<long>("area2");
 	vector<double> contact = dptable.get_column<double>("contact");
 
-	for (int i = 0; i < nrows; i++) {
-		a1 = area1.at(i);
-		a2 = area2.at(i);
-		v = contact.at(i);
+	for(auto i = 0u; i < nrows; i++) {
+		auto a1 = area1.at(i);
+		auto a2 = area2.at(i);
+		auto v = contact.at(i);
 		mat.i.push_back(a1);
 		mat.j.push_back(a2);
 		if(std::isnan(v)) emsg("The value '"+v+"' in file '"+file+"' is not a number.");
@@ -348,25 +331,23 @@ SPARSEMATRIX loadsparsefromdatapipeline(const string& file, unsigned int N)
 	return mat;
 }
 
-
 /// Uses 'from' and 'to' columns to generate a sparse matrix
 SPARSEMATRIX loadsparsefromfile(const string& file, unsigned int N)
 {
-	unsigned int a1, a2;
-	double v;
-	string line;
-	SPARSEMATRIX mat;
-	
 	ifstream in(file.c_str());                             // Loads information about areas
 	if(!in) emsg("Cannot open the file '"+file+"'");
 	
+	SPARSEMATRIX mat;
 	mat.N = N;	
+	string line;
 	getline(in,line);
 	do{
 		getline(in,line);
 		if(in.eof()) break;
 				
 		stringstream ss(line);
+		unsigned int a1, a2;
+		double v;
 		ss >> a1 >> a2 >> v;
 		mat.i.push_back(a1);
 		mat.j.push_back(a2);
@@ -427,30 +408,26 @@ TABLE loadarrayfromdatapipeline(const string& file)
 /// Loads a table from a file
 TABLE loadarray(const string& file, const string& dir)
 {
-	if (stringhasending(file, ".txt")) {
-		return loadtable(dir+"/"+file, "nohead");
-	} else {
-		return loadarrayfromdatapipeline(file);
-	}
+	if (stringhasending(file, ".txt")) return loadtable(dir+"/"+file, "nohead");
+	else return loadarrayfromdatapipeline(file);
 }
 
 /// Loads a table from a file
 TABLE loadtable(const string& file, const string& head)
 {
-	TABLE tab;
-	string line, st;
-	vector <string> vec;
-	
 	ifstream in(file.c_str());                             // Loads information about areas
 	if(!in) emsg("Cannot open the file '"+file+"'");
 		
+	TABLE tab;
 	tab.file = file;
 		
-	if(head == "head"){	
+	if(head == "head"){
+		string line;
 		getline(in,line);
 
 		stringstream ss(line);
 		do{
+			string st;
 			getline(ss,st,'\t'); st = strip(st);
 			tab.heading.push_back(st);
 			if(ss.eof()) break;
@@ -459,12 +436,14 @@ TABLE loadtable(const string& file, const string& head)
 	}
 	
 	do{
-		vec.clear();
+		vector <string> vec;
+		string line;
 		getline(in,line);
 		if(in.eof()) break;
 				
 		stringstream ss(line);
 		do{
+			string st;
 			getline(ss,st,'\t'); st = strip(st);
 			vec.push_back(st);
 			if(ss.eof()) break;
