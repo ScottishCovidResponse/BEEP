@@ -78,7 +78,7 @@ void Output::Li_trace_plot_init(unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void Output::Li_trace_plot(unsigned int samp, unsigned int nchaintot, double *Litot)
+void Output::Li_trace_plot(unsigned int samp, unsigned int nchaintot, const vector <double> &Litot)
 {
 	unsigned int p;
 	
