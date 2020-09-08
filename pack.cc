@@ -56,9 +56,9 @@ void pack_item(T t)
 // to be modified
 void pack_item(const string& vec)
 {
-	unsigned int jmax = vec.length();
+	auto jmax = vec.length();
 	pack_item(jmax);
-	for(unsigned int j = 0; j < jmax; j++){
+	for(auto j = 0u; j < jmax; j++){
 		pack_item(vec.at(j));
 	}
 }
@@ -145,9 +145,8 @@ void pack(const vector <string> &vec)
 
 void pack(const vector <FEV> &vec)
 {
-	unsigned int imax, i;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = 0; i < imax; i++){
+	auto imax = vec.size(); buffer.push_back(imax); k++;
+	for(auto i = 0u; i < imax; i++){
 		buffer.push_back(vec[i].trans); k++;
 		buffer.push_back(vec[i].ind); k++;
 		buffer.push_back(vec[i].t); k++;
@@ -157,11 +156,10 @@ void pack(const vector <FEV> &vec)
 
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
-	unsigned int imax, i, jmax, j;
-	imax = vec.size(); buffer.push_back(imax); k++;
-	for(i = fedivmin; i < fedivmax; i++){
-		jmax = vec[i].size(); buffer.push_back(jmax); k++;
-		for(j = 0; j < jmax; j++){
+	auto imax = vec.size(); buffer.push_back(imax); k++;
+	for(auto i = fedivmin; i < fedivmax; i++){
+		auto jmax = vec[i].size(); buffer.push_back(jmax); k++;
+		for(auto j = 0u; j < jmax; j++){
 			buffer.push_back(vec[i][j].trans); k++;
 			buffer.push_back(vec[i][j].ind); k++;
 			buffer.push_back(vec[i][j].t); k++;
@@ -239,10 +237,10 @@ void unpack_item(T &num)
 }
 void unpack_item(string &vec)
 {
-	unsigned int jmax, j;
+	unsigned int jmax;
 	
 	unpack_item(jmax);
-	stringstream ss; for(j = 0; j < jmax; j++){ ss << (char) buffer[k]; k++;}
+	stringstream ss; for(auto j = 0u; j < jmax; j++){ ss << (char) buffer[k]; k++;}
 	vec = ss.str();
 }
 
@@ -324,9 +322,8 @@ void unpack(vector <string> &vec)
 
 void unpack(vector <FEV> &vec)
 {
-	unsigned int imax, i;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = 0; i < imax; i++){
+	unsigned int imax = buffer[k]; k++; vec.resize(imax);
+	for(auto i = 0u; i < imax; i++){
 		vec[i].trans = buffer[k]; k++;
 		vec[i].ind = buffer[k]; k++;
 		vec[i].t = buffer[k]; k++;
@@ -336,11 +333,10 @@ void unpack(vector <FEV> &vec)
 
 void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
-	unsigned int imax, i, jmax, j;
-	imax = buffer[k]; k++; vec.resize(imax);
-	for(i = fedivmin; i < fedivmax; i++){
-		jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(j = 0; j < jmax; j++){ 
+	unsigned int imax = buffer[k]; k++; vec.resize(imax);
+	for(auto i = fedivmin; i < fedivmax; i++){
+		unsigned int jmax = buffer[k]; k++; vec[i].resize(jmax);
+		for(auto j = 0u; j < jmax; j++){ 
 			vec[i][j].trans = buffer[k]; k++;
 			vec[i][j].ind = buffer[k]; k++;
 			vec[i][j].t = buffer[k]; k++;

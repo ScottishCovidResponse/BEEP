@@ -63,13 +63,12 @@ double gammasamp(double a, double b)
 
   if(a < 1){
     double u = ran();
-    return gammasamp(1.0 + a, b) * pow (u, 1.0 / a);
+    return gammasamp(1.0+a,b)*pow(u,1.0/a);
   }
   else{
-    double x, v, u;
-    double d = a - 1.0 / 3.0;
-    double c = (1.0 / 3.0) / sqrt (d);
- 
+    double d = a - 1.0/3.0;
+    double c = (1.0/3.0)/sqrt(d);
+		double v, x;
     while(true){
       do{
         x = sqrt(-2*log(ran()))*cos(2*M_PI*ran());
@@ -77,11 +76,11 @@ double gammasamp(double a, double b)
       }while (v < 0);
 
       v = v*v*v;
-      u = ran();
+      double u = ran();
 
-      if (u < 1 - 0.0331*x*x*x*x) break;
+      if(u < 1 - 0.0331*x*x*x*x) break;
 
-      if (log(u) < 0.5*x*x + d*(1 - v + log(v))) break;
+      if(log(u) < 0.5*x*x + d*(1 - v + log(v))) break;
     }
 
     return d*v/b;
@@ -106,10 +105,9 @@ double gammaprob(double x, double a, double b)
 /// The log of the lognormal probability distribution
 double lognormprob(double x, double mean, double var)
 {
-	double val;
 	if(x <= 0) emsgEC("Utils",4);
 	if(var <= 0) emsgEC("Utils",5); 
-	val = log(x);
+	auto val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
 }
 
@@ -132,7 +130,7 @@ bool emsg_throws = false;
 /// Displays an error message
 void emsg(const string& msg)
 {
-	if (emsg_throws)
+	if(emsg_throws)
 		throw(std::runtime_error(msg));
 	cout << msg << endl;
 	MPI_Barrier(MPI_COMM_WORLD);

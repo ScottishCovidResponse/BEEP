@@ -60,20 +60,20 @@ void Simulate::run()
 /// Runs multiple simulations
 void Simulate::multirun()
 {		
-	unsigned int s;
-	SAMPLE sample;
-	PARAMSAMP paramsamp;		
 	vector <SAMPLE> opsamp; 
   vector <PARAMSAMP> psamp;
 	
-	for(s = 0; s < nsamp; s++){
+	for(auto s = 0u; s < nsamp; s++){
 		cout << "Simulating sample " << (s+1) << endl;
 		Chain chain(details,data,model,poptree,obsmodel,0);
 		
+		SAMPLE sample;
 		sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
 		model.setup(chain.paramval);
 		sample.R0 = model.R0calc(chain.paramval);
 		sample.phi = model.phi; 
+		
+		PARAMSAMP paramsamp;		
 		paramsamp.paramval = chain.paramval;
 		opsamp.push_back(sample);
 		psamp.push_back(paramsamp);
@@ -84,24 +84,22 @@ void Simulate::multirun()
 /// Works out the proportion of individuals which visit different compartments
 void Simulate::proportions(const vector< vector <FEV> > &indev)
 {
-	unsigned int ninf, i, c, e, emax, dp;
 	vector <unsigned int> visit;
+	for(auto c = 0u; c < model.comp.size(); c++) visit.push_back(0);
+	
 	vector <unsigned int> demo;
-		
-	for(c = 0; c < model.comp.size(); c++) visit.push_back(0);
+	for(auto dp = 0u; dp < data.ndemocatpos; dp++) demo.push_back(0);
 	
-	for(dp = 0; dp < data.ndemocatpos; dp++) demo.push_back(0);
-	
-	ninf = 0;
-	for(i = 0; i < indev.size(); i++){
-		emax = indev[i].size();
+	auto ninf = 0u;
+	for(auto i = 0u; i < indev.size(); i++){
+		auto emax = indev[i].size();
 		if(emax > 0){ 
 			ninf++;
 			demo[data.ind[i].dp]++;
 			 
-			c = 0;
+			auto c = 0u;
 			visit[c]++;
-			for(e = 0; e < emax; e++){
+			for(auto e = 0u; e < emax; e++){
 				if(model.trans[indev[i][e].trans].from != model.trans[indev[i][e].trans].to){
 					visit[model.trans[indev[i][e].trans].to]++;
 				}
@@ -113,7 +111,7 @@ void Simulate::proportions(const vector< vector <FEV> > &indev)
 	
 	cout << "Proportion of infected individuals visiting different compartments:" << endl;
 	
-	for(c = 0; c < model.comp.size(); c++){
+	for(auto c = 0u; c < model.comp.size(); c++){
 		cout << "  " << model.comp[c].name << ": " << double(100*visit[c])/ninf << "%" << endl;
 	}
 	cout << endl;

@@ -108,7 +108,7 @@ void Output::posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsig
 	ofstream dataout(filefull.c_str());
 	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
 				
-	unsigned int nrow;
+	unsigned int nrow = UNSET;
 	switch(type){
 	case pop_data: 
 		cout << "'" << file << "' gives the population in '" << data.popdata[d].compstr << "'";
@@ -358,13 +358,6 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 void Output::combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
                            string file, string distfile, unsigned int burnin) const
 {
-	//unsigned int p, inp, s, npsamp, psampmin, N, M, nmax, nmin, b;
-	//double W, B, valav, varr, muav;
-	//string GR;
-	//vector <double> vec, mu, vari;
-	//STAT stat;
-	//vector <DIST> paramdist;
-			
 	ofstream paramout(file.c_str());
 	if(!paramout) emsg("Cannot output the file '"+file+"'");
 	
@@ -378,46 +371,46 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 	auto nmax = large;
 	for(auto inp = 0u; inp < M; inp++) if(vals[inp][0].size() < nmax) nmax = vals[inp][0].size();
 
+	auto nmin = nmax/4;
 	if(burnin != UNSET){
 		if(burnin >= nmax) emsg("The 'burnin' period must be greater than the number of samples.");
 		nmin = burnin;
 	}
-	else nmin = nmax/4;
 	
-	N = nmax-nmin; 
+	auto N = nmax-nmin; 
 		
-	paramdist.resize(paramname.size());
-			
-	mu.resize(M); vari.resize(M);
-	for(p = 0; p < paramname.size(); p++){
-		GR = "---";
+	vector <DIST> paramdist(paramname.size());
+		
+	vector <double> mu(M), vari(M);
+	for(auto p = 0u; p < paramname.size(); p++){
+		string GR = "---";
 		if(M > 1){
-			muav = 0;
-			for(inp = 0; inp < M; inp++){
-				valav = 0; for(s = nmin; s < nmax; s++) valav += vals[inp][p][s]/N;
-				varr = 0; for(s = nmin; s < nmax; s++) varr += (vals[inp][p][s]-valav)*(vals[inp][p][s]-valav)/(N-1);
+			auto muav = 0.0;
+			for(auto inp = 0u; inp < M; inp++){
+				auto valav = 0.0; for(auto s = nmin; s < nmax; s++) valav += vals[inp][p][s]/N;
+				auto varr = 0.0; for(auto s = nmin; s < nmax; s++) varr += (vals[inp][p][s]-valav)*(vals[inp][p][s]-valav)/(N-1);
 				mu[inp] = valav;
 				vari[inp] = varr;
 				muav += mu[inp]/M;
 			}
 					
-			W = 0; for(inp = 0; inp < M; inp++) W += vari[inp]/M;
-			B = 0; for(inp = 0; inp < M; inp++) B += (mu[inp]-muav)*(mu[inp]-muav)*N/(M-1);
+			auto W = 0.0; for(auto inp = 0u; inp < M; inp++) W += vari[inp]/M;
+			auto B = 0.0; for(auto inp = 0u; inp < M; inp++) B += (mu[inp]-muav)*(mu[inp]-muav)*N/(M-1);
 			if(W > tiny) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
 		}
 	
-		vec.clear(); 
-		for(inp = 0; inp < M; inp++){
-			npsamp = vals[inp][p].size();
+		vector <double> vec;
+		for(auto inp = 0u; inp < M; inp++){
+			auto npsamp = vals[inp][p].size();
+			auto psampmin = npsamp/4;
 			if(burnin != UNSET){
 				if(burnin >= npsamp) emsg("The 'burnin' period must be greater than the number of samples.");
 				psampmin = burnin;
 			}
-			else psampmin = npsamp/4;
-			for(s = psampmin; s < npsamp; s++) vec.push_back(vals[inp][p][s]);
+			for(auto s = psampmin; s < npsamp; s++) vec.push_back(vals[inp][p][s]);
 		}
 		paramdist[p] = getdist(vec);
-		stat = getstat(vec);
+		STAT stat = getstat(vec);
 				
 		paramout << paramname[p]  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << " " << GR << endl; 
 	}
@@ -431,13 +424,13 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 		distout << "# Posterior probability distributions for model parameters." << endl;
 		distout << endl;
 
-		for(p = 0; p < paramname.size(); p++){
+		for(auto p = 0u; p < paramname.size(); p++){
 			distout << paramname[p] << "\t" << "Probability\t";
 		}	
 		distout << endl;
 		
-		for(b = 0; b < BIN; b++){
-			for(p = 0; p < paramname.size(); p++){
+		for(auto b = 0u; b < BIN; b++){
+			for(auto p = 0u; p < paramname.size(); p++){
 			distout << paramdist[p].value[b] << "\t" << paramdist[p].prob[b] << "\t";
 			}
 			distout << endl;
@@ -448,14 +441,11 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 /// Outputs an event sample fev
 void Output::eventsample(const vector < vector <FEV> > &fev) const
 {
-	unsigned int d, j, nind;
+	auto nind = data.ind.size();
 	vector< vector <FEV> > indev;
-	TRANS tr;
-	
-	nind = data.ind.size();
 	indev.resize(nind);
-	for(d = 0; d < fev.size(); d++){
-		for(j = 0; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
+	for(auto d = 0u; d < fev.size(); d++){
+		for(auto j = 0u; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
 	}
 	
 	ensuredirectory(details.outputdir);
@@ -482,23 +472,19 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 /// Outputs a population plot for event sequence xi
 void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
 {
-	unsigned int c, tra, td, tdf;
-	double t;
-	vector <int> N;
-	TRANS tr;
-	
-	N.resize(model.comp.size()); for(c = 0; c < model.comp.size(); c++) N[c] = 0;
+	vector <int> N(model.comp.size());
+	for(auto c = 0u; c < model.comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	td = 0; tdf = 0; while(td < details.fediv && xi[td].size()==0) td++;
+	auto td = 0u, tdf = 0u; while(td < details.fediv && xi[td].size()==0) td++;
 	
 	ofstream plot(file.c_str());
 	if(!plot) emsg("Cannot output the file '"+file+"'");
 	
-	for(t = tmin; t < period; t += (period-tmin)/100){
+	for(auto t = tmin; t < period; t += (period-tmin)/100){
 		while(td < details.fediv && xi[td][tdf].t < t){
-			tra = xi[td][tdf].trans;
-			tr = model.trans[tra];
+			auto tra = xi[td][tdf].trans;
+			TRANS tr = model.trans[tra];
 			N[tr.from]--; N[tr.to]++;
 			
 			tdf++;
@@ -509,7 +495,7 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 		}
 		
 		plot << t << " ";
-		for(c = 0; c < model.comp.size(); c++) plot << N[c] << " ";
+		for(auto c = 0u; c < model.comp.size(); c++) plot << N[c] << " ";
 		plot << endl;
 	}
 }
@@ -517,19 +503,14 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 /// Generates case data based on a simulation using the MBP algorithm
 void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const
 {
-	unsigned int row, r, td, pd, md, d, j, jj;
-	string file, filefull;
-	double sum;
-	MEAS meas;
-	
 	ensuredirectory(dir);
 		
-	meas = obsmodel.getmeas(trev,indev);
+	MEAS meas = obsmodel.getmeas(trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
-	for(td = 0; td < data.transdata.size(); td++){
-		file = data.transdata[td].file;
-		filefull =  dir+"/"+file;
+	for(auto td = 0u; td < data.transdata.size(); td++){
+		auto file = data.transdata[td].file;
+		auto filefull =  dir+"/"+file;
 		ofstream transout(filefull);
 		if(!transout) emsg("Cannot output the file '"+filefull+"'");
 		
@@ -549,19 +530,19 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: transout << "date"; break;
 		}
 
-		if(data.transdata[td].type == "reg"){ for(r = 0; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
+		if(data.transdata[td].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
 		else transout << "\t" << "all";
 		transout << endl;
 		
-		for(row = 0; row < data.transdata[td].rows; row++){
+		for(auto row = 0u; row < data.transdata[td].rows; row++){
 			transout << details.getdate(data.transdata[td].start + row*data.transdata[td].units);
-			for(r = 0; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
+			for(auto r = 0u; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
 		}
 	}
 	
-	for(pd = 0; pd < data.popdata.size(); pd++){
-		file = data.popdata[pd].file;
-		filefull = dir+"/"+file;
+	for(auto pd = 0u; pd < data.popdata.size(); pd++){
+		auto file = data.popdata[pd].file;
+		auto filefull = dir+"/"+file;
 		ofstream popout(filefull);
 		if(!popout) emsg("Cannot output the file '"+filefull+"'");
 		
@@ -574,21 +555,21 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: popout << "date"; break;
 		}
 		
-		if(data.popdata[pd].type == "reg"){ for(r = 0; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
+		if(data.popdata[pd].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
 		else popout << "\t" << "all";
 		popout << endl;
 		
-		for(row = 0; row < data.popdata[pd].rows; row++){
+		for(auto row = 0u; row < data.popdata[pd].rows; row++){
 			popout << details.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
-			for(r = 0; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
+			for(auto r = 0u; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
 		}
 	}
 	
-	for(md = 0; md < data.margdata.size(); md++){
-		d = data.margdata[md].democat;
+	for(auto md = 0u; md < data.margdata.size(); md++){
+		auto d = data.margdata[md].democat;
 			
-		file = data.margdata[md].file;
-		filefull = dir+"/"+file;
+		auto file = data.margdata[md].file;
+		auto filefull = dir+"/"+file;
 		ofstream margout(filefull);
 		if(!margout) emsg("Cannot output the file '"+filefull+"'");
 
@@ -597,14 +578,14 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		else cout << "." << endl;
 		
 		margout << "Category"; 
-		if(data.margdata[md].type == "reg"){ for(r = 0; r < data.nregion; r++){ margout << "\t" << data.region[r].code;}}
+		if(data.margdata[md].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ margout << "\t" << data.region[r].code;}}
 		else margout << "\t" << "all";
 		margout << endl;
 	
-		for(j = 0; j < data.democat[d].value.size(); j++){
+		for(auto j = 0u; j < data.democat[d].value.size(); j++){
 			margout << data.democat[d].value[j];
-			for(r = 0; r < meas.margnum[md][j].size(); r++){ 
-				sum = 0; for(jj = 0; jj < data.democat[d].value.size(); jj++) sum += meas.margnum[md][jj][r];
+			for(auto r = 0u; r < meas.margnum[md][j].size(); r++){ 
+				auto sum = 0.0; for(auto jj = 0u; jj < data.democat[d].value.size(); jj++) sum += meas.margnum[md][jj][r];
 				margout << "\t" << (100.0*meas.margnum[md][j][r])/sum;
 			} 
 			margout << endl;
@@ -658,25 +639,22 @@ STAT Output::getstat_with_w(vector <PW> vec) const
 /// Calculates diagnostic statistics
 STAT Output::getstat(const vector <double> &vec) const                       
 {
-	unsigned int n, i, d;
-	double sum, sum2, var, sd, a, cor, f;
 	STAT stat;
-	vector <double> vec2;
 	
-	n = vec.size();
+	auto n = vec.size();
 	if(n == 0){
 		stat.mean = "---"; stat.CImin = "---"; stat.CImax = "---"; stat.ESS = "---"; 
 	}
 	else{
-		sum = 0; sum2 = 0; for(i = 0; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
+		auto sum = 0.0, sum2 = 0.0; for(auto i = 0u; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
 		sum /= n; sum2 /= n;
 		stat.mean = to_string(sum); 
 		
-		vec2 = vec;
+		auto vec2 = vec;
 		sort(vec2.begin(),vec2.end());
 	
 		if(n >= 2){
-			i = (unsigned int)((n-1)*0.05); f = (n-1)*0.05 - i;
+			auto i = (unsigned int)((n-1)*0.05); auto f = (n-1)*0.05 - i;
 			stat.CImin = to_string(vec2[i]*(1-f) + vec2[i+1]*f);
 				
 			i = (unsigned int)((n-1)*0.95); f = (n-1)*0.95 - i;
@@ -688,16 +666,16 @@ STAT Output::getstat(const vector <double> &vec) const
 		}
 
 		vec2 = vec;
-		var = sum2 - sum*sum;
+		auto var = sum2 - sum*sum;
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
 		else{	
-			sd = sqrt(var);
-			for(i = 0; i < n; i++) vec2[i] = (vec2[i]-sum)/sd;
+			auto sd = sqrt(var);
+			for(auto i = 0u; i < n; i++) vec2[i] = (vec2[i]-sum)/sd;
 				
-			sum = 1;
-			for(d = 1; d < n/2; d++){             // calculates the effective sample size
-				a = 0; for(i = 0; i < n-d; i++) a += vec2[i]*vec2[i+d]; 
-				cor = a/(n-d);
+			auto sum = 1.0;
+			for(auto d = 1u; d < n/2; d++){             // calculates the effective sample size
+				auto a = 0.0; for(auto i = 0u; i < n-d; i++) a += vec2[i]*vec2[i+d]; 
+				auto cor = a/(n-d);
 				if(cor < 0) break;
 				sum += 2*cor;			
 			}
@@ -712,13 +690,10 @@ STAT Output::getstat(const vector <double> &vec) const
 /// Gets the probability distributions for a given set of samples
 DIST Output::getdist(const vector <double> &vec) const
 {
-	unsigned int i, b;
-	double min, max, d;
 	DIST dist;
-	vector <unsigned int> bin;
 	
-	min = large; max = -large;	
-	for(i = 0; i < vec.size(); i++){
+	auto min = large, max = -large;	
+	for(auto i = 0u; i < vec.size(); i++){
 		if(vec[i] < min) min = vec[i];
 		if(vec[i] > max) max = vec[i];
 	}
@@ -727,21 +702,21 @@ DIST Output::getdist(const vector <double> &vec) const
 	dist.prob.resize(BIN);
 	
 	if(min == max){
-		for(b = 0; b < BIN; b++){ dist.value[b] = "---"; dist.prob[b] = "---";} 
+		for(auto b = 0u; b < BIN; b++){ dist.value[b] = "---"; dist.prob[b] = "---";} 
 	}
 	else{
-		d = max-min;
+		auto d = max-min;
 		min -= 0.2*d; max += 0.2*d; 
 	
-		bin.resize(BIN);
-		for(b = 0; b < BIN; b++) bin[b] = 0;
+		vector <unsigned int> bin(BIN);
+		for(auto b = 0u; b < BIN; b++) bin[b] = 0;
 		
-		for(i = 0; i < vec.size(); i++){
-			b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
+		for(auto i = 0u; i < vec.size(); i++){
+			auto b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
 			bin[b]++;
 		}
 
-		for(b = 0; b < BIN; b++){ 
+		for(auto b = 0u; b < BIN; b++){ 
 			dist.value[b] = to_string(min+(b+0.5)*(max-min)/BIN); 
 			dist.prob[b] = to_string(double(bin[b])/vec.size());
 		} 
@@ -750,11 +725,9 @@ DIST Output::getdist(const vector <double> &vec) const
 	return dist;
 }
 
-/// Outputs the probability distributions generated by 
+/// Outputs the probability distributions generated by abc
 void Output::plot_distribution(string file, const Generation &gen) const 
 {
-	const int smax = 100000;
-	
 	ensuredirectory(details.outputdir);
 		
 	if(details.mode != abcsmc) emsg("The mode should be ANC-SMC");
@@ -778,6 +751,7 @@ void Output::plot_distribution(string file, const Generation &gen) const
 		double sumst[N];    // Generate particle sampler
 		double sum = 0; for(auto i = 0u; i < N; i++){ sum += gen.w[i]; sumst[i] = sum;}
 	
+		const int smax = 100000;
 		for(auto s = 0u; s < smax; s++){
 			double z = ran()*sum; auto k = 0u; while(k < N && z > sumst[k]) k++;
 			if(k == N) emsg("Problem");
