@@ -79,6 +79,7 @@ struct TRANS{                              // Stores information about a compart
 struct SPLINEP{                            // Stores information about a spline point
 	double t;                                // The time of the point
 	unsigned int param;                      // The parameter which defines the value
+	double multfac;                             // A multiplicative factor
 };
 
 struct Particle
@@ -108,11 +109,15 @@ public:
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
+	vector <vector <SPLINEP> > spline;       // Stores all the splines (for beta and phi)  
+ 
 	vector <double> beta;                    // The value for beta at the various times
-	vector <SPLINEP> betaspline;             // The spline used to define beta
+	unsigned int betaspline_ref;             //
+	//vector <SPLINEP> betaspline;             // The spline used to define beta
 	
+	unsigned int phispline_ref;              //
 	vector <double> phi;                     // The value for phi at the various times
-	vector <SPLINEP> phispline;              // The spline used to define phi
+	//vector <SPLINEP> phispline;              // The spline used to define phi
 	
 	vector <double> sus;                     // The susceptibility for different demographic categories
 
@@ -160,7 +165,8 @@ public:
 	double prior(const vector<double> &paramv);
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
-													 
+	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
+											
 private:
 	void addQ();
 	void checkdata();

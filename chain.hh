@@ -28,6 +28,7 @@ struct State
 
 	double beta, phi;                                 // A temporary store for the values of beta and phi
 
+	vector < vector <double> > disc_spline;           // A discretisation of the splines	
 };
 
 

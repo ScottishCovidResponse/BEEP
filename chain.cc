@@ -41,6 +41,10 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 {
 	ch = chstart;
 
+	initial.disc_spline.resize(model.spline.size());
+	propose.disc_spline.resize(model.spline.size());
+	
+		
 	initial.x.clear();
 	initial.trev.clear(); initial.trev.resize(details.nsettime); 
 	initial.indev.clear(); initial.indev.resize(data.popsize);
@@ -85,6 +89,7 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	initial.Qmap = propose.Qmap;	
 	initial.indev = propose.indev;
 	initial.x = propose.x;
+
 	
 	initial.L = obsmodel.Lobs(initial.trev,initial.indev);
 	initial.Pr = model.prior(paramval);
@@ -99,16 +104,21 @@ void Chain::sample_from_prior()
 	auto loop = 0;
 	do{
 		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
-		do{	paramval = model.priorsamp(); }while(model.setup(paramval) == 1);             // Randomly samples parameters from the prior	
+		do{	paramval = model.priorsamp();}while(model.setup(paramval) == 1);             // Randomly samples parameters from the prior	
 
 		vector <double> paramvalinit = paramval;
 
-		 // Sets the initial state to zero force of infection
-		for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
-		for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
+		// Sets the initial state to zero force of infection
+		for(const auto& spli : model.spline){
+			for(const auto& sp : spli) paramvalinit[sp.param] = 0; 
+		}	 
+				 
+		//for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
+		//for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
 			
 		model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 		model.copyi(paramvalinit);
+		for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
 		model.setup(paramval);
 		model.copyp(paramval);
 
@@ -130,8 +140,8 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 	vector <double> paramvalinit = paramval;
 
 	// Sets the initial state to zero force of infection
-	for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
-	for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
+	for(const auto& spl : model.spline[model.betaspline_ref]) paramvalinit[spl.param] = 0; 
+	for(const auto& spl : model.spline[model.phispline_ref]) paramvalinit[spl.param] = 0;
 		
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 	model.copyi(paramvalinit);
@@ -1060,8 +1070,8 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	} 
 	
 	vector <unsigned int> parampos;
-	for(const auto& spl : model.betaspline) parampos.push_back(spl.param);
-	for(const auto& spl : model.phispline) parampos.push_back(spl.param);
+	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
+	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
 		
 	timers.timebetaphiinit += clock();
 		

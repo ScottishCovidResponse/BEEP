@@ -95,24 +95,28 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	vector <string> pname; 
 	string splinetype;
 
-	splinetype = "betaspline";
-	inputs.find_spline(details,splinetype,time,pname);
-	for(auto i = 0u; i < time.size(); i++){
-		SPLINEP spl;
-		spl.t = time[i];
-		spl.param = findparam(pname[i]);
-		betaspline.push_back(spl);
-	}	
-	
-	splinetype = "phispline";
-	inputs.find_spline(details,splinetype,time,pname);
-	for(auto i = 0u; i < time.size(); i++){
-		SPLINEP spl;
-		spl.t = time[i];
-		spl.param = findparam(pname[i]);
-		phispline.push_back(spl);
-	}	
+	for(auto loop = 0u; loop < 2; loop++){        // Loads up the different splines
+		double fac;
+		switch(loop){
+		case 0: fac = 1; splinetype = "betaspline"; break;
+		case 1: fac = 1.0/data.popsize; splinetype = "phispline"; break;
+		}
 		
+		vector <SPLINEP> spli;
+		inputs.find_spline(details,splinetype,time,pname);
+		for(auto i = 0u; i < time.size(); i++){
+			SPLINEP spl;
+			spl.t = time[i];
+			spl.param = findparam(pname[i]);
+			spl.multfac = fac;
+			
+			spli.push_back(spl);
+		}	
+		spline.push_back(spli);
+	}
+	betaspline_ref = 0;
+	phispline_ref = 1;
+	
 	sus_param.resize(data.ndemocat);
 	for(auto c = 0u; c < data.ndemocat; c++){
 		for(auto fi = 0u; fi < data.democat[c].value.size(); fi++){
@@ -293,31 +297,20 @@ vector <double> MODEL::priorsamp()
 	}
 	
 	if(smooth_spline == 1){
-		for(auto i = 0u; i < betaspline.size()-1; i++){
-			auto th1 = betaspline[i].param;
-			auto th2 = betaspline[i+1].param;
-			
-			if(betaspline[i].t != betaspline[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
-				double val;
-				do{
-					double fac = exp(normal(0,smooth));
-					val = paramv[th1]*fac;
-				}while(val <= param[th2].min || val >= param[th2].max);
-			  paramv[th2] = val;
-			}
-		}
 		
-		for(auto i = 0u; i < phispline.size()-1; i++){
-			auto th1 = phispline[i].param;
-			auto th2 = phispline[i+1].param;
-			
-			if(phispline[i].t != phispline[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
-				double val;
-				do{
-					double fac = exp(normal(0,smooth));
-					val = paramv[th1]*fac;
-				}while(val <= param[th2].min || val >= param[th2].max);
-			  paramv[th2] = val;
+		for(const auto &spli : spline){
+			for(auto i = 0u; i < spli.size()-1; i++){
+				auto th1 = spli[i].param;
+				auto th2 = spli[i+1].param;
+				
+				if(spli[i].t != spli[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
+					double val;
+					do{
+						double fac = exp(normal(0,smooth));
+						val = paramv[th1]*fac;
+					}while(val <= param[th2].min || val >= param[th2].max);
+					paramv[th2] = val;
+				}
 			}
 		}
 	}
@@ -403,26 +396,27 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 void MODEL::timevariation(const vector<double> &paramv)
 {
   // Uses a linear spline for beta
+	beta = create_disc_spline(betaspline_ref,paramv);
+	
+	phi = create_disc_spline(phispline_ref,paramv);
+
+}
+
+vector <double> MODEL::create_disc_spline(unsigned int ref, const vector<double> &paramv) const
+{
+	vector <double> disc_spline(details.nsettime);
+	
 	auto p = 0;
 	for(auto s = 0u; s < details.nsettime; s++){	
 		auto t = double((s+0.5)*details.period)/details.nsettime;
 		
-		while(p < int(betaspline.size())-1 && t > betaspline[p+1].t) p++;
+		while(p < int(spline[ref].size())-1 && t > spline[ref][p+1].t) p++;
 		
-		auto fac = (t-betaspline[p].t)/(betaspline[p+1].t-betaspline[p].t);
-		beta[s] = (paramv[betaspline[p].param]*(1-fac) + paramv[betaspline[p+1].param]*fac);
+		auto fac = (t-spline[ref][p].t)/(spline[ref][p+1].t-spline[ref][p].t);
+		disc_spline[s] = (paramv[spline[ref][p].param]*(1-fac) + paramv[spline[ref][p+1].param]*fac)*spline[ref][p].multfac;
 	}
 	
-	// Uses a linear spline for phi
-	p = 0;
-	for(auto s = 0u; s < details.nsettime; s++){	
-		auto t = double((s+0.5)*details.period)/details.nsettime;
-		
-		while(p < int(phispline.size())-1 && t > phispline[p+1].t) p++;
-		
-		auto fac = (t-phispline[p].t)/(phispline[p+1].t-phispline[p].t);
-		phi[s] = (paramv[phispline[p].param]*(1-fac) + paramv[phispline[p+1].param]*fac)/data.popsize;
-	}
+	return disc_spline;
 }
 
 /// Sets the transition probabilies based on the parameters
@@ -718,19 +712,13 @@ double MODEL::prior(const vector<double> &paramv)
 	}
 	
 	if(smooth_spline == 1){
-		for(auto i = 0u; i < betaspline.size()-1; i++){
-			if(betaspline[i].t != betaspline[i+1].t){
-				double dval = log(paramv[betaspline[i+1].param]/paramv[betaspline[i].param])/smooth;
-			
-				Pr += -dval*dval/2;
-			}
-		}
-
-		for(auto i = 0u; i < phispline.size()-1; i++){
-			if(phispline[i].t != phispline[i+1].t){
-				double dval = log(paramv[phispline[i+1].param]/paramv[phispline[i].param])/smooth;
-					
-				Pr += -dval*dval/2;
+		for(const auto& spli : spline){
+			for(auto i = 0u; i < spli.size()-1; i++){
+				if(spli[i].t != spli[i+1].t){
+					double dval = log(paramv[spli[i+1].param]/paramv[spli[i].param])/smooth;
+				
+					Pr += -dval*dval/2;
+				}
 			}
 		}
 	}
