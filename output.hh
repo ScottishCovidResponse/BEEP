@@ -63,6 +63,7 @@ private:
 	STAT getstat_with_w(vector <PW> vec) const;	
 	DIST getdist(const vector <double> &vec) const;
 	void posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const;
+	void ensuredirectory(const string &path);
 
 	ofstream trace, traceLi;
 	

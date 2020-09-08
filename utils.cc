@@ -157,19 +157,6 @@ void emsgroot(const string& msg)
 }
 /// @endcond
 
-/// Create a directory if it doesn't already exist
-void ensuredirectory(const string &path) 
-{
-	struct stat st;
-	if (stat(path.c_str(), &st) == -1)
-	{
-		// Directory not found
-		int ret = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-		if (ret == -1)
-			emsg("Error creating directory '"+path+"'");
-	}
-}
-
 string filebasename(const string &path)
 {
 	auto filecomps = split(path,'/');
