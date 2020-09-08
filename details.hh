@@ -12,7 +12,7 @@ struct Mpi
 	unsigned int core;                       // The core of the current process
 };
 
-struct Details
+struct Details                             // Provides various details used to define the simulation / inference
 {
 	Details(Inputs &inputs);
 	
@@ -35,6 +35,5 @@ struct Details
 
 	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
 	vector <double> settime;                 // The timings at which beta changes
-	
 };
 #endif

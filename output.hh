@@ -19,10 +19,10 @@ struct PARAMSAMP{                                     // Stores information abou
 	vector <double> paramval;                           // A parameter sample
 };
 
-struct STAT{                                           // Stores statistical information
-	string mean;                                         // The mean
-	string CImin, CImax;                                 // The minimum and maximum of the 90% credible interval
-	string ESS;                                          // The estimated sample size
+struct STAT{                                          // Stores statistical information
+	string mean;                                        // The mean
+	string CImin, CImax;                                // The minimum and maximum of the 90% credible interval
+	string ESS;                                         // The estimated sample size
 };
 
 struct DIST{                                          // Stores a probability distribution

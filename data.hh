@@ -211,7 +211,7 @@ public:
 	
 	vector <double> agedist; 								 // Gives the overall age distribution
 	
-	void sortX(vector <unsigned int> &vec);	 // Used for sorting houses by x and y location
+	void sortX(vector <unsigned int> &vec);	 // Used for sorting areas by x and y location
 	void sortY(vector <unsigned int> &vec);	
 	AreaRefComparatorX compX;
 	AreaRefComparatorY compY;

@@ -133,7 +133,7 @@ public:
 	
 	unsigned int ntr, nac;                   // Gets the base acceptance rate
 	
-	vector< vector <unsigned int> > sus_param;  // The parameters related to fixed effect for susceptibility
+	vector< vector <unsigned int> > sus_param;// The parameters related to fixed effect for susceptibility
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
 	unsigned int regioneffect;               // Set to 1 if a regional random effect is put in the force of infection
@@ -145,7 +145,6 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	//double getparam(const string& name);
 	double getinfectivity(const string& name);
 	void simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);

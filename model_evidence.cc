@@ -41,14 +41,14 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 /// Stores the likelihood so the model evidence can be calculated later
 void Model_Evidence::store(const Mpi &mpi, const vector<Chain>& chain) 
 {
-	unsigned int nchain = chain.size();
-	double L[nchain], Ltot[nchaintot];
-	unsigned int ch[nchain], chtot[nchaintot];
+	auto nchain = chain.size();
+	vector <double> L(nchain), Ltot(nchaintot);
+	vector <unsigned int> ch(nchain), chtot(nchaintot);
 	
 	for(auto p = 0u; p < nchain; p++){ L[p] = chain[p].Li; ch[p] = chain[p].ch;}
 		
-	MPI_Gather(L,nchain,MPI_DOUBLE,Ltot,nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(ch,nchain,MPI_UNSIGNED,chtot,nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&L[0],nchain,MPI_DOUBLE,&Ltot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
 		for(auto p = 0u; p < nchaintot; p++) Li[chtot[p]].push_back(Ltot[p]);
@@ -58,19 +58,17 @@ void Model_Evidence::store(const Mpi &mpi, const vector<Chain>& chain)
 /// Calculates the model evidence
 double Model_Evidence::calculate() const
 {
-	unsigned int jmin, jmax;
-	double max, dinvT, ME, sum;
-	
-	ME = 0;
+	auto ME = 0.0;
 	for(auto ch = 1u; ch < Li.size(); ch++){
-		dinvT = invT[ch-1]-invT[ch];
-		jmax = Li[ch].size(); jmin = jmax/3;
-		max = -large; 
+		auto dinvT = invT[ch-1]-invT[ch];
+		auto jmax = Li[ch].size();
+		auto jmin = jmax/3;
+		auto max = -large; 
 		for(auto j = jmin; j < jmax; j++){ 
 			if(Li[ch][j] > max) max = Li[ch][j];
 		}
 		
-		sum = 0; for(auto j = jmin; j < jmax; j++) sum += exp(dinvT*(Li[ch][j]-max));
+		auto sum = 0.0; for(auto j = jmin; j < jmax; j++) sum += exp(dinvT*(Li[ch][j]-max));
 		ME += dinvT*max + log(sum/(jmax-jmin));
 	}
 	if(ME < -large) ME = -large;
@@ -85,7 +83,7 @@ double Model_Evidence::get_invT(unsigned int ch) const
 
 double Model_Evidence::average_Li(unsigned int ch) const
 {
-	double av = 0; 
+	auto av = 0.0; 
 	auto jmax = Li[ch].size(); 
 	for(auto j = 0u; j < jmax; j++) av += Li[ch][j];
 	
