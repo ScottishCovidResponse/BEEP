@@ -45,8 +45,8 @@ public:
 	
 	void trace_plot_init();
 	void trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval);
-	void Li_trace_plot_init(unsigned int nchaintot);
-	void Li_trace_plot(unsigned int samp, const vector <double> &Litot);
+	void L_trace_plot_init(unsigned int nchaintot);
+	void L_trace_plot(unsigned int samp, const vector <double> &Litot);
 	void plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const;
 
 	void results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &opsamp) const;

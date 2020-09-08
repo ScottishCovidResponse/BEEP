@@ -69,7 +69,7 @@ void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int 
 }
 
 /// Initialises trace plot for likelihoods on difference chains (MBP only)
-void Output::Li_trace_plot_init(unsigned int nchaintot)
+void Output::L_trace_plot_init(unsigned int nchaintot)
 {
 	stringstream ss; ss << details.outputdir << "/traceLi.txt";
 
@@ -80,7 +80,7 @@ void Output::Li_trace_plot_init(unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void Output::Li_trace_plot(unsigned int samp, const vector <double> &Litot)
+void Output::L_trace_plot(unsigned int samp, const vector <double> &Litot)
 {
 	traceLi << samp;
 	for(const auto& Lito : Litot) traceLi << "\t" << Lito; 

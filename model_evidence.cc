@@ -14,7 +14,7 @@ void Model_Evidence::init(const unsigned int _nchaintot, const unsigned int _que
 	quench = _quench;
 	invTmin = _invTmin;
 	invTmax = _invTmax;
-	Li.resize(nchaintot); invT.resize(nchaintot);
+	L.resize(nchaintot); invT.resize(nchaintot);
 }
 
 void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
@@ -39,19 +39,19 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 }
 
 /// Stores the likelihood so the model evidence can be calculated later
-void Model_Evidence::store(const Mpi &mpi, const vector<Chain>& chain) 
+void Model_Evidence::store(const Mpi &mpi, const vector<Chain> &chain) 
 {
 	auto nchain = chain.size();
-	vector <double> L(nchain), Ltot(nchaintot);
+	vector <double> Lst(nchain), Lsttot(nchaintot);
 	vector <unsigned int> ch(nchain), chtot(nchaintot);
 	
-	for(auto p = 0u; p < nchain; p++){ L[p] = chain[p].Li; ch[p] = chain[p].ch;}
+	for(auto p = 0u; p < nchain; p++){ Lst[p] = chain[p].initial.L; ch[p] = chain[p].ch;}
 		
-	MPI_Gather(&L[0],nchain,MPI_DOUBLE,&Ltot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	MPI_Gather(&Lst[0],nchain,MPI_DOUBLE,&Lsttot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
-		for(auto p = 0u; p < nchaintot; p++) Li[chtot[p]].push_back(Ltot[p]);
+		for(auto p = 0u; p < nchaintot; p++) L[chtot[p]].push_back(Lsttot[p]);
 	}
 }
 	
@@ -59,16 +59,16 @@ void Model_Evidence::store(const Mpi &mpi, const vector<Chain>& chain)
 double Model_Evidence::calculate() const
 {
 	auto ME = 0.0;
-	for(auto ch = 1u; ch < Li.size(); ch++){
+	for(auto ch = 1u; ch < L.size(); ch++){
 		auto dinvT = invT[ch-1]-invT[ch];
-		auto jmax = Li[ch].size();
+		auto jmax = L[ch].size();
 		auto jmin = jmax/3;
 		auto max = -large; 
 		for(auto j = jmin; j < jmax; j++){ 
-			if(Li[ch][j] > max) max = Li[ch][j];
+			if(L[ch][j] > max) max = L[ch][j];
 		}
 		
-		auto sum = 0.0; for(auto j = jmin; j < jmax; j++) sum += exp(dinvT*(Li[ch][j]-max));
+		auto sum = 0.0; for(auto j = jmin; j < jmax; j++) sum += exp(dinvT*(L[ch][j]-max));
 		ME += dinvT*max + log(sum/(jmax-jmin));
 	}
 	if(ME < -large) ME = -large;
@@ -81,11 +81,11 @@ double Model_Evidence::get_invT(unsigned int ch) const
 	return invT[ch];
 }
 
-double Model_Evidence::average_Li(unsigned int ch) const
+double Model_Evidence::average_L(unsigned int ch) const
 {
 	auto av = 0.0; 
-	for(auto Lich : Li[ch]) av += Lich;
+	for(auto Lch : L[ch]) av += Lch;
 	
-	return av/Li[ch].size();
+	return av/L[ch].size();
 }
 	

@@ -35,9 +35,9 @@ Simulate::Simulate(const Details &details, DATA &data, MODEL &model, const POPTR
 void Simulate::run()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
-	proportions(chain.indevp);
+	proportions(chain.propose.indev);
 	
-	output.simulateddata(chain.trevp,chain.indevp,details.outputdir);
+	output.simulateddata(chain.propose.trev,chain.propose.indev,details.outputdir);
 	
 	if(1 == 0){ // This is switched on to see distribution for R and eta from the simulated data
 		SAMPLE sample; 
@@ -45,7 +45,7 @@ void Simulate::run()
 		vector <SAMPLE> opsamp; 
 		vector <PARAMSAMP> psamp;
 		
-		sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
+		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
 		model.setup(chain.paramval);
 		sample.R0 = model.R0calc(chain.paramval);
 		sample.phi = model.phi; 
@@ -68,7 +68,7 @@ void Simulate::multirun()
 		Chain chain(details,data,model,poptree,obsmodel,0);
 		
 		SAMPLE sample;
-		sample.meas = obsmodel.getmeas(chain.trevp,chain.indevp);
+		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
 		model.setup(chain.paramval);
 		sample.R0 = model.R0calc(chain.paramval);
 		sample.phi = model.phi; 

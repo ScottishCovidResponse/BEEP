@@ -76,11 +76,11 @@ void ABC::mbp()
 			
 			for(auto& pa : part){ 
 				chain.sample_from_prior();
-				double EF = obsmodel.Lobs(chain.trevp,chain.indevp);
+				double EF = obsmodel.Lobs(chain.propose.trev,chain.propose.indev);
 
 				pa.paramval = chain.paramval;
 				pa.EF = EF;
-				pa.ev = chain.event_compress(chain.indevp);
+				pa.ev = chain.event_compress(chain.propose.indev);
 				
 				gen.param_samp.push_back(chain.paramval);
 				gen.EF_samp.push_back(EF);
@@ -177,7 +177,7 @@ void ABC::smc()
 				chain.sample_from_prior();
 				
 				gen.param_samp.push_back(chain.paramval);
-				gen.EF_samp.push_back(obsmodel.Lobs(chain.trevp,chain.indevp));
+				gen.EF_samp.push_back(obsmodel.Lobs(chain.propose.trev,chain.propose.indev));
 			}
 		}
 		else{
@@ -210,7 +210,7 @@ void ABC::smc()
 					if(fl == 0){
 						fl = chain.simulate(param_propose);
 						if(fl == 0){
-							EF = obsmodel.Lobs(chain.trevp,chain.indevp);
+							EF = obsmodel.Lobs(chain.propose.trev,chain.propose.indev);
 							if(EF > EFcut) fl = 1;
 						}
 					}
@@ -276,7 +276,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 		for(auto j = 0u; j < jmax; j++){
 			if(j%sampstep == 0){
 				gen.param_samp.push_back(chain.paramval);				
-				gen.EF_samp.push_back(chain.EF);
+				gen.EF_samp.push_back(chain.initial.EF);
 			}
 			
 			if(ran() < p_mbp){
@@ -432,7 +432,7 @@ SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 {
 	SAMPLE sample;
 	chain.initialise_from_particle(part);
-	sample.meas = obsmodel.getmeas(chain.trevi,chain.indevi);
+	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);
 	model.setup(chain.paramval);
 	sample.R0 = model.R0calc(chain.paramval);
 	sample.phi = model.phi; 
