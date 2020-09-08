@@ -331,11 +331,10 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 			ninfplot =  chain[ppost].xi.size();
 		}
 		else{
-			MPI_Status status;
-			packinit(MAX_NUMBERS);
-			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
-			int siz;
-			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer is not big enough");
+			unsigned int si;
+			MPI_Recv(&si,1,MPI_UNSIGNED,ppost/nchain,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			packinit(si);
+			MPI_Recv(packbuffer(),si,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 		
 			unpack(paramsamp.paramval);
 			unpack(L);
@@ -355,7 +354,9 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 			pack(chain[p].Li);
 			pack(chain[p].Pri);
 			pack((unsigned int) chain[p].xi.size());
-			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+			unsigned int si = packsize();
+			MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
+			MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
 	
@@ -391,11 +392,10 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			sample.phi = model.phi; 
 		}
 		else{
-			MPI_Status status;
-			packinit(MAX_NUMBERS);
-			MPI_Recv(packbuffer(),MAX_NUMBERS,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,&status);
-			int siz;
-			MPI_Get_count(&status, MPI_DOUBLE, &siz); if(siz >= int(MAX_NUMBERS)) emsg("The buffer not big enough.");
+			unsigned int si;
+			MPI_Recv(&si,1,MPI_UNSIGNED,ppost/nchain,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			packinit(si);
+			MPI_Recv(packbuffer(),si,MPI_DOUBLE,ppost/nchain,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 		
 			unpack(sample.meas.transnum);
 			unpack(sample.meas.popnum);
@@ -419,7 +419,9 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			pack(meas.margnum);
 			pack(R0);
 			pack(model.phi);
-			MPI_Send(packbuffer(),packsize(),MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+			unsigned int si = packsize();
+			MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
+			MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 		}
 	}
 

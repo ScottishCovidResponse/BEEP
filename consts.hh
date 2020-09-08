@@ -31,8 +31,6 @@ const unsigned int quenchpl = 0;                                 // Set to 1 if 
 const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
 const unsigned int duplicate = 0;                                // Set to one to duplicate chains (this is used as a diagnostic check)
 
-const unsigned int MAX_NUMBERS = 15000000;                       // The maximum buffer size for Send Recv MPI messages
-
 const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions
 
 const unsigned int smooth_spline = 1;                            // Set to 1 if smoothing on splines is being done
