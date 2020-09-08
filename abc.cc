@@ -74,13 +74,13 @@ void ABC::mbp()
 		if(g == 0){
 			gen.EFcut = large;
 			
-			for(auto i = 0u; i < N; i++){ 
+			for(auto& pa : part){ 
 				chain.sample_from_prior();
 				double EF = obsmodel.Lobs(chain.trevp,chain.indevp);
 
-				part[i].paramval = chain.paramval;
-				part[i].EF = EF;
-				part[i].ev = chain.event_compress(chain.indevp);
+				pa.paramval = chain.paramval;
+				pa.EF = EF;
+				pa.ev = chain.event_compress(chain.indevp);
 				
 				gen.param_samp.push_back(chain.paramval);
 				gen.EF_samp.push_back(EF);
@@ -259,11 +259,10 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	for(auto v = 0u; v < nvar; v++){ ntr_v[v] = 0; nac_v[v] = 0;}
 	
 	double EFcut = gen.EFcut;
-	auto N = part.size();
 	
 	auto jmax = 0u;
-	for(auto v = 0u; v < nvar; v++){
-		auto num = 1.0/(jumpv[v]*jumpv[v]);
+	for(auto& ju : jumpv){
+		auto num = 1.0/(ju*ju);
 		if(num < 1) num = 1;
 		jmax += beta*num;
 	}
@@ -271,8 +270,8 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	if(jmax < 1) jmax = 1;
 	if(mpi.core == 0) cout << jmax << "jmax\n";
 	
-	for(auto i = 0u; i < N; i++){
-		chain.initialise_from_particle(part[i]);
+	for(auto& pa : part){
+		chain.initialise_from_particle(pa);
 
 		for(auto j = 0u; j < jmax; j++){
 			if(j%sampstep == 0){
@@ -297,7 +296,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 			}
 		}
 			
-		chain.generate_particle(part[i]);
+		chain.generate_particle(pa);
 	}	
 			
 	for(auto v = 0u; v < nvar; v++){
@@ -451,14 +450,14 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 	
 	if(mpi.core == 0){
 		vector <PARAMSAMP> psamp;      // Stores parameter samples
-		for(auto s = 0u; s < gen.param_samp.size(); s++){
+		for(auto& samp : gen.param_samp){
 			PARAMSAMP psa; 
-			psa.paramval = gen.param_samp[s];
+			psa.paramval = samp;
 			psamp.push_back(psa);
 		}
 		
 		vector <SAMPLE> opsamp;        // Stores output samples
-		for(auto i = 0u; i < N; i++) opsamp.push_back(get_sample(part[i],chain));
+		for(auto &pa : part) opsamp.push_back(get_sample(pa,chain));
 		
 		for(auto co = 1u; co < mpi.ncore; co++){
 			unsigned int si;
