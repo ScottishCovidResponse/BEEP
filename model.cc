@@ -30,7 +30,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		vector <string> name;
 		vector <double> val;
 		inputs.find_param(name,val);
-		for(unsigned int th = 0; th < name.size(); th++){
+		for(auto th = 0u; th < name.size(); th++){
 			addparam(name[th],val[th],val[th]);
 		}
 	}
@@ -39,14 +39,14 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		vector <string> name;
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
-		for(unsigned int th = 0; th < name.size(); th++){
+		for(auto th = 0u; th < name.size(); th++){
 			addparam(name[th],min[th],max[th]);
 		}
 	}
 	
 	regioneffect = 0;
 	sigma_param = UNSET;
-	for(unsigned int th = 0; th < param.size(); th++){
+	for(auto th = 0u; th < param.size(); th++){
 		if(param[th].name == "regeff_sigma"){
 			param[th].used = 1;
 			
@@ -54,7 +54,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 			sigma_param = th;	
 			
 			regioneff_param.resize(data.nregion);
-			for(unsigned int r = 0; r < data.nregion; r++){
+			for(auto r = 0u; r < data.nregion; r++){
 				regioneff_param[r] = param.size();
 				stringstream ss; ss << "reff_" << data.region[r].code;
 				addparam(ss.str(),-large,large);
@@ -67,7 +67,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		regioneffect = 2;
 		
 		regioneff_param.resize(data.nregion);
-		for(unsigned int r = 0; r < data.nregion; r++){
+		for(auto r = 0u; r < data.nregion; r++){
 			regioneff_param[r] = param.size();
 			stringstream ss; ss << "reff_" << data.region[r].code;
 			addparam(ss.str(),-0.2,0.2);
@@ -80,12 +80,12 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	vector <string> name;
 	vector <double> infectivity;
 	inputs.find_comps(name,infectivity);
-	for(unsigned int c = 0; c < name.size(); c++) addcomp(name[c],infectivity[c]);
+	for(auto c = 0u; c < name.size(); c++) addcomp(name[c],infectivity[c]);
 	
 	vector <string> from, to, prpar, mean, cv;
 	vector <int> type;
 	inputs.find_trans(from,to,prpar,type,mean,cv);
-	for(unsigned int tr = 0; tr < from.size(); tr++) addtrans(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
+	for(auto tr = 0u; tr < from.size(); tr++) addtrans(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
 	
 	if(details.mode == inf || details.mode == abcsmc || details.mode == abcmbp){
 		priorcomps = inputs.find_priorcomps(comp);
@@ -97,7 +97,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 
 	splinetype = "betaspline";
 	inputs.find_spline(details,splinetype,time,pname);
-	for(unsigned int i = 0; i < time.size(); i++){
+	for(auto i = 0u; i < time.size(); i++){
 		SPLINEP spl;
 		spl.t = time[i];
 		spl.param = findparam(pname[i]);
@@ -106,7 +106,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	
 	splinetype = "phispline";
 	inputs.find_spline(details,splinetype,time,pname);
-	for(unsigned int i = 0; i < time.size(); i++){
+	for(auto i = 0u; i < time.size(); i++){
 		SPLINEP spl;
 		spl.t = time[i];
 		spl.param = findparam(pname[i]);
@@ -114,8 +114,8 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	}	
 		
 	sus_param.resize(data.ndemocat);
-	for(unsigned int c = 0; c < data.ndemocat; c++){
-		for(unsigned int fi = 0; fi < data.democat[c].value.size(); fi++){
+	for(auto c = 0u; c < data.ndemocat; c++){
+		for(auto fi = 0u; fi < data.democat[c].value.size(); fi++){
 			sus_param[c].push_back(findparam(data.democat[c].param[fi]));
 		}
 	}
@@ -124,7 +124,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 		covar_param.push_back(findparam(data.covar[c].param));
 	}
 
-	for(unsigned int p = 0; p < param.size(); p++){
+	for(auto p = 0u; p < param.size(); p++){
 		if(param[p].used == 0) emsg("The [arameter '"+param[p].name+"' is not used in the model.");
 	}
 
@@ -133,16 +133,14 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 
 	beta.resize(details.nsettime); phi.resize(details.nsettime);
 	
-	for(unsigned int tra = 0; tra < trans.size(); tra++){
-		switch(trans[tra].type){
-		case exp_dist: param[trans[tra].param_mean].type = distval_paramtype; break;
-		case gamma_dist: case lognorm_dist: param[trans[tra].param_mean].type = distval_paramtype; param[trans[tra].param_cv].type = distval_paramtype; break;
+	for(auto &tr : trans){
+		switch(tr.type){
+		case exp_dist: param[tr.param_mean].type = distval_paramtype; break;
+		case gamma_dist: case lognorm_dist: param[tr.param_mean].type = distval_paramtype; param[tr.param_cv].type = distval_paramtype; break;
 		}
 		
-		if(trans[tra].istimep == 0){
-			if(trans[tra].probparam.size() > 0){
-				for(unsigned int a = 0; a < data.nage; a++) param[trans[tra].probparam[a]].type = branchprob_paramtype; 
-			}
+		if(tr.istimep == 0){
+			for(auto &th : tr.probparam) param[th].type = branchprob_paramtype; 
 		}
 	}
 	
@@ -156,13 +154,13 @@ void MODEL::print_to_terminal() const
 	cout << endl;                                           
 	if(details.mode == sim || details.mode == multisim){
 		cout << "Parameters:" << endl;
-		for(unsigned int p = 0; p < param.size()-1; p++){
+		for(auto p = 0u; p < param.size()-1; p++){
 			cout << "  " << param[p].name << " = " << param[p].min << endl;
 		}
 	}
 	else{
 		cout << "Priors:" << endl;
-		for(unsigned int p = 0; p < param.size()-1; p++){
+		for(auto p = 0u; p < param.size()-1; p++){
 			cout << "  " << param[p].name << " = ";
 			if(param[p].min ==  param[p].max) cout << param[p].min << endl;
 			else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
@@ -171,38 +169,38 @@ void MODEL::print_to_terminal() const
 	cout << endl;
 		
 	cout << "Compartments:" << endl; 
-	for(unsigned int c = 0; c < comp.size(); c++){
-		cout << "  " << comp[c].name << "  Infectivity: " << comp[c].infectivity << endl; 			
+	for(auto &co : comp){
+		cout << "  " << co.name << "  Infectivity: " << co.infectivity << endl; 			
 	}
 	cout << endl;
 	
 	cout << "Transitions:" << endl; 
-	for(unsigned int tra = 0; tra < trans.size(); tra++){
-		if(trans[tra].from != trans[tra].to){
-			cout << "  " << comp[trans[tra].from].name << " → " << comp[trans[tra].to].name;
-			if(trans[tra].probparam.size() > 0){
+	for(auto &tr : trans){
+		if(tr.from != tr.to){
+			cout << "  " << comp[tr.from].name << " → " << comp[tr.to].name;
+			if(tr.probparam.size() > 0){
 				cout << " with probability ";
-				for(unsigned int j = 0; j < trans[tra].probparam.size(); j++){
+				for(auto j = 0u; j < tr.probparam.size(); j++){
 					if(j > 0) cout << ", ";
-					cout << param[trans[tra].probparam[j]].name;
+					cout << param[tr.probparam[j]].name;
 				}
 				cout << "  ";
 			}
 			
-			switch(trans[tra].type){
+			switch(tr.type){
 				case infection_dist: 
 					cout << " Infection";
 					break;
 				case exp_dist:
-					cout << " Exponential  mean=" << param[trans[tra].param_mean].name;
+					cout << " Exponential  mean=" << param[tr.param_mean].name;
 					break;
 				case gamma_dist:
-					cout << " Gamma mean=" << param[trans[tra].param_mean].name 
-							 << " cv=" << param[trans[tra].param_cv].name; 
+					cout << " Gamma mean=" << param[tr.param_mean].name 
+							 << " cv=" << param[tr.param_cv].name; 
 					break;
 				case lognorm_dist:
-					cout << " Lognormal mean=" << param[trans[tra].param_mean].name 
-							 << " cv=" << param[trans[tra].param_cv].name; 
+					cout << " Lognormal mean=" << param[tr.param_mean].name 
+							 << " cv=" << param[tr.param_cv].name; 
 					break;
 				default:
 					break;
@@ -228,25 +226,25 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 void MODEL::copyi(const vector<double> &paramv)
 {
 	parami = paramv; betai = beta; phii = phi; susi = sus; areafaci = areafac;
-	for(auto c = 0u; c < comp.size(); c++) comp[c].probi = comp[c].prob;
+	for(auto &co : comp) co.probi = co.prob;
 }
 	
 /// Copies values used for the proposed state (used in MBPs)
 void MODEL::copyp(const vector<double> &paramv)
 {
 	paramp = paramv; betap = beta; phip = phi; susp = sus; areafacp = areafac;
-	for(auto c = 0u; c < comp.size(); c++) comp[c].probp = comp[c].prob;
+	for(auto &co : comp) co.probp = co.prob;
 }
 
 /// Adds in the tensor Q to the model
 void MODEL::addQ()
 {
-	for(auto c = 0u; c < comp.size(); c++) addtrans(comp[c].name,comp[c].name,"",timep_dist,"","");  
+	for(auto &co : comp) addtrans(co.name,co.name,"",timep_dist,"","");  
 	
-	for(auto q = 0u; q < data.Q.size(); q++){
+	for(auto &QQ : data.Q){
 		unsigned int c;
-		for(c = 0; c < comp.size(); c++) if(data.Q[q].comp == comp[c].name) break;
-		if(c == comp.size()) emsg("The compartment '"+data.Q[q].comp+"' in '"+data.Q[q].name+"' is not recognised.");
+		for(c = 0; c < comp.size(); c++) if(QQ.comp == comp[c].name) break;
+		if(c == comp.size()) emsg("The compartment '"+QQ.comp+"' in '"+QQ.name+"' is not recognised.");
 	}
 	
 	DQINFO dq;
@@ -286,13 +284,12 @@ void MODEL::addQ()
 vector <double> MODEL::priorsamp()
 {
 	vector <double> paramv(param.size());
-	
 	for(auto th = 0u; th < param.size(); th++){	
 		paramv[th] = param[th].min + ran()*(param[th].max - param[th].min);
 	}
 	
 	if(regioneffect == 1){
-		for(auto r = 0u; r < data.nregion; r++) paramv[regioneff_param[r]] = normal(0,paramv[sigma_param]);
+		for(auto &th : regioneff_param) paramv[th] = normal(0,paramv[sigma_param]);
 	}
 	
 	if(smooth_spline == 1){
@@ -386,10 +383,11 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 	if(prpar != ""){
 		vector <string> probparam = split(prpar,',');
 	
-		if(probparam.size() != data.nage) emsg("For the transition '"+from+"→"+to+"' the number of parameters in expression '"+prpar+"' should equal the number of age groups.");
-		for(auto j = 0u; j < probparam.size(); j++){
-			tr.probparam.push_back(findparam(probparam[j]));
+		if(probparam.size() != data.nage){
+			emsg("For the transition '"+from+"→"+to+"' the number of parameters in expression '"+prpar+"' should equal the number of age groups.");
 		}
+		
+		for(auto &parname : probparam) tr.probparam.push_back(findparam(parname));
 	}
 	
 	tr.type = type;
@@ -430,40 +428,26 @@ void MODEL::timevariation(const vector<double> &paramv)
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob(const vector<double> &paramv)
 {
-	if(checkon == 2){
-		for(auto c = 0u; c < comp.size(); c++){
-			cout << "Comp " << comp[c].name << "  "; cout << comp[c].transtimep << ",  ";
-			for(auto k = 0u; k <  comp[c].trans.size(); k++) cout << comp[c].trans[k] << ", ";
-			cout << endl;
-		}
-	
-		for(auto tra = 0u; tra < trans.size(); tra++){
-			cout << tra << " " << comp[trans[tra].from].name << "->" << comp[trans[tra].to].name << " trans" << endl;
-			for(auto k = 0u; k < trans[tra].DQ.size(); k++) cout <<  trans[tra].DQ[k] << ", ";
-			cout << "DQ" << endl;
-		}
-	}
-	
-	for(auto c = 0u; c < comp.size(); c++){
-		auto kmax = comp[c].trans.size();
+	for(auto &co : comp){
+		auto kmax = co.trans.size();
 		if(kmax > 1){
-			comp[c].prob.resize(data.nage);
-			comp[c].probsum.resize(data.nage);
+			co.prob.resize(data.nage);
+			co.probsum.resize(data.nage);
 			for(auto a = 0u; a < data.nage; a++){
-				comp[c].prob[a].resize(kmax);
-				comp[c].probsum[a].resize(kmax);
+				co.prob[a].resize(kmax);
+				co.probsum[a].resize(kmax);
 				
 				auto sum = 0.0;
 				for(auto k = 0u; k < kmax-1; k++){
-					auto p = trans[comp[c].trans[k]].probparam[a]; if(p == UNSET) emsgEC("model",1);		
-					auto prob = paramv[p]; comp[c].prob[a][k] = prob; sum += prob; if(prob < 0) return 1;
+					auto p = trans[co.trans[k]].probparam[a]; if(p == UNSET) emsgEC("model",1);		
+					auto prob = paramv[p]; co.prob[a][k] = prob; sum += prob; if(prob < 0) return 1;
 				} 
-				auto prob = 1-sum; comp[c].prob[a][kmax-1] = prob; if(prob < 0) return 1;
+				auto prob = 1-sum; co.prob[a][kmax-1] = prob; if(prob < 0) return 1;
 				
 				sum = 0.0;
 				for(auto k = 0u; k < kmax; k++){
-					sum += comp[c].prob[a][k];
-					comp[c].probsum[a][k] = sum;
+					sum += co.prob[a][k];
+					co.probsum[a][k] = sum;
 				}
 			}
 		}
@@ -730,9 +714,7 @@ double MODEL::prior(const vector<double> &paramv)
 	
 	if(regioneffect == 1){
 		auto sd = paramv[sigma_param];
-		for(auto r = 0u; r < data.nregion; r++){
-			Pr += normalprob(paramv[regioneff_param[r]],0,sd*sd);
-		}
+		for(auto &th : regioneff_param) Pr += normalprob(paramv[th],0,sd*sd);
 	}
 	
 	if(smooth_spline == 1){
@@ -759,9 +741,9 @@ double MODEL::prior(const vector<double> &paramv)
 /// Calculate compartmental probabilities
 void MODEL::calcprobin()
 {
-	for(auto c = 0u; c < comp.size(); c++){
-		comp[c].probin.resize(data.nage);
-		for(auto a = 0u; a < data.nage; a++) comp[c].probin[a] = 0;
+	for(auto &co : comp){
+		co.probin.resize(data.nage);
+		for(auto &probin : co.probin) probin = 0;
 	}
 
 	for(auto a = 0u; a < data.nage; a++){
@@ -813,14 +795,14 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	setup(paramv);
 	calcprobin();
 	
-	for(auto c = 0u; c < comp.size(); c++){
-		comp[c].infint.resize(data.nage);
+	for(auto &co : comp){
+		co.infint.resize(data.nage);
 		for(auto a = 0u; a < data.nage; a++){
-			comp[c].infint[a] = 0;
+			co.infint[a] = 0;
 		
-			auto kmax = comp[c].trans.size();
+			auto kmax = co.trans.size();
 			for(auto k = 0u; k < kmax; k++){
-				auto tra = comp[c].trans[k];
+				auto tra = co.trans[k];
 				
 				double dt;
 				switch(trans[tra].type){
@@ -830,22 +812,22 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 				case lognorm_dist: dt = paramv[trans[tra].param_mean]; break;
 				default: emsgEC("MODEL",9); break;
 				}	
-				if(kmax == 1) comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt;
-				else comp[c].infint[a] += comp[c].probin[a]*comp[c].infectivity*dt*comp[c].prob[a][k];
+				if(kmax == 1) co.infint[a] += co.probin[a]*co.infectivity*dt;
+				else co.infint[a] += co.probin[a]*co.infectivity*dt*co.prob[a][k];
 			}
 		}
 	}
 	
 	vector <double> R0fac(ntimeperiod);
-	for(auto timep = 0u; timep < ntimeperiod; timep++) R0fac[timep] = 0;
+	for(auto &R0fa : R0fac) R0fa = 0;
 		
-	for(auto q = 0u; q < data.Q.size(); q++){
-		auto timep = data.Q[q].timep;
-		auto qt = data.Q[q].Qtenref;
+	for(auto &QQ : data.Q){
+		auto timep = QQ.timep;
+		auto qt = QQ.Qtenref;
 		
 		unsigned int co;
-		for(co = 0u; co < comp.size(); co++) if(data.Q[q].comp == comp[co].name) break;
-		if(co == comp.size()) emsg("Compartment '"+data.Q[q].comp+"' in '"+data.Q[q].name+"' not recognised.");
+		for(co = 0u; co < comp.size(); co++) if(QQ.comp == comp[co].name) break;
+		if(co == comp.size()) emsg("Compartment '"+QQ.comp+"' in '"+QQ.name+"' not recognised.");
 		
 		for(auto c = 0u; c < data.narea; c++){
 			for(auto a = 0u; a < data.nage; a++){
@@ -884,30 +866,25 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 {	
 	timers.timecompparam -= clock();
 
-	for(auto tra = 0u; tra < trans.size(); tra++){
-		if(trans[tra].istimep == 0){
-			trans[tra].num.resize(data.nage); for(auto a = 0u; a < data.nage; a++) trans[tra].num[a] = 0;
+	for(auto &tr : trans){
+		if(tr.istimep == 0){
+			tr.num.resize(data.nage); for(auto &num : tr.num) num = 0;
 		}
-	}
-		
-	for(auto tra = 0u; tra < trans.size(); tra++){
-		trans[tra].numvisittot = 0; trans[tra].dtsum = 0; trans[tra].dtlist.clear();
+		tr.numvisittot = 0; tr.dtsum = 0; tr.dtlist.clear();
 	}
 
-	auto jmax = x.size();                                                        // Extracts values based on the event sequence
-	for(auto j = 0u; j < jmax; j++){
-		auto i = x[j].ind;
+	for(auto &xx : x){                  // Extracts values based on the event sequence
+		auto i = xx.ind;
 		auto dp = data.ind[i].dp;
 		auto a = data.democatpos[dp][0];
 				
 		auto t = 0.0;
-		auto emax = indev[i].size();
-		for(auto e = 0u; e < emax; e++){
-			auto tra = indev[i][e].trans;
+		for(auto &ev : indev[i]){
+			auto tra = ev.trans;
 			if(trans[tra].istimep == 0){
 				trans[tra].num[a]++;
 	
-				auto dt = indev[i][e].t-t;
+				auto dt = ev.t-t;
 				if(dt == 0) emsgEC("Model",10);
 				t += dt;
 				
@@ -983,13 +960,13 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 double MODEL::likelihood_prob()
 {
 	auto L = 0.0;
-	for(auto c = 0u; c < comp.size(); c++){	
-		auto kmax = comp[c].trans.size();
+	for(auto &co : comp){	
+		auto kmax = co.trans.size();
 		if(kmax > 1){
 			for(auto k = 0u; k < kmax; k++){
 				for(auto a = 0u; a < data.nage; a++){
-					auto num = trans[comp[c].trans[k]].num[a];
-					if(num > 0) L += num*log(comp[c].prob[a][k]);
+					auto num = trans[co.trans[k]].num[a];
+					if(num > 0) L += num*log(co.prob[a][k]);
 				}
 			}
 		}
@@ -1001,29 +978,27 @@ double MODEL::likelihood_prob()
 double MODEL::likelihood_dt(vector <double> &paramv)
 {
 	auto L = 0.0;
-	for(auto tra = 0u; tra < trans.size(); tra++){
-		switch(trans[tra].type){
+	for(auto &tr : trans){
+		switch(tr.type){
 		case exp_dist:
 			{
-				auto r = 1.0/paramv[trans[tra].param_mean];
-				L += trans[tra].numvisittot*log(r) - r*trans[tra].dtsum;
+				auto r = 1.0/paramv[tr.param_mean];
+				L += tr.numvisittot*log(r) - r*tr.dtsum;
 			}
 			break;
 		
 		case gamma_dist:
 			{
-				auto mean = paramv[trans[tra].param_mean], sd = paramv[trans[tra].param_cv]*mean;
-				auto jmax = trans[tra].dtlist.size();
-				for(auto j = 0u; j < jmax; j++) L += gammaprob(trans[tra].dtlist[j],mean*mean/(sd*sd),mean/(sd*sd));
+				auto mean = paramv[tr.param_mean], sd = paramv[tr.param_cv]*mean;
+				for(auto dt : tr.dtlist) L += gammaprob(dt,mean*mean/(sd*sd),mean/(sd*sd));
 			}
 			break;
 			
 		case lognorm_dist:
 			{
-				auto mean_ns = paramv[trans[tra].param_mean], cv_ns = paramv[trans[tra].param_cv];
+				auto mean_ns = paramv[tr.param_mean], cv_ns = paramv[tr.param_cv];
 				auto sd = sqrt(log(1+cv_ns*cv_ns)), mean = log(mean_ns) - sd*sd/2;
-				auto jmax = trans[tra].dtlist.size();
-				for(auto j = 0u; j < jmax; j++) L += lognormprob(trans[tra].dtlist[j],mean,sd*sd);
+				for(auto dt : tr.dtlist) L += lognormprob(dt,mean,sd*sd);
 			}
 			break;
 		}
@@ -1036,28 +1011,27 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 {
 	auto L = 0.0;
-	for(auto tra = 0u; tra < trans.size(); tra++){
-		switch(trans[tra].type){
+	for(auto &tr : trans){
+		switch(tr.type){
 		case exp_dist:
 			{
-				auto ri = 1.0/paramvi[trans[tra].param_mean], rf = 1.0/paramvf[trans[tra].param_mean];
+				auto ri = 1.0/paramvi[tr.param_mean], rf = 1.0/paramvf[tr.param_mean];
 				if(ri != rf){
-					L += trans[tra].numvisittot*log(rf) - rf*trans[tra].dtsum;
-					L -= trans[tra].numvisittot*log(ri) - ri*trans[tra].dtsum;
+					L += tr.numvisittot*log(rf) - rf*tr.dtsum;
+					L -= tr.numvisittot*log(ri) - ri*tr.dtsum;
 				}
 			}
 			break;
 		
 		case gamma_dist:
 			{
-				auto meani = paramvi[trans[tra].param_mean], sdi = paramvi[trans[tra].param_cv]*meani;
-				auto meanf = paramvf[trans[tra].param_mean], sdf = paramvf[trans[tra].param_cv]*meanf;
+				auto meani = paramvi[tr.param_mean], sdi = paramvi[tr.param_cv]*meani;
+				auto meanf = paramvf[tr.param_mean], sdf = paramvf[tr.param_cv]*meanf;
 		
 				if(meani != meanf || sdi != sdf){
-					auto jmax = trans[tra].dtlist.size();
-					for(auto j = 0u; j < jmax; j++){
-						L += gammaprob(trans[tra].dtlist[j],meanf*meanf/(sdf*sdf),meanf/(sdf*sdf));
-						L -= gammaprob(trans[tra].dtlist[j],meani*meani/(sdi*sdi),meani/(sdi*sdi));
+					for(auto dt : tr.dtlist){
+						L += gammaprob(dt,meanf*meanf/(sdf*sdf),meanf/(sdf*sdf));
+						L -= gammaprob(dt,meani*meani/(sdi*sdi),meani/(sdi*sdi));
 					}
 				}				
 			}
@@ -1065,16 +1039,15 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 			
 		case lognorm_dist:
 			{
-				auto mean_nsi = paramvi[trans[tra].param_mean], cv_nsi = paramvi[trans[tra].param_cv];
-				auto mean_nsf = paramvf[trans[tra].param_mean], cv_nsf = paramvf[trans[tra].param_cv];
+				auto mean_nsi = paramvi[tr.param_mean], cv_nsi = paramvi[tr.param_cv];
+				auto mean_nsf = paramvf[tr.param_mean], cv_nsf = paramvf[tr.param_cv];
 				if(mean_nsi != mean_nsf || cv_nsi != cv_nsf){
 					auto sdi = sqrt(log(1+cv_nsi*cv_nsi)), meani = log(mean_nsi) - sdi*sdi/2;
 					auto sdf = sqrt(log(1+cv_nsf*cv_nsf)), meanf = log(mean_nsf) - sdf*sdf/2;
 		
-					auto jmax = trans[tra].dtlist.size();
-					for(auto j = 0u; j < jmax; j++){
-						L += lognormprob(trans[tra].dtlist[j],meanf,sdf*sdf);
-						L -= lognormprob(trans[tra].dtlist[j],meani,sdi*sdi);
+					for(auto dt : tr.dtlist){
+						L += lognormprob(dt,meanf,sdf*sdf);
+						L -= lognormprob(dt,meani,sdi*sdi);
 					}
 				}
 			}

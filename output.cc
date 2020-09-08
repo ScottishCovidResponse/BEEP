@@ -39,8 +39,8 @@ void Output::trace_plot_init()
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
-	for(auto p = 0u; p < model.param.size(); p++) trace << "\t" << model.param[p].name; 
-	for(auto pc = 0u; pc < model.priorcomps.size(); pc++) trace << "\tProb in " << model.comp[model.priorcomps[pc].comp].name;
+	for(auto &par : model.param) trace << "\t" << par.name; 
+	for(auto &pri : model.priorcomps) trace << "\tProb in " << model.comp[pri.comp].name;
 	trace << "\tLi"; 
 	trace << "\tPri"; 
 	trace << "\tninf";
@@ -51,12 +51,12 @@ void Output::trace_plot_init()
 void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval)
 {
 	trace << samp; 
-	for(auto p = 0u; p < paramval.size(); p++) trace << "\t" << paramval[p]; 
+	for(auto &pval : paramval) trace << "\t" << pval; 
 	
 	if(model.priorcomps.size() > 0){
 		model.calcprobin();
-		for(auto pc = 0u; pc < model.priorcomps.size(); pc++){
-			auto c = model.priorcomps[pc].comp;
+		for(auto &pri : model.priorcomps){
+			auto c = pri.comp;
 			auto pr = 0.0; for(auto a = 0u; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
 			trace << "\t" << pr;
 		}
@@ -80,10 +80,10 @@ void Output::Li_trace_plot_init(unsigned int nchaintot)
 }
 
 /// Outputs trace plot for likelihoods on difference chains (MBP only)
-void Output::Li_trace_plot(unsigned int samp, unsigned int nchaintot, const vector <double> &Litot)
+void Output::Li_trace_plot(unsigned int samp, const vector <double> &Litot)
 {
 	traceLi << samp;
-	for(auto p = 0u; p < nchaintot; p++) traceLi << "\t" << Litot[p]; 
+	for(auto &Lito : Litot) traceLi << "\t" << Lito; 
 	traceLi << endl;
 }
 
@@ -345,7 +345,7 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 	Rmapout << endl;
 	
 	model.setup(paramav);
-	auto areaav = 0.0; for(auto c = 0u; c < data.narea; c++)	areaav += model.areafac[c]/ data.narea;
+	auto areaav = 0.0; for(auto &areafac : model.areafac)	areaav += areafac/data.narea;
 
 	for(auto c = 0u; c < data.narea; c++){
 		Rmapout << data.area[c].code;
@@ -376,7 +376,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 
 	auto M = vals.size();
 	auto nmax = large;
-	for(auto inp = 0u; inp < M; inp++) if(vals[inp][0].size() < nmax) nmax = vals[inp][0].size();
+	for(auto &vs : vals){ if(vs[0].size() < nmax) nmax = vs[0].size();}
 
 	auto nmin = nmax/4;
 	if(burnin != UNSET){
@@ -401,20 +401,20 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 				muav += mu[inp]/M;
 			}
 					
-			auto W = 0.0; for(auto inp = 0u; inp < M; inp++) W += vari[inp]/M;
-			auto B = 0.0; for(auto inp = 0u; inp < M; inp++) B += (mu[inp]-muav)*(mu[inp]-muav)*N/(M-1);
+			auto W = 0.0; for(auto &var : vari) W += var/M;
+			auto B = 0.0; for(auto &muu : mu) B += (muu-muav)*(muu-muav)*N/(M-1);
 			if(W > tiny) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
 		}
 	
 		vector <double> vec;
-		for(auto inp = 0u; inp < M; inp++){
-			auto npsamp = vals[inp][p].size();
+		for(auto &vs : vals){
+			auto npsamp = vs[p].size();
 			auto psampmin = npsamp/4;
 			if(burnin != UNSET){
 				if(burnin >= npsamp) emsg("The 'burnin' period must be greater than the number of samples.");
 				psampmin = burnin;
 			}
-			for(auto s = psampmin; s < npsamp; s++) vec.push_back(vals[inp][p][s]);
+			for(auto s = psampmin; s < npsamp; s++) vec.push_back(vs[p][s]);
 		}
 		paramdist[p] = getdist(vec);
 		STAT stat = getstat(vec);
@@ -431,15 +431,11 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 		distout << "# Posterior probability distributions for model parameters." << endl;
 		distout << endl;
 
-		for(auto p = 0u; p < paramname.size(); p++){
-			distout << paramname[p] << "\t" << "Probability\t";
-		}	
+		for(auto &parname : paramname) distout << parname << "\t" << "Probability\t";
 		distout << endl;
 		
 		for(auto b = 0u; b < BIN; b++){
-			for(auto p = 0u; p < paramname.size(); p++){
-			distout << paramdist[p].value[b] << "\t" << paramdist[p].prob[b] << "\t";
-			}
+			for(auto &pardist : paramdist) distout << pardist.value[b] << "\t" << pardist.prob[b] << "\t";
 			distout << endl;
 		}				
 	}
@@ -451,8 +447,8 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 	auto nind = data.ind.size();
 	vector< vector <FEV> > indev;
 	indev.resize(nind);
-	for(auto d = 0u; d < fev.size(); d++){
-		for(auto j = 0u; j < fev[d].size(); j++) indev[fev[d][j].ind].push_back(fev[d][j]);
+	for(auto &fe: fev){
+		for(auto &ev : fe) indev[ev.ind].push_back(ev);
 	}
 	
 	stringstream sst; sst << details.outputdir << "/events.txt";
@@ -479,7 +475,7 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
 {
 	vector <int> N(model.comp.size());
-	for(auto c = 0u; c < model.comp.size(); c++) N[c] = 0;
+	for(auto &NN : N) NN = 0;
 	N[0] = data.popsize;
 		
 	auto td = 0u, tdf = 0u; while(td < details.fediv && xi[td].size()==0) td++;
@@ -501,7 +497,7 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 		}
 		
 		plot << t << " ";
-		for(auto c = 0u; c < model.comp.size(); c++) plot << N[c] << " ";
+		for(auto &NN : N) plot << NN << " ";
 		plot << endl;
 	}
 }
@@ -513,20 +509,22 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(auto td = 0u; td < data.transdata.size(); td++){
-		auto file = data.transdata[td].file;
+		auto tdata = data.transdata[td];
+		
+		auto file = tdata.file;
 		auto filefull =  dir+"/"+file;
 		ofstream transout(filefull);
 		if(!transout) emsg("Cannot output the file '"+filefull+"'");
 		
 		cout << "  '" << file << "' gives the observed ";
-		switch(data.transdata[td].units){
+		switch(tdata.units){
 		case 1: cout << "daily"; break;
 		case 7: cout << "weekly"; break;
 		default: emsg("Problem with units"); break;
 		}
 		
-		cout << " number of " << data.transdata[td].fromstr << "→" << data.transdata[td].tostr << " transitions";
-		if(data.transdata[td].type == "reg") cout << " for different regions." << endl;
+		cout << " number of " << tdata.fromstr << "→" << tdata.tostr << " transitions";
+		if(tdata.type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
 		switch(details.tform){
@@ -534,24 +532,26 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: transout << "date"; break;
 		}
 
-		if(data.transdata[td].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ transout << "\t" << data.region[r].code;}}
+		if(tdata.type == "reg"){ for(auto &reg : data.region){ transout << "\t" << reg.code;}}
 		else transout << "\t" << "all";
 		transout << endl;
 		
-		for(auto row = 0u; row < data.transdata[td].rows; row++){
-			transout << details.getdate(data.transdata[td].start + row*data.transdata[td].units);
-			for(auto r = 0u; r < meas.transnum[td][row].size(); r++){ transout <<  "\t" << meas.transnum[td][row][r];} transout << endl;
+		for(auto row = 0u; row < tdata.rows; row++){
+			transout << details.getdate(tdata.start + row*tdata.units);
+			for(auto &trnum : meas.transnum[td][row]){ transout <<  "\t" << trnum;} transout << endl;
 		}
 	}
 	
 	for(auto pd = 0u; pd < data.popdata.size(); pd++){
-		auto file = data.popdata[pd].file;
+		auto pdata = data.popdata[pd];
+		
+		auto file = pdata.file;
 		auto filefull = dir+"/"+file;
 		ofstream popout(filefull);
 		if(!popout) emsg("Cannot output the file '"+filefull+"'");
 		
-		cout << "  '" << file << "' gives the numbers in population '" << data.popdata[pd].compstr << "'";
-		if(data.popdata[pd].type == "reg") cout << " for different regions." << endl;
+		cout << "  '" << file << "' gives the numbers in population '" << pdata.compstr << "'";
+		if(pdata.type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
 		switch(details.tform){
@@ -559,30 +559,32 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: popout << "date"; break;
 		}
 		
-		if(data.popdata[pd].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ popout << "\t" << data.region[r].code;}}
+		if(pdata.type == "reg"){ for(auto &reg : data.region){ popout << "\t" << reg.code;}}
 		else popout << "\t" << "all";
 		popout << endl;
 		
-		for(auto row = 0u; row < data.popdata[pd].rows; row++){
-			popout << details.getdate(data.popdata[pd].start + row*data.popdata[pd].units);
-			for(auto r = 0u; r <  meas.popnum[pd][row].size(); r++){ popout <<  "\t" << meas.popnum[pd][row][r];} popout << endl;
+		for(auto row = 0u; row < pdata.rows; row++){
+			popout << details.getdate(pdata.start + row*pdata.units);
+			for(auto &popnum : meas.popnum[pd][row]){ popout <<  "\t" << popnum;} popout << endl;
 		}
 	}
 	
 	for(auto md = 0u; md < data.margdata.size(); md++){
-		auto d = data.margdata[md].democat;
+		auto mdata = data.margdata[md];
+		
+		auto d = mdata.democat;
 			
-		auto file = data.margdata[md].file;
+		auto file = mdata.file;
 		auto filefull = dir+"/"+file;
 		ofstream margout(filefull);
 		if(!margout) emsg("Cannot output the file '"+filefull+"'");
 
-		cout << "  '" << file << "' gives the '" << data.democat[d].name << "' stratified number of " << data.margdata[md].fromstr << "→" << data.margdata[md].tostr << " transitions";
-		if(data.margdata[md].type == "reg") cout << " for different regions." << endl;
+		cout << "  '" << file << "' gives the '" << data.democat[d].name << "' stratified number of " << mdata.fromstr << "→" << mdata.tostr << " transitions";
+		if(mdata.type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
 		margout << "Category"; 
-		if(data.margdata[md].type == "reg"){ for(auto r = 0u; r < data.nregion; r++){ margout << "\t" << data.region[r].code;}}
+		if(mdata.type == "reg"){ for(auto &reg : data.region){ margout << "\t" << reg.code;}}
 		else margout << "\t" << "all";
 		margout << endl;
 	
@@ -605,14 +607,14 @@ STAT Output::getstat_with_w(vector <PW> vec) const
 {
 	STAT stat;
 	
-	auto n = vec.size();
 	double sum = 0, sumw = 0; 
-	for(auto i = 0u; i < n; i++){ sum += vec[i].val*vec[i].w; sumw += vec[i].w;}
+	for(auto &v : vec){ sum += v.val*v.w; sumw += v.w;}
 	
 	stat.mean = to_string(sum/sumw); 
 	
 	sort(vec.begin(),vec.end(),PW_ord);
 
+	auto n = vec.size();
 	if(n >= 2){
 		double sumtail = 0;
 		auto i = 0u; while(i < n && sumtail < 0.05*sumw){ sumtail += vec[i].w; i++;}
@@ -650,7 +652,7 @@ STAT Output::getstat(const vector <double> &vec) const
 		stat.mean = "---"; stat.CImin = "---"; stat.CImax = "---"; stat.ESS = "---"; 
 	}
 	else{
-		auto sum = 0.0, sum2 = 0.0; for(auto i = 0u; i < n; i++){ sum += vec[i]; sum2 += vec[i]*vec[i];}
+		auto sum = 0.0, sum2 = 0.0; for(auto &v : vec){ sum += v; sum2 += v*v;}
 		sum /= n; sum2 /= n;
 		stat.mean = to_string(sum); 
 		
@@ -674,7 +676,7 @@ STAT Output::getstat(const vector <double> &vec) const
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
 		else{	
 			auto sd = sqrt(var);
-			for(auto i = 0u; i < n; i++) vec2[i] = (vec2[i]-sum)/sd;
+			for(auto &v : vec2) v = (v-sum)/sd;
 				
 			auto sum = 1.0;
 			for(auto d = 1u; d < n/2; d++){             // calculates the effective sample size
@@ -697,9 +699,9 @@ DIST Output::getdist(const vector <double> &vec) const
 	DIST dist;
 	
 	auto min = large, max = -large;	
-	for(auto i = 0u; i < vec.size(); i++){
-		if(vec[i] < min) min = vec[i];
-		if(vec[i] > max) max = vec[i];
+	for(auto &v : vec){
+		if(v < min) min = v;
+		if(v > max) max = v;
 	}
 	
 	dist.value.resize(BIN);
@@ -715,8 +717,8 @@ DIST Output::getdist(const vector <double> &vec) const
 		vector <unsigned int> bin(BIN);
 		for(auto b = 0u; b < BIN; b++) bin[b] = 0;
 		
-		for(auto i = 0u; i < vec.size(); i++){
-			auto b = (unsigned int)(BIN*(vec[i]-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
+		for(auto &v : vec){
+			auto b = (unsigned int)(BIN*(v-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
 			bin[b]++;
 		}
 
@@ -787,7 +789,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 	if(!genout) emsg("Cannot output the file '"+filefull+"'");
 
 	genout << "# Genetarion"; 
-	for(auto th = 0u; th < nparam; th++) genout << model.param[th].name << " (mean,CImin,CImax) ";
+	for(auto &param : model.param) genout << param.name << " (mean,CImin,CImax) ";
 	genout << endl;
 	
 	long timestart = generation[0].time;
@@ -834,7 +836,7 @@ double Output::model_evidence_plot(string file, const vector<Generation> &genera
 		
 		for(auto gg = 0u; gg <= g; gg++){
 			for(auto EF : generation[gg].EF_samp){
-				if(gg == g && EF > EF_upper_limit){ cout << g << " " << EF << " " << EF_upper_limit << " y\n";  emsgEC("Output",10);}
+				if(gg == g && EF > EF_upper_limit) emsgEC("Output",10);
 				if(EF < EF_upper_limit){
 					num++;
 					if(EF < EFcut) num_cut++;

@@ -84,11 +84,11 @@ void Simulate::multirun()
 /// Works out the proportion of individuals which visit different compartments
 void Simulate::proportions(const vector< vector <FEV> > &indev)
 {
-	vector <unsigned int> visit;
-	for(auto c = 0u; c < model.comp.size(); c++) visit.push_back(0);
+	vector <unsigned int> visit(model.comp.size());
+	for(auto& visi : visit) visi = 0;
 	
-	vector <unsigned int> demo;
-	for(auto dp = 0u; dp < data.ndemocatpos; dp++) demo.push_back(0);
+	vector <unsigned int> demo(data.ndemocatpos);
+	for(auto& dem : demo) dem = 0;
 	
 	auto ninf = 0u;
 	for(auto i = 0u; i < indev.size(); i++){
@@ -99,9 +99,9 @@ void Simulate::proportions(const vector< vector <FEV> > &indev)
 			 
 			auto c = 0u;
 			visit[c]++;
-			for(auto e = 0u; e < emax; e++){
-				if(model.trans[indev[i][e].trans].from != model.trans[indev[i][e].trans].to){
-					visit[model.trans[indev[i][e].trans].to]++;
+			for(auto& ev : indev[i]){
+				if(model.trans[ev.trans].from != model.trans[ev.trans].to){
+					visit[model.trans[ev.trans].to]++;
 				}
 			}
 		}

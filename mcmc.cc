@@ -60,7 +60,7 @@ Mcmc::Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &popt
 	if(mpi.core == 0){ output.trace_plot_init(); output.Li_trace_plot_init(mpi.ncore*nchain);}
 	if(quenchpl == 1){ quenchplot.open((details.outputdir+"/quenchplot.txt").c_str());}
 	
-	if(mpi.core == 0){ nac_swap.resize(nchaintot); for(auto pp = 0u; pp < nchaintot; pp++) nac_swap[pp] = 0;}
+	if(mpi.core == 0){ nac_swap.resize(nchaintot); for(auto &nac_swa : nac_swap) nac_swa = 0;}
 
 	assert(mpi.ncore > 0);
   assert(mpi.core < mpi.ncore);
@@ -84,14 +84,14 @@ void Mcmc::run()
 		
 		long time = clock();
 
-		for(auto p = 0u; p < nchain; p++) chain[p].standard_prop(samp,burnin);
+		for(auto &cha : chain) cha.standard_prop(samp,burnin);
 		
 		timeprop -= clock();
 		switch(propsmethod){
 		case proposalsmethod::allchainsallparams:
-			for(auto p = 0u; p < nchain; p++){
+			for(auto &cha : chain){
 				for(auto th = 0u; th < model.param.size(); th++){
-					if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
+					if(model.param[th].min != model.param[th].max){ cha.proposal(th,samp,burnin); ntimeprop++;}
 				}
 			}
 			break;
@@ -115,7 +115,7 @@ void Mcmc::run()
 		
 		timeprop += clock();
 
-		if(samp%10 == 0){ for(auto p = 0u; p < nchain; p++) chain[p].setQmapi(0);}  // Recalcualtes Qmapi (numerical)
+		if(samp%10 == 0){ for(auto &cha : chain) cha.setQmapi(0);}  // Recalcualtes Qmapi (numerical)
 	
 		timers.timewait -= clock();
 		
@@ -315,7 +315,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 			if(chtot[p] == 0) ppost = p;
 			Liord[chtot[p]] = Litot[p];
 		}
-		output.Li_trace_plot(samp,nchaintot,Liord);
+		output.Li_trace_plot(samp,Liord);
 	}
 	
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
