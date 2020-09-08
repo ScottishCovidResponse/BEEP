@@ -57,7 +57,7 @@ void DATA::print_to_terminal() const
 	if(covar.size() > 0){
 		cout << "Area covariates: " << endl;
 		cout << "  ";
-		for(auto j = 0u; j < covar.size(); j++) cout << covar[j].name << "   param='" << covar[j].param << "'" << endl; 
+		for(auto &cov : covar) cout << cov.name << "   param='" << cov.param << "'" << endl; 
 		cout << endl;
 	}	
 	
@@ -91,11 +91,11 @@ void DATA::print_to_terminal() const
 	cout << endl;
 	
 	cout << "Q tensors loaded:" << endl;
-	for(auto j = 0u; j < Q.size(); j++){
+	for(auto &QQ : Q){
 		cout << "    ";
-		cout << "timep: " << timeperiod[Q[j].timep].name << "  ";
-		cout << "compartment: " << Q[j].comp << "  ";
-		cout << "name: " << Q[j].name << "  ";
+		cout << "timep: " << timeperiod[QQ.timep].name << "  ";
+		cout << "compartment: " << QQ.comp << "  ";
+		cout << "name: " << QQ.name << "  ";
 		cout << endl;
 	}
 	cout << endl;
@@ -104,10 +104,8 @@ void DATA::print_to_terminal() const
 /// Based to the different demographic categories, this calculates all the possible combinations
 void DATA::calc_democatpos()
 {
-	vector <unsigned int> count;
-	count.resize(ndemocat);                                     // Defines all the demographic states
-	
-	for(auto dc = 0u; dc < ndemocat; dc++) count[dc] = 0;
+	vector <unsigned int> count(ndemocat);       // Defines all the demographic states
+	for(auto &co : count) co = 0;
 	
 	int dc;
 	do{
@@ -135,10 +133,10 @@ void DATA::load_region_file(const Inputs &inputs)
 	auto namecol = findcol(tab,"name");
 	auto codecol = findcol(tab,"code");
 	
-	for(auto row = 0u; row < tab.nrow; row++){
+	for(auto &trow : tab.ele){
 		REGION reg;
-		reg.name = tab.ele[row][namecol];
-		reg.code = tab.ele[row][codecol];
+		reg.name = trow[namecol];
+		reg.code = trow[codecol];
 		region.push_back(reg);
 	}		
 	nregion = region.size();
@@ -178,27 +176,27 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		auto ycol = findcol(tab,"northing");
 		auto regcol = findcol(tab,"region");
 		
-		for(auto j = 0u; j < ncovar; j++) covar[j].col = findcol(tab,covar[j].name);
+		for(auto &cov : covar) cov.col = findcol(tab,cov.name);
 
-		for(auto j = 0u; j < ndemocat; j++){
-			democat[j].col.resize(democat[j].value.size());
-			for(auto k = 0u; k < democat[j].col.size(); k++) democat[j].col[k] = findcol(tab,democat[j].value[k]);  
+		for(auto & democ : democat){
+			democ.col.resize(democ.value.size());
+			for(auto k = 0u; k < democ.col.size(); k++) democ.col[k] = findcol(tab,democ.value[k]);  
 		}
 
-		for(auto row = 0u; row < tab.nrow; row++){
+		for(auto &trow : tab.ele){
 			AREA are;
-			are.code = tab.ele[row][codecol];
-			are.x = atof(tab.ele[row][xcol].c_str());
-			are.y = atof(tab.ele[row][ycol].c_str());
+			are.code = trow[codecol];
+			are.x = atof(trow[xcol].c_str());
+			are.y = atof(trow[ycol].c_str());
 	
-			auto regcode = tab.ele[row][regcol];
+			auto regcode = trow[regcol];
 			auto r = 0u; while(r < nregion && region[r].code != regcode) r++;
 			if(r == nregion) emsg("In file '"+file+"' the region code '"+regcode+"' is not recognised.");
 			are.region = r;
 					
 			are.covar.resize(ncovar);
 			for(auto j = 0u; j < ncovar; j++){
-				auto st = tab.ele[row][covar[j].col];
+				auto st = trow[covar[j].col];
 				auto v = atof(st.c_str());
 				if(std::isnan(are.covar[j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 			
@@ -219,7 +217,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 				auto jmax = democat[d].value.size();
 				val[d].resize(jmax);
 				for(auto j = 0u; j < jmax; j++){
-					auto st = tab.ele[row][democat[d].col[j]];
+					auto st = trow[democat[d].col[j]];
 					val[d][j] = atof(st.c_str());
 					if(std::isnan(val[d][j])) emsg("In file '"+file+"' the expression '"+st+"' is not a number");	
 				}
@@ -275,11 +273,11 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}		
 		
 		if(checkon == 1){
-			for(auto c = 0u; c < narea; c++){
-				cout << nregion << " " << area[c].region << "region" << endl;
-				cout << area[c].code << " " << region[area[c].region].code << " " <<  area[c].x << " " <<  area[c].y << "  ***";
+			for(auto &are : area){
+				cout << nregion << " " << are.region << "region" << endl;
+				cout << are.code << " " << region[are.region].code << " " << are.x << " " <<  are.y << "  ***";
 			
-				for(auto j = 0u; j < area[c].pop.size(); j++) cout << area[c].pop[j] << ", ";
+				for(auto &pop : are.pop) cout << pop << ", ";
 				cout << endl;	
 			}
 		}
@@ -288,67 +286,67 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		//convertRegion_M(); emsg("done");
 
 		if(details.mode != sim && details.mode != multisim){                                                    // Loads transition data for inference
-			for(auto td = 0u; td < transdata.size(); td++){
-				file = transdata[td].file; 
+			for(auto &tdata : transdata){
+				file = tdata.file; 
 				TABLE tab = loadtable(file);
-				table_selectdates(transdata[td].start,transdata[td].units,tab,"trans");
+				table_selectdates(tdata.start,tdata.units,tab,"trans");
 				
 				vector <unsigned int> rcol;
-				if(transdata[td].type == "reg"){	for(auto k = 0u; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				if(tdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
-				transdata[td].num.resize(rcol.size());
+				tdata.num.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
 					
-					transdata[td].num[r].resize(tab.nrow);
+					tdata.num[r].resize(tab.nrow);
 					for(auto row = 0u; row < tab.nrow; row++){	
-						transdata[td].num[r][row] = getint(tab.ele[row][rcol[r]],file);
+						tdata.num[r][row] = getint(tab.ele[row][rcol[r]],file);
 					}
 				}
-				transdata[td].rows = tab.nrow;
-				if(transdata[td].start + (tab.nrow-1)*transdata[td].units > details.period){
+				tdata.rows = tab.nrow;
+				if(tdata.start + (tab.nrow-1)*tdata.units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
 		
-		if(details.mode != sim && details.mode != multisim){                                                    // Loads population data for inference
-			for(auto pd = 0u; pd < popdata.size(); pd++){
-				file = popdata[pd].file;
+		if(details.mode != sim && details.mode != multisim){                                            // Loads population data for inference
+			for(auto &pdata : popdata){
+				file = pdata.file;
 				TABLE tab = loadtable(file);
-				table_selectdates(popdata[pd].start,popdata[pd].units,tab,"pop");
+				table_selectdates(pdata.start,pdata.units,tab,"pop");
 			
 				vector <unsigned int> rcol;
-				if(popdata[pd].type == "reg"){	for(auto k = 0u; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				if(pdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
-				popdata[pd].num.resize(rcol.size());
+				pdata.num.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
-					popdata[pd].num[r].resize(tab.nrow);
-					for(auto row = 0u; row < tab.nrow; row++) popdata[pd].num[r][row] = getint(tab.ele[row][rcol[r]],file);
+					pdata.num[r].resize(tab.nrow);
+					for(auto row = 0u; row < tab.nrow; row++) pdata.num[r][row] = getint(tab.ele[row][rcol[r]],file);
 				}
-				popdata[pd].rows = tab.nrow;
+				pdata.rows = tab.nrow;
 				
-				if(popdata[pd].start + (tab.nrow-1)*popdata[pd].units > details.period){
+				if(pdata.start + (tab.nrow-1)*pdata.units > details.period){
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
 		}
 		
-		if(details.mode != sim && details.mode != multisim){                                                    // Loads marginal data for inference
-			for(auto md = 0u; md < margdata.size(); md++){
-				file = margdata[md].file;
+		if(details.mode != sim && details.mode != multisim){                                        // Loads marginal data for inference
+			for(auto &mdata : margdata){
+				file = mdata.file;
 				TABLE tab = loadtable(file);
 	
 				vector <unsigned int> rcol;
-				if(margdata[md].type == "reg"){	for(auto k = 0u; k < region.size(); k++) rcol.push_back(findcol(tab,region[k].code));}
+				if(mdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
-				margdata[md].percent.resize(rcol.size());
+				mdata.percent.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
-					margdata[md].percent[r].resize(tab.nrow);
+					mdata.percent[r].resize(tab.nrow);
 					for(auto row = 0u; row < tab.nrow; row++){	
-						margdata[md].percent[r][row] = atof(tab.ele[row][rcol[r]].c_str());
+						mdata.percent[r][row] = atof(tab.ele[row][rcol[r]].c_str());
 					}
 				}
 			}
@@ -360,13 +358,13 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	if(mpi.ncore > 1) copydata(mpi.core);
 	
 	vector <double> vec(nage);                                                           // Reads in Q tensors
-	for(auto q = 0u; q < Q.size(); q++){
-		auto j = 0u; while(j < genQ.Qten.size() && genQ.Qten[j].name != Q[q].name) j++;
-		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+Q[q].name+"' in the input TOML file.");
-		Q[q].Qtenref = j;
+	for(auto &QQ : Q){
+		auto j = 0u; while(j < genQ.Qten.size() && genQ.Qten[j].name != QQ.name) j++;
+		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+QQ.name+"' in the input TOML file.");
+		QQ.Qtenref = j;
 	}
 		
-	agedist.resize(nage); for(auto a = 0u; a < nage; a++) agedist[a] = 0;
+	agedist.resize(nage); for(auto &aged : agedist) aged = 0;
 	
 	for(auto c = 0u; c < narea; c++){                                              // Adds individuals to the system
 		area[c].ind.resize(ndemocatpos);
@@ -385,7 +383,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 	}
 	popsize = ind.size();
-	for(auto a = 0u; a < nage; a++) agedist[a] /= popsize;
+	for(auto &aged : agedist) aged /= popsize;
 	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
@@ -515,10 +513,10 @@ TABLE DATA::loadtable(string file, string dir) const
 void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const
 {
 	tab.heading.push_back(head);
-	for(auto row = 0u; row < tab.nrow; row++){
-		auto sum = 0u; for(auto i = 0u; i < cols.size(); i++) sum += atoi(tab.ele[row][cols[i]].c_str());
+	for(auto &trow : tab.ele){
+		auto sum = 0u; for(auto i = 0u; i < cols.size(); i++) sum += atoi(trow[cols[i]].c_str());
 		stringstream ss; ss << sum;
-		tab.ele[row].push_back(ss.str());
+		trow.push_back(ss.str());
 	}
 	tab.ncol++;
 }
@@ -559,8 +557,8 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 	}	
 	
 	if(checkon == 1){
-		for(auto row = 0u; row < tab.nrow; row++){
-			for(auto i = 0u; i < tab.ncol; i++) cout << tab.ele[row][i] << " ";
+		for(auto &trow : tab.ele){
+			for(auto &ele : trow) cout << ele << " ";
 			cout << endl;
 		}
 	}
@@ -570,7 +568,6 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 unsigned int DATA::findcol(const TABLE &tab, string name) const
 {
 	unsigned int c;
-	
 	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
 	if(c == tab.ncol) emsg("Cannot find the column heading '"+name+"' in file '"+tab.file+"'.");
 	return c;
@@ -587,21 +584,21 @@ void DATA::copydata(unsigned int core)
 		pack(region);
 		pack(narea);
 		pack(area);
-		for(auto td = 0u; td < transdata.size(); td++){
-			pack(transdata[td].num);
-			pack(transdata[td].rows);
+		for(auto &tdata : transdata){
+			pack(tdata.num);
+			pack(tdata.rows);
 		}
-		for(auto pd = 0u; pd < popdata.size(); pd++){
-			pack(popdata[pd].num);
-			pack(popdata[pd].rows);
+		for(auto &pdata : popdata){
+			pack(pdata.num);
+			pack(pdata.rows);
 		}
-		for(auto md = 0u; md < margdata.size(); md++){
-			pack(margdata[md].percent);
+		for(auto &mdata : margdata){
+			pack(mdata.percent);
 		}
 		unsigned int kmax = genQ.Qten.size();
 		pack(kmax);
-		for(auto k = 0u; k < kmax; k++){
-			pack(genQ.Qten[k].name);
+		for(auto &Qten : genQ.Qten){
+			pack(Qten.name);
 		}
 		si = packsize();
 	}
@@ -617,33 +614,33 @@ void DATA::copydata(unsigned int core)
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		for(auto td = 0u; td < transdata.size(); td++){
-			unpack(transdata[td].num);
-			unpack(transdata[td].rows);
+		for(auto &tdata : transdata){
+			unpack(tdata.num);
+			unpack(tdata.rows);
 		}
-		for(auto pd = 0u; pd < popdata.size(); pd++){
-			unpack(popdata[pd].num);
-			unpack(popdata[pd].rows);
+		for(auto &pdata : popdata){
+			unpack(pdata.num);
+			unpack(pdata.rows);
 		}
-		for(auto md = 0u; md < margdata.size(); md++){
-			unpack(margdata[md].percent);
+		for(auto &mdata : margdata){
+			unpack(mdata.percent);
 		}
 		unsigned int kmax;
 		unpack(kmax);
 		genQ.Qten.resize(kmax);
-		for(auto k = 0u; k < kmax; k++){
-			unpack(genQ.Qten[k].name);
+		for(auto &Qten : genQ.Qten){
+			unpack(Qten.name);
 		}
 		if(si != packsize()) emsgEC("Data",1);
 	}
 
-	for(auto k = 0u; k < genQ.Qten.size(); k++){                                                   // Copies the Q matrices
+	for(auto &Qten : genQ.Qten){                                                   // Copies the Q matrices
 		auto num = narea*nage;
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 		if(core != 0){
-			genQ.Qten[k].ntof.resize(num);
-			genQ.Qten[k].tof.resize(num);
-			genQ.Qten[k].valf.resize(num);
+			Qten.ntof.resize(num);
+			Qten.tof.resize(num);
+			Qten.valf.resize(num);
 		}
 		
 		auto vmin = 0u;
@@ -653,9 +650,9 @@ void DATA::copydata(unsigned int core)
 			if(core == 0){
 				packinit(0);
 				for(auto v = vmin; v < vmax; v++){
-					pack(genQ.Qten[k].ntof[v]);
-					pack(genQ.Qten[k].tof[v]);
-					pack(genQ.Qten[k].valf[v]);
+					pack(Qten.ntof[v]);
+					pack(Qten.tof[v]);
+					pack(Qten.valf[v]);
 				}
 				si = packsize();
 			}
@@ -668,9 +665,9 @@ void DATA::copydata(unsigned int core)
 
 			if(core != 0){
 				for(auto v = vmin; v < vmax; v++){
-					unpack(genQ.Qten[k].ntof[v]);
-					unpack(genQ.Qten[k].tof[v]);
-					unpack(genQ.Qten[k].valf[v]);
+					unpack(Qten.ntof[v]);
+					unpack(Qten.tof[v]);
+					unpack(Qten.valf[v]);
 				}
 				if(si != packsize()) emsgEC("Data",2);
 			}

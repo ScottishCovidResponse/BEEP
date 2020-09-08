@@ -59,8 +59,7 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 	}
 	
 	// Store the parameters passed on the command line in cmdlineparams
-	for(auto op = 0u; op < commandlist.size(); op++){ // Goes the various input options
-		string str = commandlist[op];
+	for(auto &str : commandlist ){ // Goes the various input options
 		auto j = 0u; auto jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 
@@ -210,7 +209,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 	if(basedata->contains("transdata")) {
 		const auto tdata = basedata->open("transdata");
 
-		for(unsigned int j = 0; j < tdata.size(); j++){
+		for(auto j = 0u; j < tdata.size(); j++){
 			const auto td = tdata[j];
 		
 			TRANSDATA transdata;
@@ -254,7 +253,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 	if(basedata->contains("popdata")) {
 		const auto pdata = basedata->open("popdata");
 
-		for(unsigned int j = 0; j < pdata.size(); j++){
+		for(auto j = 0u; j < pdata.size(); j++){
 			const auto pd = pdata[j];
 
 			POPDATA popdata;
@@ -298,7 +297,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vect
 	if(basedata->contains("margdata")) {
 		const auto mdata = basedata->open("margdata");
 
-		for(unsigned int j = 0; j < mdata.size(); j++){
+		for(auto j = 0u; j < mdata.size(); j++){
 			const auto md = mdata[j];
 			
 			MARGDATA margdata;
@@ -334,7 +333,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
 		
 		DEMOCAT democat;
 		democat.name = "age";
-		for(unsigned int j = 0; j < ages.size(); j++){
+		for(auto j = 0u; j < ages.size(); j++){
 			const auto ag = ages[j];
 			
 			const auto range = ag.stringfield("range");
@@ -350,12 +349,12 @@ vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
 	if(basedata->contains("democats")){                        // Other demographic possibilities
 		const auto democats = basedata->open("democats");
 	
-		for(unsigned int k = 0; k < democats.size(); k++){
+		for(auto k = 0u; k < democats.size(); k++){
 			const auto democ = democats[k];
 			
 			DEMOCAT democat;
 			democat.name="";
-			for(unsigned int j = 0; j < democ.size(); j++){
+			for(auto j = 0u; j < democ.size(); j++){
 				const auto demoval = democ[j];
 				
 				const auto value = demoval.stringfield("value");
@@ -381,7 +380,7 @@ vector <COVAR> Inputs::find_covar(const Details &/*details*/) const
 		const auto covars = basedata->open("covars");
 		
 		COVAR cov;
-		for(unsigned int j = 0; j < covars.size(); j++){
+		for(auto j = 0u; j < covars.size(); j++){
 			const auto covar = covars[j];
 			
 			cov.name = covar.stringfield("name");
@@ -403,7 +402,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 	
 	if(basedata->contains("timep")) {
 		const auto timep = basedata->open("timep");
-		for(unsigned int j = 0; j < timep.size(); j++){
+		for(auto j = 0u; j < timep.size(); j++){
 			const auto tim = timep[j];
 			
 			TIMEP timeperiod;
@@ -462,13 +461,13 @@ void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, co
 {
 	if(basedata->contains("Q")) {
 		const auto Qlist = basedata->open("Q");
-		for(unsigned int j = 0; j < Qlist.size(); j++){
+		for(auto j = 0u; j < Qlist.size(); j++){
 			QTENSOR qten;
 		
 			const auto Q = Qlist[j];
 			
 			const auto timep = Q.stringfield("timep");
-			unsigned int tp = 0;
+			auto tp = 0u;
 			while(tp < timeperiod.size() && timeperiod[tp].name != timep)
 				tp++;
 			if(tp == timeperiod.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
@@ -490,7 +489,7 @@ void Inputs::find_param(vector <string> &name, vector <double> &val) const
 {
 	if(basedata->contains("params")){
 		const auto paramsin = basedata->open("params");
-		for(unsigned int j = 0; j < paramsin.size(); j++){
+		for(auto j = 0u; j < paramsin.size(); j++){
 			const auto params = paramsin[j];
 			string nam = params.stringfield("name");
 			
@@ -508,7 +507,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 {
 	if(basedata->contains("priors")){
 		const auto paramsin = basedata->open("priors");
-		for(unsigned int j = 0; j < paramsin.size(); j++){
+		for(auto j = 0u; j < paramsin.size(); j++){
 			const auto params = paramsin[j];
 			string nam = params.stringfield("name");
 
@@ -539,7 +538,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 {
 	if(basedata->contains("comps")) {
 		const auto compsin = basedata->open("comps");
-		for(unsigned int j = 0; j < compsin.size(); j++){
+		for(auto j = 0u; j < compsin.size(); j++){
 			const auto comps = compsin[j];
 
 			string nam = comps.stringfield("name");
@@ -557,7 +556,7 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 {
 	if(basedata->contains("trans")){
 		const auto transin = basedata->open("trans");
-		for(unsigned int j = 0; j < transin.size(); j++){
+		for(auto j = 0u; j < transin.size(); j++){
 			const auto trans = transin[j];
 			
 			string fr_temp = trans.stringfield("from");
@@ -613,7 +612,7 @@ vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
 	
 	if(basedata->contains("priorcomps")){
 		const auto prcomps = basedata->open("priorcomps");
-		for(unsigned int j = 0; j < prcomps.size(); j++){
+		for(auto j = 0u; j < prcomps.size(); j++){
 			const auto prcomp = prcomps[j];
 			
 			PRIORCOMP pricomp;
@@ -638,7 +637,7 @@ void Inputs::find_spline(const Details &details, string &name, vector <int> &tim
 	time.clear(); param.clear();
 	if(basedata->contains(name)) {
 		const auto bespin = basedata->open(name);
-		for(unsigned int j = 0; j < bespin.size(); j++){
+		for(auto j = 0u; j < bespin.size(); j++){
 			const auto besp = bespin[j];
 
 			const auto nam = besp.stringfield("param");
