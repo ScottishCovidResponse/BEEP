@@ -35,7 +35,7 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 		}
 	}
 	
-	for(auto &cha : chain) cha.invT = invT[cha.ch];
+	for(auto& cha : chain) cha.invT = invT[cha.ch];
 }
 
 /// Stores the likelihood so the model evidence can be calculated later
@@ -84,7 +84,7 @@ double Model_Evidence::get_invT(unsigned int ch) const
 double Model_Evidence::average_Li(unsigned int ch) const
 {
 	auto av = 0.0; 
-	for(auto &Lich : Li[ch]) av += Lich;
+	for(auto Lich : Li[ch]) av += Lich;
 	
 	return av/Li[ch].size();
 }

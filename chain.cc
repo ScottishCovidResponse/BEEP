@@ -104,8 +104,8 @@ void Chain::sample_from_prior()
 		vector <double> paramvalinit = paramval;
 
 		 // Sets the initial state to zero force of infection
-		for(auto &spl : model.betaspline) paramvalinit[spl.param] = 0; 
-		for(auto &spl : model.phispline) paramvalinit[spl.param] = 0;
+		for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
+		for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
 			
 		model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 		model.copyi(paramvalinit);
@@ -130,8 +130,8 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 	vector <double> paramvalinit = paramval;
 
 	// Sets the initial state to zero force of infection
-	for(auto &spl : model.betaspline) paramvalinit[spl.param] = 0; 
-	for(auto &spl : model.phispline) paramvalinit[spl.param] = 0;
+	for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
+	for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
 		
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 	model.copyi(paramvalinit);
@@ -174,7 +174,7 @@ unsigned int Chain::mbp()
 	for(auto c = 0u; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	for(auto &i : xp) indevp[i.ind].clear();
+	for(const auto& i : xp) indevp[i.ind].clear();
 	//indevp.clear(); indevp.resize(data.popsize);	
 	
 	xp.clear();
@@ -282,7 +282,7 @@ void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vec
 /// Based on the the event sequence in xi, this sets Qmapi
 void Chain::setQmapi(unsigned int check)
 {
-	for(auto &dQma : dQmap) dQma = 0;
+	for(auto& dQma : dQmap) dQma = 0;
 
 	auto nage = data.nage;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
@@ -297,7 +297,7 @@ void Chain::setQmapi(unsigned int check)
 			Qmapi[sett][v] = val;
 		}
 		
-		for(auto &trev : trevi[sett]){
+		for(const auto& trev : trevi[sett]){
 			auto i = trev.ind;
 			FEV fev = indevi[i][trev.e];
 
@@ -370,7 +370,7 @@ void Chain::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 	for(int l = poptree.level-2; l >= 0; l--){                                 
 		auto cmax = lev[l].node.size();
 		for(auto c = 0u; c < cmax; c++){
-			double sum = 0; for(auto &ch : lev[l].node[c].child) sum += Rtot[l+1][ch];
+			double sum = 0; for(const auto& ch : lev[l].node[c].child) sum += Rtot[l+1][ch];
 			
 			Rtot[l][c] = sum;
 		}
@@ -416,8 +416,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		trevi = trevp;
 		Qmapi = Qmapp;
 		
-		for(auto &x : xi) indevi[x.ind].clear();
-		for(auto &x : xp) indevi[x.ind] = indevp[x.ind];
+		for(const auto& x : xi) indevi[x.ind].clear();
+		for(const auto& x : xp) indevi[x.ind] = indevp[x.ind];
 		//indevi = indevp;
 		
 		xi = xp;
@@ -452,7 +452,7 @@ void Chain::setuplists()
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 			auto w = c*data.ndemocatpos + dp;
 
-			for(auto &i : data.area[c].ind[dp]){
+			for(const auto& i : data.area[c].ind[dp]){
 				stat[i] = both_sus;
 				indlistref[i] = indbothlist[w].size();
 				indbothlist[w].push_back(i);
@@ -556,7 +556,7 @@ void Chain::changestat(unsigned int i, unsigned int st, unsigned int updateR)
 void Chain::resetlists()
 {
 	for(auto w = 0u; w < data.nardp; w++){
-		for(auto &i : indponlylist[w]){
+		for(const auto& i : indponlylist[w]){
 			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
@@ -565,7 +565,7 @@ void Chain::resetlists()
 		indponlylist[w].clear();
 		nindponlylist[w] = 0;
 		
-		for(auto &i : indnotlist[w]){
+		for(const auto& i : indnotlist[w]){
 			stat[i] = both_sus;
 			indlistref[i] = indbothlist[w].size();
 			indbothlist[w].push_back(i);
@@ -583,13 +583,13 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 	
 	auto nage = data.nage;
 
-	for(auto &tre : trei){
+	for(const auto& tre : trei){
 		auto i = tre.ind; 
 		auto tra = indevi[i][tre.e].trans;
 		indmap[i][tra] = 1;
 	}
 	
-	for(auto &tre : trep){
+	for(const auto& tre : trep){
 		auto i = tre.ind; 
 		auto tra = indevp[i][tre.e].trans;	
 		if(indmap[i][tra] == 0){
@@ -609,7 +609,7 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 		else indmap[i][tra] = 0;
 	}	
 	
-	for(auto &tre : trei){
+	for(const auto& tre : trei){
 		auto i = tre.ind; 
 		auto tra = indevi[i][tre.e].trans;
 		if(indmap[i][tra] == 1){
@@ -629,7 +629,7 @@ void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
 	}
 	
 	if(details.mode == sim){
-		for(auto &tre : trep){
+		for(const auto& tre : trep){
 			auto tra = indevp[tre.ind][tre.e].trans;
 			N[trans[tra].from]--;
 			N[trans[tra].to]++;
@@ -747,12 +747,12 @@ void Chain::check(unsigned int /* num */, double t, unsigned int sett)
 		}
 	}
 
-	for(auto &indev : indevp){
+	for(const auto& indev : indevp){
 		auto emax = indev.size();
 		if(emax > 0){
 			auto c = 0u; 
 			double tt = 0;
-			for(auto &ev : indev){
+			for(const auto& ev : indev){
 				auto ttt = ev.t; if(ttt <= tt){ model.oe("here",indev); emsgEC("Chain",19);}
 				auto tra = ev.trans;
 				if(trans[tra].from != c) emsgEC("Chain",20);
@@ -934,7 +934,7 @@ double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vec
 /// Calculates Qmapp based on the initial and final sequences
 void Chain::calcQmapp()
 {	
-	for(auto &dQma : dQmap) dQma = 0;
+	for(auto& dQma : dQmap) dQma = 0;
 	
 	for(auto sett = 0u; sett < details.nsettime; sett++){
 		for(auto v = 0u; v < data.narage; v++){
@@ -987,7 +987,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	timers.timebetaphiinit -= clock();
 	
 	vector <unsigned int> map;
-	map.resize(data.nardp); for(auto &ma : map) ma = 0;
+	map.resize(data.nardp); for(auto& ma : map) ma = 0;
 	
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
@@ -1050,7 +1050,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 		
 		betafac[sett] = betasum; phifac[sett] = phisum;
 					
-		for(auto &lcont : lcontlist){
+		for(auto& lcont : lcontlist){
 			auto w = lcont.w;
 			lcont.num = map[w];
 			map[w] = 0;
@@ -1062,8 +1062,8 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	} 
 	
 	vector <unsigned int> parampos;
-	for(auto &spl : model.betaspline) parampos.push_back(spl.param);
-	for(auto &spl : model.phispline) parampos.push_back(spl.param);
+	for(const auto& spl : model.betaspline) parampos.push_back(spl.param);
+	for(const auto& spl : model.phispline) parampos.push_back(spl.param);
 		
 	timers.timebetaphiinit += clock();
 		
@@ -1071,7 +1071,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	
 	timers.timebetaphi -= clock();
 	for(auto loop = 0u; loop < loopmax; loop++){
-		for(auto &th : parampos){
+		for(auto th : parampos){
 			if(model.param[th].min != model.param[th].max){
 				auto valst = paramval[th];	
 				paramval[th] += normal(0,paramjumpxi[th]);               // Makes a change to a parameter
@@ -1087,7 +1087,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 						auto beta = model.beta[sett], phi = model.phi[sett];
 						Levp += betafac[sett]*beta + phifac[sett]*phi;
 						
-						for(auto &l : lc[sett]) Levp += l.num*log(l.betafac*beta + l.phifac*phi);
+						for(const auto& l : lc[sett]) Levp += l.num*log(l.betafac*beta + l.phifac*phi);
 						if(std::isnan(Levp)) emsgEC("Chain",52);
 					}
 					
@@ -1188,12 +1188,12 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 	unsigned int loopmax = 12/num; if(loopmax == 0) loopmax = 1;
 	
 	for(auto loop = 0u; loop < loopmax; loop++){
-		for(auto &th : model.covar_param){ 
+		for(auto th : model.covar_param){ 
 			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
 		}
 		
 		if(model.regioneffect == 1){
-			for(auto &th : model.regioneff_param){ 
+			for(auto th : model.regioneff_param){ 
 				if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add);
 			}
 		
@@ -1256,7 +1256,7 @@ void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 		else{
 			auto sd = paramval[model.sigma_param];
-			Prp = 0; for(auto &th : model.regioneff_param) Prp += normalprob(paramval[th],0,sd*sd);
+			Prp = 0; for(auto th : model.regioneff_param) Prp += normalprob(paramval[th],0,sd*sd);
 			al = exp(Prp-Pri);
 		}
 
@@ -1275,7 +1275,7 @@ void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
 {
 	vector <EVREFT> xt;
-	for(auto &xx : x){
+	for(const auto& xx : x){
 		EVREFT evreft;
 		evreft.ind = xx.ind; evreft.e = xx.e;
 		if(indev[xx.ind].size() == 0) emsgEC("Chain",54);
@@ -1300,11 +1300,11 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	auto probif = 0.0, probfi = 0.0;
 	
 	trevp = trevi;     // Copies initial state into proposed state
-	for(auto &x : xp) indevp[x.ind].clear();
+	for(const auto& x : xp) indevp[x.ind].clear();
 	xp = xi;
-	for(auto &x : xp) indevp[x.ind] = indevi[x.ind];
+	for(const auto& x : xp) indevp[x.ind] = indevi[x.ind];
 		 
-	for(auto &x : xp) changestat(x.ind,not_sus,0);
+	for(const auto& x : xp) changestat(x.ind,not_sus,0);
 	
 	if(ran() < 0.5){  // Adds individuals
 		timers.timembptemp2 -= clock();
@@ -1387,7 +1387,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 			probfi += log(1.0/nindbothlist[w]);
 		}
 		
-		for(auto &trev : trevp){  // Removes events in trevp
+		for(auto& trev : trevp){  // Removes events in trevp
 			auto j = 0u;
 			auto jmax = trev.size();
 			while(j < jmax){
@@ -1410,7 +1410,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		timers.timembptemp2 += clock();
 		
 		auto sumtot = lamsum[data.nsettardp-1]; 
-		for(auto &ks : kst) probfi += log(lam[ks]/sumtot);
+		for(const auto& ks : kst) probfi += log(lam[ks]/sumtot);
 	}
 	
 	timers.timembptemp4 -= clock();
@@ -1439,8 +1439,8 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		trevi = trevp;
 		Qmapi = Qmapp;
 		
-		for(auto &x : xi) indevi[x.ind].clear();
-		for(auto &x : xp) indevi[x.ind] = indevp[x.ind];
+		for(const auto& x : xi) indevi[x.ind].clear();
+		for(const auto& x : xp) indevi[x.ind] = indevp[x.ind];
 		//indevi = indevp;
 		
 		xi = xp;
@@ -1484,8 +1484,8 @@ void Chain::infsampler(vector< vector<double> > &Qmap)
 vector <FEV> Chain::event_compress(const vector < vector <FEV> > &indev) const
 {
 	vector <FEV> store;
-	for(auto &inde : indev){
-		for(auto &ev : inde) store.push_back(ev);
+	for(const auto& inde : indev){
+		for(const auto& ev : inde) store.push_back(ev);
 	}
 	
 	return store;
@@ -1497,13 +1497,13 @@ void Chain::initialise_from_particle(const Particle &part)
 	paramval = part.paramval;
 	model.setup(paramval);
 	
-	for(auto &x : xi) indevi[x.ind].clear();   // Removes the exisiting initial sequence 
+	for(const auto& x : xi) indevi[x.ind].clear();   // Removes the exisiting initial sequence 
 	xi.clear();
 	
 	trevi.clear(); trevi.resize(details.nsettime); 
 	
 	vector <int> indlist;
-	for(auto &ev : part.ev){
+	for(const auto& ev : part.ev){
 		int i = ev.ind;
 		if(indevi[i].size() == 0) indlist.push_back(i);
 		indevi[i].push_back(ev);
@@ -1566,8 +1566,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		trevi = trevp;
 		Qmapi = Qmapp;
 		
-		for(auto &x : xi) indevi[x.ind].clear();
-		for(auto &x : xp) indevi[x.ind] = indevp[x.ind];
+		for(const auto& x : xi) indevi[x.ind].clear();
+		for(const auto& x : xp) indevi[x.ind] = indevp[x.ind];
 		//indevi = indevp;
 		
 		xi = xp;

@@ -457,7 +457,7 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 		}
 		
 		vector <SAMPLE> opsamp;        // Stores output samples
-		for(auto &pa : part) opsamp.push_back(get_sample(pa,chain));
+		for(const auto& pa : part) opsamp.push_back(get_sample(pa,chain));
 		
 		for(auto co = 1u; co < mpi.ncore; co++){
 			unsigned int si;

@@ -135,7 +135,7 @@ vector <AREA> loadarea(const TABLE& tab)
 	}
 	
 	vector <AREA> area;
-	for(auto &trow : tab.ele){
+	for(const auto& trow : tab.ele){
 		AREA are;
 		are.agepop.resize(nage);
 		for(auto a = 0u; a < nage; a++) are.agepop[a] = atoi(trow[agecol[a]].c_str());

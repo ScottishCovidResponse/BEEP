@@ -169,10 +169,10 @@ double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vect
 vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
 {
 	vector <unsigned int> num(data.nregion);
-	for(auto &nu : num) nu = 0;
+	for(auto& nu : num) nu = 0;
 
 	for(auto sett = details.settpertime*ti; sett < details.settpertime*tf; sett++){
-		for(auto &tre : trev[sett]){
+		for(const auto& tre : trev[sett]){
 			auto i = tre.ind;
 			if(d == UNSET || data.democatpos[data.ind[i].dp][d] == v){		
 				if(tra == indev[i][tre.e].trans) num[data.area[data.ind[i].area].region]++;

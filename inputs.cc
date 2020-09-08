@@ -59,7 +59,7 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 	}
 	
 	// Store the parameters passed on the command line in cmdlineparams
-	for(auto &str : commandlist ){ // Goes the various input options
+	for(const auto& str : commandlist ){ // Goes the various input options
 		auto j = 0u; auto jmax = str.length(); while(j < jmax && str.substr(j,1) != "=") j++;
 		if(j == jmax){
 			stringstream ss; ss << "Cannot understand " << str; 

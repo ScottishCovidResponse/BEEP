@@ -57,7 +57,7 @@ void DATA::print_to_terminal() const
 	if(covar.size() > 0){
 		cout << "Area covariates: " << endl;
 		cout << "  ";
-		for(auto &cov : covar) cout << cov.name << "   param='" << cov.param << "'" << endl; 
+		for(const auto& cov : covar) cout << cov.name << "   param='" << cov.param << "'" << endl; 
 		cout << endl;
 	}	
 	
@@ -91,7 +91,7 @@ void DATA::print_to_terminal() const
 	cout << endl;
 	
 	cout << "Q tensors loaded:" << endl;
-	for(auto &QQ : Q){
+	for(const auto& QQ : Q){
 		cout << "    ";
 		cout << "timep: " << timeperiod[QQ.timep].name << "  ";
 		cout << "compartment: " << QQ.comp << "  ";
@@ -105,7 +105,7 @@ void DATA::print_to_terminal() const
 void DATA::calc_democatpos()
 {
 	vector <unsigned int> count(ndemocat);       // Defines all the demographic states
-	for(auto &co : count) co = 0;
+	for(auto& co : count) co = 0;
 	
 	int dc;
 	do{
@@ -133,7 +133,7 @@ void DATA::load_region_file(const Inputs &inputs)
 	auto namecol = findcol(tab,"name");
 	auto codecol = findcol(tab,"code");
 	
-	for(auto &trow : tab.ele){
+	for(const auto& trow : tab.ele){
 		REGION reg;
 		reg.name = trow[namecol];
 		reg.code = trow[codecol];
@@ -176,14 +176,14 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		auto ycol = findcol(tab,"northing");
 		auto regcol = findcol(tab,"region");
 		
-		for(auto &cov : covar) cov.col = findcol(tab,cov.name);
+		for(auto& cov : covar) cov.col = findcol(tab,cov.name);
 
-		for(auto & democ : democat){
+		for(auto& democ : democat){
 			democ.col.resize(democ.value.size());
 			for(auto k = 0u; k < democ.col.size(); k++) democ.col[k] = findcol(tab,democ.value[k]);  
 		}
 
-		for(auto &trow : tab.ele){
+		for(const auto& trow : tab.ele){
 			AREA are;
 			are.code = trow[codecol];
 			are.x = atof(trow[xcol].c_str());
@@ -273,11 +273,11 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}		
 		
 		if(checkon == 1){
-			for(auto &are : area){
+			for(const auto& are : area){
 				cout << nregion << " " << are.region << "region" << endl;
 				cout << are.code << " " << region[are.region].code << " " << are.x << " " <<  are.y << "  ***";
 			
-				for(auto &pop : are.pop) cout << pop << ", ";
+				for(const auto& pop : are.pop) cout << pop << ", ";
 				cout << endl;	
 			}
 		}
@@ -285,14 +285,14 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		//convertOAtoM(); emsg("done");
 		//convertRegion_M(); emsg("done");
 
-		if(details.mode != sim && details.mode != multisim){                                                    // Loads transition data for inference
-			for(auto &tdata : transdata){
+		if(details.mode != sim && details.mode != multisim){                                        // Loads transition data for inference
+			for(auto& tdata : transdata){
 				file = tdata.file; 
 				TABLE tab = loadtable(file);
 				table_selectdates(tdata.start,tdata.units,tab,"trans");
 				
 				vector <unsigned int> rcol;
-				if(tdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
+				if(tdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
 				tdata.num.resize(rcol.size());
@@ -311,13 +311,13 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 		
 		if(details.mode != sim && details.mode != multisim){                                            // Loads population data for inference
-			for(auto &pdata : popdata){
+			for(auto& pdata : popdata){
 				file = pdata.file;
 				TABLE tab = loadtable(file);
 				table_selectdates(pdata.start,pdata.units,tab,"pop");
 			
 				vector <unsigned int> rcol;
-				if(pdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
+				if(pdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
 				pdata.num.resize(rcol.size());
@@ -334,12 +334,12 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 		
 		if(details.mode != sim && details.mode != multisim){                                        // Loads marginal data for inference
-			for(auto &mdata : margdata){
+			for(auto& mdata : margdata){
 				file = mdata.file;
 				TABLE tab = loadtable(file);
 	
 				vector <unsigned int> rcol;
-				if(mdata.type == "reg"){	for(auto &reg : region) rcol.push_back(findcol(tab,reg.code));}
+				if(mdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
 				else{ rcol.push_back(findcol(tab,"all"));}
 				
 				mdata.percent.resize(rcol.size());
@@ -358,13 +358,13 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	if(mpi.ncore > 1) copydata(mpi.core);
 	
 	vector <double> vec(nage);                                                           // Reads in Q tensors
-	for(auto &QQ : Q){
+	for(auto& QQ : Q){
 		auto j = 0u; while(j < genQ.Qten.size() && genQ.Qten[j].name != QQ.name) j++;
 		if(j == genQ.Qten.size()) emsg("Cannot find the reference to '"+QQ.name+"' in the input TOML file.");
 		QQ.Qtenref = j;
 	}
 		
-	agedist.resize(nage); for(auto &aged : agedist) aged = 0;
+	agedist.resize(nage); for(auto& aged : agedist) aged = 0;
 	
 	for(auto c = 0u; c < narea; c++){                                              // Adds individuals to the system
 		area[c].ind.resize(ndemocatpos);
@@ -383,7 +383,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 	}
 	popsize = ind.size();
-	for(auto &aged : agedist) aged /= popsize;
+	for(auto& aged : agedist) aged /= popsize;
 	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
@@ -513,7 +513,7 @@ TABLE DATA::loadtable(string file, string dir) const
 void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const
 {
 	tab.heading.push_back(head);
-	for(auto &trow : tab.ele){
+	for(auto& trow : tab.ele){
 		auto sum = 0u; for(auto i = 0u; i < cols.size(); i++) sum += atoi(trow[cols[i]].c_str());
 		stringstream ss; ss << sum;
 		trow.push_back(ss.str());
@@ -557,8 +557,8 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 	}	
 	
 	if(checkon == 1){
-		for(auto &trow : tab.ele){
-			for(auto &ele : trow) cout << ele << " ";
+		for(const auto& trow : tab.ele){
+			for(const auto& ele : trow) cout << ele << " ";
 			cout << endl;
 		}
 	}
@@ -584,20 +584,20 @@ void DATA::copydata(unsigned int core)
 		pack(region);
 		pack(narea);
 		pack(area);
-		for(auto &tdata : transdata){
+		for(const auto& tdata : transdata){
 			pack(tdata.num);
 			pack(tdata.rows);
 		}
-		for(auto &pdata : popdata){
+		for(const auto& pdata : popdata){
 			pack(pdata.num);
 			pack(pdata.rows);
 		}
-		for(auto &mdata : margdata){
+		for(const auto& mdata : margdata){
 			pack(mdata.percent);
 		}
 		unsigned int kmax = genQ.Qten.size();
 		pack(kmax);
-		for(auto &Qten : genQ.Qten){
+		for(const auto& Qten : genQ.Qten){
 			pack(Qten.name);
 		}
 		si = packsize();
@@ -614,27 +614,27 @@ void DATA::copydata(unsigned int core)
 		unpack(region);
 		unpack(narea);
 		unpack(area);
-		for(auto &tdata : transdata){
+		for(auto& tdata : transdata){
 			unpack(tdata.num);
 			unpack(tdata.rows);
 		}
-		for(auto &pdata : popdata){
+		for(auto& pdata : popdata){
 			unpack(pdata.num);
 			unpack(pdata.rows);
 		}
-		for(auto &mdata : margdata){
+		for(auto& mdata : margdata){
 			unpack(mdata.percent);
 		}
 		unsigned int kmax;
 		unpack(kmax);
 		genQ.Qten.resize(kmax);
-		for(auto &Qten : genQ.Qten){
+		for(auto& Qten : genQ.Qten){
 			unpack(Qten.name);
 		}
 		if(si != packsize()) emsgEC("Data",1);
 	}
 
-	for(auto &Qten : genQ.Qten){                                                   // Copies the Q matrices
+	for(auto& Qten : genQ.Qten){                                                   // Copies the Q matrices
 		auto num = narea*nage;
 		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 		if(core != 0){

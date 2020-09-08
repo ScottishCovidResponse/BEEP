@@ -155,7 +155,7 @@ public:
 	void copyp(const vector<double> &paramv);
 	vector <double> R0calc(const vector<double> &paramv);
 	unsigned int dombpevents();
-	void oe(const string& name, vector <FEV> &ev);
+	void oe(const string& name, const vector <FEV> &ev);
 	void calcprobin();
 	double prior(const vector<double> &paramv);
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,

@@ -39,8 +39,8 @@ void Output::trace_plot_init()
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
-	for(auto &par : model.param) trace << "\t" << par.name; 
-	for(auto &pri : model.priorcomps) trace << "\tProb in " << model.comp[pri.comp].name;
+	for(const auto& par : model.param) trace << "\t" << par.name; 
+	for(const auto& pri : model.priorcomps) trace << "\tProb in " << model.comp[pri.comp].name;
 	trace << "\tLi"; 
 	trace << "\tPri"; 
 	trace << "\tninf";
@@ -51,11 +51,11 @@ void Output::trace_plot_init()
 void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval)
 {
 	trace << samp; 
-	for(auto &pval : paramval) trace << "\t" << pval; 
+	for(const auto& pval : paramval) trace << "\t" << pval; 
 	
 	if(model.priorcomps.size() > 0){
 		model.calcprobin();
-		for(auto &pri : model.priorcomps){
+		for(const auto& pri : model.priorcomps){
 			auto c = pri.comp;
 			auto pr = 0.0; for(auto a = 0u; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
 			trace << "\t" << pr;
@@ -83,7 +83,7 @@ void Output::Li_trace_plot_init(unsigned int nchaintot)
 void Output::Li_trace_plot(unsigned int samp, const vector <double> &Litot)
 {
 	traceLi << samp;
-	for(auto &Lito : Litot) traceLi << "\t" << Lito; 
+	for(const auto& Lito : Litot) traceLi << "\t" << Lito; 
 	traceLi << endl;
 }
 
@@ -345,7 +345,7 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 	Rmapout << endl;
 	
 	model.setup(paramav);
-	auto areaav = 0.0; for(auto &areafac : model.areafac)	areaav += areafac/data.narea;
+	auto areaav = 0.0; for(const auto& areafac : model.areafac)	areaav += areafac/data.narea;
 
 	for(auto c = 0u; c < data.narea; c++){
 		Rmapout << data.area[c].code;
@@ -376,7 +376,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 
 	auto M = vals.size();
 	auto nmax = large;
-	for(auto &vs : vals){ if(vs[0].size() < nmax) nmax = vs[0].size();}
+	for(const auto& vs : vals){ if(vs[0].size() < nmax) nmax = vs[0].size();}
 
 	auto nmin = nmax/4;
 	if(burnin != UNSET){
@@ -401,13 +401,13 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 				muav += mu[inp]/M;
 			}
 					
-			auto W = 0.0; for(auto &var : vari) W += var/M;
-			auto B = 0.0; for(auto &muu : mu) B += (muu-muav)*(muu-muav)*N/(M-1);
+			auto W = 0.0; for(auto var : vari) W += var/M;
+			auto B = 0.0; for(auto muu : mu) B += (muu-muav)*(muu-muav)*N/(M-1);
 			if(W > tiny) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
 		}
 	
 		vector <double> vec;
-		for(auto &vs : vals){
+		for(const auto& vs : vals){
 			auto npsamp = vs[p].size();
 			auto psampmin = npsamp/4;
 			if(burnin != UNSET){
@@ -431,11 +431,11 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 		distout << "# Posterior probability distributions for model parameters." << endl;
 		distout << endl;
 
-		for(auto &parname : paramname) distout << parname << "\t" << "Probability\t";
+		for(auto parname : paramname) distout << parname << "\t" << "Probability\t";
 		distout << endl;
 		
 		for(auto b = 0u; b < BIN; b++){
-			for(auto &pardist : paramdist) distout << pardist.value[b] << "\t" << pardist.prob[b] << "\t";
+			for(const auto& pardist : paramdist) distout << pardist.value[b] << "\t" << pardist.prob[b] << "\t";
 			distout << endl;
 		}				
 	}
@@ -447,8 +447,8 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 	auto nind = data.ind.size();
 	vector< vector <FEV> > indev;
 	indev.resize(nind);
-	for(auto &fe: fev){
-		for(auto &ev : fe) indev[ev.ind].push_back(ev);
+	for(auto& fe: fev){
+		for(auto& ev : fe) indev[ev.ind].push_back(ev);
 	}
 	
 	stringstream sst; sst << details.outputdir << "/events.txt";
@@ -475,7 +475,7 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
 {
 	vector <int> N(model.comp.size());
-	for(auto &NN : N) NN = 0;
+	for(auto& NN : N) NN = 0;
 	N[0] = data.popsize;
 		
 	auto td = 0u, tdf = 0u; while(td < details.fediv && xi[td].size()==0) td++;
@@ -497,7 +497,7 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 		}
 		
 		plot << t << " ";
-		for(auto &NN : N) plot << NN << " ";
+		for(auto NN : N) plot << NN << " ";
 		plot << endl;
 	}
 }
@@ -532,13 +532,13 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: transout << "date"; break;
 		}
 
-		if(tdata.type == "reg"){ for(auto &reg : data.region){ transout << "\t" << reg.code;}}
+		if(tdata.type == "reg"){ for(const auto& reg : data.region){ transout << "\t" << reg.code;}}
 		else transout << "\t" << "all";
 		transout << endl;
 		
 		for(auto row = 0u; row < tdata.rows; row++){
 			transout << details.getdate(tdata.start + row*tdata.units);
-			for(auto &trnum : meas.transnum[td][row]){ transout <<  "\t" << trnum;} transout << endl;
+			for(const auto& trnum : meas.transnum[td][row]){ transout <<  "\t" << trnum;} transout << endl;
 		}
 	}
 	
@@ -559,13 +559,13 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		case tform_ymd: popout << "date"; break;
 		}
 		
-		if(pdata.type == "reg"){ for(auto &reg : data.region){ popout << "\t" << reg.code;}}
+		if(pdata.type == "reg"){ for(const auto& reg : data.region){ popout << "\t" << reg.code;}}
 		else popout << "\t" << "all";
 		popout << endl;
 		
 		for(auto row = 0u; row < pdata.rows; row++){
 			popout << details.getdate(pdata.start + row*pdata.units);
-			for(auto &popnum : meas.popnum[pd][row]){ popout <<  "\t" << popnum;} popout << endl;
+			for(auto popnum : meas.popnum[pd][row]){ popout <<  "\t" << popnum;} popout << endl;
 		}
 	}
 	
@@ -584,7 +584,7 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 		else cout << "." << endl;
 		
 		margout << "Category"; 
-		if(mdata.type == "reg"){ for(auto &reg : data.region){ margout << "\t" << reg.code;}}
+		if(mdata.type == "reg"){ for(const auto& reg : data.region){ margout << "\t" << reg.code;}}
 		else margout << "\t" << "all";
 		margout << endl;
 	
@@ -608,7 +608,7 @@ STAT Output::getstat_with_w(vector <PW> vec) const
 	STAT stat;
 	
 	double sum = 0, sumw = 0; 
-	for(auto &v : vec){ sum += v.val*v.w; sumw += v.w;}
+	for(auto v : vec){ sum += v.val*v.w; sumw += v.w;}
 	
 	stat.mean = to_string(sum/sumw); 
 	
@@ -652,7 +652,7 @@ STAT Output::getstat(const vector <double> &vec) const
 		stat.mean = "---"; stat.CImin = "---"; stat.CImax = "---"; stat.ESS = "---"; 
 	}
 	else{
-		auto sum = 0.0, sum2 = 0.0; for(auto &v : vec){ sum += v; sum2 += v*v;}
+		auto sum = 0.0, sum2 = 0.0; for(auto v : vec){ sum += v; sum2 += v*v;}
 		sum /= n; sum2 /= n;
 		stat.mean = to_string(sum); 
 		
@@ -676,7 +676,7 @@ STAT Output::getstat(const vector <double> &vec) const
 		if(var <= tiny || n <= 2)  stat.ESS = "---";
 		else{	
 			auto sd = sqrt(var);
-			for(auto &v : vec2) v = (v-sum)/sd;
+			for(auto& v : vec2) v = (v-sum)/sd;
 				
 			auto sum = 1.0;
 			for(auto d = 1u; d < n/2; d++){             // calculates the effective sample size
@@ -699,7 +699,7 @@ DIST Output::getdist(const vector <double> &vec) const
 	DIST dist;
 	
 	auto min = large, max = -large;	
-	for(auto &v : vec){
+	for(auto v : vec){
 		if(v < min) min = v;
 		if(v > max) max = v;
 	}
@@ -717,7 +717,7 @@ DIST Output::getdist(const vector <double> &vec) const
 		vector <unsigned int> bin(BIN);
 		for(auto b = 0u; b < BIN; b++) bin[b] = 0;
 		
-		for(auto &v : vec){
+		for(auto v : vec){
 			auto b = (unsigned int)(BIN*(v-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
 			bin[b]++;
 		}
@@ -789,7 +789,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 	if(!genout) emsg("Cannot output the file '"+filefull+"'");
 
 	genout << "# Genetarion"; 
-	for(auto &param : model.param) genout << param.name << " (mean,CImin,CImax) ";
+	for(const auto& param : model.param) genout << param.name << " (mean,CImin,CImax) ";
 	genout << endl;
 	
 	long timestart = generation[0].time;

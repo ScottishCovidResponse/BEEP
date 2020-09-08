@@ -133,14 +133,14 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 
 	beta.resize(details.nsettime); phi.resize(details.nsettime);
 	
-	for(auto &tr : trans){
+	for(const auto& tr : trans){
 		switch(tr.type){
 		case exp_dist: param[tr.param_mean].type = distval_paramtype; break;
 		case gamma_dist: case lognorm_dist: param[tr.param_mean].type = distval_paramtype; param[tr.param_cv].type = distval_paramtype; break;
 		}
 		
 		if(tr.istimep == 0){
-			for(auto &th : tr.probparam) param[th].type = branchprob_paramtype; 
+			for(const auto th : tr.probparam) param[th].type = branchprob_paramtype; 
 		}
 	}
 	
@@ -169,13 +169,13 @@ void MODEL::print_to_terminal() const
 	cout << endl;
 		
 	cout << "Compartments:" << endl; 
-	for(auto &co : comp){
+	for(const auto& co : comp){
 		cout << "  " << co.name << "  Infectivity: " << co.infectivity << endl; 			
 	}
 	cout << endl;
 	
 	cout << "Transitions:" << endl; 
-	for(auto &tr : trans){
+	for(const auto& tr : trans){
 		if(tr.from != tr.to){
 			cout << "  " << comp[tr.from].name << " → " << comp[tr.to].name;
 			if(tr.probparam.size() > 0){
@@ -226,22 +226,22 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 void MODEL::copyi(const vector<double> &paramv)
 {
 	parami = paramv; betai = beta; phii = phi; susi = sus; areafaci = areafac;
-	for(auto &co : comp) co.probi = co.prob;
+	for(auto& co : comp) co.probi = co.prob;
 }
 	
 /// Copies values used for the proposed state (used in MBPs)
 void MODEL::copyp(const vector<double> &paramv)
 {
 	paramp = paramv; betap = beta; phip = phi; susp = sus; areafacp = areafac;
-	for(auto &co : comp) co.probp = co.prob;
+	for(auto& co : comp) co.probp = co.prob;
 }
 
 /// Adds in the tensor Q to the model
 void MODEL::addQ()
 {
-	for(auto &co : comp) addtrans(co.name,co.name,"",timep_dist,"","");  
+	for(const auto& co : comp) addtrans(co.name,co.name,"",timep_dist,"","");  
 	
-	for(auto &QQ : data.Q){
+	for(const auto& QQ : data.Q){
 		unsigned int c;
 		for(c = 0; c < comp.size(); c++) if(QQ.comp == comp[c].name) break;
 		if(c == comp.size()) emsg("The compartment '"+QQ.comp+"' in '"+QQ.name+"' is not recognised.");
@@ -249,7 +249,7 @@ void MODEL::addQ()
 	
 	DQINFO dq;
 	dq.q.resize(2); dq.fac.resize(2);
-	for(auto &tr : trans){
+	for(auto& tr : trans){
 		auto ci = tr.from;
 		auto cf = tr.to;
 		auto compi = comp[ci].name;
@@ -289,7 +289,7 @@ vector <double> MODEL::priorsamp()
 	}
 	
 	if(regioneffect == 1){
-		for(auto &th : regioneff_param) paramv[th] = normal(0,paramv[sigma_param]);
+		for(auto th : regioneff_param) paramv[th] = normal(0,paramv[sigma_param]);
 	}
 	
 	if(smooth_spline == 1){
@@ -387,7 +387,7 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 			emsg("For the transition '"+from+"→"+to+"' the number of parameters in expression '"+prpar+"' should equal the number of age groups.");
 		}
 		
-		for(auto &parname : probparam) tr.probparam.push_back(findparam(parname));
+		for(const auto& parname : probparam) tr.probparam.push_back(findparam(parname));
 	}
 	
 	tr.type = type;
@@ -428,7 +428,7 @@ void MODEL::timevariation(const vector<double> &paramv)
 /// Sets the transition probabilies based on the parameters
 unsigned int MODEL::settransprob(const vector<double> &paramv)
 {
-	for(auto &co : comp){
+	for(auto& co : comp){
 		auto kmax = co.trans.size();
 		if(kmax > 1){
 			co.prob.resize(data.nage);
@@ -663,7 +663,7 @@ void MODEL::setarea(const vector<double> &paramv)
 /// Checks that the transition and population data is correct
 void MODEL::checkdata()
 {
-	for(auto &td : data.transdata){
+	for(auto& td : data.transdata){
 		auto from = td.fromstr, to = td.tostr; 
 		
 		unsigned int tra;
@@ -673,7 +673,7 @@ void MODEL::checkdata()
 		td.trans = tra;
 	}
 	
-	for(auto &pd : data.popdata){
+	for(auto& pd : data.popdata){
 		auto compstr = pd.compstr;
 	
 		unsigned int c;
@@ -683,7 +683,7 @@ void MODEL::checkdata()
 		pd.comp = c;
 	}
 	
-	for(auto &md : data.margdata){
+	for(auto& md : data.margdata){
 		auto from = md.fromstr, to = md.tostr; 
 		
 		unsigned int tra;
@@ -714,7 +714,7 @@ double MODEL::prior(const vector<double> &paramv)
 	
 	if(regioneffect == 1){
 		auto sd = paramv[sigma_param];
-		for(auto &th : regioneff_param) Pr += normalprob(paramv[th],0,sd*sd);
+		for(auto th : regioneff_param) Pr += normalprob(paramv[th],0,sd*sd);
 	}
 	
 	if(smooth_spline == 1){
@@ -741,9 +741,9 @@ double MODEL::prior(const vector<double> &paramv)
 /// Calculate compartmental probabilities
 void MODEL::calcprobin()
 {
-	for(auto &co : comp){
+	for(auto& co : comp){
 		co.probin.resize(data.nage);
-		for(auto &probin : co.probin) probin = 0;
+		for(auto& probin : co.probin) probin = 0;
 	}
 
 	for(auto a = 0u; a < data.nage; a++){
@@ -795,7 +795,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	setup(paramv);
 	calcprobin();
 	
-	for(auto &co : comp){
+	for(auto& co : comp){
 		co.infint.resize(data.nage);
 		for(auto a = 0u; a < data.nage; a++){
 			co.infint[a] = 0;
@@ -819,9 +819,9 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	}
 	
 	vector <double> R0fac(ntimeperiod);
-	for(auto &R0fa : R0fac) R0fa = 0;
+	for(auto& R0fa : R0fac) R0fa = 0;
 		
-	for(auto &QQ : data.Q){
+	for(const auto& QQ : data.Q){
 		auto timep = QQ.timep;
 		auto qt = QQ.Qtenref;
 		
@@ -866,20 +866,20 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 {	
 	timers.timecompparam -= clock();
 
-	for(auto &tr : trans){
+	for(auto& tr : trans){
 		if(tr.istimep == 0){
-			tr.num.resize(data.nage); for(auto &num : tr.num) num = 0;
+			tr.num.resize(data.nage); for(auto& num : tr.num) num = 0;
 		}
 		tr.numvisittot = 0; tr.dtsum = 0; tr.dtlist.clear();
 	}
 
-	for(auto &xx : x){                  // Extracts values based on the event sequence
+	for(const auto& xx : x){                  // Extracts values based on the event sequence
 		auto i = xx.ind;
 		auto dp = data.ind[i].dp;
 		auto a = data.democatpos[dp][0];
 				
 		auto t = 0.0;
-		for(auto &ev : indev[i]){
+		for(const auto& ev : indev[i]){
 			auto tra = ev.trans;
 			if(trans[tra].istimep == 0){
 				trans[tra].num[a]++;
@@ -960,7 +960,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 double MODEL::likelihood_prob()
 {
 	auto L = 0.0;
-	for(auto &co : comp){	
+	for(const auto& co : comp){	
 		auto kmax = co.trans.size();
 		if(kmax > 1){
 			for(auto k = 0u; k < kmax; k++){
@@ -978,7 +978,7 @@ double MODEL::likelihood_prob()
 double MODEL::likelihood_dt(vector <double> &paramv)
 {
 	auto L = 0.0;
-	for(auto &tr : trans){
+	for(const auto& tr : trans){
 		switch(tr.type){
 		case exp_dist:
 			{
@@ -1011,7 +1011,7 @@ double MODEL::likelihood_dt(vector <double> &paramv)
 double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 {
 	auto L = 0.0;
-	for(auto &tr : trans){
+	for(const auto& tr : trans){
 		switch(tr.type){
 		case exp_dist:
 			{
@@ -1059,7 +1059,7 @@ double MODEL::dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf)
 }
 
 /// Outputs an event sequence (used for debugging)
-void MODEL::oe(const string& name, vector <FEV> &ev)
+void MODEL::oe(const string& name, const vector <FEV> &ev)
 {
 	cout << name << ":" << endl;
 	for(auto e = 0u; e < ev.size(); e++){
