@@ -28,6 +28,8 @@ class State
 
 	vector <double> sus;                              // The susceptibility for different demographic categories
 	
+	vector <double> areafac;                          // The modification due to area effects
+	
 	vector < vector <double> > disc_spline;           // A discretisation of the splines	
 	
 	//double likelihood();

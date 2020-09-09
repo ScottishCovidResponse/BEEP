@@ -218,7 +218,6 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 {
 	if(settransprob(paramv) == 1) return 1;
 	
-	setarea(paramv);
 	return 0;
 }
 
@@ -227,7 +226,6 @@ void MODEL::copyi(const vector<double> &paramv)
 {
 	parami = paramv;
 
-areafaci = areafac;
 	for(auto& co : comp) co.probi = co.prob;
 }
 	
@@ -236,7 +234,6 @@ void MODEL::copyp(const vector<double> &paramv)
 {
 	paramp = paramv;
 
- areafacp = areafac;
 	for(auto& co : comp) co.probp = co.prob;
 }
 
@@ -632,9 +629,9 @@ vector <double> MODEL::create_sus(const vector<double> &paramv)
 }
 
 /// Defines the relative transmission rate for different areas
-void MODEL::setarea(const vector<double> &paramv) 
+vector <double> MODEL::create_areafac(const vector<double> &paramv) 
 {
-	areafac.resize(data.narea);
+	vector <double> areafac(data.narea);
 	for(auto c = 0u; c < data.narea; c++){
 		auto sum = 0.0;
 		for(auto j = 0u; j < data.ncovar; j++) sum += paramv[covar_param[j]]*data.area[c].covar[j];
@@ -644,6 +641,8 @@ void MODEL::setarea(const vector<double> &paramv)
 		areafac[c] = exp(sum);
 		if(std::isnan(areafac[c])) emsgEC("Model",90);
 	}
+	
+	return areafac;
 }
 
 /// Checks that the transition and population data is correct
@@ -802,6 +801,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	for(auto& R0fa : R0fac) R0fa = 0;
 		
 	vector <double> sus = create_sus(paramv);
+	vector <double> areafac = create_areafac(paramv);
 	
 	for(const auto& QQ : data.Q){
 		auto timep = QQ.timep;

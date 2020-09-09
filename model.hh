@@ -114,14 +114,8 @@ public:
 	unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
 	unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
 
-	//vector <double> sus;                     // The susceptibility for different demographic categories
-
-	vector <double> areafac;                 // The modification due to area effects
-	
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
-	//vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
-	vector <double> areafaci, areafacp;      // Under MBPs the area factor for the initial and proposed states
-				
+
 	vector <PARAM> param;                    // Information about parameters in the model
 	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
 	vector <TRANS> trans;                    // Stores model transitions
@@ -160,6 +154,7 @@ public:
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
 	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
 	vector <double> create_sus(const vector<double> &paramv);  
+	vector <double> create_areafac(const vector<double> &paramv);
 						
 private:
 	void addQ();
@@ -169,7 +164,6 @@ private:
 	void addtrans(const string& from, const string& to, const string& prpar,
 								unsigned int type, const string& param1, const string& param2);
 	
-	void setarea(const vector<double> &paramv);
 	unsigned int findparam(const string& name);
 	unsigned int settransprob(const vector<double> &paramv);
 	double likelihood_prob();
