@@ -28,7 +28,6 @@ public:
 	int abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 	
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
-	
 
 	double invT;                                          // The inverse temperature
 

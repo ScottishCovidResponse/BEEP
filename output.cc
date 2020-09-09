@@ -54,10 +54,13 @@ void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int 
 	for(const auto& pval : paramval) trace << "\t" << pval; 
 	
 	if(model.priorcomps.size() > 0){
-		model.calcprobin();
+		vector <CompTrans> comptrans;
+		model.create_comptrans(comptrans,paramval);
+		vector <CompProb> compprob = model.create_compprob(comptrans);
+	
 		for(const auto& pri : model.priorcomps){
 			auto c = pri.comp;
-			auto pr = 0.0; for(auto a = 0u; a < data.nage; a++) pr += data.agedist[a]*model.comp[c].probin[a];
+			auto pr = 0.0; for(auto a = 0u; a < data.nage; a++) pr += data.agedist[a]*compprob[c].value[a];
 			trace << "\t" << pr;
 		}
 	}
@@ -344,7 +347,6 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 	for(auto st = 0u; st < details.nsettime; st++){ Rmapout << (st+1); if(st < details.nsettime-1) Rmapout << ", ";}
 	Rmapout << endl;
 	
-	model.setup(paramav);
 	vector <double> areafac = model.create_areafac(paramav);
 	auto areaav = 0.0; for(const auto& areafa : areafac) areaav += areafa/data.narea;
 

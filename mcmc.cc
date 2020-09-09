@@ -387,7 +387,6 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 		SAMPLE sample;
 		if(ppost < nchain){
 			sample.meas = obsmodel.getmeas(chain[ppost].initial.trev,chain[ppost].initial.indev);
-			model.setup(chain[ppost].paramval);
 			sample.R0 = model.R0calc(chain[ppost].paramval);
 			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].paramval); 
 		}
@@ -410,7 +409,6 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			auto p = ppost%nchain;
 			
 			MEAS meas = obsmodel.getmeas(chain[p].initial.trev,chain[p].initial.indev);
-			model.setup(chain[p].paramval);
 			vector <double> R0 = model.R0calc(chain[p].paramval);
 	
 			packinit(0);

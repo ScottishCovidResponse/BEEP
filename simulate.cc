@@ -46,7 +46,7 @@ void Simulate::run()
 		vector <PARAMSAMP> psamp;
 		
 		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
-		model.setup(chain.paramval);
+		
 		sample.R0 = model.R0calc(chain.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.paramval);
 		paramsamp.paramval = chain.paramval;
@@ -69,7 +69,6 @@ void Simulate::multirun()
 		
 		SAMPLE sample;
 		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
-		model.setup(chain.paramval);
 		sample.R0 = model.R0calc(chain.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.paramval);
 		

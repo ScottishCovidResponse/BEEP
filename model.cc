@@ -213,14 +213,6 @@ void MODEL::print_to_terminal() const
 	cout << endl;
 }
 
-/// Sets up the model with a given set of parameters
-unsigned int MODEL::setup(const vector <double> &paramv)
-{
-	if(settransprob(paramv) == 1) return 1;
-	
-	return 0;
-}
-
 /// Adds in the tensor Q to the model
 void MODEL::addQ()
 {
@@ -732,7 +724,7 @@ double MODEL::prior(const vector<double> &paramv)
 	
 	return Pr;
 }
-	
+	/*
 /// Calculate compartmental probabilities
 void MODEL::calcprobin()
 {
@@ -783,21 +775,81 @@ void MODEL::calcprobin()
 		if(cst.size() > 0 || kst.size() > 0 || probst.size() > 0) emsgEC("Model",8);
 	}
 }
+*/
+/// Calculate compartmental probabilities
+vector <CompProb> MODEL::create_compprob(const vector <CompTrans> &comptrans)
+{
+	vector <CompProb> compprob(comp.size());
+	
+	for(auto& co : compprob){
+		co.value.resize(data.nage);
+		for(auto& value : co.value) value = 0;
+	}
+
+	for(auto a = 0u; a < data.nage; a++){
+		vector <unsigned int> cst, kst;
+		vector <double> probst;
+	
+		auto prob = 1.0;
+		auto c = 0u;
+		do{
+			compprob[c].value[a] += prob;
+			
+			unsigned int k;
+			if(comp[c].trans.size() == 0){
+				if(cst.size() == 0) break;
+				
+				do{
+					auto j = cst.size()-1;
+					c = cst[j];
+					prob = probst[j]; 
+					kst[j]++;
+					k = kst[j];
+					if(k < comp[c].trans.size()) break;
+					
+					cst.pop_back();
+					probst.pop_back();
+					kst.pop_back();
+				}while(cst.size() > 0);
+				if(k == comp[c].trans.size()) break;
+			}
+			else{
+				k = 0;
+				if(comp[c].trans.size() > 1){
+					cst.push_back(c);
+					probst.push_back(prob);
+					kst.push_back(0);
+				}
+			}
+			if(comp[c].trans.size() > 1) prob *= comptrans[c].prob[a][k];
+			c = trans[comp[c].trans[k]].to;		
+		}while(1 == 1);
+		
+		if(cst.size() > 0 || kst.size() > 0 || probst.size() > 0) emsgEC("Model",8);
+	}
+	
+	return compprob;
+}
 
 /// Calculates R0
 vector <double> MODEL::R0calc(const vector<double> &paramv)
 {
-	setup(paramv);
-	calcprobin();
+	vector <CompTrans> comptrans;
+	if(create_comptrans(comptrans,paramv) == 1) emsgEC("Model",81);
 	
-	for(auto& co : comp){
-		co.infint.resize(data.nage);
+	vector <CompProb> compprob = create_compprob(comptrans);
+	
+	vector < vector<double> > infint;   // Stores the time integrated infectivity
+	
+	infint.resize(comp.size());
+	for(auto c = 0u; c < comp.size(); c++){
+		infint[c].resize(data.nage);
 		for(auto a = 0u; a < data.nage; a++){
-			co.infint[a] = 0;
+			infint[c][a] = 0;
 		
-			auto kmax = co.trans.size();
+			auto kmax = comp[c].trans.size();
 			for(auto k = 0u; k < kmax; k++){
-				auto tra = co.trans[k];
+				auto tra = comp[c].trans[k];
 				
 				double dt;
 				switch(trans[tra].type){
@@ -807,8 +859,8 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 				case lognorm_dist: dt = paramv[trans[tra].param_mean]; break;
 				default: emsgEC("MODEL",9); break;
 				}	
-				if(kmax == 1) co.infint[a] += co.probin[a]*co.infectivity*dt;
-				else co.infint[a] += co.probin[a]*co.infectivity*dt*co.prob[a][k];
+				if(kmax == 1) infint[c][a] += compprob[c].value[a]*comp[c].infectivity*dt;
+				else infint[c][a] += compprob[c].value[a]*comp[c].infectivity*dt*comptrans[c].prob[a][k];
 			}
 		}
 	}
@@ -829,7 +881,8 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 		
 		for(auto c = 0u; c < data.narea; c++){
 			for(auto a = 0u; a < data.nage; a++){
-				auto fac = comp[co].infint[a]*double(data.area[c].agepop[a])/data.popsize; 
+				auto fac = infint[co][a]*double(data.area[c].agepop[a])/data.popsize; 
+				
 				if(fac != 0){
 					auto vi = c*data.nage + a;
 					auto kmax = data.genQ.Qten[qt].ntof[vi];
@@ -944,7 +997,6 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 	}
 	
 	if(settransprob(paramv) == 1) emsgEC("Model",12);
-	setup(paramv);
 	
 	if(checkon == 1){
 		double dd;

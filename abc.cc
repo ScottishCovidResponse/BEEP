@@ -353,8 +353,7 @@ void ABC::calculate_w(vector <Generation> &generation, double jump)
 				
 				double sum = 0;
 				for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jump);
-				
-				//model.setup(gen.param_samp[i]);
+			
 				w = exp(model.prior(gen.param_samp[i]))/sum;
 			}
 			gen.w[i] = w;
@@ -432,8 +431,7 @@ SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 {
 	SAMPLE sample;
 	chain.initialise_from_particle(part);
-	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);
-	model.setup(chain.paramval);
+	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);;
 	sample.R0 = model.R0calc(chain.paramval);
 	sample.phi = model.create_disc_spline(model.phispline_ref,chain.paramval); 
 	

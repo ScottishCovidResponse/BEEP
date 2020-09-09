@@ -54,13 +54,16 @@ struct COMP{                               // Stores information about a compart
 	//vector <vector <double> > probp;         // The age-dependent probability of going down transition for proposed state (MBP)
 	
 	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
-	vector <double> infint;                  // The integrated infectivity (used to calculate R0)
 };
 
 struct CompTrans                           // If in a compartment this gives probabilities of going down transitions
 {
 	vector <vector <double> > prob;          // The age-dependent probability of going down transition
 	vector <vector <double> > probsum;       // The sum of the age-dependent probability of going down transition
+};
+
+struct CompProb{
+	vector <double> value;                  // The prob ind goes to compartment (used to calculate R0)
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
@@ -146,11 +149,9 @@ public:
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp);
 	void print_to_terminal() const;
 	vector <double> priorsamp();
-	unsigned int setup(const vector <double> &paramval);
 	vector <double> R0calc(const vector <double> &paramv);
 	unsigned int dombpevents(const vector <double> &parami, const vector <double> &paramp);
 	void oe(const string& name, const vector <FEV> &ev);
-	void calcprobin();
 	double prior(const vector<double> &paramv);
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
 												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
@@ -158,7 +159,8 @@ public:
 	vector <double> create_sus(const vector<double> &paramv);  
 	vector <double> create_areafac(const vector<double> &paramv);
 	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv);
-						
+	vector <CompProb> create_compprob(const vector <CompTrans> &comptrans);
+	
 private:
 	void addQ();
 	void checkdata();
