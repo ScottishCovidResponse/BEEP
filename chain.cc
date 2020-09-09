@@ -89,45 +89,26 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	initial.Qmap = propose.Qmap;	
 	initial.indev = propose.indev;
 	initial.x = propose.x;
-
 	
 	initial.L = obsmodel.Lobs(initial.trev,initial.indev);
 	initial.Pr = model.prior(paramval);
 
+	initial.disc_spline = propose.disc_spline;
+	
 	setinitialQmap(1);
 }
 
 /// Randomly samples from prior and generates an event sequence
 void Chain::sample_from_prior()
 {
-	const auto loopmax = 100;
-	auto loop = 0;
-	do{
-		//if(details.mode == MODE_INF) cout << ch << "Initialisation try: " << loop << endl;
-		do{	paramval = model.priorsamp();}while(model.setup(paramval) == 1);             // Randomly samples parameters from the prior	
-
-		vector <double> paramvalinit = paramval;
-
-		// Sets the initial state to zero force of infection
-		for(const auto& spli : model.spline){
-			for(const auto& sp : spli) paramvalinit[sp.param] = 0; 
-		}	 
-				 
-		//for(const auto& spl : model.betaspline) paramvalinit[spl.param] = 0; 
-		//for(const auto& spl : model.phispline) paramvalinit[spl.param] = 0;
+	unsigned int loop, loopmax = 100;
+	for(loop = 0; loop < loopmax; loop++){
+		do{	paramval = model.priorsamp();}while(model.setup(paramval) == 1);  
 			
-		model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
-		model.copyi(paramvalinit);
-		for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
-		model.setup(paramval);
-		model.copyp(paramval);
-
-		if(mbp() == 0) break;
-
-		loop++;
-	}while(loop < loopmax);                                           // Checks not too many infected individuals (based on prior)
-	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
+		if(simulate(paramval) == 0) break;
+	}
 	
+	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 }
 
 /// Simulates an event sequence given a parameter set
@@ -135,18 +116,17 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 {
 	if(model.setup(paramv) == 1) return 1;
 	
-	auto nparam = model.param.size();                   
-	paramval.resize(nparam); for(auto th = 0u; th < nparam; th++) paramval[th] = paramv[th];
+	paramval = paramv;
 	vector <double> paramvalinit = paramval;
-
-	// Sets the initial state to zero force of infection
-	for(const auto& spl : model.spline[model.betaspline_ref]) paramvalinit[spl.param] = 0; 
-	for(const auto& spl : model.spline[model.phispline_ref]) paramvalinit[spl.param] = 0;
-		
+	for(auto& pval : paramvalinit) pval = 0;
+	
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 	model.copyi(paramvalinit);
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
+		
 	model.setup(paramval);
 	model.copyp(paramval);
+	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 
 	if(mbp() == 1) return 1;
 
@@ -205,9 +185,9 @@ unsigned int Chain::mbp()
 			cout << endl;	
 		}
 		
-		initial.phi = model.phii[sett]; propose.phi = model.phip[sett];	
-		initial.beta = model.betai[sett]; propose.beta = model.betap[sett];
-
+		initial.phi = initial.disc_spline[model.phispline_ref][sett]; propose.phi = propose.disc_spline[model.phispline_ref][sett];	
+		initial.beta = initial.disc_spline[model.betaspline_ref][sett]; propose.beta = propose.disc_spline[model.betaspline_ref][sett];	
+	
 		for(auto v = 0u; v < data.narage; v++){
 			double val = initial.Qmap[sett][v] + dQmap[v];
 			if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
@@ -393,7 +373,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	
 	model.setup(paramval);
 	model.copyi(paramval);
-			
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
+		
 	auto valst = paramval[th];
 
 	paramval[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
@@ -406,6 +387,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		if(model.setup(paramval) == 1) al = 0;
 		else{
 			model.copyp(paramval);
+			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
+			
 			if(mbp() == 1) al = 0;
 			else{
 				propose.L = obsmodel.Lobs(propose.trev,propose.indev);
@@ -424,6 +407,7 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		initial.trev = propose.trev;
 		initial.Qmap = propose.Qmap;
 		
+		initial.disc_spline = propose.disc_spline;
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
 		//initial.indev = propose.indev;
@@ -886,7 +870,7 @@ void Chain::check_addrem()
 }
 
 /// Calculates the likelihood in the initial state
-double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev)
+double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, 	vector < vector <double> > &disc_spline)
 {	
 	model.setup(paramval);
 		
@@ -901,7 +885,9 @@ double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vec
 	auto t = 0.0; 
 	auto n = 0u;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto beta = model.beta[sett], phi = model.phi[sett];
+		auto phi = disc_spline[model.phispline_ref][sett]; 
+		auto beta = disc_spline[model.betaspline_ref][sett];
+	
 		auto tmax = details.settime[sett+1];
 		
 		for(auto c = 0u; c < data.narea; c++){
@@ -965,7 +951,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	if(checkon == 1){ double dd = initial.Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
 	timers.timembptemp -= clock();
-	initial.Lev = likelihood(initial.Qmap,initial.x,initial.indev);
+	initial.Lev = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline);
 	timers.timembptemp += clock();
 	
 	
@@ -976,13 +962,13 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 	timers.timeparam += clock();
 		
-	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",49);}
+	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",49);}
 
 	timers.timeaddrem -= clock();
 	addrem_prop(samp,burnin,EFcut);
 	timers.timeaddrem += clock();
 	
-	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",50);}
+	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",50);}
 
 	if(checkon == 1){ double dd = initial.Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
@@ -1086,14 +1072,19 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 
 				propose.Pr = initial.Pr; 
 				propose.Lev = initial.Lev;
+
 				double al;
 				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 				else{
 					model.setup(paramval);
+					for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 
 					propose.Lev = 0; 
 					for(auto sett = 0u; sett < details.nsettime; sett++){
-						auto beta = model.beta[sett], phi = model.phi[sett];
+						auto phi = propose.disc_spline[model.phispline_ref][sett]; 
+						auto beta = propose.disc_spline[model.betaspline_ref][sett];
+	
+						
 						propose.Lev += betafac[sett]*beta + phifac[sett]*phi;
 						
 						for(const auto& l : lc[sett]) propose.Lev += l.num*log(l.betafac*beta + l.phifac*phi);
@@ -1108,6 +1099,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 				if(ran() < al){
 					initial.Pr = propose.Pr;
 					initial.Lev = propose.Lev;
+					initial.disc_spline = propose.disc_spline;
 					nacstand[th]++;
 					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 				}
@@ -1150,7 +1142,9 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 	auto L0 = 0.0, t = 0.0;
 	auto n = 0u;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto beta = model.beta[sett], phi = model.phi[sett];
+		auto phi = initial.disc_spline[model.phispline_ref][sett]; 
+		auto beta = initial.disc_spline[model.betaspline_ref][sett];
+	
 		auto tmax = details.settime[sett+1];
 		
 		for(auto c = 0u; c < data.narea; c++){
@@ -1304,7 +1298,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	model.setup(paramval);
 		
-	if(checkon == 1){ auto dd = likelihood(initial.Qmap,initial.x,initial.indev) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",55);}
+	if(checkon == 1){ auto dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",55);}
 
 	auto probif = 0.0, probfi = 0.0;
 	
@@ -1423,7 +1417,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	}
 	
 	timers.timembptemp4 -= clock();
-	propose.Lev = likelihood(propose.Qmap,propose.x,propose.indev);
+	propose.Lev = likelihood(propose.Qmap,propose.x,propose.indev,propose.disc_spline);
 	
 	double al;
 	if(details.mode == abcmbp){
@@ -1470,7 +1464,8 @@ void Chain::infsampler(vector< vector<double> > &Qmap)
 {
 	auto sum = 0.0;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto beta = model.beta[sett], phi = model.phi[sett];
+		auto phi = initial.disc_spline[model.phispline_ref][sett]; 
+		auto beta = initial.disc_spline[model.betaspline_ref][sett];
 	
 		for(auto c = 0u; c < data.narea; c++){
 			auto fac = beta*model.areafac[c];
@@ -1542,7 +1537,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 {
 	model.setup(paramval);
 	model.copyi(paramval);
-			
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
+	
 	vector <double> valst = paramval;
 	paramval = param_propose;
 	
@@ -1558,6 +1554,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		if(model.setup(paramval) == 1) al = 0;
 		else{
 			model.copyp(paramval);
+			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
+			
 			if(mbp() == 1) al = 0;
 			else{
 				propose.EF = obsmodel.Lobs(propose.trev,propose.indev);

@@ -435,7 +435,7 @@ SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);
 	model.setup(chain.paramval);
 	sample.R0 = model.R0calc(chain.paramval);
-	sample.phi = model.phi; 
+	sample.phi = model.create_disc_spline(model.phispline_ref,chain.paramval); 
 	
 	return sample;
 }

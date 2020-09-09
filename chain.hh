@@ -80,7 +80,7 @@ private:
 	void resetlists();
 	void changestat(unsigned int i, unsigned int st, unsigned int updateR);
 	void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
-	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev);
+	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, vector < vector <double> > &disc_spline);
 	void infsampler(vector< vector<double> > &Qmap);
 	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
 	void calcproposeQmap();
