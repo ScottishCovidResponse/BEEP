@@ -16,7 +16,7 @@ struct SAMPLE;
 class ABC
 {
 public:	
-  ABC(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
+  ABC(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, const Output &output, const Obsmodel &obsmodel);	
 	void smc();
 	void mbp();
 	
@@ -55,12 +55,12 @@ private:
 	vector <double> jumpv;
 	
 	const Details &details;
-	DATA &data;
+	const DATA &data;
 	const MODEL &model;
 	const POPTREE &poptree;
 	const Mpi &mpi;
-	Output &output;
-	Obsmodel &obsmodel;
+	const Output &output;
+	const Obsmodel &obsmodel;
 };
 
 #endif

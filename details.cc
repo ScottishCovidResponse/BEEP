@@ -23,7 +23,7 @@ Mpi::Mpi()
 	#endif
 }
 
-Details::Details(Inputs &inputs)
+Details::Details(const Inputs &inputs)
 {
 	mode = inputs.mode();
 	

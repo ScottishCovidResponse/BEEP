@@ -108,7 +108,7 @@ struct Generation
 class MODEL                                // Stores all the information about the model
 {
 public:
-	MODEL(Inputs &inputs, const Details &details, DATA &data);
+	MODEL(const Inputs &inputs, const Details &details, DATA &data);
 
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories

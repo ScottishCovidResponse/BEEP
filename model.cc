@@ -17,7 +17,7 @@ using namespace std;
 #include "inputs.hh"
 
 /// Initialises the model 
-MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
+MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
 {
 	infmax = inputs.find_int("infmax",large);
 	if((details.mode == inf || details.mode == abcsmc || details.mode == abcmbp) && infmax == large){

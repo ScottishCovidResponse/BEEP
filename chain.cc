@@ -38,7 +38,7 @@ struct LCONT {
 };
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	ch = chstart;
 
@@ -250,7 +250,7 @@ unsigned int Chain::mbp()
 		if(propose.x.size() >= model.infmax) break; 
 
 		updatedQmap(initial.trev[sett],propose.trev[sett]);	
-		if(checkon == 1) check(1,t,sett);
+		if(checkon == 1) check(t,sett);
 	}
 
 	timers.timembp += clock();
@@ -335,7 +335,7 @@ void Chain::setinitialQmap(unsigned int check)
 }
 
 /// Constructs the tree Rtot for fast Gilelspie sampling	
-void Chain::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
+void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp)
 {
 	timers.timembpconRtot -= clock();
 		
@@ -590,7 +590,7 @@ void Chain::resetlists()
 }
 
 /// Updates dQmap based on events which occur in timestep sett in the initial and proposed states
-void Chain::updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep)
+void Chain::updatedQmap(const vector <EVREF> &trei, const vector <EVREF> &trep)
 {
 	timers.timembpQmap -= clock();
 	
@@ -749,7 +749,7 @@ void Chain::addinfc(unsigned int c, double t)
 }
 
 /// Used for checking the code is running correctly
-void Chain::check(unsigned int /* num */, double t, unsigned int sett)
+void Chain::check(double t, unsigned int sett) const
 {
 	for(auto j = 0u; j < propose.x.size(); j++){ // Checks order
 		auto i = propose.x[j].ind, e = propose.x[j].e;
@@ -841,7 +841,7 @@ void Chain::check(unsigned int /* num */, double t, unsigned int sett)
 }
 
 /// Checks that quantities used when adding and removing events are correctly updated
-void Chain::check_addrem()
+void Chain::check_addrem() const
 {
 	for(auto j = 0u; j < initial.x.size(); j++){
 		auto i = initial.x[j].ind, e = initial.x[j].e;
@@ -887,7 +887,7 @@ void Chain::check_addrem()
 		}
 	}
 	
-	setinitialQmap(1);
+	//setinitialQmap(1);
 }
 
 /// Calculates the likelihood in the initial state
@@ -1226,7 +1226,7 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 	timers.timecovar += clock();
 }
 
-void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add)
+void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add)
 {
 	auto valst = paramval[th];	
 	paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
@@ -1298,7 +1298,7 @@ void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 }
 
 /// Time orders x
-void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev)
+void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const
 {
 	vector <EVREFT> xt;
 	for(const auto& xx : x){
@@ -1484,7 +1484,7 @@ if(dd*dd > tiny) emsgEC("Chain",55);}
 }
 
 /// Generates a sampler for adding infected individuals into the system
-void Chain::infsampler(vector< vector<double> > &Qmap)
+void Chain::infsampler(const vector< vector<double> > &Qmap)
 {
 	auto sum = 0.0;
 	for(auto sett = 0u; sett < details.nsettime; sett++){

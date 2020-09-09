@@ -17,13 +17,13 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-Output::Output(const Details &details, const DATA &data, const MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
+Output::Output(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	ensuredirectory(details.outputdir);
 }
 	
 /// Create a directory if it doesn't already exist
-void Output::ensuredirectory(const string &path) 
+void Output::ensuredirectory(const string &path) const
 {
 	struct stat st;
 	if (stat(path.c_str(), &st) == -1){  	// Directory not found

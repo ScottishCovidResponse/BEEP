@@ -16,7 +16,7 @@ class Obsmodel;
 class Chain                                             // Stores all the things related to an MCMC chain
 {
 public:
-	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	Obsmodel &obsmodel, unsigned int chstart);
+	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	const Obsmodel &obsmodel, unsigned int chstart);
 	void sample_from_prior();
 	unsigned int simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
@@ -53,20 +53,20 @@ private:
 	void addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev);
 	unsigned int nextinfection();
 	void addinfc(unsigned int c, double t);
-	void check(unsigned int num, double t, unsigned int sett);
-	void check_addrem();
-	void updatedQmap(vector <EVREF> &trei, vector <EVREF> &trep);
+	void check(double t, unsigned int sett) const;
+	void check_addrem() const;
+	void updatedQmap(const vector <EVREF> &trei, const vector <EVREF> &trep);
 	void setuplists();
 	void resetlists();
 	void changestat(unsigned int i, unsigned int st, unsigned int updateR);
-	void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
+	void constructRtot(const vector <double> &Qmi, const vector <double> &Qmp);
 	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, vector < vector <double> > &disc_spline, vector <double> &sus, vector <double> &areafac);
-	void infsampler(vector< vector<double> > &Qmap);
-	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
+	void infsampler(const vector< vector<double> > &Qmap);
+	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const;
 	void calcproposeQmap();
-	void betaphi_prop( unsigned int samp, unsigned int burnin);
+	void betaphi_prop(unsigned int samp, unsigned int burnin);
 	void area_prop(unsigned int samp, unsigned int burnin);
-	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, vector <double> &areasum, vector < vector <double> >&mult, vector < vector <double> > &add);
+	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
 	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	void proposal_init();
@@ -106,6 +106,6 @@ private:
 	const DATA &data;
 	const MODEL &model;
 	const POPTREE &poptree;
-	Obsmodel &obsmodel;
+	const Obsmodel &obsmodel;
 };
 #endif

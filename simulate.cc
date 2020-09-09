@@ -19,7 +19,7 @@
 using namespace std;
 
 /// Initilaises the simulation
-Simulate::Simulate(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+Simulate::Simulate(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), obsmodel(obsmodel), output(output)
 {	
 	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 

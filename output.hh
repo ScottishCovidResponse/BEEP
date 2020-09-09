@@ -41,7 +41,7 @@ struct Generation;
 class Output
 {
 public:
-	Output(const Details &details, const DATA &data, const MODEL &model, Obsmodel &obsmodel);
+	Output(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel);
 	
 	void trace_plot_init();
 	void trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval);
@@ -63,13 +63,13 @@ private:
 	STAT getstat_with_w(vector <PW> vec) const;	
 	DIST getdist(const vector <double> &vec) const;
 	void posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const;
-	void ensuredirectory(const string &path);
+	void ensuredirectory(const string &path) const;
 
 	ofstream trace, traceLi;
 	
 	const Details &details;
 	const DATA &data;
 	const MODEL &model;
-	Obsmodel &obsmodel;
+	const Obsmodel &obsmodel;
 };
 #endif

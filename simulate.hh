@@ -14,7 +14,7 @@ class Obsmodel;
 class Simulate
 {
 public:	
-	Simulate(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
+	Simulate(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel);	
 	void run();
 	void multirun();
 	
@@ -23,12 +23,12 @@ private:
 	unsigned int nsamp;                                   // The number of simulations 
 	
 	const Details &details;
-	DATA &data;
+	const DATA &data;
 	const MODEL &model;
 	const POPTREE &poptree;
 	const Mpi &mpi;
+	const Obsmodel &obsmodel;
 	Output &output;
-	Obsmodel &obsmodel;
 };
 
 #endif

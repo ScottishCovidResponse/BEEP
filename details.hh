@@ -14,7 +14,7 @@ struct Mpi
 
 struct Details                             // Provides various details used to define the simulation / inference
 {
-	Details(Inputs &inputs);
+	Details(const Inputs &inputs);
 	
 	unsigned int gettime(string st) const;   // Gets a time from a date
 	string getdate(unsigned int t) const;    // Gets a date fri=om a time

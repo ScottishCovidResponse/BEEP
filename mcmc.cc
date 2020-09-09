@@ -23,7 +23,7 @@ using namespace std;
 ofstream quenchplot;
 
 /// In initialises the inference algorithm
-Mcmc::Mcmc(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+Mcmc::Mcmc(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                                 // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
