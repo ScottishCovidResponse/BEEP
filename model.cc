@@ -133,7 +133,7 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	}
 
 	ntr = 0; nac = 0;
-	parami.resize(param.size()); paramp.resize(param.size());
+	//parami.resize(param.size()); paramp.resize(param.size());
 
 	for(const auto& tr : trans){
 		switch(tr.type){
@@ -219,22 +219,6 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 	if(settransprob(paramv) == 1) return 1;
 	
 	return 0;
-}
-
-/// Copies values used for the initial state (used in MBPs)
-void MODEL::copyi(const vector<double> &paramv)
-{
-	parami = paramv;
-
-	for(auto& co : comp) co.probi = co.prob;
-}
-	
-/// Copies values used for the proposed state (used in MBPs)
-void MODEL::copyp(const vector<double> &paramv)
-{
-	paramp = paramv;
-
-	for(auto& co : comp) co.probp = co.prob;
 }
 
 /// Adds in the tensor Q to the model
@@ -437,8 +421,40 @@ unsigned int MODEL::settransprob(const vector<double> &paramv)
 	return 0;
 }
 
+/// Sets the transition probabilies based on the parameters
+unsigned int MODEL::create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv)
+{
+	comptrans.resize(comp.size());
+	for(auto c = 0u; c < comp.size(); c++){
+		auto kmax = comp[c].trans.size();
+		if(kmax > 1){
+			comptrans[c].prob.resize(data.nage);
+			comptrans[c].probsum.resize(data.nage);
+			for(auto a = 0u; a < data.nage; a++){
+				comptrans[c].prob[a].resize(kmax);
+				comptrans[c].probsum[a].resize(kmax);
+				
+				auto sum = 0.0;
+				for(auto k = 0u; k < kmax-1; k++){
+					auto p = trans[comp[c].trans[k]].probparam[a]; if(p == UNSET) emsgEC("model",1);		
+					auto prob = paramv[p]; comptrans[c].prob[a][k] = prob; sum += prob; if(prob < 0) return 1;
+				} 
+				auto prob = 1-sum; comptrans[c].prob[a][kmax-1] = prob; if(prob < 0) return 1;
+				
+				sum = 0.0;
+				for(auto k = 0u; k < kmax; k++){
+					sum += comptrans[c].prob[a][k];
+					comptrans[c].probsum[a][k] = sum;
+				}
+			}
+		}
+	}
+	
+	return 0;
+}
+
 /// This simulates from the model and generates an event list
-void MODEL::simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigned int i, unsigned int c, double t)
+void MODEL::simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t)
 {
 	auto timep = 0u; while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 
@@ -464,7 +480,7 @@ void MODEL::simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigne
 		
 		if(kmax == 1) tra = comp[c].trans[0];
 		else{
-			z = ran(); auto k = 0u; while(k < kmax && z > comp[c].probsum[a][k]) k++;
+			z = ran(); auto k = 0u; while(k < kmax && z > comptrans[c].probsum[a][k]) k++;
 			if(k == kmax) emsgEC("Model",2);
 			tra = comp[c].trans[k];
 		}
@@ -510,7 +526,7 @@ void MODEL::simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigne
 }
 
 /// This does an equivelent MBP for the compartmental model
-void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
+void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp)
 {
 	evlistp.clear();
 	
@@ -540,12 +556,12 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 				auto k = 0u; while(k < kmax && tra != comp[c].trans[k]) k++;
 				if(k == kmax) emsgEC("model",4);
 				
-				if(comp[c].probp[a][k] < comp[c].probi[a][k]){  // Looks at switching to another branch
-					if(ran() < 1 - comp[c].probp[a][k]/comp[c].probi[a][k]){
+				if(comptransp[c].prob[a][k] < comptransi[c].prob[a][k]){  // Looks at switching to another branch
+					if(ran() < 1 - comptransp[c].prob[a][k]/comptransi[c].prob[a][k]){
 						auto sum = 0.0; 
 						vector <double> sumst;
 						for(auto k = 0u; k < kmax; k++){
-							auto dif = comp[c].probp[a][k] - comp[c].probi[a][k];
+							auto dif = comptransp[c].prob[a][k] - comptransi[c].prob[a][k];
 							if(dif > 0) sum += dif;
 							sumst.push_back(sum);
 						}
@@ -609,7 +625,7 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 		}
 	}
 	
-	if(comp[c].trans.size() != 0)	simmodel(paramp,evlistp,i,c,tp);
+	if(comp[c].trans.size() != 0)	simmodel(paramp,comptransp,evlistp,i,c,tp);
 }
   
 /// Defines the relative susceptibility of individuals
@@ -1052,7 +1068,7 @@ void MODEL::oe(const string& name, const vector <FEV> &ev)
 }
 
 /// Determines if it is necessary to do mbp for the exisiting event sequence
-unsigned int MODEL::dombpevents()
+unsigned int MODEL::dombpevents(const vector <double> &parami, const vector <double> &paramp)
 {
 	for(auto th = 0u; th < param.size(); th++){
 		if(parami[th] != paramp[th] && (param[th].type == distval_paramtype || param[th].type == branchprob_paramtype)) return 1;

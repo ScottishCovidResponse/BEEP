@@ -99,7 +99,8 @@ Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTR
 	initial.disc_spline = propose.disc_spline;
 	initial.sus = propose.sus;
 	initial.areafac = propose.areafac;
-		
+	initial.comptrans = propose.comptrans;
+	
 	setinitialQmap(1);
 }
 
@@ -126,17 +127,18 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 	for(auto& pval : paramvalinit) pval = 0;
 	
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
-	model.copyi(paramvalinit);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
 	initial.sus = model.create_sus(paramvalinit);    
 	initial.areafac = model.create_areafac(paramvalinit);    
+	initial.paramval = paramvalinit;
+	model.create_comptrans(initial.comptrans,paramvalinit);
 	
 	model.setup(paramval);
-	model.copyp(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 	propose.sus = model.create_sus(paramval);  
-	propose.areafac = model.create_areafac(paramval);    
-	
+	propose.areafac = model.create_areafac(paramval);   
+	propose.paramval = paramval;	
+	model.create_comptrans(propose.comptrans,paramval);
 	
 	if(mbp() == 1) return 1;
 
@@ -169,7 +171,7 @@ unsigned int Chain::mbp()
 {
 	timers.timembpinit -= clock();
 
-	unsigned int doev = model.dombpevents();
+	unsigned int doev = model.dombpevents(initial.paramval,propose.paramval);
 
 	for(auto c = 0u; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
@@ -235,7 +237,7 @@ unsigned int Chain::mbp()
 					if(ran() < al){                                    // Keeps the infection event
 						changestat(i,not_sus,1);
 						
-						if(doev == 1) model.mbpmodel(initial.indev[i],propose.indev[i]);
+						if(doev == 1) model.mbpmodel(initial.indev[i],propose.indev[i],initial.paramval,propose.paramval,initial.comptrans,propose.comptrans);
 						else propose.indev[i] = initial.indev[i];
 						
 						addindev(i,propose.indev[i],propose.x,propose.trev);
@@ -382,9 +384,10 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	timers.timembpprop -= clock();
 	
 	model.setup(paramval);
-	model.copyi(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 	initial.sus = model.create_sus(paramval);
+	initial.paramval = paramval;
+	model.create_comptrans(initial.comptrans,paramval);
 			
 	auto valst = paramval[th];
 
@@ -397,11 +400,12 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	else{
 		if(model.setup(paramval) == 1) al = 0;
 		else{
-			model.copyp(paramval);
 			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 			propose.sus = model.create_sus(paramval);
 			propose.areafac = model.create_areafac(paramval);    
-	
+			propose.paramval = paramval;
+			model.create_comptrans(propose.comptrans,paramval);
+
 			if(mbp() == 1) al = 0;
 			else{
 				propose.L = obsmodel.Lobs(propose.trev,propose.indev);
@@ -423,7 +427,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		initial.disc_spline = propose.disc_spline;
 		initial.sus = propose.sus;
 		initial.areafac = propose.areafac;
-		
+		initial.comptrans = propose.comptrans;
+			
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
 		//initial.indev = propose.indev;
@@ -738,7 +743,7 @@ void Chain::addinfc(unsigned int c, double t)
 	
 	changestat(i,not_sus,1);
 	
-	model.simmodel(paramval,propose.indev[i],i,0,t);
+	model.simmodel(paramval,propose.comptrans,propose.indev[i],i,0,t);
 
 	addindev(i,propose.indev[i],propose.x,propose.trev);
 }
@@ -1261,6 +1266,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 		initial.Pr = propose.Pr;
 		initial.sus = propose.sus;
 		initial.areafac = propose.areafac;
+		
 		nacstand[th]++;
 		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 	}
@@ -1379,7 +1385,7 @@ if(dd*dd > tiny) emsgEC("Chain",55);}
 			auto t = details.settime[sett] + ran()*dt;
 			probif += log(1.0/dt);
 			
-			model.simmodel(paramval,propose.indev[i],i,0,t);
+			model.simmodel(paramval,propose.comptrans,propose.indev[i],i,0,t);
 			addindev(i,propose.indev[i],propose.x,propose.trev);
 			
 			probfi += log(1.0/propose.x.size());
@@ -1564,10 +1570,11 @@ void Chain::generate_particle(Particle &part) const
 int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)  
 {
 	model.setup(paramval);
-	model.copyi(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 	initial.sus = model.create_sus(paramval);
-	initial.areafac = model.create_areafac(paramval);    
+	initial.areafac = model.create_areafac(paramval);  
+	initial.paramval = paramval;  
+	model.create_comptrans(initial.comptrans,paramval);
 	
 	vector <double> valst = paramval;
 	paramval = param_propose;
@@ -1583,10 +1590,11 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 	if(al == 1){
 		if(model.setup(paramval) == 1) al = 0;
 		else{
-			model.copyp(paramval);
 			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
 			propose.sus = model.create_sus(paramval);
-			propose.areafac = model.create_areafac(paramval);    
+			propose.areafac = model.create_areafac(paramval);
+			propose.paramval = paramval;
+			model.create_comptrans(propose.comptrans,paramval);			
 	
 			if(mbp() == 1) al = 0;
 			else{
@@ -1608,7 +1616,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		initial.Qmap = propose.Qmap;
 		initial.sus = propose.sus;
 		initial.areafac = propose.areafac;
-		
+		initial.comptrans = propose.comptrans;
+			
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
 		//initial.indev = propose.indev;

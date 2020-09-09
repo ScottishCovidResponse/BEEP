@@ -17,6 +17,8 @@ class State
 	double EF; 																				// The error function (used in abc methods)
 	double Pr; 																		    // The prior probability
 	
+	vector <double> paramval;                         // The parameter values
+
 	vector < vector <FEV> > indev;                    // The individual event sequences
 	vector <EVREF> x;                                 // Ordered list of references to infection events 
 	vector < vector <EVREF> > trev;                   // Event references
@@ -26,11 +28,15 @@ class State
 
 	double beta, phi;                                 // A temporary store for the values of beta and phi
 
+	
+	// The quantities below are all derived from the parameter values
 	vector <double> sus;                              // The susceptibility for different demographic categories
 	
 	vector <double> areafac;                          // The modification due to area effects
 	
 	vector < vector <double> > disc_spline;           // A discretisation of the splines	
+	
+	vector <CompTrans> comptrans; 
 	
 	//double likelihood();
 	

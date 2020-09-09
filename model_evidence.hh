@@ -14,8 +14,7 @@ class Chain;
 class Model_Evidence                                                                    // Used to calculate the model evidence
 {
 	public:
-		void init(const unsigned int _nchaintot,                                            // Initialises quantities for calculating the model evidence
-		          const unsigned int _quench, const double _invTmin, const double _invTmax);     
+		void init(const unsigned int _nchaintot, const unsigned int _quench, const double _invTmin, const double _invTmax);    
 		void store(const Mpi &mpi, const vector<Chain>& chain);                             // Stores quantities used to calculate the model evidence
 		double calculate() const;                                                           // Calculates the model evidence based on the store quantities
 		double get_invT(unsigned int ch) const;                                             // Gives the inverse temperature on a chain

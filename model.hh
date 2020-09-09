@@ -50,11 +50,17 @@ struct COMP{                               // Stores information about a compart
 	unsigned int transtimep;                 // The transition used to represent a change in timep in that compartment
 
 	vector <vector <double> > prob, probsum; // The age-dependent probability of going down transition
-	vector <vector <double> > probi;         // The age-dependent probability of going down transition for initial state (MBP)
-	vector <vector <double> > probp;         // The age-dependent probability of going down transition for proposed state (MBP)
+	//vector <vector <double> > probi;         // The age-dependent probability of going down transition for initial state (MBP)
+	//vector <vector <double> > probp;         // The age-dependent probability of going down transition for proposed state (MBP)
 	
 	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
 	vector <double> infint;                  // The integrated infectivity (used to calculate R0)
+};
+
+struct CompTrans                           // If in a compartment this gives probabilities of going down transitions
+{
+	vector <vector <double> > prob;          // The age-dependent probability of going down transition
+	vector <vector <double> > probsum;       // The sum of the age-dependent probability of going down transition
 };
 
 struct TRANS{                              // Stores information about a compartmental model transition
@@ -114,8 +120,6 @@ public:
 	unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
 	unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
 
-	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
-
 	vector <PARAM> param;                    // Information about parameters in the model
 	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
 	vector <TRANS> trans;                    // Stores model transitions
@@ -138,15 +142,13 @@ public:
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
 	double getinfectivity(const string& name);
-	void simmodel(const vector<double> &paramv, vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
-	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
+	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
+	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp);
 	void print_to_terminal() const;
 	vector <double> priorsamp();
 	unsigned int setup(const vector <double> &paramval);
-	void copyi(const vector<double> &paramv);
-	void copyp(const vector<double> &paramv);
-	vector <double> R0calc(const vector<double> &paramv);
-	unsigned int dombpevents();
+	vector <double> R0calc(const vector <double> &paramv);
+	unsigned int dombpevents(const vector <double> &parami, const vector <double> &paramp);
 	void oe(const string& name, const vector <FEV> &ev);
 	void calcprobin();
 	double prior(const vector<double> &paramv);
@@ -155,6 +157,7 @@ public:
 	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
 	vector <double> create_sus(const vector<double> &paramv);  
 	vector <double> create_areafac(const vector<double> &paramv);
+	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv);
 						
 private:
 	void addQ();
