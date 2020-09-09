@@ -135,8 +135,6 @@ MODEL::MODEL(Inputs &inputs, const Details &details, DATA &data) : details(detai
 	ntr = 0; nac = 0;
 	parami.resize(param.size()); paramp.resize(param.size());
 
-	beta.resize(details.nsettime); phi.resize(details.nsettime);
-	
 	for(const auto& tr : trans){
 		switch(tr.type){
 		case exp_dist: param[tr.param_mean].type = distval_paramtype; break;
@@ -220,7 +218,6 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 {
 	if(settransprob(paramv) == 1) return 1;
 	
-	timevariation(paramv);
 	setsus(paramv);
 	setarea(paramv);
 	return 0;
@@ -229,14 +226,18 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 /// Copies values used for the initial state (used in MBPs)
 void MODEL::copyi(const vector<double> &paramv)
 {
-	parami = paramv; betai = beta; phii = phi; susi = sus; areafaci = areafac;
+	parami = paramv;
+//	betai = beta; phii = phi; 
+susi = sus; areafaci = areafac;
 	for(auto& co : comp) co.probi = co.prob;
 }
 	
 /// Copies values used for the proposed state (used in MBPs)
 void MODEL::copyp(const vector<double> &paramv)
 {
-	paramp = paramv; betap = beta; phip = phi; susp = sus; areafacp = areafac;
+	paramp = paramv;
+//	betap = beta; phip = phi;
+ susp = sus; areafacp = areafac;
 	for(auto& co : comp) co.probp = co.prob;
 }
 
@@ -390,16 +391,6 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 	tr.dtsum = 0.;
 	
 	trans.push_back(tr);
-}
-	
-/// Generates the time variation in beta and phi from the parameters
-void MODEL::timevariation(const vector<double> &paramv)
-{
-  // Uses a linear spline for beta
-	beta = create_disc_spline(betaspline_ref,paramv);
-	
-	phi = create_disc_spline(phispline_ref,paramv);
-
 }
 
 vector <double> MODEL::create_disc_spline(unsigned int ref, const vector<double> &paramv) const
@@ -837,6 +828,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	
 	vector <double> R0(details.nsettime);
 
+	vector <double> beta = create_disc_spline(betaspline_ref,paramv);
 	auto timep = 0u; 
 	for(auto st = 0u; st < details.nsettime; st++){
 		auto t = details.settime[st];

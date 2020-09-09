@@ -109,22 +109,15 @@ public:
 	unsigned int ndemocat;                   // The number of demographic categories
 	vector <DEMOCAT> democat;                // Stores the demographic categories
 	
-	vector <vector <SPLINEP> > spline;       // Stores all the splines (for beta and phi)  
+	vector <vector <SPLINEP> > spline;       // Stores all the splines used in the model (for beta and phi)  
  
-	vector <double> beta;                    // The value for beta at the various times
-	unsigned int betaspline_ref;             //
-	//vector <SPLINEP> betaspline;             // The spline used to define beta
-	
-	unsigned int phispline_ref;              //
-	vector <double> phi;                     // The value for phi at the various times
-	//vector <SPLINEP> phispline;              // The spline used to define phi
-	
+	unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
+	unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
+
 	vector <double> sus;                     // The susceptibility for different demographic categories
 
 	vector <double> areafac;                 // The modification due to area effects
 	
-	vector <double> betai, betap;            // Under MBPs the values of beta for the initial and proposed states
-	vector <double> phii, phip;              // Under MBPs the values of phi for the initial and proposed states
 	vector <double> parami, paramp;          // Under MBPs the parameter values for the initial and proposed states
 	vector <double> susi, susp;              // Under MBPs the susceptibility for the initial and proposed states
 	vector <double> areafaci, areafacp;      // Under MBPs the area factor for the initial and proposed states
@@ -176,7 +169,6 @@ private:
 								unsigned int type, const string& param1, const string& param2);
 	void setsus(const vector<double> &paramv); 
 	void setarea(const vector<double> &paramv);
-	void timevariation(const vector<double> &paramv);
 	unsigned int findparam(const string& name);
 	unsigned int settransprob(const vector<double> &paramv);
 	double likelihood_prob();

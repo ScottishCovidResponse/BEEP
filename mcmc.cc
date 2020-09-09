@@ -389,7 +389,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			sample.meas = obsmodel.getmeas(chain[ppost].initial.trev,chain[ppost].initial.indev);
 			model.setup(chain[ppost].paramval);
 			sample.R0 = model.R0calc(chain[ppost].paramval);
-			sample.phi = model.phi; 
+			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].paramval); 
 		}
 		else{
 			unsigned int si;
@@ -418,7 +418,7 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			pack(meas.popnum);
 			pack(meas.margnum);
 			pack(R0);
-			pack(model.phi);
+			pack(model.create_disc_spline(model.phispline_ref,chain[p].paramval));
 			unsigned int si = packsize();
 			MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
 			MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
