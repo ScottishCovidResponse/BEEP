@@ -78,11 +78,11 @@ void ABC::mbp()
 				chain.sample_from_prior();
 				double EF = obsmodel.Lobs(chain.propose.trev,chain.propose.indev);
 
-				pa.paramval = chain.paramval;
+				pa.paramval = chain.initial.paramval;
 				pa.EF = EF;
 				pa.ev = chain.event_compress(chain.propose.indev);
 				
-				gen.param_samp.push_back(chain.paramval);
+				gen.param_samp.push_back(chain.initial.paramval);
 				gen.EF_samp.push_back(EF);
 			}
 		}
@@ -176,7 +176,7 @@ void ABC::smc()
 			for(auto i = 0u; i < N; i++){     // For the first generation 
 				chain.sample_from_prior();
 				
-				gen.param_samp.push_back(chain.paramval);
+				gen.param_samp.push_back(chain.initial.paramval);
 				gen.EF_samp.push_back(obsmodel.Lobs(chain.propose.trev,chain.propose.indev));
 			}
 		}
@@ -218,7 +218,7 @@ void ABC::smc()
 				}while(fl == 1);
 				nac++;
 				
-				gen.param_samp.push_back(chain.paramval);
+				gen.param_samp.push_back(chain.initial.paramval);
 				gen.EF_samp.push_back(EF);
 			}
 			
@@ -275,7 +275,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 
 		for(auto j = 0u; j < jmax; j++){
 			if(j%sampstep == 0){
-				gen.param_samp.push_back(chain.paramval);				
+				gen.param_samp.push_back(chain.initial.paramval);				
 				gen.EF_samp.push_back(chain.initial.EF);
 			}
 			
@@ -283,7 +283,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 				auto v = (unsigned int)(ran()*nvar);
 				auto th = param_not_fixed[v];
 					
-				vector <double> param_propose = chain.paramval;
+				vector <double> param_propose = chain.initial.paramval;
 				param_propose[th] += normal(0,jumpv[v]*sqrt(M[v][v]));
 						
 				timers.timeabcprop -= clock();
@@ -432,8 +432,8 @@ SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 	SAMPLE sample;
 	chain.initialise_from_particle(part);
 	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);;
-	sample.R0 = model.R0calc(chain.paramval);
-	sample.phi = model.create_disc_spline(model.phispline_ref,chain.paramval); 
+	sample.R0 = model.R0calc(chain.initial.paramval);
+	sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval); 
 	
 	return sample;
 }

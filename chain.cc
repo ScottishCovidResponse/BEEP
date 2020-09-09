@@ -37,21 +37,10 @@ struct LCONT {
 };
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(details,data,model), propose(details,data,model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(details,data,model,obsmodel), propose(details,data,model,obsmodel), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	ch = chstart;
 
-	initial.disc_spline.resize(model.spline.size());
-	propose.disc_spline.resize(model.spline.size());
-	
-	//initial.init();
-	//propose.init();
-		
-	initial.x.clear();
-	initial.trev.clear(); initial.trev.resize(details.nsettime); 
-	initial.indev.clear(); initial.indev.resize(data.popsize);
-	propose.indev.clear(); propose.indev.resize(data.popsize);
-	
 	setuplists();
 	
 	indmap.resize(data.popsize);
@@ -67,19 +56,11 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 		dQbuf[v].resize(data.Q.size()); for(auto q = 0u; q < data.Q.size(); q++) dQbuf[v][q] = 0;
 	}
 	dQbuflistv.clear(); dQbuflistq.clear();
-	
-	initial.Qmap.resize(details.nsettime); propose.Qmap.resize(details.nsettime); 
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		initial.Qmap[sett].resize(data.narage); for(auto v = 0u; v < data.narage; v++) initial.Qmap[sett][v] = 0;
-		propose.Qmap[sett].resize(data.narage); 
-	}
 
-	initial.lam.resize(data.nardp); propose.lam.resize(data.nardp);
 	Rtot.resize(poptree.level); for(auto l = 0u; l < poptree.level; l++) Rtot[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
 	sample_from_prior();
-	paramval = propose.paramval;
 	
 	proposal_init(propose.paramval);
 
@@ -88,22 +69,8 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 	
 	if(details.mode != inf) return;
 	
-	initial.paramval = propose.paramval;
-		
-	initial.trev = propose.trev;
-	initial.Qmap = propose.Qmap;	
-	initial.indev = propose.indev;
-	initial.x = propose.x;
-	
-	initial.L = obsmodel.Lobs(initial.trev,initial.indev);
-	initial.Pr = model.prior(initial.paramval);
-
-	initial.disc_spline = propose.disc_spline;
-	initial.sus = propose.sus;
-	initial.areafac = propose.areafac;
-	initial.comptrans = propose.comptrans;
-	
-	setinitialQmap(1);
+	initial.copy(propose);
+	initial.setLPr();
 }
 
 /// Randomly samples from prior and generates an event sequence
@@ -114,30 +81,17 @@ void Chain::sample_from_prior()
 		if(simulate(model.priorsamp()) == 0) break;
 	}
 	
-	
-	//paramval = initial.paramval;
-	
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 }
 
 /// Simulates an event sequence given a parameter set (returns 1 if it is found not to be possible)
 unsigned int Chain::simulate(const vector <double>& paramv)
 {
-	initial.paramval = paramv;
-	propose.paramval = paramv;	
-		
-	for(auto& pval : initial.paramval) pval = 0;
+	vector <double> zero(paramv.size());
+	for(auto& pval : zero) pval = 0;
 	
-	 // Generate initial state mbp is used to simulate
-	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
-	initial.sus = model.create_sus(initial.paramval);    
-	initial.areafac = model.create_areafac(initial.paramval);    
-	model.create_comptrans(initial.comptrans,initial.paramval);
-	
-	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,propose.paramval);
-	propose.sus = model.create_sus(propose.paramval);  
-	propose.areafac = model.create_areafac(propose.paramval);  
-	if(model.create_comptrans(propose.comptrans,propose.paramval) == 1) return 1;
+	initial.setparam(zero);
+	propose.setparam(paramv);
 	
 	if(mbp() == 1) return 1;
 	
@@ -175,11 +129,7 @@ unsigned int Chain::mbp()
 	for(auto c = 0u; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
 		
-	for(const auto& i : propose.x) propose.indev[i.ind].clear();
-	//propose.indev.clear(); propose.indev.resize(data.popsize);	
-	
-	propose.x.clear();
-	propose.trev.clear(); propose.trev.resize(details.nsettime);
+	propose.clear();
 	
 	for(auto v = 0u; v < data.narage; v++) dQmap[v] = 0;
 	
@@ -187,7 +137,7 @@ unsigned int Chain::mbp()
 	
 	timers.timembp -= clock();
 		
-	unsigned int n = 0;
+	unsigned int n = 0, nmax = initial.x.size();
 	double t = 0;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
 		if(details.mode == sim){
@@ -196,8 +146,7 @@ unsigned int Chain::mbp()
 			cout << endl;	
 		}
 		
-		initial.phi = initial.disc_spline[model.phispline_ref][sett]; propose.phi = propose.disc_spline[model.phispline_ref][sett];	
-		initial.beta = initial.disc_spline[model.betaspline_ref][sett]; propose.beta = propose.disc_spline[model.betaspline_ref][sett];	
+		initial.setbetaphi(sett);	propose.setbetaphi(sett);
 	
 		for(auto v = 0u; v < data.narage; v++){
 			double val = initial.Qmap[sett][v] + dQmap[v];
@@ -212,7 +161,7 @@ unsigned int Chain::mbp()
 		do{
 			double tini;
 			FEV ev;
-			if(n < initial.x.size()){ ev = initial.indev[initial.x[n].ind][initial.x[n].e]; tini = ev.t;} else{ ev.ind = UNSET; tini = tmax;}
+			if(n < nmax){ ev = initial.getinfev(n); tini = ev.t;} else{ ev.ind = UNSET; tini = tmax;}
 		
 			double v; v = ran();
 			double tinf;
@@ -239,7 +188,7 @@ unsigned int Chain::mbp()
 						if(doev == 1) model.mbpmodel(initial.indev[i],propose.indev[i],initial.paramval,propose.paramval,initial.comptrans,propose.comptrans);
 						else propose.indev[i] = initial.indev[i];
 						
-						addindev(i,propose.indev[i],propose.x,propose.trev);
+						propose.addindev(i);
 					}
 					else changestat(i,ponly_sus,1);      // Does not keep the infection event
 				}
@@ -262,24 +211,6 @@ unsigned int Chain::mbp()
 	return 0;
 }
 
-/// Adds an individual event sequence
-void Chain::addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev)
-{
-	unsigned int e, emax, se;
-	EVREF evref;
-	
-	emax = indev.size();
-	if(emax == 0) return;
-	
-	evref.ind = i; evref.e = 0;
-	x.push_back(evref);
-	for(e = 0; e < indev.size(); e++){
-		evref.e = e;
-		se = (unsigned int)(details.nsettime*indev[e].t/details.period); 
-		if(se < details.nsettime) trev[se].push_back(evref);
-	}
-}
-		
 /// Based on the the event sequence in initial.x, this sets initial.Qmap
 void Chain::setinitialQmap(unsigned int check)
 {
@@ -379,7 +310,7 @@ void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp
 /// Performs a MBP on parameter 'th'
 void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
 {
-	initial.paramval = paramval;
+	//initial.paramval = paramval;
 	
 	timeprop -= clock();
 	timers.timembpprop -= clock();
@@ -420,40 +351,18 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	
 	ntr[th]++;
 	if(ran() < al){
-		initial.L = propose.L;
-		initial.Pr = propose.Pr;
-		initial.trev = propose.trev;
-		initial.Qmap = propose.Qmap;
-		
-		initial.disc_spline = propose.disc_spline;
-		initial.sus = propose.sus;
-		initial.areafac = propose.areafac;
-		initial.comptrans = propose.comptrans;
-		initial.paramval = propose.paramval;
-		
-		for(const auto& x : initial.x) initial.indev[x.ind].clear();
-		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
-		//initial.indev = propose.indev;
-		
-		initial.x = propose.x;
+		initial.copy(propose);
 		nac[th]++;
 		if(samp < burnin){ if(samp < 50) paramjump[th] *= 2; else paramjump[th] *= 1.1;}
 	}
 	else{
-		//paramval[th] = valst;
 		if(samp < burnin){ if(samp < 50) paramjump[th] *= 0.5; paramjump[th] *= 0.95;}
 	}
 
-	if(checkon == 1){
-		double dd;
-		dd = initial.L - obsmodel.Lobs(initial.trev,initial.indev); if(sqrt(dd*dd) > tiny) emsgEC("Chain",5);
-		dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny) emsgEC("Chain",6);
-	}
+	if(checkon == 1) initial.check();
 	
 	timers.timembpprop += clock();
 	timeprop += clock();	
-	
-	paramval = initial.paramval;
 }
 
 /// Sets up lists for use with MBPs
@@ -748,7 +657,7 @@ void Chain::addinfc(unsigned int c, double t)
 	
 	model.simmodel(propose.paramval,propose.comptrans,propose.indev[i],i,0,t);
 
-	addindev(i,propose.indev[i],propose.x,propose.trev);
+	propose.addindev(i);
 }
 
 /// Used for checking the code is running correctly
@@ -913,7 +822,7 @@ void Chain::calcproposeQmap()
 void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	timers.timestandard -= clock();
-	initial.paramval = paramval;
+	//initial.paramval = paramval;
 	
 	if(checkon == 1){ double dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
@@ -942,7 +851,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	if(checkon == 1){ double dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
 	timers.timestandard += clock();
-	paramval = initial.paramval;
+	//paramval = initial.paramval;
 }
 
 /// Makes proposal to beta and phi
@@ -1319,7 +1228,8 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 			probif += log(1.0/dt);
 			
 			model.simmodel(initial.paramval,propose.comptrans,propose.indev[i],i,0,t);
-			addindev(i,propose.indev[i],propose.x,propose.trev);
+		
+			propose.addindev(i);
 			
 			probfi += log(1.0/propose.x.size());
 		}
@@ -1464,7 +1374,7 @@ vector <FEV> Chain::event_compress(const vector < vector <FEV> > &indev) const
 /// Initialises the chain based on a particle (used for abcmbp)
 void Chain::initialise_from_particle(const Particle &part)
 {
-	paramval = part.paramval;
+	initial.paramval = part.paramval;
 	
 	for(const auto& x : initial.x) initial.indev[x.ind].clear();   // Removes the einitial.xsiting initial sequence 
 	initial.x.clear();
@@ -1478,14 +1388,14 @@ void Chain::initialise_from_particle(const Particle &part)
 		initial.indev[i].push_back(ev);
 	}	
 	
-	for(auto i : indlist) addindev(i,initial.indev[i],initial.x,initial.trev);
+	for(auto i : indlist) initial.addindev(i);
 	
 	sortx(initial.x,initial.indev);
 	
 	setinitialQmap(0);
 
 	initial.EF = part.EF;
-	initial.Pr = model.prior(paramval);
+	initial.Pr = model.prior(initial.paramval);
 	
 	if(initial.EF != obsmodel.Lobs(initial.trev,initial.indev)) emsg("Observation does not agree");
 }
@@ -1494,44 +1404,41 @@ void Chain::initialise_from_particle(const Particle &part)
 void Chain::generate_particle(Particle &part) const
 {
 	part.EF = initial.EF;
-	part.paramval = paramval;
+	part.paramval = initial.paramval;
 	part.ev = event_compress(initial.indev);
 }
 
 int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)  
 {
-	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-	initial.sus = model.create_sus(paramval);
-	initial.areafac = model.create_areafac(paramval);  
-	initial.paramval = paramval;  
-	model.create_comptrans(initial.comptrans,paramval);
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
+	initial.sus = model.create_sus(initial.paramval);
+	initial.areafac = model.create_areafac(initial.paramval);  
 	
-	vector <double> valst = paramval;
-	paramval = param_propose;
+	model.create_comptrans(initial.comptrans,initial.paramval);
+	
+	propose.paramval = param_propose;
 	
 	auto al = 1.0;
 	for(auto th = 0u; th < model.param.size(); th++){
-		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
-		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+		if(propose.paramval[th] < model.param[th].min || propose.paramval[th] > model.param[th].max) al = 0;
+		if(propose.paramval[th] < model.param[th].min || propose.paramval[th] > model.param[th].max) al = 0;
 	}
 
 	propose.EF = initial.EF;
 	propose.Pr = initial.Pr;
 	if(al == 1){
-		if(model.create_comptrans(propose.comptrans,paramval) == 1) al = 0;
+		if(model.create_comptrans(propose.comptrans,propose.paramval) == 1) al = 0;
 		else{
-			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-			propose.sus = model.create_sus(paramval);
-			propose.areafac = model.create_areafac(paramval);
-			propose.paramval = paramval;
-			//model.create_comptrans(propose.comptrans,paramval);			
-	
+			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,propose.paramval);
+			propose.sus = model.create_sus(propose.paramval);
+			propose.areafac = model.create_areafac(propose.paramval);
+		
 			if(mbp() == 1) al = 0;
 			else{
 				propose.EF = obsmodel.Lobs(propose.trev,propose.indev);
 				if(propose.EF >= EFcut) al = 0;
 				else{
-					propose.Pr = model.prior(paramval);
+					propose.Pr = model.prior(propose.paramval);
 					al = exp(propose.Pr-initial.Pr);
 					//cout << al << " " << propose.Pr << " " << initial.Pr <<  "al\n";
 				}
@@ -1547,7 +1454,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		initial.sus = propose.sus;
 		initial.areafac = propose.areafac;
 		initial.comptrans = propose.comptrans;
-			
+		initial.paramval = propose.paramval;
+				
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
 		//initial.indev = propose.indev;
@@ -1556,7 +1464,7 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		return 1;
 	}
 	else{
-		paramval = valst;
+		//paramval = valst;
 	}
 	return 0;
 }

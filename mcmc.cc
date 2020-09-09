@@ -144,7 +144,7 @@ void Mcmc::run()
 		
 		if(mpi.core == 0 && quenchpl == 1){ 
 			quenchplot << chain[0].invT;
-			for(auto pval : chain[0].paramval) quenchplot << "\t" << pval; 
+			for(auto pval : chain[0].initial.paramval) quenchplot << "\t" << pval; 
 			quenchplot << endl;
 		}	
 	
@@ -325,7 +325,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 		PARAMSAMP paramsamp;
 	
 		if(ppost < nchain){
-			paramsamp.paramval = chain[ppost].paramval;
+			paramsamp.paramval = chain[ppost].initial.paramval;
 			L = chain[ppost].initial.L; Pr = chain[ppost].initial.Pr;
 			ninfplot = chain[ppost].initial.x.size();
 		}
@@ -349,7 +349,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 			auto p = ppost%nchain;
 		
 			packinit(0);
-			pack(chain[p].paramval);
+			pack(chain[p].initial.paramval);
 			pack(chain[p].initial.L);
 			pack(chain[p].initial.Pr);
 			pack((unsigned int) chain[p].initial.x.size());
@@ -386,8 +386,8 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 		SAMPLE sample;
 		if(ppost < nchain){
 			sample.meas = obsmodel.getmeas(chain[ppost].initial.trev,chain[ppost].initial.indev);
-			sample.R0 = model.R0calc(chain[ppost].paramval);
-			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].paramval); 
+			sample.R0 = model.R0calc(chain[ppost].initial.paramval);
+			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].initial.paramval); 
 		}
 		else{
 			unsigned int si;
@@ -408,14 +408,14 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 			auto p = ppost%nchain;
 			
 			MEAS meas = obsmodel.getmeas(chain[p].initial.trev,chain[p].initial.indev);
-			vector <double> R0 = model.R0calc(chain[p].paramval);
+			vector <double> R0 = model.R0calc(chain[p].initial.paramval);
 	
 			packinit(0);
 			pack(meas.transnum);
 			pack(meas.popnum);
 			pack(meas.margnum);
 			pack(R0);
-			pack(model.create_disc_spline(model.phispline_ref,chain[p].paramval));
+			pack(model.create_disc_spline(model.phispline_ref,chain[p].initial.paramval));
 			unsigned int si = packsize();
 			MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
 			MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);

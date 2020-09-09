@@ -46,11 +46,8 @@ public:
 	
 	State initial, propose;                               // The states in the initial and proposed states
 	
- 	vector <double> paramval;                             // The values for the parameters
-
 private:
 	unsigned int mbp();
-	void addindev(unsigned int i, vector <FEV> &indev, vector <EVREF> &x, vector <vector <EVREF> > &trev);
 	unsigned int nextinfection();
 	void addinfc(unsigned int c, double t);
 	void check(double t, unsigned int sett) const;
