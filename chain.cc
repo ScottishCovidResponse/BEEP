@@ -38,7 +38,7 @@ struct LCONT {
 };
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	ch = chstart;
 
@@ -977,7 +977,7 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	timers.timeparam -= clock();
 	betaphi_prop(samp,burnin);
 	area_prop(samp,burnin);
-	model.compparam_prop(samp,burnin,initial.x,initial.indev,paramval,paramjumpstand,ntrstand,nacstand,initial.Pr);
+	model.compparam_prop(samp,burnin,initial.x,initial.indev,paramval,initial.comptrans,paramjumpstand,ntrstand,nacstand,initial.Pr);
 	if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 	timers.timeparam += clock();
 		

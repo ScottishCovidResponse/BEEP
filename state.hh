@@ -10,7 +10,7 @@ using namespace std;
 class State
 {
 	public:
-		State(MODEL &model);
+		State(const MODEL &model);
 		
 	double L; 																				// The observation likelihood 
 	double Lev; 																	   	// The latent process likelihood 
@@ -42,7 +42,7 @@ class State
 	
 	//void init();
 	private:
-	MODEL &model;
+	const MODEL &model;
 };
 
 #endif

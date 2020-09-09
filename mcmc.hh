@@ -24,7 +24,7 @@ class Obsmodel;
 class Mcmc
 {
 public:	
-	Mcmc(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);
+	Mcmc(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);
 	
 	void run();
 
@@ -50,7 +50,7 @@ private:
 	
 	const Details &details;
 	DATA &data;
-	MODEL &model;
+	const MODEL &model;
 	const POPTREE &poptree;
 	const Mpi &mpi;
 	Output &output;

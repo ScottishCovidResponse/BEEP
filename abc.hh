@@ -16,7 +16,7 @@ struct SAMPLE;
 class ABC
 {
 public:	
-  ABC(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
+  ABC(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
 	void smc();
 	void mbp();
 	
@@ -56,7 +56,7 @@ private:
 	
 	const Details &details;
 	DATA &data;
-	MODEL &model;
+	const MODEL &model;
 	const POPTREE &poptree;
 	const Mpi &mpi;
 	Output &output;

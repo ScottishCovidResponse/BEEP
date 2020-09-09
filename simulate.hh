@@ -14,7 +14,7 @@ class Obsmodel;
 class Simulate
 {
 public:	
-	Simulate(const Details &details, DATA &data, MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
+	Simulate(const Details &details, DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, Inputs &inputs, Output &output, Obsmodel &obsmodel);	
 	void run();
 	void multirun();
 	
@@ -24,7 +24,7 @@ private:
 	
 	const Details &details;
 	DATA &data;
-	MODEL &model;
+	const MODEL &model;
 	const POPTREE &poptree;
 	const Mpi &mpi;
 	Output &output;

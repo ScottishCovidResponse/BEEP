@@ -16,7 +16,7 @@ class Obsmodel;
 class Chain                                             // Stores all the things related to an MCMC chain
 {
 public:
-	Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree,	Obsmodel &obsmodel, unsigned int chstart);
+	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	Obsmodel &obsmodel, unsigned int chstart);
 	void sample_from_prior();
 	unsigned int simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
@@ -104,7 +104,7 @@ private:
 	
 	const Details &details;
 	const DATA &data;
-	MODEL &model;
+	const MODEL &model;
 	const POPTREE &poptree;
 	Obsmodel &obsmodel;
 };

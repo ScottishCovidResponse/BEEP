@@ -17,7 +17,7 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-Output::Output(const Details &details, const DATA &data, MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
+Output::Output(const Details &details, const DATA &data, const MODEL &model, Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	ensuredirectory(details.outputdir);
 }

@@ -2,7 +2,7 @@ using namespace std;
 
 #include "state.hh"
 
-State::State(MODEL &model) :  model(model){}
+State::State(const MODEL &model) :  model(model){}
 
 /*
 /// Calculates the likelihood in the initial state

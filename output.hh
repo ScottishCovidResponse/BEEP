@@ -41,7 +41,7 @@ struct Generation;
 class Output
 {
 public:
-	Output(const Details &details, const DATA &data, MODEL &model, Obsmodel &obsmodel);
+	Output(const Details &details, const DATA &data, const MODEL &model, Obsmodel &obsmodel);
 	
 	void trace_plot_init();
 	void trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval);
@@ -69,7 +69,7 @@ private:
 	
 	const Details &details;
 	const DATA &data;
-	MODEL &model;
+	const MODEL &model;
 	Obsmodel &obsmodel;
 };
 #endif

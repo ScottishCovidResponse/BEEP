@@ -48,12 +48,6 @@ struct COMP{                               // Stores information about a compart
 
 	vector <unsigned int> trans;             // The transitions leaving that compartment
 	unsigned int transtimep;                 // The transition used to represent a change in timep in that compartment
-
-	vector <vector <double> > prob, probsum; // The age-dependent probability of going down transition
-	//vector <vector <double> > probi;         // The age-dependent probability of going down transition for initial state (MBP)
-	//vector <vector <double> > probp;         // The age-dependent probability of going down transition for proposed state (MBP)
-	
-	vector <double> probin;                  // The prob ind goes to compartment (used to calculate R0)
 };
 
 struct CompTrans                           // If in a compartment this gives probabilities of going down transitions
@@ -75,11 +69,12 @@ struct TRANS{                              // Stores information about a compart
 	int param_cv;                            // The parameter for the coefficient of variation (if used)
 	
 	unsigned int istimep;                    // Set to one if the transition is in time period
-	vector <unsigned int> num;               // The number of times down transition 
 	vector <unsigned int> probparam;         // The parameter for the probability of going down transition (age dependant)
 	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition (age dependant)
-	
-	                                          // The following are used for making changes to the parameters
+};
+
+struct TransInfo{                          // Stores information about transition when doing compartmental parameter proposals 
+	vector <unsigned int> num;               // The number of times down transition 
 	unsigned int numvisittot;                // The number of times the compartment is visited
 	double dtsum;                            // Sums up the total time spent
 	vector <double> dtlist;                  // Keeps a list of waiting time
@@ -130,8 +125,6 @@ public:
 
 	unsigned int infmax;                     // The maximum number of infected individuals
 	
-	unsigned int ntr, nac;                   // Gets the base acceptance rate
-	
 	vector< vector <unsigned int> > sus_param;// The parameters related to fixed effect for susceptibility
 	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
 	
@@ -144,36 +137,34 @@ public:
 	
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
-	double getinfectivity(const string& name);
-	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t);
-	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp);
+	double getinfectivity(const string& name) const;
+	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t) const;
+	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const;
 	void print_to_terminal() const;
-	vector <double> priorsamp();
-	vector <double> R0calc(const vector <double> &paramv);
-	unsigned int dombpevents(const vector <double> &parami, const vector <double> &paramp);
-	void oe(const string& name, const vector <FEV> &ev);
-	double prior(const vector<double> &paramv);
-	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv,
-												   vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri);
+	vector <double> priorsamp() const;
+	vector <double> R0calc(const vector <double> &paramv) const;
+	unsigned int dombpevents(const vector <double> &parami, const vector <double> &paramp) const;
+	void oe(const string& name, const vector <FEV> &ev) const;
+	double prior(const vector<double> &paramv) const;
+	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const;
 	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
-	vector <double> create_sus(const vector<double> &paramv);  
-	vector <double> create_areafac(const vector<double> &paramv);
-	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv);
-	vector <CompProb> create_compprob(const vector <CompTrans> &comptrans);
+	vector <double> create_sus(const vector<double> &paramv) const;  
+	vector <double> create_areafac(const vector<double> &paramv) const;
+	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv) const;
+	vector <CompProb> create_compprob(const vector <CompTrans> &comptrans) const;
 	
 private:
 	void addQ();
-	void checkdata();
 	void addcomp(const string& name, double infectivity);
 	void addparam(const string& name, double min, double max);
 	void addtrans(const string& from, const string& to, const string& prpar,
 								unsigned int type, const string& param1, const string& param2);
-	
 	unsigned int findparam(const string& name);
-	unsigned int settransprob(const vector<double> &paramv);
-	double likelihood_prob();
-	double likelihood_dt(vector <double> &paramv);
-	double dlikelihood_dt(vector <double> &paramvi, vector <double> &paramvf);
+	
+	void checkdata() const;
+	double likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const;
+	double likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const;
+	double dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
 
 	const Details &details;
 	DATA &data;
