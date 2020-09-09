@@ -345,11 +345,12 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
 	Rmapout << endl;
 	
 	model.setup(paramav);
-	auto areaav = 0.0; for(const auto& areafac : model.areafac)	areaav += areafac/data.narea;
+	vector <double> areafac = model.create_areafac(paramav);
+	auto areaav = 0.0; for(const auto& areafa : areafac) areaav += areafa/data.narea;
 
 	for(auto c = 0u; c < data.narea; c++){
 		Rmapout << data.area[c].code;
-		for(auto st = 0u; st < details.nsettime; st++) Rmapout << "\t" << (model.areafac[c]/areaav)*Rav[st];
+		for(auto st = 0u; st < details.nsettime; st++) Rmapout << "\t" << (areafac[c]/areaav)*Rav[st];
 		Rmapout << endl;
 	}
 	
