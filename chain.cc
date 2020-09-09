@@ -17,6 +17,7 @@ using namespace std;
 #include "output.hh"
 #include "pack.hh"
 #include "obsmodel.hh"
+//#include "state.hh"
 
 struct EVREFT {                
 	unsigned int ind;                   
@@ -37,13 +38,15 @@ struct LCONT {
 };
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+Chain::Chain(const Details &details, const DATA &data, MODEL &model, const POPTREE &poptree, Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	ch = chstart;
 
 	initial.disc_spline.resize(model.spline.size());
 	propose.disc_spline.resize(model.spline.size());
 	
+	//initial.init();
+	//propose.init();
 		
 	initial.x.clear();
 	initial.trev.clear(); initial.trev.resize(details.nsettime); 
@@ -123,11 +126,13 @@ unsigned int Chain::simulate(const vector <double>& paramv)
 	model.setup(paramvalinit);                                       // To generate initial state mbp is used to simulate
 	model.copyi(paramvalinit);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
-		
+	initial.sus = model.create_sus(paramvalinit);    
+	
 	model.setup(paramval);
 	model.copyp(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-
+	propose.sus = model.create_sus(paramval);  
+	
 	if(mbp() == 1) return 1;
 
 	return 0;
@@ -342,8 +347,8 @@ void Chain::constructRtot(vector <double> &Qmi, vector <double> &Qmp)
 		auto v = c*data.nage; 
 		for(auto w = wmin; w < wmax; w++){
 			auto a = data.democatpos[dp][0];
-			initial.lam[w] = model.susi[dp]*(faci*Qmi[v+a] + initial.phi);
-			propose.lam[w] = model.susp[dp]*(facp*Qmp[v+a] + propose.phi);
+			initial.lam[w] = initial.sus[dp]*(faci*Qmi[v+a] + initial.phi);
+			propose.lam[w] = propose.sus[dp]*(facp*Qmp[v+a] + propose.phi);
 			auto dlam = nindbothlist[w]*(propose.lam[w] - initial.lam[w]); if(dlam < 0) dlam = 0;
 			if(std::isnan(dlam)){ emsgEC("Chain",400);}
 			sum += dlam + nindponlylist[w]*propose.lam[w];
@@ -374,7 +379,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	model.setup(paramval);
 	model.copyi(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-		
+	initial.sus = model.create_sus(paramval);
+			
 	auto valst = paramval[th];
 
 	paramval[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
@@ -388,7 +394,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		else{
 			model.copyp(paramval);
 			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-			
+			propose.sus = model.create_sus(paramval);
+				
 			if(mbp() == 1) al = 0;
 			else{
 				propose.L = obsmodel.Lobs(propose.trev,propose.indev);
@@ -408,6 +415,8 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 		initial.Qmap = propose.Qmap;
 		
 		initial.disc_spline = propose.disc_spline;
+		initial.sus = propose.sus;
+		
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
 		//initial.indev = propose.indev;
@@ -802,8 +811,8 @@ void Chain::check(unsigned int /* num */, double t, unsigned int sett)
 			auto a = data.democatpos[dp][0];
 			
 			double dd;
-			dd = initial.lam[w] - model.susi[dp]*(initial.beta*model.areafaci[c]*initial.Qmap[sett][v+a] + initial.phi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",33);
-			dd = propose.lam[w] - model.susp[dp]*(propose.beta*model.areafacp[c]*propose.Qmap[sett][v+a] + propose.phi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",34);
+			dd = initial.lam[w] - initial.sus[dp]*(initial.beta*model.areafaci[c]*initial.Qmap[sett][v+a] + initial.phi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",33);
+			dd = propose.lam[w] - propose.sus[dp]*(propose.beta*model.areafacp[c]*propose.Qmap[sett][v+a] + propose.phi); if(sqrt(dd*dd) > tiny) emsgEC("Chain",34);
 	
 			auto dlam = nindbothlist[w]*(propose.lam[w] - initial.lam[w]); if(dlam < 0) dlam = 0;
 			sum += dlam + nindponlylist[w]*propose.lam[w];
@@ -870,7 +879,7 @@ void Chain::check_addrem()
 }
 
 /// Calculates the likelihood in the initial state
-double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, 	vector < vector <double> > &disc_spline)
+double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, 	vector < vector <double> > &disc_spline, vector <double> &sus)
 {	
 	model.setup(paramval);
 		
@@ -895,7 +904,7 @@ double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vec
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];
-				initial.lam[w] = model.sus[dp]*(fac*Qmap[sett][v] + phi);		
+				initial.lam[w] = sus[dp]*(fac*Qmap[sett][v] + phi);		
 				if(initial.lam[w] < 0) emsgEC("Chain",46);
 				
 				L -= initial.lam[w]*popw[w]*(tmax-t);
@@ -925,6 +934,7 @@ double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vec
 	return L;
 }
 
+
 /// Calculates propose.Qmap based on the initial and final sequences
 void Chain::calcproposeQmap()
 {	
@@ -951,7 +961,8 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	if(checkon == 1){ double dd = initial.Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
 	timers.timembptemp -= clock();
-	initial.Lev = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline);
+	initial.Lev = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus);
+	//initial.Lev = initial.likelihood();
 	timers.timembptemp += clock();
 	
 	
@@ -962,13 +973,18 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 	timers.timeparam += clock();
 		
-	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",49);}
+	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus) - initial.Lev; 
+	 //double dd = initial.likelihood() - initial.Lev; 
+	if(dd*dd > tiny) emsgEC("Chain",49);}
 
 	timers.timeaddrem -= clock();
 	addrem_prop(samp,burnin,EFcut);
 	timers.timeaddrem += clock();
 	
-	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",50);}
+	if(checkon == 1){
+		double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus) - initial.Lev; 
+//	double dd = initial.likelihood() - initial.Lev; 
+if(dd*dd > tiny) emsgEC("Chain",50);}
 
 	if(checkon == 1){ double dd = initial.Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
@@ -1009,8 +1025,8 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];	
-				betasum -= fac*model.sus[dp]*initial.Qmap[sett][v]*popw[w]*(tmax-t);
-				phisum -= model.sus[dp]*popw[w]*(tmax-t);
+				betasum -= fac*initial.sus[dp]*initial.Qmap[sett][v]*popw[w]*(tmax-t);
+				phisum -= initial.sus[dp]*popw[w]*(tmax-t);
 			}
 		}
 		
@@ -1031,13 +1047,13 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 			
 			if(map[w] == 0){
 				LCONT lcont;
-				lcont.w = w; lcont.betafac = fac*model.sus[dp]*initial.Qmap[sett][v]; lcont.phifac = model.sus[dp]; lcont.num = UNSET;
+				lcont.w = w; lcont.betafac = fac*initial.sus[dp]*initial.Qmap[sett][v]; lcont.phifac = initial.sus[dp]; lcont.num = UNSET;
 				lcontlist.push_back(lcont);
 			}
 			map[w]++;
 		
-			betasum += fac*model.sus[dp]*initial.Qmap[sett][v]*(tmax-t);
-			phisum += model.sus[dp]*(tmax-t);
+			betasum += fac*initial.sus[dp]*initial.Qmap[sett][v]*(tmax-t);
+			phisum += initial.sus[dp]*(tmax-t);
 			popw[w]--;
 			n++;
 		}
@@ -1151,8 +1167,8 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];
-				lamareafac[w] = model.sus[dp]*beta*initial.Qmap[sett][v];
-				lamphifac[w] = model.sus[dp]*phi;
+				lamareafac[w] = initial.sus[dp]*beta*initial.Qmap[sett][v];
+				lamphifac[w] = initial.sus[dp]*phi;
 				
 				areasum[c] -= lamareafac[w]*popw[w]*(tmax-t);
 				L0 -= lamphifac[w] *popw[w]*(tmax-t);
@@ -1218,6 +1234,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
 	else{
 		model.setup(paramval);
+		propose.sus = model.create_sus(paramval);
 
 		propose.Lev = L0;
 		for(auto c = 0u; c < data.narea; c++){
@@ -1236,6 +1253,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 	if(ran() < al){
 		initial.Lev = propose.Lev;
 		initial.Pr = propose.Pr;
+		initial.sus = propose.sus;
 		nacstand[th]++;
 		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 	}
@@ -1298,7 +1316,10 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	model.setup(paramval);
 		
-	if(checkon == 1){ auto dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline) - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",55);}
+	if(checkon == 1){
+		auto dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus) - initial.Lev; 
+//auto dd = initial.likelihood() - initial.Lev; 
+if(dd*dd > tiny) emsgEC("Chain",55);}
 
 	auto probif = 0.0, probfi = 0.0;
 	
@@ -1417,8 +1438,8 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	}
 	
 	timers.timembptemp4 -= clock();
-	propose.Lev = likelihood(propose.Qmap,propose.x,propose.indev,propose.disc_spline);
-	
+	propose.Lev = likelihood(propose.Qmap,propose.x,propose.indev,propose.disc_spline,propose.sus);
+	//propose.Lev = propose.likelihood();
 	double al;
 	if(details.mode == abcmbp){
 		propose.EF = obsmodel.Lobs(propose.trev,propose.indev);
@@ -1474,7 +1495,7 @@ void Chain::infsampler(vector< vector<double> > &Qmap)
 				auto tot = sett*data.nardp + w;
 				auto v = c*data.nage + data.democatpos[dp][0];
 				
-				auto val = nindbothlist[w]*model.sus[dp]*(fac*Qmap[sett][v] + phi);
+				auto val = nindbothlist[w]*initial.sus[dp]*(fac*Qmap[sett][v] + phi);
 				sum += val;
 				
 				lam[tot] = val;				
@@ -1538,7 +1559,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 	model.setup(paramval);
 	model.copyi(paramval);
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-	
+	initial.sus = model.create_sus(paramval);
+		
 	vector <double> valst = paramval;
 	paramval = param_propose;
 	
@@ -1555,7 +1577,8 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		else{
 			model.copyp(paramval);
 			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-			
+			propose.sus = model.create_sus(paramval);
+				
 			if(mbp() == 1) al = 0;
 			else{
 				propose.EF = obsmodel.Lobs(propose.trev,propose.indev);
@@ -1574,6 +1597,7 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		initial.Pr = propose.Pr;
 		initial.trev = propose.trev;
 		initial.Qmap = propose.Qmap;
+		initial.sus = propose.sus;
 		
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];

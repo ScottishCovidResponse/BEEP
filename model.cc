@@ -218,7 +218,6 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 {
 	if(settransprob(paramv) == 1) return 1;
 	
-	setsus(paramv);
 	setarea(paramv);
 	return 0;
 }
@@ -227,8 +226,8 @@ unsigned int MODEL::setup(const vector <double> &paramv)
 void MODEL::copyi(const vector<double> &paramv)
 {
 	parami = paramv;
-//	betai = beta; phii = phi; 
-susi = sus; areafaci = areafac;
+
+areafaci = areafac;
 	for(auto& co : comp) co.probi = co.prob;
 }
 	
@@ -236,8 +235,8 @@ susi = sus; areafaci = areafac;
 void MODEL::copyp(const vector<double> &paramv)
 {
 	paramp = paramv;
-//	betap = beta; phip = phi;
- susp = sus; areafacp = areafac;
+
+ areafacp = areafac;
 	for(auto& co : comp) co.probp = co.prob;
 }
 
@@ -617,9 +616,10 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp)
 }
   
 /// Defines the relative susceptibility of individuals
-void MODEL::setsus(const vector<double> &paramv)     
+vector <double> MODEL::create_sus(const vector<double> &paramv)     
 {
-	sus.resize(data.ndemocatpos);
+	vector <double> sus(data.ndemocatpos);
+	//sus.resize(data.ndemocatpos);
 	for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 		auto val = 1.0;
 		for(auto c = 0u; c < data.ndemocat; c++){
@@ -628,6 +628,7 @@ void MODEL::setsus(const vector<double> &paramv)
 		}
 		sus[dp] = val;
 	}
+	return sus;
 }
 
 /// Defines the relative transmission rate for different areas
@@ -800,6 +801,8 @@ vector <double> MODEL::R0calc(const vector<double> &paramv)
 	vector <double> R0fac(ntimeperiod);
 	for(auto& R0fa : R0fac) R0fa = 0;
 		
+	vector <double> sus = create_sus(paramv);
+	
 	for(const auto& QQ : data.Q){
 		auto timep = QQ.timep;
 		auto qt = QQ.Qtenref;

@@ -9,28 +9,9 @@ using namespace std;
 #include "poptree.hh"
 #include "data.hh"
 #include "simulate.hh"
+#include "state.hh"
 
 class Obsmodel;
-
-struct State
-{
-	double L; 																				// The observation likelihood 
-	double Lev; 																	   	// The latent process likelihood 
-	double EF; 																				// The error function (used in abc methods)
-	double Pr; 																		    // The prior probability
-	
-	vector < vector <FEV> > indev;                    // The individual event sequences
-	vector <EVREF> x;                                 // Ordered list of references to infection events 
-	vector < vector <EVREF> > trev;                   // Event references
-	
-	vector< vector <double> > Qmap;                   // The infectivty map 
-	vector <double> lam;                              // Total force of infecion for an area
-
-	double beta, phi;                                 // A temporary store for the values of beta and phi
-
-	vector < vector <double> > disc_spline;           // A discretisation of the splines	
-};
-
 
 class Chain                                             // Stores all the things related to an MCMC chain
 {
@@ -80,7 +61,7 @@ private:
 	void resetlists();
 	void changestat(unsigned int i, unsigned int st, unsigned int updateR);
 	void constructRtot(vector <double> &Qmi, vector <double> &Qmp);
-	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, vector < vector <double> > &disc_spline);
+	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, vector < vector <double> > &disc_spline, vector <double> &sus);
 	void infsampler(vector< vector<double> > &Qmap);
 	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev);
 	void calcproposeQmap();

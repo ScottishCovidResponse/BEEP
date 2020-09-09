@@ -57,6 +57,7 @@ srcs := \
  poptree.cc \
  reader.cc \
  simulate.cc \
+ state.cc \
  timers.cc \
  utils.cc
 
