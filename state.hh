@@ -10,7 +10,7 @@ using namespace std;
 class State
 {
 	public:
-		State(const MODEL &model);
+		State(const Details &details, const DATA &data, const MODEL &model);
 		
 	double L; 																				// The observation likelihood 
 	double Lev; 																	   	// The latent process likelihood 
@@ -38,10 +38,14 @@ class State
 	
 	vector <CompTrans> comptrans; 
 	
-	//double likelihood();
+	double likelihood();
 	
-	//void init();
+	vector <int> popw;                                    // The population in w
+
 	private:
+	
+	const Details &details;
+	const DATA &data;
 	const MODEL &model;
 };
 

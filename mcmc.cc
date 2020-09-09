@@ -83,7 +83,6 @@ void Mcmc::run()
 		model_evidence.set_invT(samp,chain);
 		
 		long time = clock();
-
 		for(auto& cha : chain) cha.standard_prop(samp,burnin);
 		
 		timeprop -= clock();

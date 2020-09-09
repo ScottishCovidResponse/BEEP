@@ -17,7 +17,6 @@ using namespace std;
 #include "output.hh"
 #include "pack.hh"
 #include "obsmodel.hh"
-//#include "state.hh"
 
 struct EVREFT {                
 	unsigned int ind;                   
@@ -38,7 +37,7 @@ struct LCONT {
 };
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(model), propose(model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
+Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(details,data,model), propose(details,data,model), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
 	ch = chstart;
 
@@ -80,8 +79,9 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 	N.resize(comp.size()); 
 	
 	sample_from_prior();
-
-	proposal_init();
+	paramval = propose.paramval;
+	
+	proposal_init(propose.paramval);
 
 	popw.resize(data.nardp);                                        // Used for event based changes
 	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
@@ -96,7 +96,7 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 	initial.x = propose.x;
 	
 	initial.L = obsmodel.Lobs(initial.trev,initial.indev);
-	initial.Pr = model.prior(paramval);
+	initial.Pr = model.prior(initial.paramval);
 
 	initial.disc_spline = propose.disc_spline;
 	initial.sus = propose.sus;
@@ -111,9 +111,11 @@ void Chain::sample_from_prior()
 {
 	unsigned int loop, loopmax = 100;
 	for(loop = 0; loop < loopmax; loop++){
-		paramval = model.priorsamp();
-		if(simulate(paramval) == 0) break;
+		if(simulate(model.priorsamp()) == 0) break;
 	}
+	
+	
+	//paramval = initial.paramval;
 	
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 }
@@ -121,38 +123,37 @@ void Chain::sample_from_prior()
 /// Simulates an event sequence given a parameter set (returns 1 if it is found not to be possible)
 unsigned int Chain::simulate(const vector <double>& paramv)
 {
-	paramval = paramv;
-	vector <double> paramvalinit = paramval;
-	for(auto& pval : paramvalinit) pval = 0;
+	initial.paramval = paramv;
+	propose.paramval = paramv;	
+		
+	for(auto& pval : initial.paramval) pval = 0;
 	
 	 // Generate initial state mbp is used to simulate
-	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramvalinit);
-	initial.sus = model.create_sus(paramvalinit);    
-	initial.areafac = model.create_areafac(paramvalinit);    
-	initial.paramval = paramvalinit;
-	model.create_comptrans(initial.comptrans,paramvalinit);
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
+	initial.sus = model.create_sus(initial.paramval);    
+	initial.areafac = model.create_areafac(initial.paramval);    
+	model.create_comptrans(initial.comptrans,initial.paramval);
 	
-	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-	propose.sus = model.create_sus(paramval);  
-	propose.areafac = model.create_areafac(paramval);   
-	propose.paramval = paramval;	
-	if(model.create_comptrans(propose.comptrans,paramval) == 1) return 1;
+	for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,propose.paramval);
+	propose.sus = model.create_sus(propose.paramval);  
+	propose.areafac = model.create_areafac(propose.paramval);  
+	if(model.create_comptrans(propose.comptrans,propose.paramval) == 1) return 1;
 	
 	if(mbp() == 1) return 1;
-
+	
 	return 0;
 }
 
-void Chain::proposal_init()
+void Chain::proposal_init(const vector <double> &paramv)
 {
 	auto nparam = model.param.size();
 	paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);         // Initialises proposal and diagnostic information
 	paramjumpstand.resize(nparam); ntrstand.resize(nparam); nacstand.resize(nparam);
 	for(auto th = 0u; th < nparam; th++){
-		paramjump[th] = paramval[th]/2; if(paramjump[th] == 0) paramjump[th] = 0.1;
+		paramjump[th] = paramv[th]/2; if(paramjump[th] == 0) paramjump[th] = 0.1;
 		ntr[th] = 0; nac[th] = 0;
 		
-		paramjumpstand[th] = paramval[th]/10; if(paramjumpstand[th] == 0) paramjumpstand[th] = 0.1;
+		paramjumpstand[th] = paramv[th]/10; if(paramjumpstand[th] == 0) paramjumpstand[th] = 0.1;
 		ntrstand[th] = 0; nacstand[th] = 0;
 	}
 	
@@ -378,13 +379,15 @@ void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp
 /// Performs a MBP on parameter 'th'
 void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
 {
+	initial.paramval = paramval;
+	
 	timeprop -= clock();
 	timers.timembpprop -= clock();
 
-	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,paramval);
-	initial.sus = model.create_sus(paramval);
-	initial.paramval = paramval;
-	model.create_comptrans(initial.comptrans,paramval);
+	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
+	initial.sus = model.create_sus(initial.paramval);
+	
+	model.create_comptrans(initial.comptrans,initial.paramval);
 			
 	//auto valst = paramval[th];
 
@@ -890,61 +893,6 @@ void Chain::check_addrem() const
 	//setinitialQmap(1);
 }
 
-/// Calculates the likelihood in the initial state
-double Chain::likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, 	vector < vector <double> > &disc_spline, vector <double> &sus, vector <double> &areafac)
-{		
-	for(auto c = 0u; c < data.narea; c++){
-		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-			auto w = c*data.ndemocatpos + dp;
-			popw[w] = data.area[c].ind[dp].size();
-		}
-	}		
-			
-	auto L = 0.0;
-	auto t = 0.0; 
-	auto n = 0u;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto phi = disc_spline[model.phispline_ref][sett]; 
-		auto beta = disc_spline[model.betaspline_ref][sett];
-	
-		auto tmax = details.settime[sett+1];
-		
-		for(auto c = 0u; c < data.narea; c++){
-			auto fac = beta*areafac[c];
-			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-				auto w = c*data.ndemocatpos + dp;
-				auto v = c*data.nage + data.democatpos[dp][0];
-				initial.lam[w] = sus[dp]*(fac*Qmap[sett][v] + phi);		
-				if(initial.lam[w] < 0) emsgEC("Chain",46);
-				
-				L -= initial.lam[w]*popw[w]*(tmax-t);
-			}
-		}
-		
-		while(n < x.size()){
-			auto i = x[n].ind;
-			auto ev = indev[i][x[n].e];
-			auto tt = ev.t;
-			if(tt >= tmax) break;
-	
-			t = tt;
-			
-			auto c = data.ind[i].area;
-			auto w = c*data.ndemocatpos + data.ind[i].dp;
-			L += log(initial.lam[w]);
-			if(std::isnan(L)) emsgEC("Chain",47);
-			popw[w]--;
-			n++;
-			
-			L += initial.lam[w]*(tmax-t);
-		}
-		t = tmax;
-	} 
-	
-	return L;
-}
-
-
 /// Calculates propose.Qmap based on the initial and final sequences
 void Chain::calcproposeQmap()
 {	
@@ -965,38 +913,36 @@ void Chain::calcproposeQmap()
 void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {
 	timers.timestandard -= clock();
+	initial.paramval = paramval;
 	
 	if(checkon == 1){ double dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
 	
 	timers.timembptemp -= clock();
-	initial.Lev = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus,initial.areafac);
-	//initial.Lev = initial.likelihood();
+	initial.Lev = initial.likelihood();
 	timers.timembptemp += clock();
 	
 	
 	timers.timeparam -= clock();
 	betaphi_prop(samp,burnin);
 	area_prop(samp,burnin);
-	model.compparam_prop(samp,burnin,initial.x,initial.indev,paramval,initial.comptrans,paramjumpstand,ntrstand,nacstand,initial.Pr);
+	model.compparam_prop(samp,burnin,initial.x,initial.indev,initial.paramval,initial.comptrans,paramjumpstand,ntrstand,nacstand,initial.Pr);
+
 	if(model.regioneffect == 1) fixarea_prop(samp,burnin);
 	timers.timeparam += clock();
 		
-	if(checkon == 1){ double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus,initial.areafac) - initial.Lev; 
-	 //double dd = initial.likelihood() - initial.Lev; 
+	if(checkon == 1){ double dd = initial.likelihood() - initial.Lev; 
 	if(dd*dd > tiny) emsgEC("Chain",49);}
 
 	timers.timeaddrem -= clock();
 	addrem_prop(samp,burnin,EFcut);
 	timers.timeaddrem += clock();
 	
-	if(checkon == 1){
-		double dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus,initial.areafac) - initial.Lev; 
-//	double dd = initial.likelihood() - initial.Lev; 
-if(dd*dd > tiny) emsgEC("Chain",50);}
+	if(checkon == 1){ double dd = initial.likelihood() - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",50);}
 
 	if(checkon == 1){ double dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chain",51);}}
 
 	timers.timestandard += clock();
+	paramval = initial.paramval;
 }
 
 /// Makes proposal to beta and phi
@@ -1089,16 +1035,16 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 	for(auto loop = 0u; loop < loopmax; loop++){
 		for(auto th : parampos){
 			if(model.param[th].min != model.param[th].max){
-				auto valst = paramval[th];	
-				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+				auto valst = initial.paramval[th];	
+				initial.paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
 
 				propose.Pr = initial.Pr; 
 				propose.Lev = initial.Lev;
 
 				double al;
-				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+				if(initial.paramval[th] < model.param[th].min || initial.paramval[th] > model.param[th].max) al = 0;
 				else{
-					for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,paramval);
+					for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
 
 					propose.Lev = 0; 
 					for(auto sett = 0u; sett < details.nsettime; sett++){
@@ -1112,7 +1058,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 						if(std::isnan(propose.Lev)) emsgEC("Chain",52);
 					}
 					
-					if(smooth_spline == 1) propose.Pr = model.prior(paramval);
+					if(smooth_spline == 1) propose.Pr = model.prior(initial.paramval);
 					al = exp(propose.Pr - initial.Pr + propose.Lev-initial.Lev);
 				}
 			
@@ -1125,7 +1071,7 @@ void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
 					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 				}
 				else{
-					paramval[th] = valst;
+					initial.paramval[th] = valst;
 					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else  paramjumpstand[th] *= 0.995;}
 				}
 			}
@@ -1228,16 +1174,16 @@ void Chain::area_prop(unsigned int samp, unsigned int burnin)
 
 void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add)
 {
-	auto valst = paramval[th];	
-	paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+	auto valst = initial.paramval[th];	
+	initial.paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
 
 	propose.Lev=initial.Lev;
 	propose.Pr = initial.Pr;
 	double al;
-	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+	if(initial.paramval[th] < model.param[th].min || initial.paramval[th] > model.param[th].max) al = 0;
 	else{
-		propose.sus = model.create_sus(paramval);
-		propose.areafac = model.create_areafac(paramval);    
+		propose.sus = model.create_sus(initial.paramval);
+		propose.areafac = model.create_areafac(initial.paramval);    
 	
 		propose.Lev = L0;
 		for(auto c = 0u; c < data.narea; c++){
@@ -1248,7 +1194,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 		}
 		if(std::isnan(propose.Lev)) emsgEC("Chain",53);
 	
-	  propose.Pr = model.prior(paramval);
+	  propose.Pr = model.prior(initial.paramval);
 		al = exp(propose.Pr-initial.Pr + propose.Lev-initial.Lev);
 	}
 
@@ -1263,7 +1209,7 @@ void Chain::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, 
 		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 	}
 	else{
-		paramval[th] = valst;
+		initial.paramval[th] = valst;
 		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
 	}
 }
@@ -1274,15 +1220,15 @@ void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 	const auto loopmax=10;
 	for(auto loop = 0u; loop < loopmax; loop++){	
 		auto th = model.sigma_param;
-		auto valst = paramval[th];
+		auto valst = initial.paramval[th];
 		
-		paramval[th] += normal(0,sigmajump);
+		initial.paramval[th] += normal(0,sigmajump);
 		
 		propose.Pr = initial.Pr;
 		double al;
-		if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+		if(initial.paramval[th] < model.param[th].min || initial.paramval[th] > model.param[th].max) al = 0;
 		else{
-			propose.Pr = model.prior(paramval);
+			propose.Pr = model.prior(initial.paramval);
 			al = exp(propose.Pr-initial.Pr);
 		}
 
@@ -1291,7 +1237,7 @@ void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
 			if(samp < burnin){ if(samp < 50) sigmajump *= 1.05; else sigmajump *= 1.01;}
 		}
 		else{
-			paramval[th] = valst;
+			initial.paramval[th] = valst;
 			if(samp < burnin){ if(samp < 50) sigmajump *= 0.975; else sigmajump *= 0.995;}
 		}
 	}
@@ -1319,10 +1265,7 @@ void Chain::sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const
 /// Adds and removes infectious individuals
 void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {	
-	if(checkon == 1){
-		auto dd = likelihood(initial.Qmap,initial.x,initial.indev,initial.disc_spline,initial.sus,initial.areafac) - initial.Lev; 
-//auto dd = initial.likelihood() - initial.Lev; 
-if(dd*dd > tiny) emsgEC("Chain",55);}
+	if(checkon == 1){ auto dd = initial.likelihood() - initial.Lev; if(dd*dd > tiny) emsgEC("Chain",55);}
 
 	auto probif = 0.0, probfi = 0.0;
 	
@@ -1375,7 +1318,7 @@ if(dd*dd > tiny) emsgEC("Chain",55);}
 			auto t = details.settime[sett] + ran()*dt;
 			probif += log(1.0/dt);
 			
-			model.simmodel(paramval,propose.comptrans,propose.indev[i],i,0,t);
+			model.simmodel(initial.paramval,propose.comptrans,propose.indev[i],i,0,t);
 			addindev(i,propose.indev[i],propose.x,propose.trev);
 			
 			probfi += log(1.0/propose.x.size());
@@ -1441,8 +1384,7 @@ if(dd*dd > tiny) emsgEC("Chain",55);}
 	}
 	
 	timers.timembptemp4 -= clock();
-	propose.Lev = likelihood(propose.Qmap,propose.x,propose.indev,propose.disc_spline,propose.sus,propose.areafac);
-	//propose.Lev = propose.likelihood();
+	propose.Lev = propose.likelihood();
 	double al;
 	if(details.mode == abcmbp){
 		propose.EF = obsmodel.Lobs(propose.trev,propose.indev);

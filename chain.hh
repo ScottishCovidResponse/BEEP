@@ -60,7 +60,6 @@ private:
 	void resetlists();
 	void changestat(unsigned int i, unsigned int st, unsigned int updateR);
 	void constructRtot(const vector <double> &Qmi, const vector <double> &Qmp);
-	double likelihood(vector < vector<double> > &Qmap, vector <EVREF> &x, vector <vector<FEV> > &indev, vector < vector <double> > &disc_spline, vector <double> &sus, vector <double> &areafac);
 	void infsampler(const vector< vector<double> > &Qmap);
 	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const;
 	void calcproposeQmap();
@@ -69,7 +68,7 @@ private:
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
 	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
-	void proposal_init();
+	void proposal_init(const vector <double> &paramv);
 		
 	double Levi;         																	// The latent process likelihood
 	

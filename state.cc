@@ -1,15 +1,20 @@
+//#include <stdio.h>
+#include <cmath>   
+
+
 using namespace std;
 
 #include "state.hh"
 
-State::State(const MODEL &model) :  model(model){}
+State::State(const Details &details, const DATA &data, const MODEL &model) : details(details), data(data), model(model)
+{
+	popw.resize(data.nardp);                                        // Used for event based changes	
+	lam.resize(data.nsettardp);
+}
 
-/*
-/// Calculates the likelihood in the initial state
+/// Calculates the likelihood 
 double State::likelihood()
-{	
-	model.setup(paramval);
-		
+{		
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 			auto w = c*data.ndemocatpos + dp;
@@ -27,14 +32,14 @@ double State::likelihood()
 		auto tmax = details.settime[sett+1];
 		
 		for(auto c = 0u; c < data.narea; c++){
-			auto fac = beta*model.areafac[c];
+			auto fac = beta*areafac[c];
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];
-				initial.lam[w] = model.sus[dp]*(fac*Qmap[sett][v] + phi);		
-				if(initial.lam[w] < 0) emsgEC("Chain",46);
+				lam[w] = sus[dp]*(fac*Qmap[sett][v] + phi);		
+				if(lam[w] < 0) emsgEC("Chain",46);
 				
-				L -= initial.lam[w]*popw[w]*(tmax-t);
+				L -= lam[w]*popw[w]*(tmax-t);
 			}
 		}
 		
@@ -48,16 +53,15 @@ double State::likelihood()
 			
 			auto c = data.ind[i].area;
 			auto w = c*data.ndemocatpos + data.ind[i].dp;
-			L += log(initial.lam[w]);
+			L += log(lam[w]);
 			if(std::isnan(L)) emsgEC("Chain",47);
 			popw[w]--;
 			n++;
 			
-			L += initial.lam[w]*(tmax-t);
+			L += lam[w]*(tmax-t);
 		}
 		t = tmax;
 	} 
 	
 	return L;
 }
-*/
