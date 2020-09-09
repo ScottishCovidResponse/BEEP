@@ -78,24 +78,23 @@ void Chain::sample_from_prior()
 {
 	unsigned int loop, loopmax = 100;
 	for(loop = 0; loop < loopmax; loop++){
-		if(simulate(model.priorsamp()) == 0) break;
+		if(simulate(model.priorsamp()) == success) break;
 	}
 	
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 }
 
 /// Simulates an event sequence given a parameter set (returns 1 if it is found not to be possible)
-unsigned int Chain::simulate(const vector <double>& paramv)
+Status Chain::simulate(const vector <double>& paramv)
 {
 	vector <double> zero(paramv.size());
 	for(auto& pval : zero) pval = 0;
 	
 	initial.setparam(zero);
-	propose.setparam(paramv);
 	
-	if(mbp() == 1) return 1;
+	if(mbp(paramv) == fail) return fail;
 	
-	return 0;
+	return success;
 }
 
 void Chain::proposal_init(const vector <double> &paramv)
@@ -120,11 +119,13 @@ void Chain::proposal_init(const vector <double> &paramv)
 }
 
 /// Performs a MBP
-unsigned int Chain::mbp()
+Status Chain::mbp(const vector<double> &paramv)
 {
 	timers.timembpinit -= clock();
 
-	unsigned int doev = model.dombpevents(initial.paramval,propose.paramval);
+	if(propose.setparam(paramv) == fail) return fail;
+	
+	bool doev = model.dombpevents(initial.paramval,propose.paramval);
 
 	for(auto c = 0u; c < comp.size(); c++) N[c] = 0;
 	N[0] = data.popsize;
@@ -185,7 +186,10 @@ unsigned int Chain::mbp()
 					if(ran() < al){                                    // Keeps the infection event
 						changestat(i,not_sus,1);
 						
-						if(doev == 1) model.mbpmodel(initial.indev[i],propose.indev[i],initial.paramval,propose.paramval,initial.comptrans,propose.comptrans);
+						if(doev == true){
+							model.mbpmodel(initial.indev[i],propose.indev[i],initial.paramval,propose.paramval,initial.comptrans,propose.comptrans);
+							//mbpmodel(initial.indev[i],propose.indev[i]);
+						}
 						else propose.indev[i] = initial.indev[i];
 						
 						propose.addindev(i);
@@ -207,8 +211,8 @@ unsigned int Chain::mbp()
 		
 	resetlists();
 
-	if(propose.x.size() >= model.infmax) return 1;
-	return 0;
+	if(propose.x.size() >= model.infmax) return fail;
+	return success;
 }
 
 /// Based on the the event sequence in initial.x, this sets initial.Qmap
@@ -310,8 +314,6 @@ void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp
 /// Performs a MBP on parameter 'th'
 void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
 {
-	//initial.paramval = paramval;
-	
 	timeprop -= clock();
 	timers.timembpprop -= clock();
 
@@ -319,33 +321,18 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	initial.sus = model.create_sus(initial.paramval);
 	
 	model.create_comptrans(initial.comptrans,initial.paramval);
+	
+	vector <double> paramv = initial.paramval;
+	paramv[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
+
+	double al = 0; 
+	if(paramv[th] > model.param[th].min && paramv[th] < model.param[th].max){
+		if(mbp(paramv) == success){
+			propose.L = obsmodel.Lobs(propose.trev,propose.indev);
+			propose.Pr = model.prior(propose.paramval);
 			
-	//auto valst = paramval[th];
-
-	propose.paramval = initial.paramval;
-	propose.paramval[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
-
-	double al; 
-	propose.L = initial.L;
-	propose.Pr = initial.Pr;
-	if(propose.paramval[th] < model.param[th].min || propose.paramval[th] > model.param[th].max) al = 0;
-	else{
-		if(model.create_comptrans(propose.comptrans,propose.paramval) == 1) al = 0;
-		else{
-			for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,propose.paramval);
-			propose.sus = model.create_sus(propose.paramval);
-			propose.areafac = model.create_areafac(propose.paramval);    
-			//propose.paramval = paramval;
-			//model.create_comptrans(propose.comptrans,paramval);
-
-			if(mbp() == 1) al = 0;
-			else{
-				propose.L = obsmodel.Lobs(propose.trev,propose.indev);
-				propose.Pr = model.prior(propose.paramval);
-				
-				al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
-				if(checkon == 1) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
-			}
+			al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
+			if(checkon == 1) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
 		}
 	}
 	
@@ -656,6 +643,7 @@ void Chain::addinfc(unsigned int c, double t)
 	changestat(i,not_sus,1);
 	
 	model.simmodel(propose.paramval,propose.comptrans,propose.indev[i],i,0,t);
+	//propose.simmodel(i,0,t);
 
 	propose.addindev(i);
 }
@@ -1228,6 +1216,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 			probif += log(1.0/dt);
 			
 			model.simmodel(initial.paramval,propose.comptrans,propose.indev[i],i,0,t);
+			//initial.simmodel(i,0,t);
 		
 			propose.addindev(i);
 			
@@ -1408,7 +1397,7 @@ void Chain::generate_particle(Particle &part) const
 	part.ev = event_compress(initial.indev);
 }
 
-int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)  
+Status Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)  
 {
 	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
 	initial.sus = model.create_sus(initial.paramval);
@@ -1433,7 +1422,7 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 			propose.sus = model.create_sus(propose.paramval);
 			propose.areafac = model.create_areafac(propose.paramval);
 		
-			if(mbp() == 1) al = 0;
+			if(mbp(propose.paramval) == fail) al = 0;
 			else{
 				propose.EF = obsmodel.Lobs(propose.trev,propose.indev);
 				if(propose.EF >= EFcut) al = 0;
@@ -1461,11 +1450,11 @@ int Chain::abcmbp_proposal(const vector <double> &param_propose, double EFcut)
 		//initial.indev = propose.indev;
 		
 		initial.x = propose.x;
-		return 1;
+		return success;
 	}
 	else{
 		//paramval = valst;
 	}
-	return 0;
+	return fail;
 }
 

@@ -11,6 +11,8 @@ enum ParamType { other_paramtype, distval_paramtype, branchprob_paramtype};
 	
 enum DataType { trans_data, pop_data, marg_data};                                         // Different types of data
 
+enum Status { success, fail};                                                             // Determines if successful
+
 enum TimeFormat { tform_num, tform_ymd };                                                 // Different type of time format
 
 enum IndSus { both_sus, ponly_sus, not_sus };                                             // Use to classify if individual is susceptible in initial/proposed state

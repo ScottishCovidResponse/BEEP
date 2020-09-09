@@ -7,6 +7,7 @@ using namespace std;
 
 #include "model.hh"
 #include "obsmodel.hh"
+#include "consts.hh"
 
 class State
 {
@@ -36,16 +37,16 @@ public:
 	vector <double> lam;                              // Total force of infecion for an area
 	double Lev; 																	   	// The latent process likelihood 
 
-		
 	double likelihood();
 	void clear();
 	void copy(const State &from);
 	void check() const;
-	unsigned int setparam(const vector <double> &paramv);
+	Status setparam(const vector <double> &paramv);
 	void setbetaphi(unsigned int sett);
 	void setLPr();
 	FEV getinfev(unsigned int n) const;
 	void addindev(unsigned int i);
+	void simmodel(unsigned int i, unsigned int c, double t);
 	
 	vector <int> popw;                                    // The population in w
 

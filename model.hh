@@ -8,7 +8,6 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-
 struct FEV {                               // Stores information about a compartmental transition
   unsigned int trans;                      // References the transition type
 	unsigned int ind;                        // The individual on which the transition happens
@@ -138,12 +137,15 @@ public:
 	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
 	
 	double getinfectivity(const string& name) const;
-	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t) const;
-	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const;
+	
+	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist,
+              	unsigned int i, unsigned int c, double t) const;
+	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp,
+              	const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const;
 	void print_to_terminal() const;
 	vector <double> priorsamp() const;
 	vector <double> R0calc(const vector <double> &paramv) const;
-	unsigned int dombpevents(const vector <double> &parami, const vector <double> &paramp) const;
+	bool dombpevents(const vector <double> &parami, const vector <double> &paramp) const;
 	void oe(const string& name, const vector <FEV> &ev) const;
 	double prior(const vector<double> &paramv) const;
 	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const;

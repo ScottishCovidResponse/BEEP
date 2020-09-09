@@ -5,6 +5,7 @@ using namespace std;
 
 #include "state.hh"
 
+
 State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	disc_spline.resize(model.spline.size());
@@ -115,13 +116,14 @@ void State::check() const
 }
 
 /// Sets up the state with a specifies set of parameters
-unsigned int State::setparam(const vector <double> &paramv)
+Status State::setparam(const vector <double> &paramv)
 {
 	paramval = paramv;
+	if(model.create_comptrans(comptrans,paramval) == 1) return fail;
 	for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline[sp] = model.create_disc_spline(sp,paramval);
 	sus = model.create_sus(paramval);    
 	areafac = model.create_areafac(paramval);    
-	return model.create_comptrans(comptrans,paramval);
+	return success;
 }
 
 /// Sets the values of phi and beta (this is used to speed up computation)
@@ -161,6 +163,7 @@ void State::addindev(unsigned int i)
 		if(se < details.nsettime) trev[se].push_back(evref);
 	}
 }
-		
+
+
 
 	

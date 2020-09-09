@@ -18,14 +18,14 @@ class Chain                                             // Stores all the things
 public:
 	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	const Obsmodel &obsmodel, unsigned int chstart);
 	void sample_from_prior();
-	unsigned int simulate(const vector <double>& paramv);
+	Status simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 	void standard_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	void setinitialQmap(unsigned int check);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
 	void initialise_from_particle(const Particle &part);
 	void generate_particle(Particle &part) const;
-	int abcmbp_proposal(const vector <double> &param_propose, double EFcut);
+	Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 	
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 
@@ -47,7 +47,8 @@ public:
 	State initial, propose;                               // The states in the initial and proposed states
 	
 private:
-	unsigned int mbp();
+	Status mbp(const vector<double> &paramv);
+	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	unsigned int nextinfection();
 	void addinfc(unsigned int c, double t);
 	void check(double t, unsigned int sett) const;

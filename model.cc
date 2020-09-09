@@ -409,8 +409,10 @@ unsigned int MODEL::create_comptrans(vector <CompTrans> &comptrans, const vector
 	return 0;
 }
 
+
 /// This simulates from the model and generates an event list
-void MODEL::simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist, unsigned int i, unsigned int c, double t) const
+void MODEL::simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist,
+                     unsigned int i, unsigned int c, double t) const
 {
 	auto timep = 0u; while(timep < ntimeperiod && t > timeperiod[timep].tend) timep++;
 
@@ -481,8 +483,10 @@ void MODEL::simmodel(const vector<double> &paramv, const vector <CompTrans> &com
 	}while(1 == 1);
 }
 
+
 /// This does an equivelent MBP for the compartmental model
-void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const
+void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp, 
+                     const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const
 {
 	evlistp.clear();
 	
@@ -583,7 +587,8 @@ void MODEL::mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <doubl
 	
 	if(comp[c].trans.size() != 0)	simmodel(paramp,comptransp,evlistp,i,c,tp);
 }
-  
+ 
+ 
 /// Defines the relative susceptibility of individuals
 vector <double> MODEL::create_sus(const vector<double> &paramv) const 
 {
@@ -1038,10 +1043,10 @@ void MODEL::oe(const string& name, const vector <FEV> &ev) const
 }
 
 /// Determines if it is necessary to do mbp for the exisiting event sequence
-unsigned int MODEL::dombpevents(const vector <double> &parami, const vector <double> &paramp) const
+bool MODEL::dombpevents(const vector <double> &parami, const vector <double> &paramp) const
 {
 	for(auto th = 0u; th < param.size(); th++){
-		if(parami[th] != paramp[th] && (param[th].type == distval_paramtype || param[th].type == branchprob_paramtype)) return 1;
+		if(parami[th] != paramp[th] && (param[th].type == distval_paramtype || param[th].type == branchprob_paramtype)) return true;
 	}
-	return 0;
+	return false;
 }
