@@ -39,6 +39,7 @@ public:
 	
 	vector <int> popw;                                    // The population in w
 
+	
 	void setlikelihood();
 	void checkLevPr();
 	void clear();
@@ -54,6 +55,9 @@ public:
 	void setQmap(unsigned int check);
 	void sortx();
 	void initialise_from_particle(const Particle &part);
+	
+	// These function make up the "standard" proposal
+	void betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand);
 	
 private:
 	const vector <COMP> &comp;

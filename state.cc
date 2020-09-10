@@ -4,7 +4,7 @@
 using namespace std;
 
 #include "state.hh"
-
+#include "timers.hh"
 
 State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : comp(model.comp), trans(model.trans), details(details), data(data), model(model), obsmodel(obsmodel)
 {
@@ -381,7 +381,150 @@ void State::initialise_from_particle(const Particle &part)
 	if(EF != obsmodel.Lobs(trev,indev)) emsg("Observation does not agree");
 }
 		
+/// STANDARD PROPOSALS
+
+
+struct LCONT {                
+	unsigned int w;       
+	unsigned int num;       	
+	double betafac;	              
+	double phifac;	 
+};
+
+/// Makes proposal to beta and phi
+void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+{	
+	timers.timebetaphiinit -= clock();
+	
+	vector <unsigned int> map;
+	map.resize(data.nardp); for(auto& ma : map) ma = 0;
+	
+	for(auto c = 0u; c < data.narea; c++){
+		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+			auto w = c*data.ndemocatpos + dp;
+			popw[w] = data.area[c].ind[dp].size();
+		}
+	}		
+	
+	vector <double> betafac, phifac;
+	betafac.resize(details.nsettime); phifac.resize(details.nsettime);
+	
+	auto t = 0.0; 
+	auto n = 0u;
+	
+	vector<	vector <LCONT> > lc;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		auto tmax = details.settime[sett+1];
+		vector <LCONT> lcontlist;
 		
+		auto betasum = 0.0, phisum = 0.0;
+		for(auto c = 0u; c < data.narea; c++){
+			auto fac = areafac[c];
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				auto w = c*data.ndemocatpos + dp;
+				auto v = c*data.nage + data.democatpos[dp][0];	
+				betasum -= fac*sus[dp]*Qmap[sett][v]*popw[w]*(tmax-t);
+				phisum -= sus[dp]*popw[w]*(tmax-t);
+			}
+		}
+		
+		while(n < x.size()){
+			auto i = x[n].ind;
+			FEV ev = indev[i][x[n].e];
+			auto tt = ev.t;
+			if(tt >= tmax) break;
+	
+			t = tt;
+			
+			auto c = data.ind[i].area;
+			auto fac = areafac[c];
+			
+			auto dp = data.ind[i].dp;
+			auto w = c*data.ndemocatpos + dp;
+			auto v = c*data.nage + data.democatpos[dp][0]; 
+			
+			if(map[w] == 0){
+				LCONT lcont;
+				lcont.w = w; lcont.betafac = fac*sus[dp]*Qmap[sett][v]; lcont.phifac = sus[dp]; lcont.num = UNSET;
+				lcontlist.push_back(lcont);
+			}
+			map[w]++;
+		
+			betasum += fac*sus[dp]*Qmap[sett][v]*(tmax-t);
+			phisum += sus[dp]*(tmax-t);
+			popw[w]--;
+			n++;
+		}
+		
+		betafac[sett] = betasum; phifac[sett] = phisum;
+					
+		for(auto& lcont : lcontlist){
+			auto w = lcont.w;
+			lcont.num = map[w];
+			map[w] = 0;
+		}
+					
+		lc.push_back(lcontlist);
+		
+		t = tmax;
+	} 
+	
+	vector <unsigned int> parampos;
+	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
+	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
+		
+	timers.timebetaphiinit += clock();
+		
+	unsigned int loopmax = 12/parampos.size(); if(loopmax == 0) loopmax = 1;
+	
+	timers.timebetaphi -= clock();
+	for(auto loop = 0u; loop < loopmax; loop++){
+		for(auto th : parampos){
+			if(model.param[th].min != model.param[th].max){
+				auto valst = paramval[th];	
+				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+
+				vector < vector <double> > disc_spline_prop;
+
+				double al, Lev_prop=Lev, Pr_prop=Pr;
+				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+				else{
+					for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline_prop.push_back(model.create_disc_spline(sp,paramval));
+
+					Lev_prop = 0;
+					for(auto sett = 0u; sett < details.nsettime; sett++){
+						auto phi = disc_spline_prop[model.phispline_ref][sett]; 
+						auto beta = disc_spline_prop[model.betaspline_ref][sett];
+	
+						
+						Lev_prop += betafac[sett]*beta + phifac[sett]*phi;
+						
+						for(const auto& l : lc[sett]) Lev_prop += l.num*log(l.betafac*beta + l.phifac*phi);
+						if(std::isnan(Lev_prop)) emsgEC("Chain",52);
+					}
+					
+					if(smooth_spline == 1) Pr_prop = model.prior(paramval);
+					al = exp(Pr_prop - Pr + Lev_prop-Lev);
+				}
+			
+				ntrstand[th]++;
+				if(ran() < al){
+					Pr = Pr_prop;
+					Lev = Lev_prop;
+					disc_spline = disc_spline_prop;
+					nacstand[th]++;
+					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+				}
+				else{
+					paramval[th] = valst;
+					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else  paramjumpstand[th] *= 0.995;}
+				}
+			}
+		}
+	}
+	timers.timebetaphi += clock();
+}
+
 
 
 	

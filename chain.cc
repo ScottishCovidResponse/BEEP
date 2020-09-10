@@ -18,13 +18,6 @@ using namespace std;
 #include "pack.hh"
 #include "obsmodel.hh"
 
-struct LCONT {                
-	unsigned int w;       
-	unsigned int num;       	
-	double betafac;	              
-	double phifac;	 
-};
-
 /// Initialises a single mcmc chain
 Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, unsigned int chstart) : initial(details,data,model,obsmodel), propose(details,data,model,obsmodel), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel)
 {
@@ -649,7 +642,9 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	
 	timers.timeparam -= clock();
 	
-	betaphi_prop(samp,burnin);
+	initial.betaphi_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
+	//void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+	
 	area_prop(samp,burnin);
 	model.compparam_prop(samp,burnin,initial.x,initial.indev,initial.paramval,initial.comptrans,paramjumpstand,ntrstand,nacstand,initial.Pr);
 
@@ -666,138 +661,6 @@ void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
 
 	timers.timestandard += clock();
 	//paramval = initial.paramval;
-}
-
-/// Makes proposal to beta and phi
-void Chain::betaphi_prop(unsigned int samp, unsigned int burnin)
-{	
-	timers.timebetaphiinit -= clock();
-	
-	vector <unsigned int> map;
-	map.resize(data.nardp); for(auto& ma : map) ma = 0;
-	
-	for(auto c = 0u; c < data.narea; c++){
-		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-			auto w = c*data.ndemocatpos + dp;
-			popw[w] = data.area[c].ind[dp].size();
-		}
-	}		
-	
-	vector <double> betafac, phifac;
-	betafac.resize(details.nsettime); phifac.resize(details.nsettime);
-	
-	auto t = 0.0; 
-	auto n = 0u;
-	
-	vector<	vector <LCONT> > lc;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto tmax = details.settime[sett+1];
-		vector <LCONT> lcontlist;
-		
-		auto betasum = 0.0, phisum = 0.0;
-		for(auto c = 0u; c < data.narea; c++){
-			auto fac = initial.areafac[c];
-			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-				auto w = c*data.ndemocatpos + dp;
-				auto v = c*data.nage + data.democatpos[dp][0];	
-				betasum -= fac*initial.sus[dp]*initial.Qmap[sett][v]*popw[w]*(tmax-t);
-				phisum -= initial.sus[dp]*popw[w]*(tmax-t);
-			}
-		}
-		
-		while(n < initial.x.size()){
-			auto i = initial.x[n].ind;
-			FEV ev = initial.indev[i][initial.x[n].e];
-			auto tt = ev.t;
-			if(tt >= tmax) break;
-	
-			t = tt;
-			
-			auto c = data.ind[i].area;
-			auto fac = initial.areafac[c];
-			
-			auto dp = data.ind[i].dp;
-			auto w = c*data.ndemocatpos + dp;
-			auto v = c*data.nage + data.democatpos[dp][0]; 
-			
-			if(map[w] == 0){
-				LCONT lcont;
-				lcont.w = w; lcont.betafac = fac*initial.sus[dp]*initial.Qmap[sett][v]; lcont.phifac = initial.sus[dp]; lcont.num = UNSET;
-				lcontlist.push_back(lcont);
-			}
-			map[w]++;
-		
-			betasum += fac*initial.sus[dp]*initial.Qmap[sett][v]*(tmax-t);
-			phisum += initial.sus[dp]*(tmax-t);
-			popw[w]--;
-			n++;
-		}
-		
-		betafac[sett] = betasum; phifac[sett] = phisum;
-					
-		for(auto& lcont : lcontlist){
-			auto w = lcont.w;
-			lcont.num = map[w];
-			map[w] = 0;
-		}
-					
-		lc.push_back(lcontlist);
-		
-		t = tmax;
-	} 
-	
-	vector <unsigned int> parampos;
-	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
-	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
-		
-	timers.timebetaphiinit += clock();
-		
-	unsigned int loopmax = 12/parampos.size(); if(loopmax == 0) loopmax = 1;
-	
-	timers.timebetaphi -= clock();
-	for(auto loop = 0u; loop < loopmax; loop++){
-		for(auto th : parampos){
-			if(model.param[th].min != model.param[th].max){
-				auto valst = initial.paramval[th];	
-				initial.paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
-
-				double al;
-				if(initial.paramval[th] < model.param[th].min || initial.paramval[th] > model.param[th].max) al = 0;
-				else{
-					for(auto sp = 0u; sp < model.spline.size(); sp++) propose.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
-
-					propose.Lev = 0; 
-					for(auto sett = 0u; sett < details.nsettime; sett++){
-						auto phi = propose.disc_spline[model.phispline_ref][sett]; 
-						auto beta = propose.disc_spline[model.betaspline_ref][sett];
-	
-						
-						propose.Lev += betafac[sett]*beta + phifac[sett]*phi;
-						
-						for(const auto& l : lc[sett]) propose.Lev += l.num*log(l.betafac*beta + l.phifac*phi);
-						if(std::isnan(propose.Lev)) emsgEC("Chain",52);
-					}
-					
-					if(smooth_spline == 1) propose.Pr = model.prior(initial.paramval);
-					al = exp(propose.Pr - initial.Pr + propose.Lev-initial.Lev);
-				}
-			
-				ntrstand[th]++;
-				if(ran() < al){
-					initial.Pr = propose.Pr;
-					initial.Lev = propose.Lev;
-					initial.disc_spline = propose.disc_spline;
-					nacstand[th]++;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
-				}
-				else{
-					initial.paramval[th] = valst;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else  paramjumpstand[th] *= 0.995;}
-				}
-			}
-		}
-	}
-	timers.timebetaphi += clock();
 }
 
 /// Makes proposal to change factors affecting transmission rates in areas
