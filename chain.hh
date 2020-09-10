@@ -21,7 +21,6 @@ public:
 	Status simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 	void standard_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
-	void setinitialQmap(unsigned int check);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
 	void initialise_from_particle(const Particle &part);
 	void generate_particle(Particle &part) const;
@@ -52,7 +51,6 @@ private:
 	unsigned int nextinfection();
 	void addinfc(unsigned int c, double t);
 	void check(double t, unsigned int sett) const;
-	void check_addrem() const;
 	void updatedQmap(const vector <EVREF> &trei, const vector <EVREF> &trep);
 	void setuplists();
 	void resetlists();

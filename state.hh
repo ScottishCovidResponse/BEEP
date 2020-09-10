@@ -36,6 +36,8 @@ public:
 	double beta, phi;                                 // A temporary store for the values of beta and phi
 	vector <double> lam;                              // Total force of infecion for an area
 	double Lev; 																	   	// The latent process likelihood 
+	
+	vector <int> popw;                                    // The population in w
 
 	double likelihood();
 	void clear();
@@ -47,11 +49,13 @@ public:
 	FEV getinfev(unsigned int n) const;
 	void addindev(unsigned int i);
 	void simmodel(unsigned int i, unsigned int c, double t);
+	void setQmapUsingdQ(unsigned int sett, const State &state, const vector <double> &dQmap);
+	void setQmap(unsigned int check);
 	
-	vector <int> popw;                                    // The population in w
-
 private:
-	
+	const vector <COMP> &comp;
+	const vector <TRANS> &trans;
+		
 	const Details &details;
 	const DATA &data;
 	const MODEL &model;

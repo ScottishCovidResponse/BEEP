@@ -114,7 +114,7 @@ void Mcmc::run()
 		
 		timeprop += clock();
 
-		if(samp%10 == 0){ for(auto& cha : chain) cha.setinitialQmap(0);}  // Recalcualtes Qmapi (numerical)
+		if(samp%10 == 0){ for(auto& cha : chain) cha.initial.setQmap(0);}  // Recalcualtes Qmapi (numerical)
 	
 		timers.timewait -= clock();
 		

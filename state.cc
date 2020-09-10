@@ -6,7 +6,7 @@ using namespace std;
 #include "state.hh"
 
 
-State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : details(details), data(data), model(model), obsmodel(obsmodel)
+State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : comp(model.comp), trans(model.trans), details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	disc_spline.resize(model.spline.size());
 
@@ -107,9 +107,91 @@ void State::copy(const State &from)
 	comptrans = from.comptrans;
 }
 
-/// Checks the observation likelihood and prior are correct
+/// Checks quanties in the state are correct
 void State::check() const
 {
+	for(auto j = 0u; j < x.size(); j++){ // Checks order
+		auto i = x[j].ind, e = x[j].e;
+		if(i >= indev.size()) emsgEC("Chain",16);
+		if(e >= indev[i].size()) emsgEC("Chain",17);
+		if(j < x.size()-1){
+			if(indev[i][e].t > indev[x[j+1].ind][x[j+1].e].t) emsgEC("State",18);
+		}
+	}
+	
+	for(const auto& iev : indev){
+		auto emax = iev.size();
+		if(emax > 0){
+			auto c = 0u; 
+			double tt = 0;
+			for(const auto& ev : iev){
+				auto ttt = ev.t; if(ttt <= tt) emsgEC("Chain",19);
+				auto tra = ev.trans;
+				if(trans[tra].from != c) emsgEC("Chain",20);
+				c = trans[tra].to; tt = ttt;
+			}
+			if(comp[c].trans.size() != 0) emsgEC("Chain",21);
+			
+			for(auto timep = 0u; timep < model.ntimeperiod; timep++){
+				tt = model.timeperiod[timep].tend;
+				if(tt > iev[0].t && tt < iev[emax-1].t){
+					unsigned int e;
+					for(e = 0u; e < emax; e++) if(iev[e].t == tt) break;
+					if(timep <  model.ntimeperiod-1){
+						if(e == emax) emsgEC("Chain",22);
+					}
+					else{
+						if(e != emax) emsgEC("Chain",23);
+					}
+				}
+			}
+		}
+	}
+	
+	for(auto j = 0u; j < x.size(); j++){
+		auto i = x[j].ind, e = x[j].e;
+		if(i >= indev.size()) emsgEC("Chain",37);
+		if(e >= indev[i].size()) emsgEC("Chain",38);
+		if(j < x.size()-1){
+			if(indev[i][e].t > indev[x[j+1].ind][x[j+1].e].t) emsgEC("Chain",39);
+		}
+	}
+
+	vector < vector <int> > done;
+	done.resize(indev.size());
+	auto num = 0u;
+	for(auto i = 0u; i < indev.size(); i++){
+		if(indev[i].size() > 0){
+			num++;
+			done[i].resize(indev[i].size());
+			for(auto e = 0u; e < indev[i].size(); e++) done[i][e] = 0;
+		}
+	}
+	if(num != x.size()) emsgEC("Chain",40);
+
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		for(auto j = 0u; j < trev[sett].size(); j++){
+			auto i = trev[sett][j].ind, e = trev[sett][j].e;
+			if(e >= indev[i].size()) emsgEC("Chain",41);
+			
+			auto se = (unsigned int)(details.nsettime*indev[i][e].t/details.period); 
+			if(se != sett) emsgEC("Chain",42);
+			if(done[i][e] != 0) emsgEC("Chain",43);
+			done[i][e] = 1;
+		}
+	}
+	
+	for(auto i = 0u; i < indev.size(); i++){
+		for(auto e = 0u; e < indev[i].size(); e++){
+			if(indev[i][e].t < details.period){
+				if(done[i][e] != 1) emsgEC("Chain",44);
+			}
+			else{
+				if(done[i][e] != 0) emsgEC("Chain",45);
+			}
+		}
+	}
+	
 	double dd;
 	dd = L - obsmodel.Lobs(trev,indev); if(sqrt(dd*dd) > tiny) emsgEC("State",1);
 	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("State",2);
@@ -164,6 +246,76 @@ void State::addindev(unsigned int i)
 	}
 }
 
+/// For a given time sett, sets Qmap by using the Qmao from another state and the difference given by dQmap
+void State::setQmapUsingdQ(unsigned int sett, const State &state, const vector <double> &dQmap)
+{
+	for(auto v = 0u; v < data.narage; v++){
+		double val = state.Qmap[sett][v] + dQmap[v];
+		if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
+		if(val < 0) val = 0;	
+		Qmap[sett][v] = val;
+	}
+}
+
+/// Sets Qmap
+void State::setQmap(unsigned int check)
+{
+	vector <double> Qma(data.narage);
+	
+ 	for(auto& Qm : Qma) Qm = 0;
+
+	auto nage = data.nage;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		for(auto v = 0u; v < data.narage; v++){
+			auto val = Qma[v];
+			if(check == 1){
+				if(val < -tiny) emsgEC("Chain",2);
+				if(val < Qmap[sett][v]-tiny || val > Qmap[sett][v]+tiny) emsgEC("Chain",3);
+			}
+			if(val < 0){ val = 0; Qma[v] = 0;}	
+			
+			Qmap[sett][v] = val;
+		}
+		
+		for(const auto& tre : trev[sett]){
+			auto i = tre.ind;
+			FEV fev = indev[i][tre.e];
+
+			auto v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
+			auto dq = trans[fev.trans].DQ[fev.timep];
+			if(dq != UNSET){
+				for(auto loop = 0u; loop < 2; loop++){
+					auto q = model.DQ[dq].q[loop];
+					if(q != UNSET){
+						auto fac = model.DQ[dq].fac[loop];
+						
+						auto qt = data.Q[q].Qtenref;
+						auto kmax = data.genQ.Qten[qt].ntof[v];
+						auto& cref = data.genQ.Qten[qt].tof[v];
+						auto& valref = data.genQ.Qten[qt].valf[v];
+						if(nage == 1){
+							for(auto k = 0u; k < kmax; k++){
+								Qma[cref[k]*nage] += fac*valref[k][0];
+							}
+						}
+						else{
+							for(auto k = 0u; k < kmax; k++){
+								auto vv = cref[k]*nage;	
+								for(auto a = 0u; a < nage; a++){
+									Qma[vv] += fac*valref[k][a];
+									vv++;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+		
+		
 
 
 	

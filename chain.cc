@@ -149,13 +149,8 @@ Status Chain::mbp(const vector<double> &paramv)
 		
 		initial.setbetaphi(sett);	propose.setbetaphi(sett);
 	
-		for(auto v = 0u; v < data.narage; v++){
-			double val = initial.Qmap[sett][v] + dQmap[v];
-			if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
-			if(val < 0) val = 0;	
-			propose.Qmap[sett][v] = val;
-		}
-
+		propose.setQmapUsingdQ(sett,initial,dQmap);
+	
 		constructRtot(initial.Qmap[sett],propose.Qmap[sett]);
 	
 		double tmax = details.settime[sett+1];
@@ -215,61 +210,6 @@ Status Chain::mbp(const vector<double> &paramv)
 	return success;
 }
 
-/// Based on the the event sequence in initial.x, this sets initial.Qmap
-void Chain::setinitialQmap(unsigned int check)
-{
-	for(auto& dQma : dQmap) dQma = 0;
-
-	auto nage = data.nage;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		for(auto v = 0u; v < data.narage; v++){
-			auto val = dQmap[v];
-			if(check == 1){
-				if(val < -tiny) emsgEC("Chain",2);
-				if(val < initial.Qmap[sett][v]-tiny || val > initial.Qmap[sett][v]+tiny) emsgEC("Chain",3);
-			}
-			if(val < 0){ val = 0; dQmap[v] = 0;}	
-			
-			initial.Qmap[sett][v] = val;
-		}
-		
-		for(const auto& trev : initial.trev[sett]){
-			auto i = trev.ind;
-			FEV fev = initial.indev[i][trev.e];
-
-			auto v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
-			auto dq = trans[fev.trans].DQ[fev.timep];
-			if(dq != UNSET){
-				for(auto loop = 0u; loop < 2; loop++){
-					auto q = model.DQ[dq].q[loop];
-					if(q != UNSET){
-						auto fac = model.DQ[dq].fac[loop];
-						
-						auto qt = data.Q[q].Qtenref;
-						auto kmax = data.genQ.Qten[qt].ntof[v];
-						auto& cref = data.genQ.Qten[qt].tof[v];
-						auto& valref = data.genQ.Qten[qt].valf[v];
-						if(nage == 1){
-							for(auto k = 0u; k < kmax; k++){
-								dQmap[cref[k]*nage] += fac*valref[k][0];
-							}
-						}
-						else{
-							for(auto k = 0u; k < kmax; k++){
-								auto vv = cref[k]*nage;	
-								for(auto a = 0u; a < nage; a++){
-									dQmap[vv] += fac*valref[k][a];
-									vv++;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 /// Constructs the tree Rtot for fast Gilelspie sampling	
 void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp)
 {
@@ -317,18 +257,13 @@ void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)
 	timeprop -= clock();
 	timers.timembpprop -= clock();
 
-	for(auto sp = 0u; sp < model.spline.size(); sp++) initial.disc_spline[sp] = model.create_disc_spline(sp,initial.paramval);
-	initial.sus = model.create_sus(initial.paramval);
-	
-	model.create_comptrans(initial.comptrans,initial.paramval);
-	
 	vector <double> paramv = initial.paramval;
 	paramv[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
 
 	double al = 0; 
 	if(paramv[th] > model.param[th].min && paramv[th] < model.param[th].max){
 		if(mbp(paramv) == success){
-			propose.L = obsmodel.Lobs(propose.trev,propose.indev);
+			propose.setLPr();
 			propose.Pr = model.prior(propose.paramval);
 			
 			al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
@@ -651,44 +586,6 @@ void Chain::addinfc(unsigned int c, double t)
 /// Used for checking the code is running correctly
 void Chain::check(double t, unsigned int sett) const
 {
-	for(auto j = 0u; j < propose.x.size(); j++){ // Checks order
-		auto i = propose.x[j].ind, e = propose.x[j].e;
-		if(i >= propose.indev.size()) emsgEC("Chain",16);
-		if(e >= propose.indev[i].size()) emsgEC("Chain",17);
-		if(j < propose.x.size()-1){
-			if(propose.indev[i][e].t > propose.indev[propose.x[j+1].ind][propose.x[j+1].e].t) emsgEC("Chain",18);
-		}
-	}
-
-	for(const auto& indev : propose.indev){
-		auto emax = indev.size();
-		if(emax > 0){
-			auto c = 0u; 
-			double tt = 0;
-			for(const auto& ev : indev){
-				auto ttt = ev.t; if(ttt <= tt){ model.oe("here",indev); emsgEC("Chain",19);}
-				auto tra = ev.trans;
-				if(trans[tra].from != c) emsgEC("Chain",20);
-				c = trans[tra].to; tt = ttt;
-			}
-			if(comp[c].trans.size() != 0) emsgEC("Chain",21);
-			
-			for(auto timep = 0u; timep < model.ntimeperiod; timep++){
-				tt = model.timeperiod[timep].tend;
-				if(tt > indev[0].t && tt < indev[emax-1].t){
-					unsigned int e;
-					for(e = 0u; e < emax; e++) if(indev[e].t == tt) break;
-					if(timep <  model.ntimeperiod-1){
-						if(e == emax) emsgEC("Chain",22);
-					}
-					else{
-						if(e != emax) emsgEC("Chain",23);
-					}
-				}
-			}
-		}
-	}
-	
 	for(auto i = 0u; i < data.popsize; i++){    // Checks stat is correct
 	  auto w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
@@ -738,56 +635,6 @@ void Chain::check(double t, unsigned int sett) const
 			if(indmap[i][tra] != 0) emsgEC("Chain",36);
 		}
 	}
-}
-
-/// Checks that quantities used when adding and removing events are correctly updated
-void Chain::check_addrem() const
-{
-	for(auto j = 0u; j < initial.x.size(); j++){
-		auto i = initial.x[j].ind, e = initial.x[j].e;
-		if(i >= initial.indev.size()) emsgEC("Chain",37);
-		if(e >= initial.indev[i].size()) emsgEC("Chain",38);
-		if(j < initial.x.size()-1){
-			if(initial.indev[i][e].t > initial.indev[initial.x[j+1].ind][initial.x[j+1].e].t) emsgEC("Chain",39);
-		}
-	}
-
-	vector < vector <int> > done;
-	done.resize(initial.indev.size());
-	auto num = 0u;
-	for(auto i = 0u; i < initial.indev.size(); i++){
-		if(initial.indev[i].size() > 0){
-			num++;
-			done[i].resize(initial.indev[i].size());
-			for(auto e = 0u; e < initial.indev[i].size(); e++) done[i][e] = 0;
-		}
-	}
-	if(num != initial.x.size()) emsgEC("Chain",40);
-
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		for(auto j = 0u; j < initial.trev[sett].size(); j++){
-			auto i = initial.trev[sett][j].ind, e = initial.trev[sett][j].e;
-			if(e >= initial.indev[i].size()) emsgEC("Chain",41);
-			
-			auto se = (unsigned int)(details.nsettime*initial.indev[i][e].t/details.period); 
-			if(se != sett) emsgEC("Chain",42);
-			if(done[i][e] != 0) emsgEC("Chain",43);
-			done[i][e] = 1;
-		}
-	}
-	
-	for(auto i = 0u; i < initial.indev.size(); i++){
-		for(auto e = 0u; e < initial.indev[i].size(); e++){
-			if(initial.indev[i][e].t < details.period){
-				if(done[i][e] != 1) emsgEC("Chain",44);
-			}
-			else{
-				if(done[i][e] != 0) emsgEC("Chain",45);
-			}
-		}
-	}
-	
-	//setinitialQmap(1);
 }
 
 /// Calculates propose.Qmap based on the initial and final sequences
@@ -1321,7 +1168,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	
 	resetlists();
 
-	if(checkon == 1) check_addrem();
+	if(checkon == 1) initial.check();
 }
 
 /// Generates a sampler for adding infected individuals into the system
@@ -1381,7 +1228,7 @@ void Chain::initialise_from_particle(const Particle &part)
 	
 	sortx(initial.x,initial.indev);
 	
-	setinitialQmap(0);
+	initial.setQmap(0);
 
 	initial.EF = part.EF;
 	initial.Pr = model.prior(initial.paramval);
