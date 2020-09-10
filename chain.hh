@@ -59,7 +59,6 @@ private:
 	void infsampler(const vector< vector<double> > &Qmap);
 	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const;
 	void calcproposeQmap();
-	void betaphi_prop(unsigned int samp, unsigned int burnin);
 	void area_prop(unsigned int samp, unsigned int burnin);
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);

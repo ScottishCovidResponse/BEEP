@@ -526,5 +526,137 @@ void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> 
 }
 
 
+/// Makes proposal to change factors affecting transmission rates in areas
+void State::area_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+{	
+	timers.timecovarinit -= clock();
+
+	vector <double> lamareafac, lamphifac;
+	lamareafac.resize(data.nardp);
+	lamphifac.resize(data.nardp);
+	
+	vector < vector <double> >	mult, add;
+	mult.resize(data.narea);
+	add.resize(data.narea);
+	
+	vector <double> areasum;
+	areasum.resize(data.narea);
+	
+	for(auto c = 0u; c < data.narea; c++){
+		areasum[c] = 0;
+		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+			auto w = c*data.ndemocatpos + dp;
+			popw[w] = data.area[c].ind[dp].size();
+		}
+	}		
+	
+	auto L0 = 0.0, t = 0.0;
+	auto n = 0u;
+	for(auto sett = 0u; sett < details.nsettime; sett++){
+		auto phi = disc_spline[model.phispline_ref][sett]; 
+		auto beta = disc_spline[model.betaspline_ref][sett];
+	
+		auto tmax = details.settime[sett+1];
+		
+		for(auto c = 0u; c < data.narea; c++){
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				auto w = c*data.ndemocatpos + dp;
+				auto v = c*data.nage + data.democatpos[dp][0];
+				lamareafac[w] = sus[dp]*beta*Qmap[sett][v];
+				lamphifac[w] = sus[dp]*phi;
+				
+				areasum[c] -= lamareafac[w]*popw[w]*(tmax-t);
+				L0 -= lamphifac[w] *popw[w]*(tmax-t);
+			}
+		}
+		
+		while(n < x.size()){
+			auto i = x[n].ind;
+			FEV ev = indev[i][x[n].e];
+			auto tt = ev.t;
+			if(tt >= tmax) break;
+	
+			t = tt;
+			
+			auto c = data.ind[i].area;
+			auto w = c*data.ndemocatpos + data.ind[i].dp;
+			
+			mult[c].push_back(lamareafac[w]);
+			add[c].push_back(lamphifac[w]);
+		
+			popw[w]--;
+			n++;
+			
+ 			areasum[c] += lamareafac[w]*(tmax-t);
+			L0 += lamphifac[w]*(tmax-t);
+		}
+		
+		t = tmax;
+	} 
+	
+	timers.timecovarinit += clock();
+		
+	timers.timecovar -= clock();
+	
+	auto num = model.covar_param.size(); if(model.regioneffect == 1) num += data.nregion;
+	unsigned int loopmax = 12/num; if(loopmax == 0) loopmax = 1;
+	
+	for(auto loop = 0u; loop < loopmax; loop++){
+		for(auto th : model.covar_param){ 
+			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
+		}
+		
+		// ZZ This should be modified for when model.regioneffect == 2
+		if(model.regioneffect == 1){
+			for(auto th : model.regioneff_param){ 
+				if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
+			}
+	
+			auto th = model.sigma_param;
+			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
+		}
+	}
+	timers.timecovar += clock();
+}
+
+void State::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+{
+	auto valst = paramval[th];	
+	paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+
+	double al, Lev_prop=Lev, Pr_prop=Pr;
+	vector <double> areafac_prop;
+	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+	else{
+		areafac_prop = model.create_areafac(paramval); 
+	
+		Lev_prop = L0;
+		for(auto c = 0u; c < data.narea; c++){
+			auto fac = areafac_prop[c];
+			Lev_prop += areasum[c]*fac;
+			auto kmax = mult[c].size();
+			for(auto k = 0u; k < kmax; k++) Lev_prop += log(mult[c][k]*fac + add[c][k]);
+		}
+		if(std::isnan(Lev_prop)) emsgEC("Chain",53);
+	
+	  Pr_prop = model.prior(paramval);
+		al = exp(Pr_prop-Pr + Lev_prop-Lev);
+	}
+
+	ntrstand[th]++;
+	if(ran() < al){
+		Lev = Lev_prop;
+		Pr = Pr_prop;
+		areafac = areafac_prop;
+		
+		nacstand[th]++;
+		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+	}
+	else{
+		paramval[th] = valst;
+		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
+	}
+}
+
 
 	
