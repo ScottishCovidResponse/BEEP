@@ -6,7 +6,7 @@ using namespace std;
 #include "state.hh"
 #include "timers.hh"
 
-State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : comp(model.comp), trans(model.trans), details(details), data(data), model(model), obsmodel(obsmodel)
+State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : comp(model.comp), trans(model.trans), param(model.param), details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	disc_spline.resize(model.spline.size());
 
@@ -381,8 +381,29 @@ void State::initialise_from_particle(const Particle &part)
 	if(EF != obsmodel.Lobs(trev,indev)) emsg("Observation does not agree");
 }
 		
-/// STANDARD PROPOSALS
+/// STANDARD PARAMETER PROPOSALS
 
+/// This incorporates standard proposals which adds and removes events as well as changes parameters
+void State::standard_parameter_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, vector <unsigned int> &nacstand, float &sigmajump)
+{
+	timers.timestandard -= clock();
+	
+	timers.timembptemp -= clock();
+	setlikelihood();
+	timers.timembptemp += clock();
+	
+	timers.timeparam -= clock();
+	stand_param_betaphi_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
+	stand_param_area_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
+	stand_param_compparam_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
+	
+	if(model.regioneffect == 1) stand_param_fixarea_prop(samp,burnin,sigmajump);
+	timers.timeparam += clock();
+		
+	if(checkon == 1) checkLevPr();
+
+	timers.timestandard += clock();
+}
 
 struct LCONT {                
 	unsigned int w;       
@@ -392,7 +413,7 @@ struct LCONT {
 };
 
 /// Makes proposal to beta and phi
-void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+void State::stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
 {	
 	timers.timebetaphiinit -= clock();
 	
@@ -480,14 +501,14 @@ void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> 
 	timers.timebetaphi -= clock();
 	for(auto loop = 0u; loop < loopmax; loop++){
 		for(auto th : parampos){
-			if(model.param[th].min != model.param[th].max){
-				auto valst = paramval[th];	
+			if(param[th].min != param[th].max){
+				auto param_store = paramval[th];	
 				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
 
 				vector < vector <double> > disc_spline_prop;
 
 				double al, Lev_prop=Lev, Pr_prop=Pr;
-				if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
+				if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
 				else{
 					for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline_prop.push_back(model.create_disc_spline(sp,paramval));
 
@@ -516,7 +537,7 @@ void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> 
 					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 				}
 				else{
-					paramval[th] = valst;
+					paramval[th] = param_store;
 					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else  paramjumpstand[th] *= 0.995;}
 				}
 			}
@@ -527,7 +548,7 @@ void State::betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> 
 
 
 /// Makes proposal to change factors affecting transmission rates in areas
-void State::area_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+void State::stand_param_area_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
 {	
 	timers.timecovarinit -= clock();
 
@@ -598,65 +619,286 @@ void State::area_prop(unsigned int samp, unsigned int burnin, vector <float> &pa
 		
 	timers.timecovar -= clock();
 	
+	vector <unsigned int> thlist;
+	for(auto th : model.covar_param) thlist.push_back(th); 
+	
+	// ZZ This should be modified for when model.regioneffect == 2
+	if(model.regioneffect == 1){
+		for(auto th : model.regioneff_param) thlist.push_back(th); 
+		thlist.push_back(model.sigma_param);
+	}
+		
 	auto num = model.covar_param.size(); if(model.regioneffect == 1) num += data.nregion;
 	unsigned int loopmax = 12/num; if(loopmax == 0) loopmax = 1;
+	// ZZ This should be replaced by 	unsigned int loopmax = 12/thlist.size(); if(loopmax == 0) loopmax = 1;
 	
 	for(auto loop = 0u; loop < loopmax; loop++){
-		for(auto th : model.covar_param){ 
-			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
-		}
-		
-		// ZZ This should be modified for when model.regioneffect == 2
-		if(model.regioneffect == 1){
-			for(auto th : model.regioneff_param){ 
-				if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
+		for(auto th : thlist){
+			if(param[th].min != param[th].max){
+				auto param_store = paramval[th];	
+				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+
+				double al, Lev_prop=Lev, Pr_prop=Pr;
+				vector <double> areafac_prop;
+				if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
+				else{
+					areafac_prop = model.create_areafac(paramval); 
+				
+					Lev_prop = L0;
+					for(auto c = 0u; c < data.narea; c++){
+						auto fac = areafac_prop[c];
+						Lev_prop += areasum[c]*fac;
+						auto kmax = mult[c].size();
+						for(auto k = 0u; k < kmax; k++) Lev_prop += log(mult[c][k]*fac + add[c][k]);
+					}
+					if(std::isnan(Lev_prop)) emsgEC("Chain",53);
+				
+					Pr_prop = model.prior(paramval);
+					al = exp(Pr_prop-Pr + Lev_prop-Lev);
+				}
+
+				ntrstand[th]++;
+				if(ran() < al){
+					Lev = Lev_prop;
+					Pr = Pr_prop;
+					areafac = areafac_prop;
+					
+					nacstand[th]++;
+					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+				}
+				else{
+					paramval[th] = param_store;
+					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
+				}
 			}
-	
-			auto th = model.sigma_param;
-			if(model.param[th].min != model.param[th].max) area_prop2(samp,burnin,th,L0,areasum,mult,add,paramjumpstand,ntrstand,nacstand);
 		}
 	}
 	timers.timecovar += clock();
 }
 
-void State::area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
-{
-	auto valst = paramval[th];	
-	paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+/// Makes proposal to compartmental paramters
+void State::stand_param_compparam_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, vector <unsigned int> &nacstand)
+{	
+	timers.timecompparam -= clock();
 
-	double al, Lev_prop=Lev, Pr_prop=Pr;
-	vector <double> areafac_prop;
-	if(paramval[th] < model.param[th].min || paramval[th] > model.param[th].max) al = 0;
-	else{
-		areafac_prop = model.create_areafac(paramval); 
+	vector <TransInfo> transinfo(trans.size());
 	
-		Lev_prop = L0;
-		for(auto c = 0u; c < data.narea; c++){
-			auto fac = areafac_prop[c];
-			Lev_prop += areasum[c]*fac;
-			auto kmax = mult[c].size();
-			for(auto k = 0u; k < kmax; k++) Lev_prop += log(mult[c][k]*fac + add[c][k]);
+	for(auto tra = 0u; tra < trans.size(); tra++){
+		if(trans[tra].istimep == 0){
+			transinfo[tra].num.resize(data.nage); for(auto& num : transinfo[tra].num) num = 0;
 		}
-		if(std::isnan(Lev_prop)) emsgEC("Chain",53);
-	
-	  Pr_prop = model.prior(paramval);
-		al = exp(Pr_prop-Pr + Lev_prop-Lev);
+		transinfo[tra].numvisittot = 0; transinfo[tra].dtsum = 0; transinfo[tra].dtlist.clear();
 	}
 
-	ntrstand[th]++;
-	if(ran() < al){
-		Lev = Lev_prop;
-		Pr = Pr_prop;
-		areafac = areafac_prop;
+	for(const auto& xx : x){                  // Extracts values based on the event sequence
+		auto i = xx.ind;
+		auto dp = data.ind[i].dp;
+		auto a = data.democatpos[dp][0];
+				
+		auto t = 0.0;
+		for(const auto& ev : indev[i]){
+			auto tra = ev.trans;
+			if(trans[tra].istimep == 0){
+				transinfo[tra].num[a]++;
+	
+				auto dt = ev.t-t;
+				if(dt == 0) emsgEC("Model",10);
+				t += dt;
+				
+				transinfo[tra].numvisittot++;
+				switch(trans[tra].type){
+				case exp_dist: transinfo[tra].dtsum += dt; break;
+				case gamma_dist: case lognorm_dist: transinfo[tra].dtlist.push_back(dt); break;
+				case infection_dist: break;
+				default: emsgEC("model",99); break;
+				}
+			}
+		}
+	}
+
+	auto Li_dt = likelihood_dt(transinfo,paramval);
+	auto Li_prob = likelihood_prob(transinfo,comptrans);
+
+	for(auto th = 0u; th < param.size(); th++){
+		if((param[th].type == distval_paramtype || param[th].type == branchprob_paramtype) && param[th].min != param[th].max){
+			vector <double> param_store = paramval;	
 		
-		nacstand[th]++;
-		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+			paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+			
+			auto Lp_prob = Li_prob;
+			auto dL=0.0;
+			auto Pr_prop = Pr;
+			auto flag=0u;
+	
+			vector <CompTrans> comptransp;
+			if(paramval[th] < param[th].min || paramval[th] > param[th].max) flag = 0;
+			else{	
+				if(param[th].type == branchprob_paramtype){
+					if(model.create_comptrans(comptransp,paramval) == 1) Lp_prob = -large;
+					else Lp_prob = likelihood_prob(transinfo,comptransp);
+				}
+				else Lp_prob = Li_prob;
+				
+				dL = dlikelihood_dt(transinfo,param_store,paramval);
+				Pr_prop = model.prior(paramval);
+				
+				auto al = exp(dL+ Lp_prob - Li_prob + Pr_prop - Pr);
+				if(ran() < al) flag = 1; else flag = 0;
+			}
+			
+			ntrstand[th]++;
+			if(flag == 1){
+				Li_dt += dL;
+				Li_prob = Lp_prob;
+				Pr = Pr_prop;
+				if(param[th].type == branchprob_paramtype) comptrans = comptransp;
+				
+				nacstand[th]++;
+				if(samp < burnin) paramjumpstand[th] *= 1.01;
+			}
+			else{
+				paramval = param_store;
+				if(samp < burnin) paramjumpstand[th] *= 0.995;
+			}	
+		}
 	}
-	else{
-		paramval[th] = valst;
-		if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
+	
+	if(checkon == 1){
+		double dd;
+		dd = likelihood_dt(transinfo,paramval)-Li_dt; if(dd*dd > tiny) emsgEC("Model",13);
+		dd = likelihood_prob(transinfo,comptrans)-Li_prob; if(dd*dd > tiny) emsgEC("Model",14);
 	}
+	
+	timers.timecompparam += clock();
 }
 
-
+/// Calculates the likelihood relating to branching probabilities
+double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const
+{
+	auto L = 0.0;
+	for(auto c = 0u; c < comp.size(); c++){	
+		auto kmax = comp[c].trans.size();
+		if(kmax > 1){
+			for(auto k = 0u; k < kmax; k++){
+				for(auto a = 0u; a < data.nage; a++){
+					auto num = transinfo[comp[c].trans[k]].num[a];
+					if(num > 0) L += num*log(comptrans[c].prob[a][k]);
+				}
+			}
+		}
+	}
+	return L;
+}
+			
+/// Calculates the likelihood for the timings of the transitions
+double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const
+{
+	auto L = 0.0;
+	for(auto tra = 0u; tra < trans.size(); tra++){
+		switch(trans[tra].type){
+		case exp_dist:
+			{
+				auto r = 1.0/paramv[trans[tra].param_mean];
+				L += transinfo[tra].numvisittot*log(r) - r*transinfo[tra].dtsum;
+			}
+			break;
+		
+		case gamma_dist:
+			{
+				auto mean = paramv[trans[tra].param_mean], sd = paramv[trans[tra].param_cv]*mean;
+				for(auto dt : transinfo[tra].dtlist) L += gammaprob(dt,mean*mean/(sd*sd),mean/(sd*sd));
+			}
+			break;
+			
+		case lognorm_dist:
+			{
+				auto mean_ns = paramv[trans[tra].param_mean], cv_ns = paramv[trans[tra].param_cv];
+				auto sd = sqrt(log(1+cv_ns*cv_ns)), mean = log(mean_ns) - sd*sd/2;
+				for(auto dt : transinfo[tra].dtlist) L += lognormprob(dt,mean,sd*sd);
+			}
+			break;
+		}
+	}
 	
+	return L;
+}
+
+/// Calculates the change in likelihood for a given change in parameters
+double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const
+{
+	auto L = 0.0;
+	for(auto tra = 0u; tra < trans.size(); tra++){
+		switch(trans[tra].type){
+		case exp_dist:
+			{
+				auto ri = 1.0/paramvi[trans[tra].param_mean], rf = 1.0/paramvf[trans[tra].param_mean];
+				if(ri != rf){
+					L += transinfo[tra].numvisittot*log(rf) - rf*transinfo[tra].dtsum;
+					L -= transinfo[tra].numvisittot*log(ri) - ri*transinfo[tra].dtsum;
+				}
+			}
+			break;
+		
+		case gamma_dist:
+			{
+				auto meani = paramvi[trans[tra].param_mean], sdi = paramvi[trans[tra].param_cv]*meani;
+				auto meanf = paramvf[trans[tra].param_mean], sdf = paramvf[trans[tra].param_cv]*meanf;
+		
+				if(meani != meanf || sdi != sdf){
+					for(auto dt : transinfo[tra].dtlist){
+						L += gammaprob(dt,meanf*meanf/(sdf*sdf),meanf/(sdf*sdf));
+						L -= gammaprob(dt,meani*meani/(sdi*sdi),meani/(sdi*sdi));
+					}
+				}				
+			}
+			break;
+			
+		case lognorm_dist:
+			{
+				auto mean_nsi = paramvi[trans[tra].param_mean], cv_nsi = paramvi[trans[tra].param_cv];
+				auto mean_nsf = paramvf[trans[tra].param_mean], cv_nsf = paramvf[trans[tra].param_cv];
+				if(mean_nsi != mean_nsf || cv_nsi != cv_nsf){
+					auto sdi = sqrt(log(1+cv_nsi*cv_nsi)), meani = log(mean_nsi) - sdi*sdi/2;
+					auto sdf = sqrt(log(1+cv_nsf*cv_nsf)), meanf = log(mean_nsf) - sdf*sdf/2;
+		
+					for(auto dt : transinfo[tra].dtlist){
+						L += lognormprob(dt,meanf,sdf*sdf);
+						L -= lognormprob(dt,meani,sdi*sdi);
+					}
+				}
+			}
+			break;
+		}
+	}
+	
+	return L;
+}
+
+/// Makes fast proposals whilst fixing area factor 
+void State::stand_param_fixarea_prop(unsigned int samp, unsigned int burnin, float &sigmajump)
+{
+	const auto loopmax=10;
+	for(auto loop = 0u; loop < loopmax; loop++){	
+		auto th = model.sigma_param;
+		auto valst = paramval[th];
+		
+		paramval[th] += normal(0,sigmajump);
+		
+		auto Pr_prop = Pr;
+		double al;
+		if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
+		else{
+			Pr_prop = model.prior(paramval);
+			al = exp(Pr_prop - Pr);
+		}
+
+		if(ran() < al){
+			Pr = Pr_prop;
+			if(samp < burnin){ if(samp < 50) sigmajump *= 1.05; else sigmajump *= 1.01;}
+		}
+		else{
+			paramval[th] = valst;
+			if(samp < burnin){ if(samp < 50) sigmajump *= 0.975; else sigmajump *= 0.995;}
+		}
+	}
+}

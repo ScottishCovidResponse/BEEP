@@ -292,7 +292,10 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 				timers.timeabcprop += clock();
 			}
 			else{
-				chain.standard_prop(0,1,EFcut);
+					chain.initial.standard_parameter_prop(0,1,chain.paramjumpstand,chain.ntrstand,chain.ntrstand,chain.sigmajump);
+		
+				//chain.standard_prop(0,1,EFcut);
+				chain.addrem_prop(0,1,EFcut);
 			}
 		}
 			

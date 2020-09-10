@@ -830,6 +830,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv) const
 	return R0;
 }
 
+/*
 /// Makes proposal to compartmental paramters
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const
 {	
@@ -890,12 +891,12 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 				if(create_comptrans(comptransp,paramv) == 1) Lp_prob = -large;
 				else Lp_prob = likelihood_prob(transinfo,comptransp);
 			
-				/*
-				if(param[th].type == branchprob_paramtype){
-					if(settransprob(paramv) == 1) Lp_prob = -large;
-					else Lp_prob = likelihood_prob();
-				}
-				*/
+				
+				//if(param[th].type == branchprob_paramtype){
+			//		if(settransprob(paramv) == 1) Lp_prob = -large;
+			//		else Lp_prob = likelihood_prob();
+			//	}
+				
 				
 				dL = dlikelihood_dt(transinfo,paramst,paramv);
 				Prp = prior(paramv);
@@ -929,7 +930,8 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 	
 	timers.timecompparam += clock();
 }
-
+*/
+/*
 /// Calculates the likelihood relating to branching probabilities
 double MODEL::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const
 {
@@ -1031,6 +1033,7 @@ double MODEL::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 	
 	return L;
 }
+*/
 
 /// Outputs an event sequence (used for debugging)
 void MODEL::oe(const string& name, const vector <FEV> &ev) const 

@@ -629,72 +629,10 @@ void Chain::calcproposeQmap()
 	} 
 }
 
-/// This incorporates standard proposals which adds and removes events as well as changes parameters
-void Chain::standard_prop(unsigned int samp, unsigned int burnin, double EFcut)
-{
-	timers.timestandard -= clock();
-
-	if(checkon == 1){ double dd = initial.Pr - model.prior(initial.paramval); if(sqrt(dd*dd) > tiny){ emsgEC("Chainbegin",51);}}
-	
-	timers.timembptemp -= clock();
-	initial.setlikelihood();
-	timers.timembptemp += clock();
-	
-	timers.timeparam -= clock();
-	
-	initial.betaphi_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
-	initial.area_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
-	
-	model.compparam_prop(samp,burnin,initial.x,initial.indev,initial.paramval,initial.comptrans,paramjumpstand,ntrstand,nacstand,initial.Pr);
-
-	if(model.regioneffect == 1) fixarea_prop(samp,burnin);
-	timers.timeparam += clock();
-		
-	if(checkon == 1) initial.checkLevPr();
-
-	timers.timeaddrem -= clock();
-	addrem_prop(samp,burnin,EFcut);
-	timers.timeaddrem += clock();
-	
-	if(checkon == 1) initial.checkLevPr();
-
-	timers.timestandard += clock();
-	//paramval = initial.paramval;
-}
-
-/// Makes fast proposals whilst fixing area factor 
-void Chain::fixarea_prop(unsigned int samp, unsigned int burnin)
-{
-	const auto loopmax=10;
-	for(auto loop = 0u; loop < loopmax; loop++){	
-		auto th = model.sigma_param;
-		auto valst = initial.paramval[th];
-		
-		initial.paramval[th] += normal(0,sigmajump);
-		
-		propose.Pr = initial.Pr;
-		double al;
-		if(initial.paramval[th] < model.param[th].min || initial.paramval[th] > model.param[th].max) al = 0;
-		else{
-			propose.Pr = model.prior(initial.paramval);
-			al = exp(propose.Pr-initial.Pr);
-		}
-
-		if(ran() < al){
-			initial.Pr = propose.Pr;
-			if(samp < burnin){ if(samp < 50) sigmajump *= 1.05; else sigmajump *= 1.01;}
-		}
-		else{
-			initial.paramval[th] = valst;
-			if(samp < burnin){ if(samp < 50) sigmajump *= 0.975; else sigmajump *= 0.995;}
-		}
-	}
-}
-
 /// Adds and removes infectious individuals
 void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 {	
-	if(checkon == 1) initial.checkLevPr();
+	timers.timeaddrem -= clock();
 
 	auto probif = 0.0, probfi = 0.0;
 	
@@ -854,6 +792,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	resetlists();
 
 	if(checkon == 1) initial.check();
+	timers.timeaddrem += clock();
 }
 
 /// Generates a sampler for adding infected individuals into the system

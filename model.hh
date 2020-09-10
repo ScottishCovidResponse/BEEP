@@ -148,7 +148,7 @@ public:
 	bool dombpevents(const vector <double> &parami, const vector <double> &paramp) const;
 	void oe(const string& name, const vector <FEV> &ev) const;
 	double prior(const vector<double> &paramv) const;
-	void compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const;
+	
 	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
 	vector <double> create_sus(const vector<double> &paramv) const;  
 	vector <double> create_areafac(const vector<double> &paramv) const;
@@ -164,10 +164,7 @@ private:
 	unsigned int findparam(const string& name);
 	
 	void checkdata() const;
-	double likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const;
-	double likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const;
-	double dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
-
+	
 	const Details &details;
 	DATA &data;
 };

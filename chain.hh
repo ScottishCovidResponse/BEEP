@@ -20,11 +20,10 @@ public:
 	void sample_from_prior();
 	Status simulate(const vector <double>& paramv);
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
-	void standard_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
-	//void initialise_from_particle(const Particle &part);
 	void generate_particle(Particle &part) const;
 	Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
+	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	
 	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
 
@@ -62,7 +61,6 @@ private:
 	void area_prop(unsigned int samp, unsigned int burnin);
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
-	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	void proposal_init(const vector <double> &paramv);
 		
 	double Levi;         																	// The latent process likelihood
