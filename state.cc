@@ -22,8 +22,8 @@ State::State(const Details &details, const DATA &data, const MODEL &model, const
 	lam.resize(data.nsettardp);
 }
 
-/// Calculates the likelihood 
-double State::likelihood()
+/// Calculates the latent process likelihood 
+void State::setlikelihood()
 {		
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
@@ -32,7 +32,7 @@ double State::likelihood()
 		}
 	}		
 			
-	auto L = 0.0;
+	Lev = 0.0;
 	auto t = 0.0; 
 	auto n = 0u;
 	for(auto sett = 0u; sett < details.nsettime; sett++){
@@ -49,7 +49,7 @@ double State::likelihood()
 				lam[w] = sus[dp]*(fac*Qmap[sett][v] + phi);		
 				if(lam[w] < 0) emsgEC("Chain",46);
 				
-				L -= lam[w]*popw[w]*(tmax-t);
+				Lev -= lam[w]*popw[w]*(tmax-t);
 			}
 		}
 		
@@ -63,19 +63,27 @@ double State::likelihood()
 			
 			auto c = data.ind[i].area;
 			auto w = c*data.ndemocatpos + data.ind[i].dp;
-			L += log(lam[w]);
+			Lev += log(lam[w]);
 			if(std::isnan(L)) emsgEC("Chain",47);
 			popw[w]--;
 			n++;
 			
-			L += lam[w]*(tmax-t);
+			Lev += lam[w]*(tmax-t);
 		}
 		t = tmax;
 	} 
-	
-	return L;
 }
 
+/// Checks the likelihood and prior ire correct 
+void State::checkLevPr() 
+{
+	auto Levst = Lev;
+	setlikelihood();
+	double dd = Levst - Lev; if(dd*dd > tiny) emsgEC("State",49);
+	
+	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("State",51);
+}
+	
 /// Clears the state
 void State::clear()
 {
@@ -314,6 +322,64 @@ void State::setQmap(unsigned int check)
 	}
 }
 
+struct EVREFT {                
+	unsigned int ind;                   
+	unsigned int e;	              
+	double t;	 
+};
+
+static bool compEVREFT(EVREFT lhs, EVREFT rhs)
+{
+	return lhs.t < rhs.t;
+};
+
+/// Time orders x
+void State::sortx()
+{
+	vector <EVREFT> xt;
+	for(const auto& xx : x){
+		EVREFT evreft;
+		evreft.ind = xx.ind; evreft.e = xx.e;
+		if(indev[xx.ind].size() == 0) emsgEC("Chain",54);
+		
+		evreft.t = indev[xx.ind][xx.e].t;
+		xt.push_back(evreft);	
+	}
+	sort(xt.begin(),xt.end(),compEVREFT);
+
+	for(auto i = 0u; i < x.size(); i++){
+		x[i].ind = xt[i].ind;	x[i].e = xt[i].e;
+	}
+}
+
+/// Initialises the chain based on a particle (used for abcmbp)
+void State::initialise_from_particle(const Particle &part)
+{
+	paramval = part.paramval;
+	
+	for(const auto& xx : x) indev[xx.ind].clear();   // Removes the existing initial sequence 
+	x.clear();
+	
+	trev.clear(); trev.resize(details.nsettime); 
+	
+	vector <int> indlist;
+	for(const auto& ev : part.ev){
+		int i = ev.ind;
+		if(indev[i].size() == 0) indlist.push_back(i);
+		indev[i].push_back(ev);
+	}	
+	
+	for(auto i : indlist) addindev(i);
+	
+	sortx();
+	
+	setQmap(0);
+
+	EF = part.EF;
+	Pr = model.prior(paramval);
+	
+	if(EF != obsmodel.Lobs(trev,indev)) emsg("Observation does not agree");
+}
 		
 		
 

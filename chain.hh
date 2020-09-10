@@ -22,7 +22,7 @@ public:
 	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
 	void standard_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
-	void initialise_from_particle(const Particle &part);
+	//void initialise_from_particle(const Particle &part);
 	void generate_particle(Particle &part) const;
 	Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 	

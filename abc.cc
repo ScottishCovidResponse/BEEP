@@ -271,7 +271,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	if(mpi.core == 0) cout << jmax << "jmax\n";
 	
 	for(auto& pa : part){
-		chain.initialise_from_particle(pa);
+		chain.initial.initialise_from_particle(pa);
 
 		for(auto j = 0u; j < jmax; j++){
 			if(j%sampstep == 0){
@@ -430,7 +430,7 @@ double ABC::acceptance(double rate) const
 SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
 {
 	SAMPLE sample;
-	chain.initialise_from_particle(part);
+	chain.initial.initialise_from_particle(part);
 	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);;
 	sample.R0 = model.R0calc(chain.initial.paramval);
 	sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval); 

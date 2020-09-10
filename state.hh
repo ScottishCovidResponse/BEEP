@@ -39,7 +39,8 @@ public:
 	
 	vector <int> popw;                                    // The population in w
 
-	double likelihood();
+	void setlikelihood();
+	void checkLevPr();
 	void clear();
 	void copy(const State &from);
 	void check() const;
@@ -51,6 +52,8 @@ public:
 	void simmodel(unsigned int i, unsigned int c, double t);
 	void setQmapUsingdQ(unsigned int sett, const State &state, const vector <double> &dQmap);
 	void setQmap(unsigned int check);
+	void sortx();
+	void initialise_from_particle(const Particle &part);
 	
 private:
 	const vector <COMP> &comp;
