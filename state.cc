@@ -384,7 +384,7 @@ void State::initialise_from_particle(const Particle &part)
 /// STANDARD PARAMETER PROPOSALS
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
-void State::standard_parameter_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, vector <unsigned int> &nacstand, float &sigmajump)
+void State::standard_parameter_prop(Jump &jump)
 {
 	timers.timestandard -= clock();
 	
@@ -393,11 +393,10 @@ void State::standard_parameter_prop(unsigned int samp, unsigned int burnin, vect
 	timers.timembptemp += clock();
 	
 	timers.timeparam -= clock();
-	stand_param_betaphi_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
-	stand_param_area_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
-	stand_param_compparam_prop(samp,burnin,paramjumpstand,ntrstand,nacstand);
+	stand_param_betaphi_prop(jump);
+	stand_param_area_prop(jump);
+	stand_param_compparam_prop(jump);
 	
-	if(model.regioneffect == 1) stand_param_fixarea_prop(samp,burnin,sigmajump);
 	timers.timeparam += clock();
 		
 	if(checkon == 1) checkLevPr();
@@ -413,7 +412,7 @@ struct LCONT {
 };
 
 /// Makes proposal to beta and phi
-void State::stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+void State::stand_param_betaphi_prop(Jump &jump)
 {	
 	timers.timebetaphiinit -= clock();
 	
@@ -503,7 +502,7 @@ void State::stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vec
 		for(auto th : parampos){
 			if(param[th].min != param[th].max){
 				auto param_store = paramval[th];	
-				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+				paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
 
 				vector < vector <double> > disc_spline_prop;
 
@@ -528,17 +527,15 @@ void State::stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vec
 					al = exp(Pr_prop - Pr + Lev_prop-Lev);
 				}
 			
-				ntrstand[th]++;
 				if(ran() < al){
 					Pr = Pr_prop;
 					Lev = Lev_prop;
 					disc_spline = disc_spline_prop;
-					nacstand[th]++;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+					jump.stand_accept(th);
 				}
 				else{
 					paramval[th] = param_store;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else  paramjumpstand[th] *= 0.995;}
+					jump.stand_reject(th);					
 				}
 			}
 		}
@@ -546,9 +543,8 @@ void State::stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vec
 	timers.timebetaphi += clock();
 }
 
-
 /// Makes proposal to change factors affecting transmission rates in areas
-void State::stand_param_area_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand)
+void State::stand_param_area_prop(Jump &jump)
 {	
 	timers.timecovarinit -= clock();
 
@@ -636,7 +632,7 @@ void State::stand_param_area_prop(unsigned int samp, unsigned int burnin, vector
 		for(auto th : thlist){
 			if(param[th].min != param[th].max){
 				auto param_store = paramval[th];	
-				paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+				paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
 
 				double al, Lev_prop=Lev, Pr_prop=Pr;
 				vector <double> areafac_prop;
@@ -657,18 +653,20 @@ void State::stand_param_area_prop(unsigned int samp, unsigned int burnin, vector
 					al = exp(Pr_prop-Pr + Lev_prop-Lev);
 				}
 
-				ntrstand[th]++;
+				//ntrstand[th]++;
 				if(ran() < al){
 					Lev = Lev_prop;
 					Pr = Pr_prop;
 					areafac = areafac_prop;
 					
-					nacstand[th]++;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
+					jump.stand_accept(th);
+					//nacstand[th]++;
+					//if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 				}
 				else{
 					paramval[th] = param_store;
-					if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
+					jump.stand_reject(th);
+					//if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
 				}
 			}
 		}
@@ -677,7 +675,7 @@ void State::stand_param_area_prop(unsigned int samp, unsigned int burnin, vector
 }
 
 /// Makes proposal to compartmental paramters
-void State::stand_param_compparam_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, vector <unsigned int> &nacstand)
+void State::stand_param_compparam_prop(Jump &jump)
 {	
 	timers.timecompparam -= clock();
 
@@ -723,10 +721,10 @@ void State::stand_param_compparam_prop(unsigned int samp, unsigned int burnin, v
 		if((param[th].type == distval_paramtype || param[th].type == branchprob_paramtype) && param[th].min != param[th].max){
 			vector <double> param_store = paramval;	
 		
-			paramval[th] += normal(0,paramjumpstand[th]);               // Makes a change to a parameter
+			paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
 			
 			auto Lp_prob = Li_prob;
-			auto dL=0.0;
+			auto dL = 0.0;
 			auto Pr_prop = Pr;
 			auto flag=0u;
 	
@@ -746,19 +744,17 @@ void State::stand_param_compparam_prop(unsigned int samp, unsigned int burnin, v
 				if(ran() < al) flag = 1; else flag = 0;
 			}
 			
-			ntrstand[th]++;
 			if(flag == 1){
 				Li_dt += dL;
 				Li_prob = Lp_prob;
 				Pr = Pr_prop;
 				if(param[th].type == branchprob_paramtype) comptrans = comptransp;
 				
-				nacstand[th]++;
-				if(samp < burnin) paramjumpstand[th] *= 1.01;
+				jump.stand_accept(th);
 			}
 			else{
 				paramval = param_store;
-				if(samp < burnin) paramjumpstand[th] *= 0.995;
+				jump.stand_reject(th);
 			}	
 		}
 	}
@@ -872,33 +868,4 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 	}
 	
 	return L;
-}
-
-/// Makes fast proposals whilst fixing area factor 
-void State::stand_param_fixarea_prop(unsigned int samp, unsigned int burnin, float &sigmajump)
-{
-	const auto loopmax=10;
-	for(auto loop = 0u; loop < loopmax; loop++){	
-		auto th = model.sigma_param;
-		auto valst = paramval[th];
-		
-		paramval[th] += normal(0,sigmajump);
-		
-		auto Pr_prop = Pr;
-		double al;
-		if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
-		else{
-			Pr_prop = model.prior(paramval);
-			al = exp(Pr_prop - Pr);
-		}
-
-		if(ran() < al){
-			Pr = Pr_prop;
-			if(samp < burnin){ if(samp < 50) sigmajump *= 1.05; else sigmajump *= 1.01;}
-		}
-		else{
-			paramval[th] = valst;
-			if(samp < burnin){ if(samp < 50) sigmajump *= 0.975; else sigmajump *= 0.995;}
-		}
-	}
 }

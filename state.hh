@@ -8,6 +8,7 @@ using namespace std;
 #include "model.hh"
 #include "obsmodel.hh"
 #include "consts.hh"
+#include "jump.hh"
 
 class State
 {
@@ -54,18 +55,12 @@ public:
 	void setQmap(unsigned int check);
 	void sortx();
 	void initialise_from_particle(const Particle &part);
-	
-	// These function make up the "standard" proposal
-	void standard_parameter_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand, float &sigmajump);
-	void stand_param_betaphi_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand);
-	
-	void stand_param_area_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, 	vector <unsigned int> &nacstand);
-	
-	void stand_param_compparam_prop(unsigned int samp, unsigned int burnin, vector <float> &paramjumpstand, vector <unsigned int> &ntrstand, vector <unsigned int> &nacstand);
-	
-	void stand_param_fixarea_prop(unsigned int samp, unsigned int burnin, float &sigmajump);
+	void standard_parameter_prop(Jump &jump);
 	
 private:
+	void stand_param_betaphi_prop(Jump &jump);	   // These function make up the "standard" proposal
+	void stand_param_area_prop(Jump &jump);
+	void stand_param_compparam_prop(Jump &jump);
 	double likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const;
 	double likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const;
 	double dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;

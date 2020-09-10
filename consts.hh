@@ -7,7 +7,9 @@ enum Mode { sim, inf, multisim, abcsmc, abcmbp, combinetrace};                  
 	
 enum Dist { exp_dist, gamma_dist, lognorm_dist, infection_dist, timep_dist};              // Different time distributions
 
-enum ParamType { other_paramtype, distval_paramtype, branchprob_paramtype}; 
+enum Alter { fast, slow, none };                                                          // Different speeds of altering proposals  
+
+enum ParamType { other_paramtype, distval_paramtype, branchprob_paramtype};               // Different types of parameters
 	
 enum DataType { trans_data, pop_data, marg_data};                                         // Different types of data
 

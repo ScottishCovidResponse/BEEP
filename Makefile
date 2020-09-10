@@ -47,6 +47,7 @@ srcs := \
  generateQ.cc \
  gitversion.cc \
  inputs.cc \
+ jump.cc \
  main.cc \
  mcmc.cc \
  model.cc \

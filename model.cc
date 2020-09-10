@@ -830,6 +830,20 @@ vector <double> MODEL::R0calc(const vector<double> &paramv) const
 	return R0;
 }
 
+bool MODEL::inbounds(const vector <double> &paramv) const
+{
+	for(auto th = 0u; th < paramv.size(); th++){
+		if(inbounds(paramv[th],th) == false) return false;
+	}	
+	return true;
+}
+
+bool MODEL::inbounds(double val, unsigned int th) const
+{
+	if(val >= param[th].min && val <= param[th].max) return true;
+	return false;
+}
+
 /*
 /// Makes proposal to compartmental paramters
 void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const

@@ -44,8 +44,8 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 	
 	sample_from_prior();
 	
-	proposal_init(propose.paramval);
-
+	jump.init(propose.paramval);
+	
 	popw.resize(data.nardp);                                        // Used for event based changes
 	lam.resize(data.nsettardp); lamsum.resize(data.nsettardp);
 	
@@ -55,6 +55,13 @@ Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const
 	initial.setLPr();
 }
 
+/// Performs a "standard" set of proposals
+void Chain::standard_prop(double EFcut) 
+{
+	initial.standard_parameter_prop(jump);
+	stand_event_prop(EFcut);
+}
+		
 /// Randomly samples from prior and generates an event sequence
 void Chain::sample_from_prior()
 {
@@ -66,45 +73,43 @@ void Chain::sample_from_prior()
 	if(loop == loopmax) emsg("After '"+to_string(loopmax)+"' random simulations, it was not possible to find an initial state with the number of infected individuals below the threshold 'infmax' specified in the input TOML file.");
 }
 
-/// Simulates an event sequence given a parameter set (returns 1 if it is found not to be possible)
-Status Chain::simulate(const vector <double>& paramv)
+/// Performs a MBP on parameter 'th'
+void Chain::mbp_proposal(unsigned int th)  
 {
-	vector <double> zero(paramv.size());
-	for(auto& pval : zero) pval = 0;
-	
-	initial.setparam(zero);
-	
-	if(mbp(paramv) == fail) return fail;
-	
-	return success;
-}
+	//timeprop -= clock();
+	timers.timembpprop -= clock();
 
-void Chain::proposal_init(const vector <double> &paramv)
-{
-	auto nparam = model.param.size();
-	paramjump.resize(nparam); ntr.resize(nparam); nac.resize(nparam);         // Initialises proposal and diagnostic information
-	paramjumpstand.resize(nparam); ntrstand.resize(nparam); nacstand.resize(nparam);
-	for(auto th = 0u; th < nparam; th++){
-		paramjump[th] = paramv[th]/2; if(paramjump[th] == 0) paramjump[th] = 0.1;
-		ntr[th] = 0; nac[th] = 0;
+	vector <double> paramv = jump.mbp_prop(initial.paramval,th);
+
+	double al = 0; 
+	if(mbp(paramv) == success){
+		propose.setLPr();
 		
-		paramjumpstand[th] = paramv[th]/10; if(paramjumpstand[th] == 0) paramjumpstand[th] = 0.1;
-		ntrstand[th] = 0; nacstand[th] = 0;
+		al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
+		if(checkon == 1) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
 	}
+
+	if(ran() < al){
+		initial.copy(propose);
+		jump.mbp_accept(th);
+	}
+	else{
+		jump.mbp_reject(th);
+	}
+
+	if(checkon == 1) initial.check();
 	
-	sigmajump = 0.01;
-		
-	timeprop = 0;
-	
-	numaddrem = 20;
-	ntr_addrem = 0; nac_addrem = 0;
+	timers.timembpprop += clock();
+	//timeprop += clock();	
 }
 
 /// Performs a MBP
 Status Chain::mbp(const vector<double> &paramv)
 {
 	timers.timembpinit -= clock();
-
+	
+	if(model.inbounds(paramv) == false) return fail;
+		
 	if(propose.setparam(paramv) == fail) return fail;
 	
 	bool doev = model.dombpevents(initial.paramval,propose.paramval);
@@ -192,6 +197,19 @@ Status Chain::mbp(const vector<double> &paramv)
 	return success;
 }
 
+/// Simulates an event sequence given a parameter set (returns 1 if it is found not to be possible)
+Status Chain::simulate(const vector <double>& paramv)
+{
+	vector <double> zero(paramv.size());
+	for(auto& pval : zero) pval = 0;
+	
+	initial.setparam(zero);
+	
+	if(mbp(paramv) == fail) return fail;
+	
+	return success;
+}
+
 /// Constructs the tree Rtot for fast Gilelspie sampling	
 void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp)
 {
@@ -233,41 +251,6 @@ void Chain::constructRtot(const vector <double> &Qmi, const vector <double> &Qmp
 	timers.timembpconRtot += clock();
 }
 	
-/// Performs a MBP on parameter 'th'
-void Chain::proposal(unsigned int th, unsigned int samp, unsigned int burnin)  
-{
-	timeprop -= clock();
-	timers.timembpprop -= clock();
-
-	vector <double> paramv = initial.paramval;
-	paramv[th] += normal(0,paramjump[th]);               // Makes a change to a parameter
-
-	double al = 0; 
-	if(paramv[th] > model.param[th].min && paramv[th] < model.param[th].max){
-		if(mbp(paramv) == success){
-			propose.setLPr();
-			
-			al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
-			if(checkon == 1) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
-		}
-	}
-	
-	ntr[th]++;
-	if(ran() < al){
-		initial.copy(propose);
-		nac[th]++;
-		if(samp < burnin){ if(samp < 50) paramjump[th] *= 2; else paramjump[th] *= 1.1;}
-	}
-	else{
-		if(samp < burnin){ if(samp < 50) paramjump[th] *= 0.5; paramjump[th] *= 0.95;}
-	}
-
-	if(checkon == 1) initial.check();
-	
-	timers.timembpprop += clock();
-	timeprop += clock();	
-}
-
 /// Sets up lists for use with MBPs
 void Chain::setuplists()
 {	
@@ -630,7 +613,7 @@ void Chain::calcproposeQmap()
 }
 
 /// Adds and removes infectious individuals
-void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
+void Chain::stand_event_prop(double EFcut)
 {	
 	timers.timeaddrem -= clock();
 
@@ -648,7 +631,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		infsampler(initial.Qmap);
 		timers.timembptemp2 += clock();
 		
-		for(auto j = 0u; j < numaddrem; j++){
+		for(auto j = 0u; j < jump.naddrem; j++){
 			if(propose.x.size() >= model.infmax){ resetlists(); return;}
 			
 			auto sumtot = lamsum[data.nsettardp-1]; if(sumtot == 0) emsgEC("Chain",56);
@@ -700,7 +683,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	}
 	else{    // Removes individuals
 		vector <int> kst;
-		for(auto j = 0u; j < numaddrem; j++){
+		for(auto j = 0u; j < jump.naddrem; j++){
 			if(propose.x.size() == 0){ resetlists(); return;}
 			
 			auto l = int(ran()*propose.x.size());
@@ -754,6 +737,7 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	
 	timers.timembptemp4 -= clock();
 	propose.setlikelihood();
+	
 	double al;
 	if(details.mode == abcmbp){
 		propose.EF = obsmodel.Lobs(propose.trev,propose.indev);
@@ -768,7 +752,6 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 	}
 	timers.timembptemp4 += clock();
 	
-	ntr_addrem++;
 	if(ran() < al){
 		initial.Lev = propose.Lev;
 		if(details.mode == abcmbp) initial.EF = propose.EF;
@@ -779,14 +762,12 @@ void Chain::addrem_prop(unsigned int samp, unsigned int burnin, double EFcut)
 		
 		for(const auto& x : initial.x) initial.indev[x.ind].clear();
 		for(const auto& x : propose.x) initial.indev[x.ind] = propose.indev[x.ind];
-		//initial.indev = propose.indev;
 		
 		initial.x = propose.x;
-		nac_addrem++;
-		if(samp < burnin) numaddrem *= 1.05;
+		jump.standev_accept();
 	}
 	else{
-		if(samp < burnin){ numaddrem *= 0.95; if(numaddrem < 1) numaddrem = 1;}
+		jump.standev_reject();
 	}
 	
 	resetlists();

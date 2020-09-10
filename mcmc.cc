@@ -79,21 +79,20 @@ void Mcmc::run()
 
 	for(auto samp = 0u; samp < nsamp; samp++){	
 		if(mpi.core == 0 && samp%1 == 0) cout << " Sample: " << samp << " / " << nsamp << endl; 
-	
+		
+		for(auto& cha : chain) cha.jump.setburnin(samp,burnin);
+			
 		model_evidence.set_invT(samp,chain);
 		
 		long time = clock();
-		for(auto& cha : chain){
-			cha.initial.standard_parameter_prop(samp,burnin,cha.paramjumpstand,cha.ntrstand,cha.nacstand,cha.sigmajump);
-			cha.addrem_prop(samp,burnin);
-		}
+		for(auto& cha : chain) cha.standard_prop();
 		
 		timeprop -= clock();
 		switch(propsmethod){
 		case proposalsmethod::allchainsallparams:
 			for(auto& cha : chain){
 				for(auto th = 0u; th < model.param.size(); th++){
-					if(model.param[th].min != model.param[th].max){ cha.proposal(th,samp,burnin); ntimeprop++;}
+					if(model.param[th].min != model.param[th].max){ cha.mbp_proposal(th); ntimeprop++;}
 				}
 			}
 			break;
@@ -102,7 +101,7 @@ void Mcmc::run()
 			for(auto lo = 0u; lo < 10; lo++){
 				auto p = int(ran()*nchain);
 				auto th = (unsigned int)(ran()*model.param.size());
-				if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
+				if(model.param[th].min != model.param[th].max){ chain[p].mbp_proposal(th); ntimeprop++;}
 			}
 			break;
 			
@@ -110,7 +109,7 @@ void Mcmc::run()
 			do{                         // Does proposals for timeloop seconds (on average 20 proposals)
 				auto p = int(ran()*nchain);
 				auto th = int(ran()*model.param.size());
-				if(model.param[th].min != model.param[th].max){ chain[p].proposal(th,samp,burnin); ntimeprop++;}
+				if(model.param[th].min != model.param[th].max){ chain[p].mbp_proposal(th); ntimeprop++;}
 			}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
 			break;
 		}
@@ -171,16 +170,16 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 	vector <double> invT(nchain), invTtot(nchaintot);		
 	vector <unsigned int> ch(nchain), chtot(nchaintot);
 	vector <long> timeprop(nchain), timeproptot(nchaintot);
-	vector <unsigned int> ntr(nchainparam), ntrtot(nparamtot);
-	vector <unsigned int> nac(nchainparam), nactot(nparamtot);
-	vector <float> paramjump(nchainparam), paramjumptot(nparamtot);
-	vector <unsigned int> ntrstand(nchainparam), ntrstandtot(nparamtot);
-	vector <unsigned int> nacstand(nchainparam), nacstandtot(nparamtot);
-	vector <float> paramjumpstand(nchainparam), paramjumpstandtot(nparamtot);
+	vector <unsigned int> jump_mbp_ntr(nchainparam), jump_mbp_ntrtot(nparamtot);
+	vector <unsigned int> jump_mbp_nac(nchainparam), jump_mbp_nactot(nparamtot);
+	vector <float> jump_mbp(nchainparam), jump_mbptot(nparamtot);
+	vector <unsigned int> jump_stand_ntr(nchainparam), jump_stand_ntrtot(nparamtot);
+	vector <unsigned int> jump_stand_nac(nchainparam), jump_stand_nactot(nparamtot);
+	vector <float> jump_stand(nchainparam), jump_standtot(nparamtot);
 	vector <float> sigmajump(nchain), sigmajumptot(nchaintot);
-	vector <float> numaddrem(nchain), numaddremtot(nchaintot);
-	vector <unsigned int> ntr_addrem(nchain), ntr_addremtot(nchaintot);
-	vector <unsigned int> nac_addrem(nchain), nac_addremtot(nchaintot);
+	vector <float> jump_naddrem(nchain), jump_naddremtot(nchaintot);
+	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchaintot);
+	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchaintot);
 
 	timers.timeswap -= clock();
 		
@@ -188,36 +187,34 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 		L[p] = chain[p].initial.L; 
 		invT[p] = chain[p].invT; 
 		ch[p] = chain[p].ch;
-		timeprop[p] = chain[p].timeprop;
+		//timeprop[p] = chain[p].timeprop;
 		for(auto th = 0u; th < nparam; th++){
-			ntr[p*nparam+th] = chain[p].ntr[th];
-			nac[p*nparam+th] = chain[p].nac[th];
-			paramjump[p*nparam+th] = chain[p].paramjump[th];
+			jump_mbp_ntr[p*nparam+th] = chain[p].jump.mbp_ntr[th];
+			jump_mbp_nac[p*nparam+th] = chain[p].jump.mbp_nac[th];
+			jump_mbp[p*nparam+th] = chain[p].jump.mbp[th];
 			
-			ntrstand[p*nparam+th] = chain[p].ntrstand[th];
-			nacstand[p*nparam+th] = chain[p].nacstand[th];
-			paramjumpstand[p*nparam+th] = chain[p].paramjumpstand[th];
+			jump_stand_ntr[p*nparam+th] = chain[p].jump.stand_ntr[th];
+			jump_stand_nac[p*nparam+th] = chain[p].jump.stand_nac[th];
+			jump_stand[p*nparam+th] = chain[p].jump.stand[th];
 		}
-		sigmajump[p] = chain[p].sigmajump;
-		numaddrem[p] = chain[p].numaddrem;
-		ntr_addrem[p] = chain[p].ntr_addrem;
-		nac_addrem[p] = chain[p].nac_addrem;
+		jump_naddrem[p] = chain[p].jump.naddrem;
+		jump_standev_ntr[p] = chain[p].jump.standev_ntr;
+		jump_standev_nac[p] = chain[p].jump.standev_nac;
 	}
 		
 	MPI_Gather(&L[0],nchain,MPI_DOUBLE,&Ltot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(&invT[0],nchain,MPI_DOUBLE,&invTtot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Gather(&timeprop[0],nchain,MPI_LONG,&timeproptot[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntr[0],nchainparam,MPI_UNSIGNED,&ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nac[0],nchainparam,MPI_UNSIGNED,&nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&paramjump[0],nchainparam,MPI_FLOAT,&paramjumptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntrstand[0],nchainparam,MPI_UNSIGNED,&ntrstandtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nacstand[0],nchainparam,MPI_UNSIGNED,&nacstandtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&paramjumpstand[0],nchainparam,MPI_FLOAT,&paramjumpstandtot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&sigmajump[0],nchain,MPI_FLOAT,&sigmajumptot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&numaddrem[0],nchain,MPI_FLOAT,&numaddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntr_addrem[0],nchain,MPI_UNSIGNED,&ntr_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nac_addrem[0],nchain,MPI_UNSIGNED,&nac_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp_ntr[0],nchainparam,MPI_UNSIGNED,&jump_mbp_ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp_nac[0],nchainparam,MPI_UNSIGNED,&jump_mbp_nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp[0],nchainparam,MPI_FLOAT,&jump_mbptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand_ntr[0],nchainparam,MPI_UNSIGNED,&jump_stand_ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand_nac[0],nchainparam,MPI_UNSIGNED,&jump_stand_nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand[0],nchainparam,MPI_FLOAT,&jump_standtot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_naddrem[0],nchain,MPI_FLOAT,&jump_naddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_standev_ntr[0],nchain,MPI_UNSIGNED,&jump_standev_ntrtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_standev_nac[0],nchain,MPI_UNSIGNED,&jump_standev_nactot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){   // Swaps different chains
 		for(auto loop = 0u; loop < loopmax; loop++){
@@ -241,20 +238,19 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 					tempi = chtot[p1]; chtot[p1] = chtot[p2]; chtot[p2] = tempi;
 					templ = timeproptot[p1]; timeproptot[p1] = timeproptot[p2]; timeproptot[p2] = templ;
 					for(auto th = 0u; th < nparam; th++){
-						tempi = ntrtot[p1*nparam+th]; ntrtot[p1*nparam+th] = ntrtot[p2*nparam+th]; ntrtot[p2*nparam+th] = tempi;
-						tempi = nactot[p1*nparam+th]; nactot[p1*nparam+th] = nactot[p2*nparam+th]; nactot[p2*nparam+th] = tempi;
-						tempf = paramjumptot[p1*nparam+th]; paramjumptot[p1*nparam+th] = paramjumptot[p2*nparam+th];
-						paramjumptot[p2*nparam+th] = tempf;
+						tempi = jump_mbp_ntrtot[p1*nparam+th]; jump_mbp_ntrtot[p1*nparam+th] = jump_mbp_ntrtot[p2*nparam+th]; jump_mbp_ntrtot[p2*nparam+th] = tempi;
+						tempi = jump_mbp_nactot[p1*nparam+th]; jump_mbp_nactot[p1*nparam+th] = jump_mbp_nactot[p2*nparam+th]; jump_mbp_nactot[p2*nparam+th] = tempi;
+						tempf = jump_mbptot[p1*nparam+th]; jump_mbptot[p1*nparam+th] = jump_mbptot[p2*nparam+th];
+						jump_mbptot[p2*nparam+th] = tempf;
 						
-						tempi = ntrstandtot[p1*nparam+th]; ntrstandtot[p1*nparam+th] = ntrstandtot[p2*nparam+th]; ntrstandtot[p2*nparam+th] = tempi;
-						tempi = nacstandtot[p1*nparam+th]; nacstandtot[p1*nparam+th] = nacstandtot[p2*nparam+th]; nacstandtot[p2*nparam+th] = tempi;
-						tempf = paramjumpstandtot[p1*nparam+th]; paramjumpstandtot[p1*nparam+th] = paramjumpstandtot[p2*nparam+th];
-						paramjumpstandtot[p2*nparam+th] = tempf;
+						tempi = jump_stand_ntrtot[p1*nparam+th]; jump_stand_ntrtot[p1*nparam+th] = jump_stand_ntrtot[p2*nparam+th]; jump_stand_ntrtot[p2*nparam+th] = tempi;
+						tempi = jump_stand_nactot[p1*nparam+th]; jump_stand_nactot[p1*nparam+th] = jump_stand_nactot[p2*nparam+th]; jump_stand_nactot[p2*nparam+th] = tempi;
+						tempf = jump_standtot[p1*nparam+th]; jump_standtot[p1*nparam+th] = jump_standtot[p2*nparam+th];
+						jump_standtot[p2*nparam+th] = tempf;
 					}		
-					tempf = sigmajumptot[p1]; sigmajumptot[p1] = sigmajumptot[p2]; sigmajumptot[p2] = tempf; 
-					tempf = numaddremtot[p1]; numaddremtot[p1] = numaddremtot[p2]; numaddremtot[p2] = tempf;
-					tempi = ntr_addremtot[p1]; ntr_addremtot[p1] = ntr_addremtot[p2]; ntr_addremtot[p2] = tempi;
-					tempi = nac_addremtot[p1]; nac_addremtot[p1] = nac_addremtot[p2]; nac_addremtot[p2] = tempi;
+					tempf = jump_naddremtot[p1]; jump_naddremtot[p1] = jump_naddremtot[p2]; jump_naddremtot[p2] = tempf;
+					tempi = jump_standev_ntrtot[p1]; jump_standev_ntrtot[p1] = jump_standev_ntrtot[p2]; jump_standev_ntrtot[p2] = tempi;
+					tempi = jump_standev_nactot[p1]; jump_standev_nactot[p1] = jump_standev_nactot[p2]; jump_standev_nactot[p2] = tempi;
 				}
 			}
 		}
@@ -263,34 +259,33 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 	MPI_Scatter(&invTtot[0],nchain,MPI_DOUBLE,&invT[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Scatter(&chtot[0],nchain,MPI_UNSIGNED,&ch[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	MPI_Scatter(&timeproptot[0],nchain,MPI_LONG,&timeprop[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Scatter(&ntrtot[0],nchainparam,MPI_UNSIGNED,&ntr[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(&nactot[0],nchainparam,MPI_UNSIGNED,&nac[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(&paramjumptot[0],nchainparam,MPI_FLOAT,&paramjump[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(&ntrstandtot[0],nchainparam,MPI_UNSIGNED,&ntrstand[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(&nacstandtot[0],nchainparam,MPI_UNSIGNED,&nacstand[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(&paramjumpstandtot[0],nchainparam,MPI_FLOAT,&paramjumpstand[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_mbp_ntrtot[0],nchainparam,MPI_UNSIGNED,&jump_mbp_ntr[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_mbp_nactot[0],nchainparam,MPI_UNSIGNED,&jump_mbp_nac[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_mbptot[0],nchainparam,MPI_FLOAT,&jump_mbp[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_stand_ntrtot[0],nchainparam,MPI_UNSIGNED,&jump_stand_ntr[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_stand_nactot[0],nchainparam,MPI_UNSIGNED,&jump_stand_nac[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_standtot[0],nchainparam,MPI_FLOAT,&jump_stand[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
 	MPI_Scatter(&sigmajumptot[0],nchain,MPI_FLOAT,&sigmajump[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(&numaddremtot[0],nchain,MPI_FLOAT,&numaddrem[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Scatter(&ntr_addremtot[0],nchain,MPI_UNSIGNED,&ntr_addrem[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Scatter(&nac_addremtot[0],nchain,MPI_UNSIGNED,&nac_addrem[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_naddremtot[0],nchain,MPI_FLOAT,&jump_naddrem[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_standev_ntrtot[0],nchain,MPI_UNSIGNED,&jump_standev_ntr[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Scatter(&jump_standev_nactot[0],nchain,MPI_UNSIGNED,&jump_standev_nac[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	for(auto p = 0u; p < nchain; p++){ 
 		chain[p].invT = invT[p]; 
 		chain[p].ch = ch[p];
-		chain[p].timeprop = timeprop[p];
+		//chain[p].timeprop = timeprop[p];
 		for(auto th = 0u; th < nparam; th++){
-			chain[p].ntr[th] = ntr[p*nparam+th];
-			chain[p].nac[th] = nac[p*nparam+th];
-			chain[p].paramjump[th] = paramjump[p*nparam+th];
+			chain[p].jump.mbp_ntr[th] = jump_mbp_ntr[p*nparam+th];
+			chain[p].jump.mbp_nac[th] = jump_mbp_nac[p*nparam+th];
+			chain[p].jump.mbp[th] = jump_mbp[p*nparam+th];
 			
-			chain[p].ntrstand[th] = ntrstand[p*nparam+th];
-			chain[p].nacstand[th] = nacstand[p*nparam+th];
-			chain[p].paramjumpstand[th] = paramjumpstand[p*nparam+th];
+			chain[p].jump.stand_ntr[th] = jump_stand_ntr[p*nparam+th];
+			chain[p].jump.stand_nac[th] = jump_stand_nac[p*nparam+th];
+			chain[p].jump.stand[th] = jump_stand[p*nparam+th];
 		}
-		chain[p].sigmajump = sigmajump[p]; 
-		chain[p].numaddrem = numaddrem[p];
-		chain[p].ntr_addrem = ntr_addrem[p];
-		chain[p].nac_addrem = nac_addrem[p];
+		chain[p].jump.naddrem = jump_naddrem[p];
+		chain[p].jump.standev_ntr = jump_standev_ntr[p];
+		chain[p].jump.standev_nac = jump_standev_nac[p];
 	}
 	
 	timers.timeswap += clock();
@@ -434,47 +429,47 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 	unsigned int nparam = model.param.size(), nchaintot = mpi.ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
 	vector <double> L(nchain), Ltot(nchaintot);
 	vector <unsigned int> ch(nchain), chtot(nchaintot);
-	vector <long> timeprop(nchain), timeproptot(nchaintot);
-	vector <unsigned int> ntr(nchainparam), ntrtot(nparamtot);
-	vector <unsigned int> nac(nchainparam), nactot(nparamtot);
-	vector <float> paramjump(nchainparam), paramjumptot(nparamtot);
-	vector <unsigned int> ntrstand(nchainparam), ntrstandtot(nparamtot);
-	vector <unsigned int> nacstand(nchainparam), nacstandtot(nparamtot);
-	vector <float> paramjumpstand(nchainparam), paramjumpstandtot(nparamtot);
-	vector <float> numaddrem(nchain), numaddremtot(nchaintot);
-	vector <unsigned int> ntr_addrem(nchain), ntr_addremtot(nchaintot);
-	vector <unsigned int> nac_addrem(nchain), nac_addremtot(nchaintot);
+	//vector <long> timeprop(nchain), timeproptot(nchaintot);
+	vector <unsigned int> jump_mbp_ntr(nchainparam), jump_mbp_ntrtot(nparamtot);
+	vector <unsigned int> jump_mbp_nac(nchainparam), jump_mbp_nactot(nparamtot);
+	vector <float> jump_mbp(nchainparam), jump_mbptot(nparamtot);
+	vector <unsigned int> jump_stand_ntr(nchainparam), jump_stand_ntrtot(nparamtot);
+	vector <unsigned int> jump_stand_nac(nchainparam), jump_stand_nactot(nparamtot);
+	vector <float> jump_stand(nchainparam), jump_standtot(nparamtot);
+	vector <float> jump_naddrem(nchain), jump_naddremtot(nchaintot);
+	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchaintot);
+	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchaintot);
 
 	for(auto p = 0u; p < nchain; p++){ 
 		L[p] = chain[p].initial.L; 
 		ch[p] = chain[p].ch;
-		timeprop[p] = chain[p].timeprop;
+		//timeprop[p] = chain[p].timeprop;
 		for(auto th = 0u; th < nparam; th++){
-			ntr[p*nparam+th] = chain[p].ntr[th];
-			nac[p*nparam+th] = chain[p].nac[th];
-			paramjump[p*nparam+th] = chain[p].paramjump[th];
+			jump_mbp_ntr[p*nparam+th] = chain[p].jump.mbp_ntr[th];
+			jump_mbp_nac[p*nparam+th] = chain[p].jump.mbp_nac[th];
+			jump_mbp[p*nparam+th] = chain[p].jump.mbp[th];
 			
-			ntrstand[p*nparam+th] = chain[p].ntrstand[th];
-			nacstand[p*nparam+th] = chain[p].nacstand[th];
-			paramjumpstand[p*nparam+th] = chain[p].paramjumpstand[th];
+			jump_stand_ntr[p*nparam+th] = chain[p].jump.stand_ntr[th];
+			jump_stand_nac[p*nparam+th] = chain[p].jump.stand_nac[th];
+			jump_stand[p*nparam+th] = chain[p].jump.stand[th];
 		}
-		numaddrem[p] = chain[p].numaddrem;
-		ntr_addrem[p] = chain[p].ntr_addrem;
-		nac_addrem[p] = chain[p].nac_addrem;
+		jump_naddrem[p] = chain[p].jump.naddrem;
+		jump_standev_ntr[p] = chain[p].jump.standev_ntr;
+		jump_standev_nac[p] = chain[p].jump.standev_nac;
 	}
 		
 	MPI_Gather(&L[0],nchain,MPI_DOUBLE,&Ltot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&timeprop[0],nchain,MPI_LONG,&timeproptot[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntr[0],nchainparam,MPI_UNSIGNED,&ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nac[0],nchainparam,MPI_UNSIGNED,&nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&paramjump[0],nchainparam,MPI_FLOAT,&paramjumptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntrstand[0],nchainparam,MPI_UNSIGNED,&ntrstandtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nacstand[0],nchainparam,MPI_UNSIGNED,&nacstandtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&paramjumpstand[0],nchainparam,MPI_FLOAT,&paramjumpstandtot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&numaddrem[0],nchain,MPI_FLOAT,&numaddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
-	MPI_Gather(&ntr_addrem[0],nchain,MPI_UNSIGNED,&ntr_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Gather(&nac_addrem[0],nchain,MPI_UNSIGNED,&nac_addremtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	//MPI_Gather(&timeprop[0],nchain,MPI_LONG,&timeproptot[0],nchain,MPI_LONG,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp_ntr[0],nchainparam,MPI_UNSIGNED,&jump_mbp_ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp_nac[0],nchainparam,MPI_UNSIGNED,&jump_mbp_nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_mbp[0],nchainparam,MPI_FLOAT,&jump_mbptot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand_ntr[0],nchainparam,MPI_UNSIGNED,&jump_stand_ntrtot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand_nac[0],nchainparam,MPI_UNSIGNED,&jump_stand_nactot[0],nchainparam,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_stand[0],nchainparam,MPI_FLOAT,&jump_standtot[0],nchainparam,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_naddrem[0],nchain,MPI_FLOAT,&jump_naddremtot[0],nchain,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_standev_ntr[0],nchain,MPI_UNSIGNED,&jump_standev_ntrtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	MPI_Gather(&jump_standev_nac[0],nchain,MPI_UNSIGNED,&jump_standev_nactot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
 		stringstream ss; ss << details.outputdir << "/MCMCdiagnostic.txt";
@@ -490,16 +485,13 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 			
 			diag << "Li average: " <<  model_evidence.average_L(c) << "  ";
 			
-			if (false) {
-				double ntrsum = 0; for(auto th = 0u; th < nparam; th++) ntrsum += ntrtot[cc*nparam+th];
-			}
 			diag << endl;
 			
 			diag << "MBP Accept: " << endl;
 			for(auto th = 0u; th < nparam; th++){
 				diag << model.param[th].name << ": ";
-				if(ntrtot[cc*nparam+th] == 0) diag << "--- ";
-				else diag << double(nactot[cc*nparam+th])/ntrtot[cc*nparam+th] << " jump:" << paramjumptot[cc*nparam+th] << ", ";
+				if(jump_mbp_ntrtot[cc*nparam+th] == 0) diag << "--- ";
+				else diag << double(jump_mbp_nactot[cc*nparam+th])/jump_mbp_ntrtot[cc*nparam+th] << " jump:" << jump_mbptot[cc*nparam+th] << ", ";
 				diag << endl;
 			}
 			diag << endl;
@@ -507,15 +499,15 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 			diag << "Standard Accept: " << endl;
 			for(auto th = 0u; th < nparam; th++){
 				diag << model.param[th].name << ": ";
-				if(ntrstandtot[cc*nparam+th] == 0) diag << "--- ";
-				else diag << double(nacstandtot[cc*nparam+th])/ntrstandtot[cc*nparam+th] << " jump:" << paramjumpstandtot[cc*nparam+th] << ", ";
+				if(jump_stand_ntrtot[cc*nparam+th] == 0) diag << "--- ";
+				else diag << double(jump_stand_nactot[cc*nparam+th])/jump_stand_ntrtot[cc*nparam+th] << " jump:" << jump_standtot[cc*nparam+th] << ", ";
 				diag << endl;
 			}
 			diag << endl;
 	
 			diag << "Add / remove infected: " << endl;
-			if(ntr_addremtot[cc] == 0) diag << "--- "; 
-			else diag << double(nac_addremtot[cc])/ntr_addremtot[cc] << " num:" << numaddremtot[cc] << ", ";
+			if(jump_standev_ntrtot[cc] == 0) diag << "--- "; 
+			else diag << double(jump_standev_nactot[cc])/jump_standev_ntrtot[cc] << " num:" << jump_naddremtot[cc] << ", ";
 			diag << endl << endl;
 		}
 		

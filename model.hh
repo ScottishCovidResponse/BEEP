@@ -154,6 +154,8 @@ public:
 	vector <double> create_areafac(const vector<double> &paramv) const;
 	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv) const;
 	vector <CompProb> create_compprob(const vector <CompTrans> &comptrans) const;
+	bool inbounds(const vector <double> &paramv) const;
+	bool inbounds(double val, unsigned int th) const;
 	
 private:
 	void addQ();

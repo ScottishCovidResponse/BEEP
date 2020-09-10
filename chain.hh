@@ -10,6 +10,7 @@ using namespace std;
 #include "data.hh"
 #include "simulate.hh"
 #include "state.hh"
+#include "jump.hh"
 
 class Obsmodel;
 
@@ -17,34 +18,27 @@ class Chain                                             // Stores all the things
 {
 public:
 	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	const Obsmodel &obsmodel, unsigned int chstart);
+	
+	void standard_prop(double EFcut=0); 
+
 	void sample_from_prior();
 	Status simulate(const vector <double>& paramv);
-	void proposal(unsigned int th, unsigned int samp, unsigned int burnin);
+	void mbp_proposal(unsigned int th);
 	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
 	void generate_particle(Particle &part) const;
 	Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
-	void addrem_prop(unsigned int samp, unsigned int burnin, double EFcut=0);
+	void stand_event_prop(double EFcut);
 	
-	unsigned int ch;                                      // The number of the chain (0=posterior, nchaintot-1=prior)            
+	unsigned int ch;                                      // Indexes the number of the chain 
 
 	double invT;                                          // The inverse temperature
 
-	long timeprop;                                        // The time for the proposals
-	
-	vector <float> paramjump;                             // The size of jumps in parameter space
-	vector <unsigned int> ntr, nac;                       // The number of jumps tried and accepted
-
-	float numaddrem;                                      // The size of adding and removing events
-	unsigned int ntr_addrem, nac_addrem;    
-	
-	vector <float> paramjumpstand;                           // The size of jumps in parameter space (fixed event sequence)
-	vector <unsigned int> ntrstand, nacstand;                   // The number of jumps tried and accepted
-
-	float sigmajump;                                      // Used for jumping in sigma
+	Jump jump;
 	
 	State initial, propose;                               // The states in the initial and proposed states
 	
 private:
+	
 	Status mbp(const vector<double> &paramv);
 	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp);
 	unsigned int nextinfection();
@@ -61,7 +55,7 @@ private:
 	void area_prop(unsigned int samp, unsigned int burnin);
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
 	void fixarea_prop(unsigned int samp, unsigned int burnin);
-	void proposal_init(const vector <double> &paramv);
+	//void proposal_init(const vector <double> &paramv);
 		
 	double Levi;         																	// The latent process likelihood
 	
@@ -75,11 +69,11 @@ private:
 
 	vector <double> lam, lamsum;                          // Used when adding and removing individuals
 	
-	vector < vector <unsigned int> > indbothlist;         // List of individuals in area/demo states which are both susceptible 
+	vector < vector <unsigned int> > indbothlist;         // List of individuals which are both susceptible 
 	vector <unsigned int> nindbothlist;  
-	vector < vector <unsigned int> > indponlylist;        // List of individuals in area/demo states where proposed state is sus
+	vector < vector <unsigned int> > indponlylist;        // List of individuals where proposed state is sus
 	vector <unsigned int> nindponlylist;       
-	vector < vector <unsigned int> > indnotlist;          // List of individuals in area/demo states both 
+	vector < vector <unsigned int> > indnotlist;          // List of individuals not sus in either state
 	vector <unsigned int> nindnotlist;
 	vector <unsigned int> indlistref;
 	vector <unsigned int> stat;

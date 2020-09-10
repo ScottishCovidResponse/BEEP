@@ -57,7 +57,8 @@ ABC::ABC(const Details &details, const DATA &data, const MODEL &model, const POP
 void ABC::mbp()
 {
 	Chain chain(details,data,model,poptree,obsmodel,0);
-	
+	chain.jump.setburnin(0,1);
+	 
 	vector <Particle> part;					
 	part.resize(N);
 	
@@ -292,10 +293,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 				timers.timeabcprop += clock();
 			}
 			else{
-					chain.initial.standard_parameter_prop(0,1,chain.paramjumpstand,chain.ntrstand,chain.ntrstand,chain.sigmajump);
-		
-				//chain.standard_prop(0,1,EFcut);
-				chain.addrem_prop(0,1,EFcut);
+				chain.standard_prop(EFcut);
 			}
 		}
 			
