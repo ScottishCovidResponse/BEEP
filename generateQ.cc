@@ -14,7 +14,7 @@ using namespace std;
 #include "generateQ.hh"
 #include "utils.hh"
 
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 #include "datapipeline.hh"
 #include "array.hh"
 #endif
@@ -33,29 +33,29 @@ struct SPARSEMATRIX {                      // Loads a matrix
 	vector <double> val;                     // The elements of the matrix
 };
 
-TABLE loadtable(const string& file, const string& head);
-TABLE loadarray(const string& file, const string& dir);
-unsigned int findcol(const TABLE &tab, const string& name);
-vector <AREA> loadarea(const TABLE& tab);
-MATRIX matfromtable(const TABLE& tab, unsigned int N);
+Table loadtable(const string& file, const string& head);
+Table loadarray(const string& file, const string& dir);
+unsigned int findcol(const Table &tab, const string& name);
+vector <Area> loadarea(const Table& tab);
+MATRIX matfromtable(const Table& tab, unsigned int N);
 SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N);
 SPARSEMATRIX identity(unsigned int N);
 void plotmat(const MATRIX& mat, const string& title);
-void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, vector <AREA> &area);
-TABLE loadarrayfromdatapipeline(const string& file);
+void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GenerateQ &genQ, vector <Area> &area);
+Table loadarrayfromdatapipeline(const string& file);
 
 string strip(const string& line);
 
 DataPipeline *datapipeline;             // DataPipeline object
 
-void generateQ(unsigned int nage, const string& datadir, GENQ &genQ, vector <AREA> &area,
+void generateQ(unsigned int nage, const string& datadir, GenerateQ &genQ, vector <Area> &area,
 							 DataPipeline *dp)
 {
 	datapipeline = dp;
 
 	cout << "Generating Q tensors." << endl;
 	
-	TABLE tab;
+	Table tab;
 	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
 	MATRIX N_all = matfromtable(tab,nage);
 	
@@ -110,7 +110,7 @@ void plotmat(const MATRIX& mat, const string& title)
 }
 
 /// Loads age stratified population data for areas
-vector <AREA> loadarea(const TABLE& tab)
+vector <Area> loadarea(const Table& tab)
 {
 	vector <int> agecol;
 	switch(nage){
@@ -134,9 +134,9 @@ vector <AREA> loadarea(const TABLE& tab)
 	default: emsg("The number of age categories 'nage' is not recognised"); break;	
 	}
 	
-	vector <AREA> area;
+	vector <Area> area;
 	for(const auto& trow : tab.ele){
-		AREA are;
+		Area are;
 		are.agepop.resize(nage);
 		for(auto a = 0u; a < nage; a++) are.agepop[a] = atoi(trow[agecol[a]].c_str());
 		area.push_back(are);
@@ -146,7 +146,7 @@ vector <AREA> loadarea(const TABLE& tab)
 }
 
 /// Generates genQ 
-void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, vector <AREA> &area)
+void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GenerateQ &genQ, vector <Area> &area)
 {
 	auto nage = N.N, narea = M.N;
 
@@ -202,7 +202,7 @@ void generateQten(SPARSEMATRIX &M, MATRIX &N, const string& name, GENQ &genQ, ve
 	}
 	
 	auto q = genQ.Qten.size();
-	genQ.Qten.push_back(SPARSETENSOR ());
+	genQ.Qten.push_back(SparseTensor ());
 
 	genQ.Qten[q].name = name;
 	
@@ -240,7 +240,7 @@ SPARSEMATRIX identity(unsigned int N)
 }
 
 /// Creates a matrix from a table
-MATRIX matfromtable(const TABLE& tab, unsigned int N)
+MATRIX matfromtable(const Table& tab, unsigned int N)
 {
 	vector <unsigned int> div;
 	switch(N){
@@ -286,7 +286,7 @@ MATRIX matfromtable(const TABLE& tab, unsigned int N)
 SPARSEMATRIX loadsparsefromdatapipeline(const string& file, unsigned int N)
 {
 	SPARSEMATRIX mat;
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 	mat.N = N;	
 
 	Table dptable = datapipeline->read_table(file, "default");
@@ -371,11 +371,11 @@ SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N)
 }
 
 /// Loads a table from the data pipeline
-TABLE loadarrayfromdatapipeline(const string& file)
+Table loadarrayfromdatapipeline(const string& file)
 {
-	TABLE tab;
+	Table tab;
 
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 
 	Array<double> dparray = datapipeline->read_array(file,"default");
 	vector<int>   dims = dparray.size();
@@ -406,19 +406,19 @@ TABLE loadarrayfromdatapipeline(const string& file)
 
 
 /// Loads a table from a file
-TABLE loadarray(const string& file, const string& dir)
+Table loadarray(const string& file, const string& dir)
 {
 	if (stringhasending(file, ".txt")) return loadtable(dir+"/"+file, "nohead");
 	else return loadarrayfromdatapipeline(file);
 }
 
 /// Loads a table from a file
-TABLE loadtable(const string& file, const string& head)
+Table loadtable(const string& file, const string& head)
 {
 	ifstream in(file.c_str());                             // Loads information about areas
 	if(!in) emsg("Cannot open the file '"+file+"'");
 		
-	TABLE tab;
+	Table tab;
 	tab.file = file;
 		
 	if(head == "head"){
@@ -462,7 +462,7 @@ TABLE loadtable(const string& file, const string& head)
 }
 
 /// Finds a column in a table
-unsigned int findcol(const TABLE &tab, const string& name)
+unsigned int findcol(const Table &tab, const string& name)
 {
 	unsigned int c;
 	

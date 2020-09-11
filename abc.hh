@@ -4,19 +4,19 @@
 #include "data.hh"
 #include "model.hh"
 
-struct PARAMSAMP;
-class DATA;
-class MODEL;
-class POPTREE;
+struct ParamSample;
+class Data;
+class Model;
+class AreaTree;
 class Output;
-class Obsmodel;
+class ObservationModel;
 class Chain;
-struct SAMPLE;
+struct Sample;
 
 class ABC
 {
 public:	
-  ABC(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, const Output &output, const Obsmodel &obsmodel);	
+  ABC(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel);	
 	void smc();
 	void mbp();
 	
@@ -31,7 +31,7 @@ private:
 	void exchange_samples_mpi(Generation &gen);
 	double next_generation_mpi(vector<Particle> &part, unsigned int *partcopy);
 	void results_mpi(const vector <Generation> &generation, const vector <Particle> &part, Chain &chain) const;
-	SAMPLE get_sample(const Particle &part, Chain &chain) const;
+	Sample get_sample(const Particle &part, Chain &chain) const;
 	double acceptance(double rate) const;
 	void calculate_w(vector <Generation> &generation, double jump);
 	unsigned int Neff(vector <double> w);
@@ -55,12 +55,12 @@ private:
 	vector <double> jumpv;
 	
 	const Details &details;
-	const DATA &data;
-	const MODEL &model;
-	const POPTREE &poptree;
+	const Data &data;
+	const Model &model;
+	const AreaTree &areatree;
 	const Mpi &mpi;
 	const Output &output;
-	const Obsmodel &obsmodel;
+	const ObservationModel &obsmodel;
 };
 
 #endif

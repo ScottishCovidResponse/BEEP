@@ -19,7 +19,7 @@ using namespace std;
 #include "obsmodel.hh"
 
 /// Initialises a single mcmc chain
-Chain::Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Obsmodel &obsmodel, const Output &output, unsigned int _ch) : initial(details,data,model,obsmodel), propose(details,data,model,obsmodel), comp(model.comp), lev(poptree.lev), trans(model.trans), details(details), data(data), model(model), poptree(poptree), obsmodel(obsmodel), output(output)
+Chain::Chain(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const ObservationModel &obsmodel, const Output &output, unsigned int _ch) : initial(details,data,model,obsmodel), propose(details,data,model,obsmodel), comp(model.comp), lev(areatree.lev), trans(model.trans), details(details), data(data), model(model), areatree(areatree), obsmodel(obsmodel), output(output)
 {
 	ch = _ch;
 
@@ -48,7 +48,7 @@ void Chain::sample_state()
 {
 	unsigned int loop, loopmax = 100;
 	for(loop = 0; loop < loopmax; loop++){       // Keeps simulating until successful
-		if(simulate(model.priorsamp()) == success) break;
+		if(simulate(model.sample_from_prior()) == success) break;
 	}
 	
 	if(loop == loopmax){
@@ -182,7 +182,7 @@ void Chain::mbp_compartmental_transitions(unsigned int i)
 	
 	evlistp.clear();
 	
-	FEV ev = evlisti[0];
+	Event ev = evlisti[0];
 	auto tra = ev.trans;
 	auto ti = ev.t; 
 	auto timep = ev.timep;
@@ -285,7 +285,7 @@ void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector
 {
 	timers.infection_sampler -= clock();
 		
-	int l = poptree.level-1;
+	int l = areatree.level-1;
 	for(auto c = 0u; c < data.narea; c++){
 		auto wmin = c*data.ndemocatpos; 
 		auto wmax = wmin + data.ndemocatpos;
@@ -309,7 +309,7 @@ void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector
 		new_infection_rate[l][c] = sum;
 	}
 	
-	for(int l = poptree.level-2; l >= 0; l--){                                 
+	for(int l = areatree.level-2; l >= 0; l--){                                 
 		auto cmax = lev[l].node.size();
 		for(auto c = 0u; c < cmax; c++){
 			double sum = 0; for(const auto& ch : lev[l].node[c].child) sum += new_infection_rate[l+1][ch];
@@ -431,7 +431,7 @@ void Chain::change_susceptible_status(unsigned int i, unsigned int st, unsigned 
 		dval += dlam + npropose_only_susceptible_list[w]*propose.lam[w];
 		
 		if(dval != 0){
-			int l = poptree.level-1;
+			int l = areatree.level-1;
 			do{
 				new_infection_rate[l][c] += dval;
 				c = lev[l].node[c].parent; l--;
@@ -467,7 +467,7 @@ void Chain::reset_susceptible_lists()
 
 
 /// Updates dQmap based on events that occur in the initial and proposed states
-void Chain::update_dQmap(const vector <EVREF> &trei, const vector <EVREF> &trep)
+void Chain::update_dQmap(const vector <EventRef> &trei, const vector <EventRef> &trep)
 {
 	timers.timembpQmap -= clock();
 	
@@ -569,7 +569,7 @@ unsigned int Chain::area_of_next_infection()
 	double sumst[4];
 	
 	auto l = 0u, c = 0u;                            
-	auto lmax = poptree.level;
+	auto lmax = areatree.level;
 	while(l < lmax-1){
 		auto& node = lev[l].node[c];
 		
@@ -670,7 +670,7 @@ void Chain::check(double t, unsigned int sett) const
 		}
 	}
 	
-	auto l = poptree.level-1;
+	auto l = areatree.level-1;
 	for(auto c = 0u; c < data.narea; c++){
 		auto wmin = c*data.ndemocatpos, wmax = wmin + data.ndemocatpos;
 	
@@ -895,9 +895,9 @@ void Chain::infsampler(const vector< vector<double> > &Qmap)
 }
 
 /// Compresses the events to take up as little memory as possible (used for abcmbp)
-vector <FEV> Chain::event_compress(const vector < vector <FEV> > &indev) const
+vector <Event> Chain::event_compress(const vector < vector <Event> > &indev) const
 {
-	vector <FEV> store;
+	vector <Event> store;
 	for(const auto& inde : indev){
 		for(const auto& ev : inde) store.push_back(ev);
 	}
@@ -962,7 +962,7 @@ void Chain::initialise_variables()
 	dQbuflistv.clear(); dQbuflistq.clear();
 	
 	
-	new_infection_rate.resize(poptree.level); for(auto l = 0u; l < poptree.level; l++) new_infection_rate[l].resize(lev[l].node.size()); 
+	new_infection_rate.resize(areatree.level); for(auto l = 0u; l < areatree.level; l++) new_infection_rate[l].resize(lev[l].node.size()); 
 	N.resize(comp.size()); 
 	
 	popw.resize(data.nardp);                                        // Used for event based changes
@@ -980,6 +980,6 @@ void Chain::mbp_init()
 	for(auto v = 0u; v < data.narage; v++) dQmap[v] = 0;
 	
 	// Set to true if MBPs on compartmental transitions needed
-	do_mbp_event = model.dombpevents(initial.paramval,propose.paramval); 
+	do_mbp_event = model.do_mbp_events(initial.paramval,propose.paramval); 
 }	
 	

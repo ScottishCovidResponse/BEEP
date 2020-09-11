@@ -17,7 +17,7 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-Output::Output(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
+Output::Output(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	ensuredirectory(details.outputdir);
 }
@@ -99,7 +99,7 @@ void Output::L_trace_plot(unsigned int samp, const vector <double> &Litot)
 }
 
 /// Outputs a posterior graph
-void Output::posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsigned int r, unsigned int type) const
+void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsigned int r, unsigned int type) const
 {
 	auto nopsamp = opsamp.size();
 	auto opsampmin = nopsamp/4;
@@ -227,7 +227,7 @@ void Output::posterior_plot(const vector <SAMPLE> &opsamp, unsigned int d, unsig
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &opsamp) const
+void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &opsamp) const
 { 
 	auto nopsamp = opsamp.size();
 	auto opsampmin = nopsamp/4;
@@ -326,7 +326,7 @@ void Output::results(const vector <PARAMSAMP> &psamp, const vector <SAMPLE> &ops
   distout << "# Posterior probability distributions for model parameters." << endl;
 	distout << endl;
 
-	vector <DIST> paramdist(model.param.size()-1);
+	vector <Distribution> paramdist(model.param.size()-1);
 	for(auto p = 0u; p < model.param.size()-1; p++){
 		vector <double> vec; for(auto s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
 		paramdist[p] = getdist(vec);
@@ -397,7 +397,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 	
 	auto N = nmax-nmin; 
 		
-	vector <DIST> paramdist(paramname.size());
+	vector <Distribution> paramdist(paramname.size());
 		
 	vector <double> mu(M), vari(M);
 	for(auto p = 0u; p < paramname.size(); p++){
@@ -428,7 +428,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 			for(auto s = psampmin; s < npsamp; s++) vec.push_back(vs[p][s]);
 		}
 		paramdist[p] = getdist(vec);
-		STAT stat = getstat(vec);
+		Statistics stat = getstat(vec);
 				
 		paramout << paramname[p]  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << " " << GR << endl; 
 	}
@@ -453,10 +453,10 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 }
 	
 /// Outputs an event sample fev
-void Output::eventsample(const vector < vector <FEV> > &fev) const
+void Output::eventsample(const vector < vector <Event> > &fev) const
 {
 	auto nind = data.ind.size();
-	vector< vector <FEV> > indev;
+	vector< vector <Event> > indev;
 	indev.resize(nind);
 	for(auto& fe: fev){
 		for(auto& ev : fe) indev[ev.ind].push_back(ev);
@@ -469,7 +469,7 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 	/*
 	for(i = 0; i < nind; i++){
 		if(indev[i].size() > 0){
-			h = poptree.ind[i].houseref;
+			h = areatree.ind[i].houseref;
 			evsamp << i << "\t" << data.house[h].x << "\t" << data.house[h].y << "\t" << indev[i].size() << "\t";
 			for(e = 0; e < indev[i].size(); e++){
 				tr = model.trans[indev[i][e].trans];
@@ -483,7 +483,7 @@ void Output::eventsample(const vector < vector <FEV> > &fev) const
 }
 
 /// Outputs a population plot for event sequence xi
-void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, double period) const
+void Output::plot(string file, const vector < vector <Event> > &xi, double tmin, double period) const
 {
 	vector <int> N(model.comp.size());
 	for(auto& NN : N) NN = 0;
@@ -497,7 +497,7 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 	for(auto t = tmin; t < period; t += (period-tmin)/100){
 		while(td < details.fediv && xi[td][tdf].t < t){
 			auto tra = xi[td][tdf].trans;
-			TRANS tr = model.trans[tra];
+			Transition tr = model.trans[tra];
 			N[tr.from]--; N[tr.to]++;
 			
 			tdf++;
@@ -514,9 +514,9 @@ void Output::plot(string file, const vector < vector <FEV> > &xi, double tmin, d
 }
 
 /// Generates case data based on a simulation using the MBP algorithm
-void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, string dir) const
+void Output::simulateddata(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev, string dir) const
 {	
-	MEAS meas = obsmodel.getmeas(trev,indev);
+	Measurements meas = obsmodel.getmeas(trev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(auto td = 0u; td < data.transdata.size(); td++){
@@ -611,19 +611,19 @@ void Output::simulateddata(const vector < vector <EVREF> > &trev, const vector <
 	cout << endl;
 }
 
-bool PW_ord (PW p1,PW p2) { return (p1.val < p2.val); }
+bool WeightedPoint_ord (WeightedPoint p1,WeightedPoint p2) { return (p1.val < p2.val); }
 
 /// Gets mean and credible interval for a series of weighted samples
-STAT Output::getstat_with_w(vector <PW> vec) const  
+Statistics Output::getstat_with_w(vector <WeightedPoint> vec) const  
 {
-	STAT stat;
+	Statistics stat;
 	
 	double sum = 0, sumw = 0; 
 	for(auto v : vec){ sum += v.val*v.w; sumw += v.w;}
 	
 	stat.mean = to_string(sum/sumw); 
 	
-	sort(vec.begin(),vec.end(),PW_ord);
+	sort(vec.begin(),vec.end(),WeightedPoint_ord);
 
 	auto n = vec.size();
 	if(n >= 2){
@@ -654,9 +654,9 @@ STAT Output::getstat_with_w(vector <PW> vec) const
 }
 		
 /// Calculates diagnostic statistics
-STAT Output::getstat(const vector <double> &vec) const                       
+Statistics Output::getstat(const vector <double> &vec) const                       
 {
-	STAT stat;
+	Statistics stat;
 	
 	auto n = vec.size();
 	if(n == 0){
@@ -705,9 +705,9 @@ STAT Output::getstat(const vector <double> &vec) const
 
 
 /// Gets the probability distributions for a given set of samples
-DIST Output::getdist(const vector <double> &vec) const
+Distribution Output::getdist(const vector <double> &vec) const
 {
-	DIST dist;
+	Distribution dist;
 	
 	auto min = large, max = -large;	
 	for(auto v : vec){
@@ -756,7 +756,7 @@ void Output::plot_distribution(string file, const Generation &gen) const
   distout << "# Posterior probability distributions for model parameters." << endl;
 	distout << endl;
 
-	vector <DIST> paramdist;
+	vector <Distribution> paramdist;
 	paramdist.resize(model.param.size()-1);
 	
 	auto N = gen.param_samp.size();
@@ -809,9 +809,9 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 		genout << g << " " << (gen.time - timestart)/(60.0*CLOCKS_PER_SEC) << " " << gen.EFcut;
 		
 		for(auto th = 0u; th < nparam; th++){
-			vector <PW> vec;
+			vector <WeightedPoint> vec;
 			for(auto i = 0u; i < gen.param_samp.size(); i++){
-				PW pw;
+				WeightedPoint pw;
 				pw.val = gen.param_samp[i][th];
 				switch(details.mode){
 					case abcsmc: pw.w = gen.w[i]; break;
@@ -821,7 +821,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 				vec.push_back(pw);
 			}
 
-			STAT stat = getstat_with_w(vec);
+			Statistics stat = getstat_with_w(vec);
 			
 			genout << " " << stat.mean << " " << stat.CImin << " " << stat.CImax;
 		}

@@ -18,13 +18,13 @@ using namespace std;
 #include "details.hh"
 #include "inputs.hh"
 
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 #include "datapipeline.hh"
 #include "table.hh"
 #endif
 
 /// Initialises data
-DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) :
+Data::Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) :
 	datapipeline(dp), datadir(inputs.find_string("datadir","UNSET")),
 	compX(area), compY(area), details(details)
 {
@@ -52,7 +52,7 @@ DATA::DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPip
 }
 
 /// Outputs properties of data to the terminal
-void DATA::print_to_terminal() const
+void Data::print_to_terminal() const
 {
 	if(covar.size() > 0){
 		cout << "Area covariates: " << endl;
@@ -102,7 +102,7 @@ void DATA::print_to_terminal() const
 }
 
 /// Based to the different demographic categories, this calculates all the possible combinations
-void DATA::calc_democatpos()
+void Data::calc_democatpos()
 {
 	vector <unsigned int> count(ndemocat);       // Defines all the demographic states
 	for(auto& co : count) co = 0;
@@ -123,18 +123,18 @@ void DATA::calc_democatpos()
 }
 
 /// Loads the region data file
-void DATA::load_region_file(const Inputs &inputs)
+void Data::load_region_file(const Inputs &inputs)
 {
 	string file = inputs.find_string("regions","UNSET");
 	if(file == "UNSET") emsgroot("A 'regions' file must be specified");
 	
-	TABLE tab = loadtable(file);
+	Table tab = loadtable(file);
 	
 	auto namecol = findcol(tab,"name");
 	auto codecol = findcol(tab,"code");
 	
 	for(const auto& trow : tab.ele){
-		REGION reg;
+		DataRegion reg;
 		reg.name = trow[namecol];
 		reg.code = trow[codecol];
 		region.push_back(reg);
@@ -143,7 +143,7 @@ void DATA::load_region_file(const Inputs &inputs)
 }
 
 /// Reads in transition and area data
-void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
+void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 {
 	transdata = inputs.find_transdata(details);	                                          // Loads data
 	
@@ -158,7 +158,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	
 		string file = inputs.find_string("areas","UNSET");
 		if(file == "UNSET") emsgroot("A 'areas' file must be specified");
-		TABLE tab = loadtable(file);
+		Table tab = loadtable(file);
 		
 		// If onle one age group then combines all columns with "age" to generate an "all" column
 		if(nage == 1){
@@ -184,7 +184,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		}
 
 		for(const auto& trow : tab.ele){
-			AREA are;
+			Area are;
 			are.code = trow[codecol];
 			are.x = atof(trow[xcol].c_str());
 			are.y = atof(trow[ycol].c_str());
@@ -281,14 +281,11 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 				cout << endl;	
 			}
 		}
-		
-		//convertOAtoM(); emsg("done");
-		//convertRegion_M(); emsg("done");
 
 		if(details.mode != sim && details.mode != multisim){                                        // Loads transition data for inference
 			for(auto& tdata : transdata){
 				file = tdata.file; 
-				TABLE tab = loadtable(file);
+				Table tab = loadtable(file);
 				table_selectdates(tdata.start,tdata.units,tab,"trans");
 				
 				vector <unsigned int> rcol;
@@ -313,7 +310,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		if(details.mode != sim && details.mode != multisim){                                            // Loads population data for inference
 			for(auto& pdata : popdata){
 				file = pdata.file;
-				TABLE tab = loadtable(file);
+				Table tab = loadtable(file);
 				table_selectdates(pdata.start,pdata.units,tab,"pop");
 			
 				vector <unsigned int> rcol;
@@ -336,7 +333,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 		if(details.mode != sim && details.mode != multisim){                                        // Loads marginal data for inference
 			for(auto& mdata : margdata){
 				file = mdata.file;
-				TABLE tab = loadtable(file);
+				Table tab = loadtable(file);
 	
 				vector <unsigned int> rcol;
 				if(mdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
@@ -356,7 +353,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	}
 
 	if(mpi.ncore > 1) copydata(mpi.core);
-	
+		
 	vector <double> vec(nage);                                                           // Reads in Q tensors
 	for(auto& QQ : Q){
 		auto j = 0u; while(j < genQ.Qten.size() && genQ.Qten[j].name != QQ.name) j++;
@@ -373,7 +370,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			for(auto i = 0u; i < imax; i++){
 				area[c].ind[dp].push_back(ind.size());
 				
-				IND indi;
+				Individual indi;
 				indi.area = c;
 				indi.dp = dp;
 				ind.push_back(indi);
@@ -394,7 +391,7 @@ void DATA::read_data_files(const Inputs &inputs, const Mpi &mpi)
 }
 
 /// Gets a positive integer from a string
-unsigned int DATA::getint(const string& st, const string& file) const
+unsigned int Data::getint(const string& st, const string& file) const
 {
 	try {
 		return ::getint(st,threshold);
@@ -404,10 +401,10 @@ unsigned int DATA::getint(const string& st, const string& file) const
 }
 
 /// Loads a table from the data pipeline
-TABLE DATA::loadtablefromdatapipeline(string file) const
+Table Data::loadtablefromdatapipeline(string file) const
 {
-	TABLE tab;
-#ifdef USE_DATA_PIPELINE
+	Table tab;
+#ifdef USE_Data_PIPELINE
 	Table dptable = datapipeline->read_table(file,"default");
 
 	tab.file = filebasename(file);
@@ -441,7 +438,7 @@ TABLE DATA::loadtablefromdatapipeline(string file) const
 }
 
 /// Loads a table from a file
-TABLE DATA::loadtablefromfile(string file, string dir) const
+Table Data::loadtablefromfile(string file, string dir) const
 {
 	ifstream in;
 
@@ -463,7 +460,7 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
 	
 	cout << "Loaded table " << file << " from file " << used_file << endl;
 
-	TABLE tab;
+	Table tab;
 	tab.file = file;
 	
 	string line;
@@ -500,7 +497,7 @@ TABLE DATA::loadtablefromfile(string file, string dir) const
 }
 
 /// Loads a table from a file (if dir is specified then this directory is used
-TABLE DATA::loadtable(string file, string dir) const
+Table Data::loadtable(string file, string dir) const
 {
 	if (stringhasending(file, ".txt")) {
 		return loadtablefromfile(file, dir);
@@ -510,7 +507,7 @@ TABLE DATA::loadtable(string file, string dir) const
 }
 
 /// Creates a new column by adding together existing columns		
-void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const
+void Data::table_createcol(string head,vector <unsigned int> cols, Table &tab) const
 {
 	tab.heading.push_back(head);
 	for(auto& trow : tab.ele){
@@ -522,7 +519,7 @@ void DATA::table_createcol(string head,vector <unsigned int> cols, TABLE &tab) c
 }
 
 /// Selects dates as specified in the TOLM file
-void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const 
+void Data::table_selectdates(unsigned int t, unsigned int units, Table &tab, string type) const 
 {
 	auto row = 0u;
 	while(row < tab.nrow){
@@ -565,7 +562,7 @@ void DATA::table_selectdates(unsigned int t, unsigned int units, TABLE &tab, str
 }				
 
 /// Finds a column in a table
-unsigned int DATA::findcol(const TABLE &tab, string name) const
+unsigned int Data::findcol(const Table &tab, string name) const
 {
 	unsigned int c;
 	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
@@ -574,10 +571,10 @@ unsigned int DATA::findcol(const TABLE &tab, string name) const
 }		
 			
 /// Copies data from core zero to all the others
-void DATA::copydata(unsigned int core)
+void Data::copydata(unsigned int core)
 {
-	size_t si;
-	
+	unsigned int si;
+
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		packinit(0);
 		pack(nregion);
@@ -604,9 +601,9 @@ void DATA::copydata(unsigned int core)
 	}
 
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	if(core != 0){
-		packinit(si);
-	}
+
+	if(core != 0) packinit(si);
+
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
 	if(core != 0){
@@ -678,7 +675,7 @@ void DATA::copydata(unsigned int core)
 }
 
 /// Removes 'r' and quotations from a string
-string DATA::strip(string line) const 
+string Data::strip(string line) const 
 {
 	unsigned int len;
 	
@@ -692,6 +689,6 @@ string DATA::strip(string line) const
 	return line;
 }	
 
-void DATA::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
-void DATA::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
+void Data::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
+void Data::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
 

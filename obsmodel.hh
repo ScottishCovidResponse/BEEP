@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__OBSMODEL_HH
-#define BEEPMBP__OBSMODEL_HH
+#ifndef BEEPMBP__OBSModel_HH
+#define BEEPMBP__OBSModel_HH
 
 #include <iostream>
 #include <vector>
@@ -12,25 +12,25 @@
 using namespace std;
 
 #include "data.hh"
-#include "poptree.hh"
+#include "areatree.hh"
 
-class Obsmodel
+class ObservationModel
 {
 public:
-	Obsmodel(const Details &details, const DATA &data, const MODEL &model);
+	ObservationModel(const Details &details, const Data &data, const Model &model);
 
-	vector <unsigned int> getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
+	vector <unsigned int> getnumtrans(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
 
-	double Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const;
+	double Lobs(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const;
 
-	MEAS getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const ;
+	Measurements getmeas(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const ;
 
 private:
 	double singobs(unsigned int mean, unsigned int val) const;
 	
 	const Details &details;
-	const DATA &data;
-	const MODEL &model;
+	const Data &data;
+	const Model &model;
 };
 
 #endif

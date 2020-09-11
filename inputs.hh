@@ -9,16 +9,16 @@ using namespace std;
 
 #include "consts.hh"
 
-struct TRANSDATA;
-struct POPDATA;
-struct MARGDATA;
-struct DEMOCAT;
-struct COVAR;
-struct TIMEP;
-struct GENQ;
-struct QTENSOR;
-struct PRIORCOMP;
-struct COMP;
+struct TransitionData;
+struct PopulationData;
+struct MarginalData;
+struct DemographicCategory;
+struct Covariate;
+struct TimePeriod;
+struct GenerateQ;
+struct Qtensor;
+struct PriorComp;
+struct Compartment;
 class Details;
 class InputData;
 
@@ -35,20 +35,20 @@ public:
 	int find_int(const string &key, int def) const;
 	double find_double(const string &key, double def) const;
 	string find_string(const string &key, const string &def) const;	
-	vector <TRANSDATA> find_transdata(const Details &details) const;
-	vector <POPDATA> find_popdata(const Details &details) const;
-	vector <MARGDATA> find_margdata(const Details &details, const vector <DEMOCAT> &democat) const;
-	vector <DEMOCAT> find_democat(const Details &details) const;
-	vector <COVAR> find_covar(const Details &details) const;
-	vector <TIMEP> find_timeperiod(const Details &details) const;
-	void find_genQ(GENQ &genQ, const Details &details) const;
-	void find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details &details) const;
+	vector <TransitionData> find_transdata(const Details &details) const;
+	vector <PopulationData> find_popdata(const Details &details) const;
+	vector <MarginalData> find_margdata(const Details &details, const vector <DemographicCategory> &democat) const;
+	vector <DemographicCategory> find_democat(const Details &details) const;
+	vector <Covariate> find_covar(const Details &details) const;
+	vector <TimePeriod> find_timeperiod(const Details &details) const;
+	void find_genQ(GenerateQ &genQ, const Details &details) const;
+	void find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &timeperiod, const Details &details) const;
 	void find_param(vector <string> &name, vector <double> &val) const;
 	void find_prior(vector <string> &name, vector <double> &min, vector <double> &max) const;
 	void find_comps(vector <string> &name, vector <double> &infectivty) const;
 	void find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar,
                  	vector <int> &type, vector <string> &mean, vector <string> &cv) const;
-	vector <PRIORCOMP> find_priorcomps(const vector<COMP> &comp) const;
+	vector <PriorComp> find_priorcomps(const vector<Compartment> &comp) const;
 	void find_spline(const Details &details, string &name, vector <int> &time, vector <string> &param) const;
 
 	Mode mode() const;

@@ -6,18 +6,18 @@
 using namespace std;
 
 #include "model.hh"
-#include "poptree.hh"
+#include "areatree.hh"
 #include "data.hh"
 #include "simulate.hh"
 #include "state.hh"
 #include "jump.hh"
 
-class Obsmodel;
+class ObservationModel;
 
 class Chain                                             // Stores all the things related to an MCMC chain
 {
 public:
-	Chain(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree,	const Obsmodel &obsmodel, const Output &output, unsigned int chstart);
+	Chain(const Details &details, const Data &data, const Model &model, const AreaTree &areatree,	const ObservationModel &obsmodel, const Output &output, unsigned int chstart);
 	
 	void standard_prop(double EFcut=0); 
 
@@ -25,7 +25,7 @@ public:
 	void sample_state();
 	Status simulate(const vector <double>& paramv);
 	void mbp_proposal(unsigned int th);
-	vector <FEV> event_compress(const vector < vector <FEV> > &indev) const;
+	vector <Event> event_compress(const vector < vector <Event> > &indev) const;
 	void generate_particle(Particle &part) const;
 	Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 	void stand_event_prop(double EFcut);
@@ -49,13 +49,13 @@ private:
 	unsigned int area_of_next_infection();
 	void add_infection_in_area(unsigned int c, double t);
 	void check(double t, unsigned int sett) const;
-	void update_dQmap(const vector <EVREF> &trei, const vector <EVREF> &trep);
+	void update_dQmap(const vector <EventRef> &trei, const vector <EventRef> &trep);
 	void setup_susceptible_lists();
 	void reset_susceptible_lists();
 	void change_susceptible_status(unsigned int i, unsigned int st, unsigned int updateR);
 	void construct_infection_sampler(const vector <double> &Qmi, const vector <double> &Qmp);
 	void infsampler(const vector< vector<double> > &Qmap);
-	void sortx(vector <EVREF> &x, vector <vector <FEV> > &indev) const;
+	void sortx(vector <EventRef> &x, vector <vector <Event> > &indev) const;
 	void calcproposeQmap();
 	void area_prop(unsigned int samp, unsigned int burnin);
 	void area_prop2(unsigned int samp, unsigned int burnin, unsigned int th, double L0, const vector <double> &areasum, const vector < vector <double> >&mult, const vector < vector <double> > &add);
@@ -88,15 +88,15 @@ private:
 	
 	bool do_mbp_event;                                    // Set to true if MBPs on compartmental transitions needed
 	
-	const vector <COMP> &comp;
-	const vector <LEVEL> &lev;
-	const vector <TRANS> &trans;
+	const vector <Compartment> &comp;
+	const vector <Level> &lev;
+	const vector <Transition> &trans;
 	
 	const Details &details;
-	const DATA &data;
-	const MODEL &model;
-	const POPTREE &poptree;
-	const Obsmodel &obsmodel;
+	const Data &data;
+	const Model &model;
+	const AreaTree &areatree;
+	const ObservationModel &obsmodel;
 	const Output &output;
 };
 #endif

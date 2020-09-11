@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__MODEL_HH
-#define BEEPMBP__MODEL_HH
+#ifndef BEEPMBP__Model_HH
+#define BEEPMBP__Model_HH
 
 #include <vector>
 
@@ -8,30 +8,30 @@ using namespace std;
 #include "consts.hh"
 #include "data.hh"
 
-struct FEV {                               // Stores information about a compartmental transition
+struct Event {                             // Stores information about a compartmental transition
   unsigned int trans;                      // References the transition type
 	unsigned int ind;                        // The individual on which the transition happens
 	double t;                                // The time of the transition
 	unsigned int timep;                      // The time period in which the transition occurs 
 };
 
-struct EVREF {                             // Used to reference an event
+struct EventRef {                          // Used to reference an event
 	unsigned int ind;                        // The individual
 	unsigned int e;	                         // The event number
 };
 
-struct DQINFO {                            // Stores information about a change in the Q matrix
+struct DQinfo {                            // Stores information about a change in the Q matrix
 	vector <unsigned int> q;
 	vector <double> fac;
 };
 
-struct PRIORCOMP {											   // Stores information about priors on compartmental probabilities
+struct PriorComp {											   // Stores information about priors on compartmental probabilities
 	unsigned int comp;											 // The compartment
 	double value;														 // The value of the comparmental probability
 	double sd;															 // The standard deviation in the value
 };
 
-struct PARAM{                              // Store information about a model parameter
+struct Param{                              // Store information about a model parameter
  	string name;                             // Its name
   double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
@@ -41,7 +41,7 @@ struct PARAM{                              // Store information about a model pa
 	ParamType type;                          // Set to one if parameter used for transition times and 2 for branching probabilities
 };
 
-struct COMP{                               // Stores information about a compartment in the model
+struct Compartment{                               // Stores information about a compartment in the model
 	string name;                             // Its name
 	double infectivity;                      // How infectious that compartment is
 
@@ -59,7 +59,7 @@ struct CompProb{
 	vector <double> value;                  // The prob ind goes to compartment (used to calculate R0)
 };
 
-struct TRANS{                              // Stores information about a compartmental model transition
+struct Transition{                              // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
 	
@@ -79,7 +79,7 @@ struct TransInfo{                          // Stores information about transitio
 	vector <double> dtlist;                  // Keeps a list of waiting time
 };
 
-struct SPLINEP{                            // Stores information about a spline point
+struct SplinePoint{                            // Stores information about a spline point
 	double t;                                // The time of the point
 	unsigned int param;                      // The parameter which defines the value
 	double multfac;                             // A multiplicative factor
@@ -88,7 +88,7 @@ struct SPLINEP{                            // Stores information about a spline 
 struct Particle
 {
 	vector <double> paramval;                // The parameter values for the particle
-	vector <FEV> ev;                         // The event sequence for the particle
+	vector <Event> ev;                         // The event sequence for the particle
 	double EF;                               // The value of the error function
 };
 
@@ -104,23 +104,23 @@ struct Generation
 	long time;                               // The clock time
 };
 
-class MODEL                                // Stores all the information about the model
+class Model                                // Stores all the information about the model
 {
 public:
-	MODEL(const Inputs &inputs, const Details &details, DATA &data);
+	Model(const Inputs &inputs, const Details &details, Data &data);
 
 	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DEMOCAT> democat;                // Stores the demographic categories
+	vector <DemographicCategory> democat;                // Stores the demographic categories
 	
-	vector <vector <SPLINEP> > spline;       // Stores all the splines used in the model (for beta and phi)  
+	vector <vector <SplinePoint> > spline;       // Stores all the splines used in the model (for beta and phi)  
  
 	unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
 	unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
 
-	vector <PARAM> param;                    // Information about parameters in the model
-	vector <PRIORCOMP> priorcomps;           // Priors on compartmental probabilities
-	vector <TRANS> trans;                    // Stores model transitions
-	vector <COMP> comp;	                     // Stores model compartments
+	vector <Param> param;                    // Information about parameters in the model
+	vector <PriorComp> priorcomps;           // Priors on compartmental probabilities
+	vector <Transition> trans;                    // Stores model transitions
+	vector <Compartment> comp;	                     // Stores model compartments
 
 	unsigned int infmax;                     // The maximum number of infected individuals
 	
@@ -131,18 +131,18 @@ public:
 	unsigned int sigma_param;                // The standard deviation of the regional effect
 	vector <unsigned int> regioneff_param;   // The parameters related to regional effects
 
-	vector <TIMEP> timeperiod;               // The timings of changes to Q;
+	vector <TimePeriod> timeperiod;               // The timings of changes to Q;
 	unsigned int ntimeperiod;
 	
-	vector <DQINFO> DQ;                      // Keeps track of the change in the Q matrix 
+	vector <DQinfo> DQ;                      // Keeps track of the change in the Q matrix 
 	
 	double getinfectivity(const string& name) const;
 	
 	void print_to_terminal() const;
-	vector <double> priorsamp() const;
-	vector <double> R0calc(const vector <double> &paramv) const;
-	bool dombpevents(const vector <double> &parami, const vector <double> &paramp) const;
-	void oe(const string& name, const vector <FEV> &ev) const;
+	vector <double> sample_from_prior() const;
+	vector <double> calculate_R_func_time(const vector <double> &paramv) const;
+	bool do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const;
+	void print_events(const string& name, const vector <Event> &ev) const;
 	double prior(const vector<double> &paramv) const;
 	
 	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
@@ -154,16 +154,16 @@ public:
 	bool inbounds(double val, unsigned int th) const;
 	
 private:
-	void addQ();
-	void addcomp(const string& name, double infectivity);
-	void addparam(const string& name, double min, double max);
-	void addtrans(const string& from, const string& to, const string& prpar,
+	void add_Q();
+	void add_compartment(const string& name, double infectivity);
+	void add_parameter(const string& name, double min, double max);
+	void add_transition(const string& from, const string& to, const string& prpar,
 								unsigned int type, const string& param1, const string& param2);
-	unsigned int findparam(const string& name);
+	unsigned int find_parameter(const string& name);
 	
-	void checkdata() const;
+	void check_data_files() const;
 	
 	const Details &details;
-	DATA &data;
+	Data &data;
 };
 #endif

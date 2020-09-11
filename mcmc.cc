@@ -23,7 +23,7 @@ using namespace std;
 ofstream quenchplot;
 
 /// In initialises the inference algorithm
-Mcmc::Mcmc(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+Mcmc::Mcmc(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
 	nsamp = inputs.find_int("nsamp",UNSET);                                                 // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
@@ -48,7 +48,7 @@ Mcmc::Mcmc(const Details &details, const DATA &data, const MODEL &model, const P
 	}
 		
 	for(auto p = 0u; p < nchain; p++){                                                     // Initialises the chains
-		Chain ch = Chain(details,data,model,poptree,obsmodel,output,mpi.core*nchain+p);
+		Chain ch = Chain(details,data,model,areatree,obsmodel,output,mpi.core*nchain+p);
 		chain.push_back(ch);
 	}
 	
@@ -70,8 +70,8 @@ Mcmc::Mcmc(const Details &details, const DATA &data, const MODEL &model, const P
 /// Runs the multi-temperature MCMC algorithm	
 void Mcmc::run()
 {
-	vector <SAMPLE> opsamp;        // Stores output samples
-	vector <PARAMSAMP> psamp;      // Stores parameter samples
+	vector <Sample> opsamp;        // Stores output samples
+	vector <ParamSample> psamp;      // Stores parameter samples
 	
 	long timeprop=0, ntimeprop=0;
 	auto timeloop=0.1;
@@ -292,7 +292,7 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 }
 
 /// Ouputs a parameter sample from the MBP algorithm
-void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
+void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
 {
 	unsigned int nchaintot = mpi.ncore*nchain, samp = psamp.size();
 	 
@@ -320,7 +320,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 	if(mpi.core == 0){
 		double L, Pr;
 		unsigned int ninfplot;
-		PARAMSAMP paramsamp;
+		ParamSample paramsamp;
 	
 		if(ppost < nchain){
 			paramsamp.paramval = chain[ppost].initial.paramval;
@@ -361,7 +361,7 @@ void Mcmc::output_param(Output &output, vector <PARAMSAMP> &psamp) const
 }
 
 /// Ouputs a measurement sample from the MBP algorithm
-void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
+void Mcmc::output_meas(vector <Sample> &opsamp, unsigned int nchain) const
 {
 	unsigned int nchaintot = mpi.ncore*nchain;
 
@@ -381,10 +381,10 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 	MPI_Bcast(&ppost,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
-		SAMPLE sample;
+		Sample sample;
 		if(ppost < nchain){
 			sample.meas = obsmodel.getmeas(chain[ppost].initial.trev,chain[ppost].initial.indev);
-			sample.R0 = model.R0calc(chain[ppost].initial.paramval);
+			sample.R0 = model.calculate_R_func_time(chain[ppost].initial.paramval);
 			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].initial.paramval); 
 		}
 		else{
@@ -405,8 +405,8 @@ void Mcmc::output_meas(vector <SAMPLE> &opsamp, unsigned int nchain) const
 		if(mpi.core == ppost/nchain){
 			auto p = ppost%nchain;
 			
-			MEAS meas = obsmodel.getmeas(chain[p].initial.trev,chain[p].initial.indev);
-			vector <double> R0 = model.R0calc(chain[p].initial.paramval);
+			Measurements meas = obsmodel.getmeas(chain[p].initial.trev,chain[p].initial.indev);
+			vector <double> R0 = model.calculate_R_func_time(chain[p].initial.paramval);
 	
 			packinit(0);
 			pack(meas.transnum);

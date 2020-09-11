@@ -19,7 +19,7 @@
 using namespace std;
 
 /// Initilaises the simulation
-Simulate::Simulate(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), obsmodel(obsmodel), output(output)
+Simulate::Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), obsmodel(obsmodel), output(output)
 {	
 	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
 
@@ -32,20 +32,20 @@ Simulate::Simulate(const Details &details, const DATA &data, const MODEL &model,
 /// Performs a simulation
 void Simulate::run()
 {
-	Chain chain(details,data,model,poptree,obsmodel,output,0);
+	Chain chain(details,data,model,areatree,obsmodel,output,0);
 	proportions(chain.propose.indev);
 	
 	output.simulateddata(chain.propose.trev,chain.propose.indev,details.outputdir);
 	
 	if(1 == 0){ // This is switched on to see distribution for R and eta from the simulated data
-		SAMPLE sample; 
-		PARAMSAMP paramsamp;		
-		vector <SAMPLE> opsamp; 
-		vector <PARAMSAMP> psamp;
+		Sample sample; 
+		ParamSample paramsamp;		
+		vector <Sample> opsamp; 
+		vector <ParamSample> psamp;
 		
 		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
 		
-		sample.R0 = model.R0calc(chain.initial.paramval);
+		sample.R0 = model.calculate_R_func_time(chain.initial.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
 		paramsamp.paramval = chain.initial.paramval;
 		opsamp.push_back(sample);
@@ -58,19 +58,19 @@ void Simulate::run()
 /// Runs multiple simulations
 void Simulate::multirun()
 {		
-	vector <SAMPLE> opsamp; 
-  vector <PARAMSAMP> psamp;
+	vector <Sample> opsamp; 
+  vector <ParamSample> psamp;
 	
 	for(auto s = 0u; s < nsamp; s++){
 		cout << "Simulating sample " << (s+1) << endl;
-		Chain chain(details,data,model,poptree,obsmodel,output,0);
+		Chain chain(details,data,model,areatree,obsmodel,output,0);
 		
-		SAMPLE sample;
+		Sample sample;
 		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
-		sample.R0 = model.R0calc(chain.initial.paramval);
+		sample.R0 = model.calculate_R_func_time(chain.initial.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
 		
-		PARAMSAMP paramsamp;		
+		ParamSample paramsamp;		
 		paramsamp.paramval = chain.initial.paramval;
 		opsamp.push_back(sample);
 		psamp.push_back(paramsamp);
@@ -79,7 +79,7 @@ void Simulate::multirun()
 }
 
 /// Works out the proportion of individuals which visit different compartments
-void Simulate::proportions(const vector< vector <FEV> > &indev)
+void Simulate::proportions(const vector< vector <Event> > &indev)
 {
 	vector <unsigned int> visit(model.comp.size());
 	for(auto& visi : visit) visi = 0;

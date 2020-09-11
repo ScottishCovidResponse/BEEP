@@ -143,7 +143,7 @@ void pack(const vector <string> &vec)
 	pack_item(vec);
 }
 
-void pack(const vector <FEV> &vec)
+void pack(const vector <Event> &vec)
 {
 	auto imax = vec.size(); buffer.push_back(imax); k++;
 	for(auto i = 0u; i < imax; i++){
@@ -154,7 +154,7 @@ void pack(const vector <FEV> &vec)
 	}
 }
 
-void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
+void pack(const vector< vector <Event> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
 	auto imax = vec.size(); buffer.push_back(imax); k++;
 	for(auto i = fedivmin; i < fedivmax; i++){
@@ -175,7 +175,7 @@ void pack(const Particle &part)
 	pack(part.EF);
 }
 
-void pack_item(const AREA& area)
+void pack_item(const Area& area)
 {
 	pack_item(area.code);
 	pack_item(area.region);
@@ -187,40 +187,40 @@ void pack_item(const AREA& area)
 	pack_item(area.ind);
 }
 
-void pack(const vector <AREA> &vec)
+void pack(const vector <Area> &vec)
 {
 	pack_item(vec);
 }
 
-void pack_item(const REGION& r)
+void pack_item(const DataRegion& r)
 {
 	pack_item(r.name);
 	pack_item(r.code);
 }
 
-void pack(const vector <REGION> &vec)
+void pack(const vector <DataRegion> &vec)
 {
 	pack_item(vec);
 }
 
-void pack_item(const DEMOCAT& d)
+void pack_item(const DemographicCategory& d)
 {
 	pack_item(d.name);
 	pack_item(d.value);
 }
 
-void pack(const vector <DEMOCAT> &vec)
+void pack(const vector <DemographicCategory> &vec)
 {
 	pack_item(vec);
 }
 
-void pack_item(const EVREF& ev)
+void pack_item(const EventRef& ev)
 {
 	pack_item(ev.ind);
 	pack_item(ev.e);
 }
 
-void pack(const vector <vector <EVREF> > &vec)
+void pack(const vector <vector <EventRef> > &vec)
 {
 	pack_item(vec);
 }
@@ -320,7 +320,7 @@ void unpack(vector <string> &vec)
 	unpack_item(vec);
 }
 
-void unpack(vector <FEV> &vec)
+void unpack(vector <Event> &vec)
 {
 	unsigned int imax = buffer[k]; k++; vec.resize(imax);
 	for(auto i = 0u; i < imax; i++){
@@ -331,7 +331,7 @@ void unpack(vector <FEV> &vec)
 	}
 }
 
-void unpack(vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax)
+void unpack(vector< vector <Event> > &vec, unsigned int fedivmin, unsigned int fedivmax)
 {
 	unsigned int imax = buffer[k]; k++; vec.resize(imax);
 	for(auto i = fedivmin; i < fedivmax; i++){
@@ -352,7 +352,7 @@ void unpack(Particle &part)
 	unpack(part.EF);
 }
 
-void unpack_item(AREA& area)
+void unpack_item(Area& area)
 {
 	unpack_item(area.code);
 	unpack_item(area.region);
@@ -364,40 +364,40 @@ void unpack_item(AREA& area)
 	unpack_item(area.ind);
 }
 
-void unpack(vector <AREA> &vec)
+void unpack(vector <Area> &vec)
 {
 	unpack_item(vec);
 }
 
-void unpack_item(REGION& r)
+void unpack_item(DataRegion& r)
 {
 	unpack_item(r.name);
 	unpack_item(r.code);
 }
 
-void unpack(vector <REGION> &vec)
+void unpack(vector <DataRegion> &vec)
 {
 	unpack_item(vec);
 }
 
-void unpack_item(DEMOCAT& d)
+void unpack_item(DemographicCategory& d)
 {
 	unpack_item(d.name);
 	unpack_item(d.value);
 }
 
-void unpack(vector <DEMOCAT> &vec)
+void unpack(vector <DemographicCategory> &vec)
 {
 	unpack_item(vec);
 }
 
-void unpack_item(EVREF& ev)
+void unpack_item(EventRef& ev)
 {
 	unpack_item(ev.ind);
 	unpack_item(ev.e);
 }
 
-void unpack(vector <vector <EVREF> > &vec)
+void unpack(vector <vector <EventRef> > &vec)
 {
 	unpack_item(vec);
 }

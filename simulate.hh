@@ -4,30 +4,30 @@
 #include "data.hh"
 #include "model.hh"
 
-struct PARAMSAMP;
-class DATA;
-class MODEL;
-class POPTREE;
+struct ParamSample;
+class Data;
+class Model;
+class AreaTree;
 class Output;
-class Obsmodel;
+class ObservationModel;
 
 class Simulate
 {
 public:	
-	Simulate(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, Output &output, const Obsmodel &obsmodel);	
+	Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel);	
 	void run();
 	void multirun();
 	
 private:
-	void proportions(const vector< vector <FEV> > &indev);
+	void proportions(const vector< vector <Event> > &indev);
 	unsigned int nsamp;                                   // The number of simulations 
 	
 	const Details &details;
-	const DATA &data;
-	const MODEL &model;
-	const POPTREE &poptree;
+	const Data &data;
+	const Model &model;
+	const AreaTree &areatree;
 	const Mpi &mpi;
-	const Obsmodel &obsmodel;
+	const ObservationModel &obsmodel;
 	Output &output;
 };
 

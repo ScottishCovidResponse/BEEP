@@ -8,16 +8,16 @@
 using namespace std;
 
 #include "utils.hh"
-#include "poptree.hh"
+#include "areatree.hh"
 #include "consts.hh"
 #include "data.hh"
 
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
-POPTREE::POPTREE(DATA &data)
+AreaTree::AreaTree(Data &data)
 {
-	lev.push_back(LEVEL ());                                       // First level contains a single node with all the areas
+	lev.push_back(Level ());                                       // First level contains a single node with all the areas
 
-	NODE node;
+	TreeNode node;
 	for(auto h = 0u; h < data.narea; h++) node.arearef.push_back(h);      
 	node.parent = UNSET;
 	lev[0].node.push_back(node);
@@ -25,7 +25,7 @@ POPTREE::POPTREE(DATA &data)
 	auto l = 0u;
 	unsigned int flag;
 	do{
-		lev.push_back(LEVEL ());
+		lev.push_back(Level ());
 		
 		flag = 0;
 		

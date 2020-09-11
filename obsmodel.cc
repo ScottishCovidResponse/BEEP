@@ -6,14 +6,14 @@
 
 using namespace std;
 
-Obsmodel::Obsmodel(const Details &details, const DATA &data, const MODEL &model) : details(details), data(data), model(model)
+ObservationModel::ObservationModel(const Details &details, const Data &data, const Model &model) : details(details), data(data), model(model)
 {
 }
 
 /// Gets all measured quantities
-MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const
+Measurements ObservationModel::getmeas(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const
 {
-	MEAS meas;
+	Measurements meas;
 	meas.transnum.resize(data.transdata.size());
 	for(auto td = 0u; td < data.transdata.size(); td++){                                   // Incorporates transition observations
 		meas.transnum[td].resize(data.transdata[td].rows);
@@ -102,7 +102,7 @@ MEAS Obsmodel::getmeas(const vector < vector <EVREF> > &trev, const vector < vec
 }
 
 /// The contribution from a single measurement 
-double Obsmodel::singobs(unsigned int mean, unsigned int val) const
+double ObservationModel::singobs(unsigned int mean, unsigned int val) const
 {
 	switch(mean){
 	case UNKNOWN: return 0;     // The data value is unknown
@@ -125,9 +125,9 @@ double Obsmodel::singobs(unsigned int mean, unsigned int val) const
 
 /// Measures how well the particle agrees with the observations for a given time range t to t+1
 /// (e.g. weekly hospitalised case data)
-double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev) const 
+double ObservationModel::Lobs(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const 
 {
-	MEAS meas = getmeas(trev,indev);
+	Measurements meas = getmeas(trev,indev);
 	
 	auto L = 0.0;	
 	for(auto td = 0u; td < meas.transnum.size(); td++){                                   // Incorporates transition observations
@@ -166,7 +166,7 @@ double Obsmodel::Lobs(const vector < vector <EVREF> > &trev, const vector < vect
 /// Returns the number of transitions for individuals going down a transition
 /// in different regions over the time range ti - tf
 /// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> Obsmodel::getnumtrans(const vector < vector <EVREF> > &trev, const vector < vector <FEV> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
+vector <unsigned int> ObservationModel::getnumtrans(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
 {
 	vector <unsigned int> num(data.nregion);
 	for(auto& nu : num) nu = 0;

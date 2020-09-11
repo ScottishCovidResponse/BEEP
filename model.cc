@@ -17,7 +17,7 @@ using namespace std;
 #include "inputs.hh"
 
 /// Initialises the model 
-MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details(details), data(data)
+Model::Model(const Inputs &inputs, const Details &details, Data &data) : details(details), data(data)
 {
 	infmax = inputs.find_int("infmax",large);
 	if((details.mode == inf || details.mode == abcsmc || details.mode == abcmbp) && infmax == large){
@@ -31,7 +31,7 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 		vector <double> val;
 		inputs.find_param(name,val);
 		for(auto th = 0u; th < name.size(); th++){
-			addparam(name[th],val[th],val[th]);
+			add_parameter(name[th],val[th],val[th]);
 		}
 	}
 
@@ -40,7 +40,7 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 		vector <double> min,max;
 		inputs.find_prior(name,min,max);
 		for(auto th = 0u; th < name.size(); th++){
-			addparam(name[th],min[th],max[th]);
+			add_parameter(name[th],min[th],max[th]);
 		}
 	}
 	
@@ -57,7 +57,7 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 			for(auto r = 0u; r < data.nregion; r++){
 				regioneff_param[r] = param.size();
 				stringstream ss; ss << "reff_" << data.region[r].code;
-				addparam(ss.str(),-large,large);
+				add_parameter(ss.str(),-large,large);
 				param[param.size()-1].used = 1;
 			}
 		}
@@ -70,22 +70,22 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 		for(auto r = 0u; r < data.nregion; r++){
 			regioneff_param[r] = param.size();
 			stringstream ss; ss << "reff_" << data.region[r].code;
-			addparam(ss.str(),-0.2,0.2);
+			add_parameter(ss.str(),-0.2,0.2);
 			param[param.size()-1].used = 1;
 		}
 	}
 	
-	addparam("zero",tiny,tiny);
+	add_parameter("zero",tiny,tiny);
 
 	vector <string> name;
 	vector <double> infectivity;
 	inputs.find_comps(name,infectivity);
-	for(auto c = 0u; c < name.size(); c++) addcomp(name[c],infectivity[c]);
+	for(auto c = 0u; c < name.size(); c++) add_compartment(name[c],infectivity[c]);
 	
 	vector <string> from, to, prpar, mean, cv;
 	vector <int> type;
 	inputs.find_trans(from,to,prpar,type,mean,cv);
-	for(auto tr = 0u; tr < from.size(); tr++) addtrans(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
+	for(auto tr = 0u; tr < from.size(); tr++) add_transition(from[tr],to[tr],prpar[tr],type[tr],mean[tr],cv[tr]);
 	
 	if(details.mode == inf || details.mode == abcsmc || details.mode == abcmbp){
 		priorcomps = inputs.find_priorcomps(comp);
@@ -102,12 +102,12 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 		case 1: fac = 1.0/data.popsize; splinetype = "phispline"; break;
 		}
 		
-		vector <SPLINEP> spli;
+		vector <SplinePoint> spli;
 		inputs.find_spline(details,splinetype,time,pname);
 		for(auto i = 0u; i < time.size(); i++){
-			SPLINEP spl;
+			SplinePoint spl;
 			spl.t = time[i];
-			spl.param = findparam(pname[i]);
+			spl.param = find_parameter(pname[i]);
 			spl.multfac = fac;
 			
 			spli.push_back(spl);
@@ -120,12 +120,12 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 	sus_param.resize(data.ndemocat);
 	for(auto c = 0u; c < data.ndemocat; c++){
 		for(auto fi = 0u; fi < data.democat[c].value.size(); fi++){
-			sus_param[c].push_back(findparam(data.democat[c].param[fi]));
+			sus_param[c].push_back(find_parameter(data.democat[c].param[fi]));
 		}
 	}
 
 	for(unsigned int c = 0; c < data.ncovar; c++){
-		covar_param.push_back(findparam(data.covar[c].param));
+		covar_param.push_back(find_parameter(data.covar[c].param));
 	}
 
 	for(auto p = 0u; p < param.size(); p++){
@@ -143,12 +143,12 @@ MODEL::MODEL(const Inputs &inputs, const Details &details, DATA &data) : details
 		}
 	}
 	
-	addQ();
-	checkdata();
+	add_Q();
+	check_data_files();
 }
 
 /// Outputs a summary of the model
-void MODEL::print_to_terminal() const
+void Model::print_to_terminal() const
 {
 	cout << endl;                                           
 	if(details.mode == sim || details.mode == multisim){
@@ -211,9 +211,9 @@ void MODEL::print_to_terminal() const
 }
 
 /// Adds in the tensor Q to the model
-void MODEL::addQ()
+void Model::add_Q()
 {
-	for(const auto& co : comp) addtrans(co.name,co.name,"",timep_dist,"","");  
+	for(const auto& co : comp) add_transition(co.name,co.name,"",timep_dist,"","");  
 	
 	for(const auto& QQ : data.Q){
 		unsigned int c;
@@ -221,7 +221,7 @@ void MODEL::addQ()
 		if(c == comp.size()) emsg("The compartment '"+QQ.comp+"' in '"+QQ.name+"' is not recognised.");
 	}
 	
-	DQINFO dq;
+	DQinfo dq;
 	dq.q.resize(2); dq.fac.resize(2);
 	for(auto& tr : trans){
 		auto ci = tr.from;
@@ -255,7 +255,7 @@ void MODEL::addQ()
 }
 
 /// Randomly samples the initial parameter values from the prior (which are uniform distributions
-vector <double> MODEL::priorsamp() const
+vector <double> Model::sample_from_prior() const
 {
 	vector <double> paramv(param.size());
 	for(auto th = 0u; th < param.size(); th++){	
@@ -290,7 +290,7 @@ vector <double> MODEL::priorsamp() const
 }
 
 /// Gets the infectivity of a compartment
-double MODEL::getinfectivity(const string& name) const
+double Model::getinfectivity(const string& name) const
 {
 	auto c = 0u; while(c < comp.size() && comp[c].name != name) c++;
 	if(c == comp.size()) emsg("Cannot find the compartment '"+name+"'");
@@ -298,9 +298,9 @@ double MODEL::getinfectivity(const string& name) const
 }
 
 /// Adds a compartment to the model
-void MODEL::addcomp(const string& name, double infectivity)
+void Model::add_compartment(const string& name, double infectivity)
 {
-	COMP co;
+	Compartment co;
 	co.name = name;
 	co.infectivity = infectivity;
 	co.transtimep = UNSET;
@@ -309,7 +309,7 @@ void MODEL::addcomp(const string& name, double infectivity)
 }
 
 /// Finds a parameter from a string
-unsigned int MODEL::findparam(const string& name)
+unsigned int Model::find_parameter(const string& name)
 {
 	auto p = 0u; auto pmax = param.size(); while(p < pmax && name != param[p].name) p++;
 	if(p == pmax) emsg("Cannot find the parameter '"+name+"'");	
@@ -319,9 +319,9 @@ unsigned int MODEL::findparam(const string& name)
 }
 
 /// Adds a parameter to the model
-void MODEL::addparam(const string& name, double min, double max)
+void Model::add_parameter(const string& name, double min, double max)
 {
-	PARAM par;
+	Param par;
 	par.name = name; par.min = min; par.max = max; par.ntr = 0; par.nac = 0; par.jump = 0.5*(min+max)/10; if(par.jump == 0) par.jump = 0.1;
 	par.used = 0; par.type = other_paramtype;
 
@@ -329,9 +329,9 @@ void MODEL::addparam(const string& name, double min, double max)
 }
 
 /// Adds a transition to the model
-void MODEL::addtrans(const string& from, const string& to, const string& prpar, unsigned int type, const string& mean, const string& cv)
+void Model::add_transition(const string& from, const string& to, const string& prpar, unsigned int type, const string& mean, const string& cv)
 {
-	TRANS tr;
+	Transition tr;
 	auto c = 0u; auto cmax = comp.size(); while(c < cmax && from != comp[c].name) c++;
 	if(c == cmax) emsg("Cannot find the 'from' compartment '"+from+"' for the transition");
 	tr.from = c;	
@@ -350,17 +350,17 @@ void MODEL::addtrans(const string& from, const string& to, const string& prpar, 
 			emsg("For the transition '"+from+"→"+to+"' the number of parameters in expression '"+prpar+"' should equal the number of age groups.");
 		}
 		
-		for(const auto& parname : probparam) tr.probparam.push_back(findparam(parname));
+		for(const auto& parname : probparam) tr.probparam.push_back(find_parameter(parname));
 	}
 	
 	tr.type = type;
-	if(mean != "") tr.param_mean = findparam(mean);	else tr.param_mean = UNSET;
-	if(cv != "") tr.param_cv = findparam(cv); else tr.param_cv = UNSET;
+	if(mean != "") tr.param_mean = find_parameter(mean);	else tr.param_mean = UNSET;
+	if(cv != "") tr.param_cv = find_parameter(cv); else tr.param_cv = UNSET;
 	
 	trans.push_back(tr);
 }
 
-vector <double> MODEL::create_disc_spline(unsigned int ref, const vector<double> &paramv) const
+vector <double> Model::create_disc_spline(unsigned int ref, const vector<double> &paramv) const
 {
 	vector <double> disc_spline(details.nsettime);
 	
@@ -378,7 +378,7 @@ vector <double> MODEL::create_disc_spline(unsigned int ref, const vector<double>
 }
 
 /// Sets the transition probabilies based on the parameters
-unsigned int MODEL::create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv) const
+unsigned int Model::create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv) const
 {
 	comptrans.resize(comp.size());
 	for(auto c = 0u; c < comp.size(); c++){
@@ -411,7 +411,7 @@ unsigned int MODEL::create_comptrans(vector <CompTrans> &comptrans, const vector
 
  
 /// Defines the relative susceptibility of individuals
-vector <double> MODEL::create_sus(const vector<double> &paramv) const 
+vector <double> Model::create_sus(const vector<double> &paramv) const 
 {
 	vector <double> sus(data.ndemocatpos);
 	for(auto dp = 0u; dp < data.ndemocatpos; dp++){
@@ -426,7 +426,7 @@ vector <double> MODEL::create_sus(const vector<double> &paramv) const
 }
 
 /// Defines the relative transmission rate for different areas
-vector <double> MODEL::create_areafac(const vector<double> &paramv) const
+vector <double> Model::create_areafac(const vector<double> &paramv) const
 {
 	vector <double> areafac(data.narea);
 	for(auto c = 0u; c < data.narea; c++){
@@ -443,7 +443,7 @@ vector <double> MODEL::create_areafac(const vector<double> &paramv) const
 }
 
 /// Checks that the transition and population data is correct
-void MODEL::checkdata() const
+void Model::check_data_files() const
 {
 	for(auto& td : data.transdata){
 		auto from = td.fromstr, to = td.tostr; 
@@ -477,7 +477,7 @@ void MODEL::checkdata() const
 }
 
 /// Calculates the prior probability
-double MODEL::prior(const vector<double> &paramv) const 
+double Model::prior(const vector<double> &paramv) const 
 {
 	double Pr = 0;
 	
@@ -515,7 +515,7 @@ double MODEL::prior(const vector<double> &paramv) const
 }
 	
 /// Calculate compartmental probabilities
-vector <CompProb> MODEL::create_compprob(const vector <CompTrans> &comptrans) const
+vector <CompProb> Model::create_compprob(const vector <CompTrans> &comptrans) const
 {
 	vector <CompProb> compprob(comp.size());
 	
@@ -570,7 +570,7 @@ vector <CompProb> MODEL::create_compprob(const vector <CompTrans> &comptrans) co
 }
 
 /// Calculates R0
-vector <double> MODEL::R0calc(const vector<double> &paramv) const
+vector <double> Model::calculate_R_func_time(const vector<double> &paramv) const
 {
 	vector <CompTrans> comptrans;
 	if(create_comptrans(comptrans,paramv) == 1) emsgEC("Model",81);
@@ -595,7 +595,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv) const
 				case exp_dist: dt = paramv[trans[tra].param_mean]; break;
 				case gamma_dist: dt = paramv[trans[tra].param_mean]; break;
 				case lognorm_dist: dt = paramv[trans[tra].param_mean]; break;
-				default: emsgEC("MODEL",9); break;
+				default: emsgEC("Model",9); break;
 				}	
 				if(kmax == 1) infint[c][a] += compprob[c].value[a]*comp[c].infectivity*dt;
 				else infint[c][a] += compprob[c].value[a]*comp[c].infectivity*dt*comptrans[c].prob[a][k];
@@ -650,7 +650,7 @@ vector <double> MODEL::R0calc(const vector<double> &paramv) const
 	return R0;
 }
 
-bool MODEL::inbounds(const vector <double> &paramv) const
+bool Model::inbounds(const vector <double> &paramv) const
 {
 	for(auto th = 0u; th < paramv.size(); th++){
 		if(inbounds(paramv[th],th) == false) return false;
@@ -658,7 +658,7 @@ bool MODEL::inbounds(const vector <double> &paramv) const
 	return true;
 }
 
-bool MODEL::inbounds(double val, unsigned int th) const
+bool Model::inbounds(double val, unsigned int th) const
 {
 	if(val >= param[th].min && val <= param[th].max) return true;
 	return false;
@@ -666,7 +666,7 @@ bool MODEL::inbounds(double val, unsigned int th) const
 
 /*
 /// Makes proposal to compartmental paramters
-void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF> &x, vector <vector <FEV> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const
+void Model::compparam_prop(unsigned int samp, unsigned int burnin, vector <EventRef> &x, vector <vector <Event> > &indev, vector <double> &paramv, vector <CompTrans> &comptransi, vector <float> &paramjumpxi, vector <unsigned int> &ntrxi,  vector <unsigned int> &nacxi, double &Pri) const
 {	
 	timers.timecompparam -= clock();
 
@@ -767,7 +767,7 @@ void MODEL::compparam_prop(unsigned int samp, unsigned int burnin, vector <EVREF
 */
 /*
 /// Calculates the likelihood relating to branching probabilities
-double MODEL::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const
+double Model::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const
 {
 	auto L = 0.0;
 	for(auto c = 0u; c < comp.size(); c++){	
@@ -785,7 +785,7 @@ double MODEL::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> 
 }
 			
 /// Calculates the likelihood for the timings of the transitions
-double MODEL::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const
+double Model::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const
 {
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
@@ -818,7 +818,7 @@ double MODEL::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &para
 }
 
 /// Calculates the change in likelihood for a given change in parameters
-double MODEL::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const
+double Model::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const
 {
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
@@ -870,7 +870,7 @@ double MODEL::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 */
 
 /// Outputs an event sequence (used for debugging)
-void MODEL::oe(const string& name, const vector <FEV> &ev) const 
+void Model::print_events(const string& name, const vector <Event> &ev) const 
 {
 	cout << name << ":" << endl;
 	for(auto e = 0u; e < ev.size(); e++){
@@ -880,7 +880,7 @@ void MODEL::oe(const string& name, const vector <FEV> &ev) const
 }
 
 /// Determines if it is necessary to do mbp for the exisiting event sequence
-bool MODEL::dombpevents(const vector <double> &parami, const vector <double> &paramp) const
+bool Model::do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const
 {
 	for(auto th = 0u; th < param.size(); th++){
 		if(parami[th] != paramp[th] && (param[th].type == distval_paramtype || param[th].type == branchprob_paramtype)) return true;

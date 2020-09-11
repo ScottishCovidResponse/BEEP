@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__STATE_HH
-#define BEEPMBP__STATE_HH
+#ifndef BEEPMBP__StatisticsE_HH
+#define BEEPMBP__StatisticsE_HH
 
 #include <vector>
 
@@ -13,7 +13,7 @@ using namespace std;
 class State
 {
 public:
-	State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel);
+	State(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel);
 		
 	double L; 																				// The observation likelihood 
 	double EF; 																				// The error function (used in abc methods)
@@ -21,9 +21,9 @@ public:
 	
 	vector <double> paramval;                         // The parameter values
 
-	vector < vector <FEV> > indev;                    // The individual event sequences
-	vector <EVREF> x;                                 // Ordered list of references to infection events 
-	vector < vector <EVREF> > trev;                   // Event references
+	vector < vector <Event> > indev;                    // The individual event sequences
+	vector <EventRef> x;                                 // Ordered list of references to infection events 
+	vector < vector <EventRef> > trev;                   // Event references
 	
 	vector< vector <double> > Qmap;                   // The infectivty map 
 	
@@ -66,14 +66,14 @@ private:
 	double likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const;
 	double dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
 	
-	const vector <COMP> &comp;
-	const vector <TRANS> &trans;
-	const vector <PARAM> &param;
+	const vector <Compartment> &comp;
+	const vector <Transition> &trans;
+	const vector <Param> &param;
 	
 	const Details &details;
-	const DATA &data;
-	const MODEL &model;
-	const Obsmodel &obsmodel;
+	const Data &data;
+	const Model &model;
+	const ObservationModel &obsmodel;
 };
 
 #endif

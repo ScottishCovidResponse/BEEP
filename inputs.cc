@@ -33,7 +33,6 @@ Inputs::Inputs(int argc, char** argv)
 
 	try {
 		basedata = new InputData{inputfilename};
-
 	} catch (const std::exception& e) {
 		std::ostringstream oss;
 		oss << "toml::parse returns exception\n" << e.what();
@@ -202,9 +201,9 @@ Mode Inputs::mode() const
 }
 
 /// Finds and returns 'transdata'
-vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
+vector <TransitionData> Inputs::find_transdata(const Details &details) const
 {
-	vector <TRANSDATA> transdatavec;
+	vector <TransitionData> transdatavec;
 	
 	if(basedata->contains("transdata")) {
 		const auto tdata = basedata->open("transdata");
@@ -212,7 +211,7 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 		for(auto j = 0u; j < tdata.size(); j++){
 			const auto td = tdata[j];
 		
-			TRANSDATA transdata;
+			TransitionData transdata;
 			transdata.trans = UNSET;
 			transdata.fromstr = td.stringfield("from");
 			transdata.tostr = td.stringfield("to");
@@ -246,9 +245,9 @@ vector <TRANSDATA> Inputs::find_transdata(const Details &details) const
 }
 
 /// Finds and returns 'popdata'
-vector <POPDATA> Inputs::find_popdata(const Details &details) const
+vector <PopulationData> Inputs::find_popdata(const Details &details) const
 {
-	vector <POPDATA> popdatavec;
+	vector <PopulationData> popdatavec;
 
 	if(basedata->contains("popdata")) {
 		const auto pdata = basedata->open("popdata");
@@ -256,7 +255,7 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 		for(auto j = 0u; j < pdata.size(); j++){
 			const auto pd = pdata[j];
 
-			POPDATA popdata;
+			PopulationData popdata;
 			popdata.comp = UNSET;
 			popdata.compstr = pd.stringfield("comp");
 			popdata.type = pd.stringfield("area");
@@ -290,9 +289,9 @@ vector <POPDATA> Inputs::find_popdata(const Details &details) const
 }
 
 /// Finds and returns 'margdata'
-vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vector <DEMOCAT> &democat) const
+vector <MarginalData> Inputs::find_margdata(const Details & /*details */, const vector <DemographicCategory> &democat) const
 {
-	vector <MARGDATA> margdatavec;
+	vector <MarginalData> margdatavec;
 	
 	if(basedata->contains("margdata")) {
 		const auto mdata = basedata->open("margdata");
@@ -300,7 +299,7 @@ vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vect
 		for(auto j = 0u; j < mdata.size(); j++){
 			const auto md = mdata[j];
 			
-			MARGDATA margdata;
+			MarginalData margdata;
 			margdata.trans = UNSET;
 			margdata.fromstr = md.stringfield("from");
 			margdata.tostr = md.stringfield("to");
@@ -324,14 +323,14 @@ vector <MARGDATA> Inputs::find_margdata(const Details & /*details */, const vect
 }
 
 /// Finds and returns 'democats'
-vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
+vector <DemographicCategory> Inputs::find_democat(const Details & /* details */) const
 {
-	vector <DEMOCAT> democatvec;
+	vector <DemographicCategory> democatvec;
 	
 	if(basedata->contains("ages")){                           // Age categories
 		const auto ages = basedata->open("ages");
 		
-		DEMOCAT democat;
+		DemographicCategory democat;
 		democat.name = "age";
 		for(auto j = 0u; j < ages.size(); j++){
 			const auto ag = ages[j];
@@ -352,7 +351,7 @@ vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
 		for(auto k = 0u; k < democats.size(); k++){
 			const auto democ = democats[k];
 			
-			DEMOCAT democat;
+			DemographicCategory democat;
 			democat.name="";
 			for(auto j = 0u; j < democ.size(); j++){
 				const auto demoval = democ[j];
@@ -372,14 +371,14 @@ vector <DEMOCAT> Inputs::find_democat(const Details & /* details */) const
 }
 
 /// Finds and returns 'covar'
-vector <COVAR> Inputs::find_covar(const Details &/*details*/) const
+vector <Covariate> Inputs::find_covar(const Details &/*details*/) const
 {
-	vector <COVAR> covarvec;
+	vector <Covariate> covarvec;
 	
 	if(basedata->contains("covars")){
 		const auto covars = basedata->open("covars");
 		
-		COVAR cov;
+		Covariate cov;
 		for(auto j = 0u; j < covars.size(); j++){
 			const auto covar = covars[j];
 			
@@ -396,16 +395,16 @@ vector <COVAR> Inputs::find_covar(const Details &/*details*/) const
 }
 
 /// Finds and returns 'timep'
-vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
+vector <TimePeriod> Inputs::find_timeperiod(const Details &details) const
 {
-	vector <TIMEP> timeperiodvec;
+	vector <TimePeriod> timeperiodvec;
 	
 	if(basedata->contains("timep")) {
 		const auto timep = basedata->open("timep");
 		for(auto j = 0u; j < timep.size(); j++){
 			const auto tim = timep[j];
 			
-			TIMEP timeperiod;
+			TimePeriod timeperiod;
 			timeperiod.name = tim.stringfield("name");
 			
 			auto tendstr = tim.stringfield("tend");
@@ -428,7 +427,7 @@ vector <TIMEP> Inputs::find_timeperiod(const Details &details) const
 }
 
 /// Finds properties of 'genQ'
-void Inputs::find_genQ(GENQ &genQ, const Details &/*details*/) const
+void Inputs::find_genQ(GenerateQ &genQ, const Details &/*details*/) const
 {
 	if(basedata->contains("agemix")) {
 		const auto agemix = basedata->open("agemix");
@@ -457,12 +456,12 @@ void Inputs::find_genQ(GENQ &genQ, const Details &/*details*/) const
 }
 
 /// Sets up Q
-void Inputs::find_Q(vector <QTENSOR> &Qvec, const vector <TIMEP> &timeperiod, const Details & /* details */) const
+void Inputs::find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &timeperiod, const Details & /* details */) const
 {
 	if(basedata->contains("Q")) {
 		const auto Qlist = basedata->open("Q");
 		for(auto j = 0u; j < Qlist.size(); j++){
-			QTENSOR qten;
+			Qtensor qten;
 		
 			const auto Q = Qlist[j];
 			
@@ -606,16 +605,16 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 }
 
 /// Finds 'priorcomps'
-vector <PRIORCOMP> Inputs::find_priorcomps(const vector<COMP> &comp) const
+vector <PriorComp> Inputs::find_priorcomps(const vector<Compartment> &comp) const
 {
-	vector <PRIORCOMP> priorcompvec;
+	vector <PriorComp> priorcompvec;
 	
 	if(basedata->contains("priorcomps")){
 		const auto prcomps = basedata->open("priorcomps");
 		for(auto j = 0u; j < prcomps.size(); j++){
 			const auto prcomp = prcomps[j];
 			
-			PRIORCOMP pricomp;
+			PriorComp pricomp;
 			string co = prcomp.stringfield("comp");
 			unsigned int c = 0; while(c < comp.size() && comp[c].name != co) c++;
 			if(c == comp.size()) emsgroot("Cannot find '"+co+"' in 'priorcomps'");

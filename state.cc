@@ -6,7 +6,7 @@ using namespace std;
 #include "state.hh"
 #include "timers.hh"
 
-State::State(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel) : comp(model.comp), trans(model.trans), param(model.param), details(details), data(data), model(model), obsmodel(obsmodel)
+State::State(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel) : comp(model.comp), trans(model.trans), param(model.param), details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	disc_spline.resize(model.spline.size());
 
@@ -25,11 +25,11 @@ State::State(const Details &details, const DATA &data, const MODEL &model, const
 /// This simulates from the model and generates an event list
 void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, double t)
 {
-	vector <FEV> &evlist = indev[i];
+	vector <Event> &evlist = indev[i];
 
 	auto timep = 0u; while(timep < model.ntimeperiod && t > model.timeperiod[timep].tend) timep++;
 
-	FEV ev;
+	Event ev;
 	ev.ind = i; ev.timep = timep; 
 		
 	auto a = data.democatpos[data.ind[i].dp][0];
@@ -76,7 +76,7 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 			}
 			break;
 			
-		default: emsgEC("MODEL",3); break;
+		default: emsgEC("Model",3); break;
 		}
 
 		if(dt < tiny) dt = tiny;
@@ -315,7 +315,7 @@ double State::get_infection_time(unsigned int n) const
 void State::add_indev(unsigned int i)
 {
 	unsigned int e, emax, se;
-	EVREF evref;
+	EventRef evref;
 	
 	emax = indev[i].size();
 	if(emax == 0) return;
@@ -362,7 +362,7 @@ void State::set_Qmap(unsigned int check)
 		
 		for(const auto& tre : trev[sett]){
 			auto i = tre.ind;
-			FEV fev = indev[i][tre.e];
+			Event fev = indev[i][tre.e];
 
 			auto v = data.ind[i].area*data.nage+data.democatpos[data.ind[i].dp][0];
 			auto dq = trans[fev.trans].DQ[fev.timep];
@@ -397,13 +397,13 @@ void State::set_Qmap(unsigned int check)
 	}
 }
 
-struct EVREFT {                
+struct EventRefT {                
 	unsigned int ind;                   
 	unsigned int e;	              
 	double t;	 
 };
 
-static bool compEVREFT(EVREFT lhs, EVREFT rhs)
+static bool compEventRefT(EventRefT lhs, EventRefT rhs)
 {
 	return lhs.t < rhs.t;
 };
@@ -411,16 +411,16 @@ static bool compEVREFT(EVREFT lhs, EVREFT rhs)
 /// Time orders x
 void State::sort_x()
 {
-	vector <EVREFT> xt;
+	vector <EventRefT> xt;
 	for(const auto& xx : x){
-		EVREFT evreft;
+		EventRefT evreft;
 		evreft.ind = xx.ind; evreft.e = xx.e;
 		if(indev[xx.ind].size() == 0) emsgEC("Chain",54);
 		
 		evreft.t = indev[xx.ind][xx.e].t;
 		xt.push_back(evreft);	
 	}
-	sort(xt.begin(),xt.end(),compEVREFT);
+	sort(xt.begin(),xt.end(),compEventRefT);
 
 	for(auto i = 0u; i < x.size(); i++){
 		x[i].ind = xt[i].ind;	x[i].e = xt[i].e;
@@ -456,7 +456,7 @@ void State::initialise_from_particle(const Particle &part)
 	if(EF != obsmodel.Lobs(trev,indev)) emsg("Observation does not agree");
 }
 		
-/// STANDARD PARAMETER PROPOSALS
+/// STANDARD ParamETER PROPOSALS
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
 void State::standard_parameter_prop(Jump &jump)
@@ -525,7 +525,7 @@ void State::stand_param_betaphi_prop(Jump &jump)
 		
 		while(n < x.size()){
 			auto i = x[n].ind;
-			FEV ev = indev[i][x[n].e];
+			Event ev = indev[i][x[n].e];
 			auto tt = ev.t;
 			if(tt >= tmax) break;
 	
@@ -664,7 +664,7 @@ void State::stand_param_area_prop(Jump &jump)
 		
 		while(n < x.size()){
 			auto i = x[n].ind;
-			FEV ev = indev[i][x[n].e];
+			Event ev = indev[i][x[n].e];
 			auto tt = ev.t;
 			if(tt >= tmax) break;
 	

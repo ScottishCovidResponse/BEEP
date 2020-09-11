@@ -29,7 +29,7 @@ struct PartEF                                                              // St
 bool PartEF_ord (PartEF p1,PartEF p2) { return (p1.EF < p2.EF); }          // Used to order by EF
 
 /// Initilaises the ABC class
-ABC::ABC(const Details &details, const DATA &data, const MODEL &model, const POPTREE &poptree, const Mpi &mpi, const Inputs &inputs, const Output &output, const Obsmodel &obsmodel) : details(details), data(data), model(model), poptree(poptree), mpi(mpi), output(output), obsmodel(obsmodel)
+ABC::ABC(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
 	total_time = inputs.find_int("cputime",UNSET);  
 	
@@ -56,7 +56,7 @@ ABC::ABC(const Details &details, const DATA &data, const MODEL &model, const POP
 /// Implements a version of abc which uses model-based proposals in MCMC
 void ABC::mbp()
 {
-	Chain chain(details,data,model,poptree,obsmodel,output,0);
+	Chain chain(details,data,model,areatree,obsmodel,output,0);
 	chain.jump.setburnin(0,1);
 	 
 	vector <Particle> part;					
@@ -160,7 +160,7 @@ void ABC::mbp()
 /// This is an implementation of an ABC-SMC algorithm, which is used to compare against the MBP-MCMC approach 
 void ABC::smc()
 {	
-	Chain chain(details,data,model,poptree,obsmodel,output,0);
+	Chain chain(details,data,model,areatree,obsmodel,output,0);
 	
 	const double jump = 1;
 	
@@ -428,12 +428,12 @@ double ABC::acceptance(double rate) const
 }
 
 /// Gets a sample from a particle
-SAMPLE ABC::get_sample(const Particle &part, Chain &chain) const
+Sample ABC::get_sample(const Particle &part, Chain &chain) const
 {
-	SAMPLE sample;
+	Sample sample;
 	chain.initial.initialise_from_particle(part);
 	sample.meas = obsmodel.getmeas(chain.initial.trev,chain.initial.indev);;
-	sample.R0 = model.R0calc(chain.initial.paramval);
+	sample.R0 = model.calculate_R_func_time(chain.initial.paramval);
 	sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval); 
 	
 	return sample;
@@ -448,14 +448,14 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 	auto N = part.size();
 	
 	if(mpi.core == 0){
-		vector <PARAMSAMP> psamp;      // Stores parameter samples
+		vector <ParamSample> psamp;      // Stores parameter samples
 		for(auto& samp : gen.param_samp){
-			PARAMSAMP psa; 
+			ParamSample psa; 
 			psa.paramval = samp;
 			psamp.push_back(psa);
 		}
 		
-		vector <SAMPLE> opsamp;        // Stores output samples
+		vector <Sample> opsamp;        // Stores output samples
 		for(const auto& pa : part) opsamp.push_back(get_sample(pa,chain));
 		
 		for(auto co = 1u; co < mpi.ncore; co++){

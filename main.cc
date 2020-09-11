@@ -46,7 +46,7 @@ ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"
 #include "inputs.hh"
 #include "details.hh"
 #include "data.hh"
-#include "poptree.hh"
+#include "areatree.hh"
 #include "model.hh"
 #include "output.hh"
 #include "obsmodel.hh"
@@ -61,7 +61,7 @@ ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"
 
 #include "combinetrace.hh"
 
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 #include "pybind11/embed.h"
 #include "datapipeline.hh"
 #endif
@@ -76,17 +76,17 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
   #endif
 
-	Mpi mpi;                                                                 // Stores mpi information (core and ncore)
+	Mpi mpi;                                                         // Stores mpi information (core and ncore)
 	
-	bool verbose = (mpi.core == 0);                                          // Paramater which ensures that only core 0 outputs results
+	bool verbose = (mpi.core == 0);                                  // Paramater which ensures that only core 0 outputs results
 		
 	if(verbose) cout << "BEEPmbp version " << gitversion() << endl << endl;  // Outputs the git version
 
 	Inputs inputs(argc,argv);                                        // Loads command line arguments and TOML file into inputs
-		
+
 	Details details(inputs);                                                 // Loads up various details of the model
-	
-#ifdef USE_DATA_PIPELINE                                                   // Sets up data
+
+#ifdef USE_Data_PIPELINE                                                   // Sets up data
 	pybind11::scoped_interpreter guard{};
 
 	using namespace pybind11::literals;
@@ -98,9 +98,9 @@ int main(int argc, char** argv)
 		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
 		gitversion());
 
-	DATA data(inputs,details,mpi,dp);   
+	Data data(inputs,details,mpi,dp);   
 #else
-	DATA data(inputs,details,mpi); 
+	Data data(inputs,details,mpi); 
 #endif
 
 	if(details.mode == combinetrace){                                        // If in 'combinetrace' mode then do this and exit
@@ -108,9 +108,9 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	
-	MODEL model(inputs,details,data);                                        // Loads up the model
+	Model model(inputs,details,data);                                        // Loads up the model
 	
-	POPTREE poptree(data);                                                   // Initialises poptree
+	AreaTree areatree(data);                                                   // Initialises areatree
 
 	unsigned int seed = inputs.find_int("seed",0);                           // Sets up the random seed
 	sran(mpi.core*10000+seed);
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 		cout << "Running...." << endl;
 	}
 	
-	Obsmodel obsmodel(details,data,model);                                   // Generates an observation model
+	ObservationModel obsmodel(details,data,model);                                   // Generates an observation model
 	
 	Output output(details,data,model,obsmodel);                              // Generates an output class
 	
@@ -131,35 +131,35 @@ int main(int argc, char** argv)
 	switch(details.mode){
 	case sim:                                                                // Performs a single simulation from the model 
 		{		
-			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.run();
 		}
 		break;
 	
 	case multisim:                                                           // Performs multiple simulations from the model
 		{
-			Simulate simu(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.multirun();
 		}
 		break;
 			
 	case abcsmc:                                                             // Performs the ABC-SMC algorithm
 		{	
-			ABC abc(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.smc();
 		}
 		break;
 		
 	case abcmbp:                                                             // Peforms the ABC-MBP algorithm
 		{	
-			ABC abc(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.mbp();
 		}
 		break;
 		
 	case inf:                                                                // Performs inference on actual data
 		{
-			Mcmc mcmc(details,data,model,poptree,mpi,inputs,output,obsmodel);
+			Mcmc mcmc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			mcmc.run();
 		}
 		break;
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 	
 	if(verbose) cout << double(timers.timetot)/CLOCKS_PER_SEC << " Total time (seconds)" << endl;
 	
-#ifdef USE_DATA_PIPELINE
+#ifdef USE_Data_PIPELINE
 	delete dp;
 #endif
 

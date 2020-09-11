@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__DATA_HH
-#define BEEPMBP__DATA_HH
+#ifndef BEEPMBP__Data_HH
+#define BEEPMBP__Data_HH
 
 #include <string>
 
@@ -9,21 +9,21 @@ using namespace std;
 #include "details.hh"
 #include "utils.hh"
 
-struct QTENSOR {                           // Stores information about a Q tensor
+struct Qtensor {                           // Stores information about a Q tensor
 	string comp;                             // The compartment on which the tensor acts
 	unsigned int timep;                      // The time period over which the tensor acts
 	string name;     			 									 // The name of the file
 	unsigned int Qtenref;                    // References the actual tensor information in genQ
 };
 
-struct SPARSETENSOR{                       // Stores the Q tensor in a sparse way
+struct SparseTensor{                       // Stores the Q tensor in a sparse way
 	string name;                             // The reference name
 	vector <unsigned short> ntof;                 	  // Stores the mixing matrix between areas and ages at different times
 	vector < vector < unsigned short > > tof;
 	vector < vector< vector < float > > > valf;
 };
 
-struct GENQ{
+struct GenerateQ{
 	string Nall;                             // The age matrix of all interations
 	string Nhome;                            // The age matrix of home interations
 	string Nother;                           // The age matrix of other interations
@@ -33,10 +33,10 @@ struct GENQ{
 	string localhome;                        // The Q matrix for someone at home
 	string flowall;                          // The Q matrix for general daily life
 
-	vector <SPARSETENSOR> Qten;              // Stores the actual tensors
+	vector <SparseTensor> Qten;              // Stores the actual tensors
 };
 
-struct TABLE {                             // Loads a table
+struct Table {                             // Loads a table
 	string file; 														 // The file from which the tables was loaded
 	unsigned int ncol;                       // The number of columns
 	unsigned int nrow;                       // The number if rows
@@ -44,12 +44,12 @@ struct TABLE {                             // Loads a table
 	vector <vector <string> > ele;        	 // The elements of the table
 };
 
-struct TIMEP { 														 // Stores a time period
+struct TimePeriod { 														 // Stores a time period
 	string name;														 // The name of the time period
 	double tend;														 // The end time
 };
 
-struct TRANSDATA{                          // Stores data about transitions
+struct TransitionData{                          // Stores data about transitions
 	string fromstr;                          // The "from" compartment
  	string tostr;                            // The "to" compartment 
 	unsigned int trans;                      // The transition number
@@ -61,7 +61,7 @@ struct TRANSDATA{                          // Stores data about transitions
 	unsigned int rows;                       // The number of rows of data
 };
 
-struct POPDATA{                            // Stores population data
+struct PopulationData{                            // Stores population data
 	string compstr;                          // The compartment string
  	unsigned int comp;                       // The comparmtent number
 	string type;                             // The type (either "reg" for regional or "all" for global)
@@ -72,7 +72,7 @@ struct POPDATA{                            // Stores population data
 	unsigned int rows;                       // The number of rows of data
 };
 
-struct MARGDATA{                           // Stores data about marginal distributions
+struct MarginalData{                           // Stores data about marginal distributions
 	string fromstr;                          // The "from" compartment
  	string tostr;                            // The "to" compartment 
 	unsigned int trans;                      // The transition number
@@ -82,32 +82,32 @@ struct MARGDATA{                           // Stores data about marginal distrib
 	vector < vector <double> > percent;      // A table giving the percentage of transition in different demographic values / regions
 };
 
-struct MEAS{                               // Stores values for all the measurements made on 
+struct Measurements{                               // Stores values for all the measurements made on 
 	vector < vector <vector <unsigned int> > > transnum;
 	vector < vector <vector <unsigned int> > > popnum;
 	vector < vector <vector <unsigned int> > > margnum;	
 };
 
-struct DEMOCAT {                           // Stores demographic categories
+struct DemographicCategory {                           // Stores demographic categories
 	string name;                             // The name of the category
 	vector <string> value;                   // The postential values it can take
 	vector <string> param;                   // The parameters used for the susceptibility
 	vector <unsigned int> col;               // The columns in the table
 };
 
-struct COVAR {                             // Stores the  covariate for the area
+struct Covariate {                             // Stores the  covariate for the area
 	string name;                             // The name of the covariate (i.e. the column in the area data file)
 	string param;                            // The parameters used
 	string func;                             // The functional transformation
 	unsigned int col;                        // The column in the table
 };
 
-struct REGION {                            // Provides information a data region
+struct DataRegion {                            // Provides information a data region
 	string name;														 // The name for the region
 	string code;														 // The code for the region
 };
 
-struct AREA {                              // Provides information about an area
+struct Area {                              // Provides information about an area
 	string code;                             // The code for the area
 	unsigned int region;                     // The data region it belongs to
  	double x, y;                             // The geographic position
@@ -118,7 +118,7 @@ struct AREA {                              // Provides information about an area
 	vector <vector <unsigned int> > ind;     // The individuals in different demographic categories
 };
 
-struct IND {                               // Provides information about an individual
+struct Individual {                               // Provides information about an individual
 	unsigned int area;                       // The area
 	unsigned int dp;                         // The demographic category possibility
 };
@@ -126,7 +126,7 @@ struct IND {                               // Provides information about an indi
 struct AreaRefComparatorX
 {
 	public:
-	AreaRefComparatorX(vector <AREA> &area) : area(area)
+	AreaRefComparatorX(vector <Area> &area) : area(area)
 	{
 	}
 
@@ -136,13 +136,13 @@ struct AreaRefComparatorX
 	}
 
 private:
-	vector <AREA> &area;
+	vector <Area> &area;
 };
 
 struct AreaRefComparatorY
 {
 	public:
-	AreaRefComparatorY(vector <AREA> &area) : area(area)
+	AreaRefComparatorY(vector <Area> &area) : area(area)
 	{
 	}
 
@@ -152,19 +152,19 @@ struct AreaRefComparatorY
 	}
 
 private:
-	vector <AREA> &area;
+	vector <Area> &area;
 };
 
 class DataPipeline;
 
-class MODEL;
+class Model;
 class Inputs;
 
-class DATA
+class Data
 {
 public:
 	
-	DATA(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
+	Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
 
 	DataPipeline *datapipeline;              // DataPipeline object
 	
@@ -174,10 +174,10 @@ public:
 	double thres_h;                          // The height of the threshold observation model
 
 	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DEMOCAT> democat;                // Stores the demographic categories
+	vector <DemographicCategory> democat;                // Stores the demographic categories
 	
 	unsigned int ncovar;                     // The number of covariates for area  
-	vector <COVAR> covar;                    // Covariates for area
+	vector <Covariate> covar;                    // MarginalDatas for area
 
 	unsigned int nage;                       // The number of age categories
 	unsigned int narage;                     // #area * #age
@@ -185,29 +185,29 @@ public:
 	unsigned int ndemocatposperage;          // Demographic states per age group
 	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
 
-	vector <TIMEP> timeperiod;               // The timings of changes to Q;
+	vector <TimePeriod> timeperiod;               // The timings of changes to Q;
 
-	GENQ genQ; 															 // Stores information about generating the Q matrix
-	vector <QTENSOR> Q;                      // Stores the list of Q tensors
+	GenerateQ genQ; 															 // Stores information about generating the Q matrix
+	vector <Qtensor> Q;                      // Stores the list of Q tensors
 	
 	unsigned int nregion;                    // Number of data regions
-	vector <REGION> region;                  // The names of the data regions
+	vector <DataRegion> region;                  // The names of the data regions
 
 	unsigned int narea;                      // The number of areas
-	vector <AREA> area;                      // List of all the areas
+	vector <Area> area;                      // List of all the areas
 	
-	vector <IND> ind;                        // The individuals in the system
+	vector <Individual> ind;                        // The individuals in the system
 		
 	unsigned int popsize;                    // The total population size 
  
 	unsigned int ndemocatpos;                // The number of demographic possibilities
 	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
 
-	vector <TRANSDATA> transdata;            // Store information about transition data
+	vector <TransitionData> transdata;            // Store information about transition data
 	
-	vector <POPDATA> popdata;                // Store information about population data
+	vector <PopulationData> popdata;                // Store information about population data
 	
-	vector <MARGDATA> margdata;              // Store information about marginalised distribution data
+	vector <MarginalData> margdata;              // Store information about marginalised distribution data
 	
 	vector <double> agedist; 								 // Gives the overall age distribution
 	
@@ -225,13 +225,13 @@ private:
 	
 	string strip(string line) const;
 	void copydata(unsigned int core);
-	TABLE loadtable(string file, string dir="") const;
-	TABLE loadtablefromdatapipeline(string file) const;
-	TABLE loadtablefromfile(string file, string dir) const;
+	Table loadtable(string file, string dir="") const;
+	Table loadtablefromdatapipeline(string file) const;
+	Table loadtablefromfile(string file, string dir) const;
 
-	void table_createcol(string head,vector <unsigned int> cols, TABLE &tab) const;
-	void table_selectdates(unsigned int t, unsigned int units, TABLE &tab, string type) const;
-	unsigned int findcol(const TABLE &tab, string name) const;
+	void table_createcol(string head,vector <unsigned int> cols, Table &tab) const;
+	void table_selectdates(unsigned int t, unsigned int units, Table &tab, string type) const;
+	unsigned int findcol(const Table &tab, string name) const;
 	unsigned int getint(const string& st, const string& file) const;
 
 	const Details &details;
