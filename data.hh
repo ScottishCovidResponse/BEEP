@@ -162,79 +162,78 @@ class Inputs;
 
 class Data
 {
-public:
-	
-	Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
+	public:
+		Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp=0);
 
-	DataPipeline *datapipeline;              // DataPipeline object
-	
-	string datadir; 												 // The data directory
-
-	unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
-	double thres_h;                          // The height of the threshold observation model
-
-	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DemographicCategory> democat;                // Stores the demographic categories
-	
-	unsigned int ncovar;                     // The number of covariates for area  
-	vector <Covariate> covar;                    // MarginalDatas for area
-
-	unsigned int nage;                       // The number of age categories
-	unsigned int narage;                     // #area * #age
-	unsigned int nardp;                      // #area * #ndemocatpos
-	unsigned int ndemocatposperage;          // Demographic states per age group
-	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
-
-	vector <TimePeriod> timeperiod;               // The timings of changes to Q;
-
-	GenerateQ genQ; 															 // Stores information about generating the Q matrix
-	vector <Qtensor> Q;                      // Stores the list of Q tensors
-	
-	unsigned int nregion;                    // Number of data regions
-	vector <DataRegion> region;                  // The names of the data regions
-
-	unsigned int narea;                      // The number of areas
-	vector <Area> area;                      // List of all the areas
-	
-	vector <Individual> ind;                        // The individuals in the system
+		DataPipeline *datapipeline;              // DataPipeline object
 		
-	unsigned int popsize;                    // The total population size 
- 
-	unsigned int ndemocatpos;                // The number of demographic possibilities
-	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
+		string data_directory; 												 // The data directory
 
-	vector <TransitionData> transdata;            // Store information about transition data
-	
-	vector <PopulationData> popdata;                // Store information about population data
-	
-	vector <MarginalData> margdata;              // Store information about marginalised distribution data
-	
-	vector <double> agedist; 								 // Gives the overall age distribution
-	
-	void sortX(vector <unsigned int> &vec);	 // Used for sorting areas by x and y location
-	void sortY(vector <unsigned int> &vec);	
-	AreaRefComparatorX compX;
-	AreaRefComparatorY compY;
-	
-	void print_to_terminal() const;
-	
-private:
-	void calc_democatpos();
-	void read_data_files(const Inputs &inputs, const Mpi &mpi);
-	void load_region_file(const Inputs &inputs);
-	
-	string strip(string line) const;
-	void copydata(unsigned int core);
-	Table loadtable(string file, string dir="") const;
-	Table loadtablefromdatapipeline(string file) const;
-	Table loadtablefromfile(string file, string dir) const;
+		unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
+		double thres_h;                          // The height of the threshold observation model
 
-	void table_createcol(string head,vector <unsigned int> cols, Table &tab) const;
-	void table_selectdates(unsigned int t, unsigned int units, Table &tab, string type) const;
-	unsigned int findcol(const Table &tab, string name) const;
-	unsigned int getint(const string& st, const string& file) const;
+		unsigned int ndemocat;                   // The number of demographic categories
+		vector <DemographicCategory> democat;                // Stores the demographic categories
+		
+		unsigned int ncovar;                     // The number of covariates for area  
+		vector <Covariate> covar;                    // MarginalDatas for area
 
-	const Details &details;
+		unsigned int nage;                       // The number of age categories
+		unsigned int narage;                     // #area * #age
+		unsigned int nardp;                      // #area * #ndemocatpos
+		unsigned int ndemocatposperage;          // Demographic states per age group
+		unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
+
+		vector <TimePeriod> time_period;          // The timings of changes to Q;
+
+		GenerateQ genQ; 								   			 // Stores information about generating the Q matrix
+		vector <Qtensor> Q;                      // Stores the list of Q tensors
+		
+		unsigned int nregion;                    // Number of data regions
+		vector <DataRegion> region;              // The names of the data regions
+
+		unsigned int narea;                      // The number of areas
+		vector <Area> area;                      // List of all the areas
+		
+		vector <Individual> ind;                 // The individuals in the system
+			
+		unsigned int popsize;                    // The total population size 
+	 
+		unsigned int ndemocatpos;                // The number of demographic possibilities
+		vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
+
+		vector <TransitionData> transdata;       // Store information about transition data
+		
+		vector <PopulationData> popdata;         // Store information about population data
+		
+		vector <MarginalData> margdata;          // Store information about marginalised distribution data
+		
+		vector <double> agedist; 								 // Gives the overall age distribution
+		
+		void sortX(vector <unsigned int> &vec);	 // Used for sorting areas by x and y location
+		void sortY(vector <unsigned int> &vec);	
+		AreaRefComparatorX compX;
+		AreaRefComparatorY compY;
+		
+		void print_to_terminal() const;
+		
+	private:
+		void calc_democatpos();
+		void read_data_files(const Inputs &inputs, const Mpi &mpi);
+		void load_region_file(const Inputs &inputs);
+		
+		string strip(string line) const;
+		void copy_data(unsigned int core);
+		Table load_table(string file, string dir="") const;
+		Table load_table_from_datapipeline(string file) const;
+		Table load_table_from_file(string file, string dir) const;
+
+		void table_create_column(string head,vector <unsigned int> cols, Table &tab) const;
+		void table_select_dates(unsigned int t, unsigned int units, Table &tab, string type) const;
+		unsigned int find_column(const Table &tab, string name) const;
+		unsigned int get_integer(const string& st, const string& file) const;
+
+		const Details &details;
 };
 
 #endif

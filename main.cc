@@ -13,20 +13,20 @@ ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"
  mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
  mpirun -n 20 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
  mpirun -n 20 ./beepmbp inputfile="examples/infMSOAnewsim.toml" mode="abcmbp"  
-  ./beepmbp inputfile="examples/infMSOAnewsim.toml" mode="sim"  outputdir="Outputnew"
+  ./beepmbp inputfile="examples/infMSOAnewsim.toml" mode="sim"  output_directory="Outputnew"
 
  mpirun -n 2 gdb --batch --quiet -ex "run" -ex "bt" -ex "quit" --args  ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"  
 
-  ./beepmbp inputfile="examples/inftest.toml" mode="sim" outputdir="OutputTest"
+  ./beepmbp inputfile="examples/inftest.toml" mode="sim" output_directory="OutputTest"
 	
  mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcmbp" 
-  mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcsmc"  outputdir="OutputTest4" 
+  mpirun -n 20	 ./beepmbp inputfile="examples/inftest.toml" mode="abcsmc"  output_directory="OutputTest4" 
 	
 	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="sim"
-	 nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  outputdir="OutputMSOATest" &
-		nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcsmc"  outputdir="OutputMSOATest1" &
+	 nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  output_directory="OutputMSOATest" &
+		nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcsmc"  output_directory="OutputMSOATest1" &
 		
- nohup  mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  outputdir="OutputMSOATest" &     beta=2
+ nohup  mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  output_directory="OutputMSOATest" &     beta=2
 		
 		
 		 mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 	Data data(inputs,details,mpi); 
 #endif
 
-	if(details.mode == combinetrace){                                        // If in 'combinetrace' mode then do this and exit
+	if(details.mode == COMBINE_TRACE){                                        // If in 'combinetrace' mode then do this and exit
 		combine_trace(data,inputs);
 		return 0;
 	}
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 	
 	AreaTree areatree(data);                                                   // Initialises areatree
 
-	unsigned int seed = inputs.find_int("seed",0);                           // Sets up the random seed
+	unsigned int seed = inputs.find_integer("seed",0);                           // Sets up the random seed
 	sran(mpi.core*10000+seed);
 	
 	if(verbose){
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 		cout << "Running...." << endl;
 	}
 	
-	ObservationModel obsmodel(details,data,model);                                   // Generates an observation model
+	ObservationModel obsmodel(details,data,model);                           // Generates an observation model
 	
 	Output output(details,data,model,obsmodel);                              // Generates an output class
 	
@@ -129,35 +129,35 @@ int main(int argc, char** argv)
 	timers.timetot = -clock();
 	
 	switch(details.mode){
-	case sim:                                                                // Performs a single simulation from the model 
+	case SIM:                                                                // Performs a single simulation from the model 
 		{		
 			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.run();
 		}
 		break;
 	
-	case multisim:                                                           // Performs multiple simulations from the model
+	case MULTISIM:                                                           // Performs multiple simulations from the model
 		{
 			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.multirun();
 		}
 		break;
 			
-	case abcsmc:                                                             // Performs the ABC-SMC algorithm
+	case ABC_SMC:                                                             // Performs the ABC-SMC algorithm
 		{	
 			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.smc();
 		}
 		break;
 		
-	case abcmbp:                                                             // Peforms the ABC-MBP algorithm
+	case ABC_MBP:                                                             // Peforms the ABC-MBP algorithm
 		{	
 			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.mbp();
 		}
 		break;
 		
-	case inf:                                                                // Performs inference on actual data
+	case MCMCMC:                                                                // Performs inference on actual data
 		{
 			Mcmc mcmc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			mcmc.run();

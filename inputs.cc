@@ -89,7 +89,7 @@ string Inputs::find_string(const string &key, const string &def) const
 }
 
 /// Finds an integer from the TOML file (or uses the default 'def' value)
-int Inputs::find_int(const string &key, int def) const
+int Inputs::find_integer(const string &key, int def) const
 {
 	int val;
 	auto val_it = cmdlineparams.find(key);
@@ -193,7 +193,7 @@ Mode Inputs::mode() const
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", sim}, {"inf", inf}, {"multisim", multisim}, {"abcsmc", abcsmc}, {"abcmbp", abcmbp}, {"combinetrace", combinetrace}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"inf", MCMCMC}, {"multisim", MULTISIM}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"combinetrace", COMBINE_TRACE}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value " + val + " for mode parameter");
 	
@@ -201,7 +201,7 @@ Mode Inputs::mode() const
 }
 
 /// Finds and returns 'transdata'
-vector <TransitionData> Inputs::find_transdata(const Details &details) const
+vector <TransitionData> Inputs::find_transition_data(const Details &details) const
 {
 	vector <TransitionData> transdatavec;
 	
@@ -231,7 +231,7 @@ vector <TransitionData> Inputs::find_transdata(const Details &details) const
 				else emsgroot("Units in 'transdata' not recognised");
 			}
 			
-			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
+			if(details.mode == SIM || details.mode == MULTISIM){
 				transdata.rows = (unsigned int)((details.period - transdata.start)/transdata.units);
 				if(transdata.rows == 0) emsgroot("Transition data '"+transdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			} else {
@@ -245,7 +245,7 @@ vector <TransitionData> Inputs::find_transdata(const Details &details) const
 }
 
 /// Finds and returns 'popdata'
-vector <PopulationData> Inputs::find_popdata(const Details &details) const
+vector <PopulationData> Inputs::find_population_data(const Details &details) const
 {
 	vector <PopulationData> popdatavec;
 
@@ -274,7 +274,7 @@ vector <PopulationData> Inputs::find_popdata(const Details &details) const
 				else emsgroot("Units in 'popdata' not recognised");
 			}
 			
-			if(details.mode != inf && details.mode != abcsmc && details.mode != abcmbp){
+			if(details.mode == SIM || details.mode == MULTISIM){
 				popdata.rows = (unsigned int)((details.period - popdata.start)/popdata.units);
 				if(popdata.rows == 0) emsgroot("popition data '"+popdata.file+"' cannot be generated because the time period is not sufficiently long.");
 			} else {
@@ -289,7 +289,7 @@ vector <PopulationData> Inputs::find_popdata(const Details &details) const
 }
 
 /// Finds and returns 'margdata'
-vector <MarginalData> Inputs::find_margdata(const Details & /*details */, const vector <DemographicCategory> &democat) const
+vector <MarginalData> Inputs::find_marginal_data(const Details & /*details */, const vector <DemographicCategory> &democat) const
 {
 	vector <MarginalData> margdatavec;
 	
@@ -323,7 +323,7 @@ vector <MarginalData> Inputs::find_margdata(const Details & /*details */, const 
 }
 
 /// Finds and returns 'democats'
-vector <DemographicCategory> Inputs::find_democat(const Details & /* details */) const
+vector <DemographicCategory> Inputs::find_demographic_category(const Details & /* details */) const
 {
 	vector <DemographicCategory> democatvec;
 	
@@ -371,7 +371,7 @@ vector <DemographicCategory> Inputs::find_democat(const Details & /* details */)
 }
 
 /// Finds and returns 'covar'
-vector <Covariate> Inputs::find_covar(const Details &/*details*/) const
+vector <Covariate> Inputs::find_covariate(const Details &/*details*/) const
 {
 	vector <Covariate> covarvec;
 	
@@ -395,35 +395,35 @@ vector <Covariate> Inputs::find_covar(const Details &/*details*/) const
 }
 
 /// Finds and returns 'timep'
-vector <TimePeriod> Inputs::find_timeperiod(const Details &details) const
+vector <TimePeriod> Inputs::find_time_period(const Details &details) const
 {
-	vector <TimePeriod> timeperiodvec;
+	vector <TimePeriod> time_periodvec;
 	
 	if(basedata->contains("timep")) {
 		const auto timep = basedata->open("timep");
 		for(auto j = 0u; j < timep.size(); j++){
 			const auto tim = timep[j];
 			
-			TimePeriod timeperiod;
-			timeperiod.name = tim.stringfield("name");
+			TimePeriod time_period;
+			time_period.name = tim.stringfield("name");
 			
 			auto tendstr = tim.stringfield("tend");
-			timeperiod.tend = details.gettime(tendstr) - details.start;
+			time_period.tend = details.gettime(tendstr) - details.start;
 			
-			if(timeperiod.tend < 0 || timeperiod.tend > (int)details.period) emsgroot("Time '"+tendstr+"' is out of range."); 
+			if(time_period.tend < 0 || time_period.tend > (int)details.period) emsgroot("Time '"+tendstr+"' is out of range."); 
 			if(j > 0){
-				if(timeperiod.tend < timeperiodvec[j-1].tend) emsgroot("'timep' is not time ordered.");
+				if(time_period.tend < time_periodvec[j-1].tend) emsgroot("'timep' is not time ordered.");
 			}
 			
 			if(j == timep.size()-1){
-				if(timeperiod.tend != (int)details.period) emsgroot("'tend' in 'timep' must finish with the end time.");
+				if(time_period.tend != (int)details.period) emsgroot("'tend' in 'timep' must finish with the end time.");
 			}
-			timeperiodvec.push_back(timeperiod);
+			time_periodvec.push_back(time_period);
 		}
 	}
 	else emsgroot("Property 'timep' defining time periods must be set.");
 
-	return timeperiodvec;
+	return time_periodvec;
 }
 
 /// Finds properties of 'genQ'
@@ -456,7 +456,7 @@ void Inputs::find_genQ(GenerateQ &genQ, const Details &/*details*/) const
 }
 
 /// Sets up Q
-void Inputs::find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &timeperiod, const Details & /* details */) const
+void Inputs::find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &time_period, const Details & /* details */) const
 {
 	if(basedata->contains("Q")) {
 		const auto Qlist = basedata->open("Q");
@@ -467,9 +467,9 @@ void Inputs::find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &timeperio
 			
 			const auto timep = Q.stringfield("timep");
 			auto tp = 0u;
-			while(tp < timeperiod.size() && timeperiod[tp].name != timep)
+			while(tp < time_period.size() && time_period[tp].name != timep)
 				tp++;
-			if(tp == timeperiod.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
+			if(tp == time_period.size()) emsgroot("Cannot find '"+timep+"' as a time period defined using the 'timep' command in the input TOML file.");
 			qten.timep = tp;
 	
 			qten.comp = Q.stringfield("comp");			
@@ -484,7 +484,7 @@ void Inputs::find_Q(vector <Qtensor> &Qvec, const vector <TimePeriod> &timeperio
 }
 
 /// Finds 'params'
-void Inputs::find_param(vector <string> &name, vector <double> &val) const
+void Inputs::find_parameter(vector <string> &name, vector <double> &val) const
 {
 	if(basedata->contains("params")){
 		const auto paramsin = basedata->open("params");
@@ -533,7 +533,7 @@ void Inputs::find_prior(vector <string> &name, vector <double> &min, vector <dou
 }
 
 /// Finds 'comps'
-void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) const
+void Inputs::find_compartments(vector <string> &name, vector <double> &infectivity) const
 {
 	if(basedata->contains("comps")) {
 		const auto compsin = basedata->open("comps");
@@ -551,7 +551,7 @@ void Inputs::find_comps(vector <string> &name, vector <double> &infectivity) con
 }
 
 /// Finds 'trans'
-void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <string> &prpar, vector <int> &type, vector <string> &mean, vector <string> &cv) const
+void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector <string> &prpar, vector <int> &type, vector <string> &mean, vector <string> &cv) const
 {
 	if(basedata->contains("trans")){
 		const auto transin = basedata->open("trans");
@@ -571,22 +571,22 @@ void Inputs::find_trans(vector <string> &from, vector <string> &to, vector <stri
 			string mean_temp="", cv_temp="";
 			
 			if(dist == "infection"){
-				distval = infection_dist;
+				distval = INFECTION_DIST;
 			}
 			
 			if(dist == "exp"){
-				distval = exp_dist;
+				distval = EXP_DIST;
 				mean_temp = trans.stringfield("mean");				
 			}
 			
 			if(dist == "lognorm"){
-				distval = lognorm_dist;
+				distval = LOGNORM_DIST;
 				mean_temp = trans.stringfield("mean");				
 				cv_temp = trans.stringfield("cv");
 			}
 			
 			if(dist == "gamma"){
-				distval = gamma_dist;
+				distval = GAMMA_DIST;
 				mean_temp = trans.stringfield("mean");
 				cv_temp = trans.stringfield("cv");
 			}

@@ -25,28 +25,28 @@ using namespace std;
 
 /// Initialises data
 Data::Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) :
-	datapipeline(dp), datadir(inputs.find_string("datadir","UNSET")),
+	datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")),
 	compX(area), compY(area), details(details)
 {
 	// The data directory
-	if(datadir == "UNSET") emsgroot("The 'datadir' must be set.");
+	if(data_directory == "UNSET") emsgroot("The 'data_directory' must be set.");
 
-	threshold = inputs.find_int("threshold",UNSET);                                       // The threshold (if specified)
-	if(threshold != UNSET) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*minvar)));
+	threshold = inputs.find_integer("threshold",UNSET);                                       // The threshold (if specified)
+	if(threshold != UNSET) thres_h = log(1.0/(threshold + 0.5*sqrt(2*M_PI*MINIMUM_VARIANCE)));
 	else thres_h = UNSET;
 	
-	democat = inputs.find_democat(details);
+	democat = inputs.find_demographic_category(details);
 	ndemocat = democat.size();	
 	nage = democat[0].value.size();
 	calc_democatpos();
 
-	covar = inputs.find_covar(details);
+	covar = inputs.find_covariate(details);
 	ncovar = covar.size();
 	
-	timeperiod = inputs.find_timeperiod(details);
+	time_period = inputs.find_time_period(details);
 	
 	inputs.find_genQ(genQ,details);
-	inputs.find_Q(Q,timeperiod,details);
+	inputs.find_Q(Q,time_period,details);
 	
 	read_data_files(inputs,mpi);                                  // Reads the data files
 }
@@ -82,18 +82,18 @@ void Data::print_to_terminal() const
 	}
 	
 	cout << "Time periods defined:" << endl;
-	for(auto j = 0u; j < timeperiod.size(); j++){
+	for(auto j = 0u; j < time_period.size(); j++){
 		cout << "  ";
-		cout << timeperiod[j].name << ": ";
-		if(j == 0) cout << "0"; else cout << timeperiod[j-1].tend;
-		cout << " - " <<  timeperiod[j].tend << endl;
+		cout << time_period[j].name << ": ";
+		if(j == 0) cout << "0"; else cout << time_period[j-1].tend;
+		cout << " - " <<  time_period[j].tend << endl;
 	}
 	cout << endl;
 	
 	cout << "Q tensors loaded:" << endl;
 	for(const auto& QQ : Q){
 		cout << "    ";
-		cout << "timep: " << timeperiod[QQ.timep].name << "  ";
+		cout << "timep: " << time_period[QQ.timep].name << "  ";
 		cout << "compartment: " << QQ.comp << "  ";
 		cout << "name: " << QQ.name << "  ";
 		cout << endl;
@@ -128,10 +128,10 @@ void Data::load_region_file(const Inputs &inputs)
 	string file = inputs.find_string("regions","UNSET");
 	if(file == "UNSET") emsgroot("A 'regions' file must be specified");
 	
-	Table tab = loadtable(file);
+	Table tab = load_table(file);
 	
-	auto namecol = findcol(tab,"name");
-	auto codecol = findcol(tab,"code");
+	auto namecol = find_column(tab,"name");
+	auto codecol = find_column(tab,"code");
 	
 	for(const auto& trow : tab.ele){
 		DataRegion reg;
@@ -145,11 +145,11 @@ void Data::load_region_file(const Inputs &inputs)
 /// Reads in transition and area data
 void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 {
-	transdata = inputs.find_transdata(details);	                                          // Loads data
+	transdata = inputs.find_transition_data(details);	                                          // Loads data
 	
-	popdata = inputs.find_popdata(details);	                                       
+	popdata = inputs.find_population_data(details);	                                       
 	
-	margdata = inputs.find_margdata(details,democat);	 
+	margdata = inputs.find_marginal_data(details,democat);	 
 
 	if(transdata.size() == 0 && popdata.size() == 0)  emsgroot("'transdata' and/or 'popdata' must be set.");	
 
@@ -158,7 +158,7 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	
 		string file = inputs.find_string("areas","UNSET");
 		if(file == "UNSET") emsgroot("A 'areas' file must be specified");
-		Table tab = loadtable(file);
+		Table tab = load_table(file);
 		
 		// If onle one age group then combines all columns with "age" to generate an "all" column
 		if(nage == 1){
@@ -168,19 +168,19 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 					if(tab.heading[col].substr(0,3) == "age") agecols.push_back(col);
 				}
 			}
-			table_createcol("all",agecols,tab);
+			table_create_column("all",agecols,tab);
 		}
 		
-		auto codecol = findcol(tab,"area");                                                 // Works out ccolumns for different columns
-		auto xcol = findcol(tab,"easting");
-		auto ycol = findcol(tab,"northing");
-		auto regcol = findcol(tab,"region");
+		auto codecol = find_column(tab,"area");                                                 // Works out ccolumns for different columns
+		auto xcol = find_column(tab,"easting");
+		auto ycol = find_column(tab,"northing");
+		auto regcol = find_column(tab,"region");
 		
-		for(auto& cov : covar) cov.col = findcol(tab,cov.name);
+		for(auto& cov : covar) cov.col = find_column(tab,cov.name);
 
 		for(auto& democ : democat){
 			democ.col.resize(democ.value.size());
-			for(auto k = 0u; k < democ.col.size(); k++) democ.col[k] = findcol(tab,democ.value[k]);  
+			for(auto k = 0u; k < democ.col.size(); k++) democ.col[k] = find_column(tab,democ.value[k]);  
 		}
 
 		for(const auto& trow : tab.ele){
@@ -282,22 +282,22 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			}
 		}
 
-		if(details.mode != sim && details.mode != multisim){                                        // Loads transition data for inference
-			for(auto& tdata : transdata){
+		if(details.mode != SIM && details.mode != MULTISIM){         
+			for(auto& tdata : transdata){                                // Loads transition data for inference
 				file = tdata.file; 
-				Table tab = loadtable(file);
-				table_selectdates(tdata.start,tdata.units,tab,"trans");
+				Table tab = load_table(file);
+				table_select_dates(tdata.start,tdata.units,tab,"trans");
 				
 				vector <unsigned int> rcol;
-				if(tdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
-				else{ rcol.push_back(findcol(tab,"all"));}
+				if(tdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(find_column(tab,reg.code));}
+				else{ rcol.push_back(find_column(tab,"all"));}
 				
 				tdata.num.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
 					
 					tdata.num[r].resize(tab.nrow);
 					for(auto row = 0u; row < tab.nrow; row++){	
-						tdata.num[r][row] = getint(tab.ele[row][rcol[r]],file);
+						tdata.num[r][row] = get_integer(tab.ele[row][rcol[r]],file);
 					}
 				}
 				tdata.rows = tab.nrow;
@@ -305,22 +305,20 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
-		}
-		
-		if(details.mode != sim && details.mode != multisim){                                            // Loads population data for inference
-			for(auto& pdata : popdata){
+	                                     
+			for(auto& pdata : popdata){                            // Loads population data for inference
 				file = pdata.file;
-				Table tab = loadtable(file);
-				table_selectdates(pdata.start,pdata.units,tab,"pop");
+				Table tab = load_table(file);
+				table_select_dates(pdata.start,pdata.units,tab,"pop");
 			
 				vector <unsigned int> rcol;
-				if(pdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
-				else{ rcol.push_back(findcol(tab,"all"));}
+				if(pdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(find_column(tab,reg.code));}
+				else{ rcol.push_back(find_column(tab,"all"));}
 				
 				pdata.num.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
 					pdata.num[r].resize(tab.nrow);
-					for(auto row = 0u; row < tab.nrow; row++) pdata.num[r][row] = getint(tab.ele[row][rcol[r]],file);
+					for(auto row = 0u; row < tab.nrow; row++) pdata.num[r][row] = get_integer(tab.ele[row][rcol[r]],file);
 				}
 				pdata.rows = tab.nrow;
 				
@@ -328,16 +326,14 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 					emsg("The file '"+file+"' has more data than will fit in the defined 'start' and 'end' time period.");
 				}
 			}
-		}
-		
-		if(details.mode != sim && details.mode != multisim){                                        // Loads marginal data for inference
-			for(auto& mdata : margdata){
+		                  
+			for(auto& mdata : margdata){                                        // Loads marginal data for inference
 				file = mdata.file;
-				Table tab = loadtable(file);
+				Table tab = load_table(file);
 	
 				vector <unsigned int> rcol;
-				if(mdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(findcol(tab,reg.code));}
-				else{ rcol.push_back(findcol(tab,"all"));}
+				if(mdata.type == "reg"){	for(const auto& reg : region) rcol.push_back(find_column(tab,reg.code));}
+				else{ rcol.push_back(find_column(tab,"all"));}
 				
 				mdata.percent.resize(rcol.size());
 				for(auto r = 0u; r < rcol.size(); r++){
@@ -349,10 +345,10 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			}
 		}
 		
-		generateQ(nage,datadir,genQ,area,datapipeline);
+		generateQ(nage,data_directory,genQ,area,datapipeline);
 	}
 
-	if(mpi.ncore > 1) copydata(mpi.core);
+	if(mpi.ncore > 1) copy_data(mpi.core);
 		
 	vector <double> vec(nage);                                                           // Reads in Q tensors
 	for(auto& QQ : Q){
@@ -384,24 +380,24 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 	
 	narage = narea*nage;                                              // Generates the mixing matrix between ages/areas
 	nardp = narea*ndemocatpos; 
-	nsettardp = details.nsettime*nardp;
+	nsettardp = details.ndivision*nardp;
 	
 	//plotrawdata(); emsg("done");
 	//generatedeathdata(); emsg("done");
 }
 
 /// Gets a positive integer from a string
-unsigned int Data::getint(const string& st, const string& file) const
+unsigned int Data::get_integer(const string& st, const string& file) const
 {
 	try {
-		return ::getint(st,threshold);
+		return ::get_integer(st,threshold);
 	} catch (const std::runtime_error& e) {
 		emsg("In file '"+file+"', "+e.what());
 	}
 }
 
 /// Loads a table from the data pipeline
-Table Data::loadtablefromdatapipeline(string file) const
+Table Data::load_table_from_datapipeline(string file) const
 {
 	Table tab;
 #ifdef USE_Data_PIPELINE
@@ -431,14 +427,14 @@ Table Data::loadtablefromdatapipeline(string file) const
 
 	cout << "Loaded table '" << file << "' from data pipeline" << endl;
 #else
-	emsg("loadtablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
+	emsg("load_tablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;
 }
 
 /// Loads a table from a file
-Table Data::loadtablefromfile(string file, string dir) const
+Table Data::load_table_from_file(string file, string dir) const
 {
 	ifstream in;
 
@@ -449,10 +445,10 @@ Table Data::loadtablefromfile(string file, string dir) const
 		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
 	}
 	else{
-    used_file = details.outputdir+"/"+file;
+    used_file = details.output_directory+"/"+file;
 		in.open(used_file.c_str());
 		if(!in){
-      used_file = datadir+"/"+file;
+      used_file = data_directory+"/"+file;
 			in.open(used_file.c_str());
 			if(!in) emsg("Cannot open the file '"+used_file+"'");
 		}
@@ -497,17 +493,17 @@ Table Data::loadtablefromfile(string file, string dir) const
 }
 
 /// Loads a table from a file (if dir is specified then this directory is used
-Table Data::loadtable(string file, string dir) const
+Table Data::load_table(string file, string dir) const
 {
 	if (stringhasending(file, ".txt")) {
-		return loadtablefromfile(file, dir);
+		return load_table_from_file(file, dir);
 	} else {
-		return loadtablefromdatapipeline(file);
+		return load_table_from_datapipeline(file);
 	}
 }
 
 /// Creates a new column by adding together existing columns		
-void Data::table_createcol(string head,vector <unsigned int> cols, Table &tab) const
+void Data::table_create_column(string head,vector <unsigned int> cols, Table &tab) const
 {
 	tab.heading.push_back(head);
 	for(auto& trow : tab.ele){
@@ -519,7 +515,7 @@ void Data::table_createcol(string head,vector <unsigned int> cols, Table &tab) c
 }
 
 /// Selects dates as specified in the TOLM file
-void Data::table_selectdates(unsigned int t, unsigned int units, Table &tab, string type) const 
+void Data::table_select_dates(unsigned int t, unsigned int units, Table &tab, string type) const 
 {
 	auto row = 0u;
 	while(row < tab.nrow){
@@ -527,8 +523,8 @@ void Data::table_selectdates(unsigned int t, unsigned int units, Table &tab, str
 		if(tt < t){
 			if(type == "trans" && row > 0){ // In the case of transitions adds up the contributions from other days to make a week 
 				for(auto i = 1u; i < tab.ncol; i++){
-					auto num1 = getint(tab.ele[row-1][i],tab.file);
-					auto num2 = getint(tab.ele[row][i],tab.file);
+					auto num1 = get_integer(tab.ele[row-1][i],tab.file);
+					auto num2 = get_integer(tab.ele[row][i],tab.file);
 					if(num1 == THRESH || num2 == THRESH || num1 == UNKNOWN || num2 == UNKNOWN){
 						emsg("In the file '"+tab.file+"', amalgamation of data with unknown values is not possible.");
 					}
@@ -562,7 +558,7 @@ void Data::table_selectdates(unsigned int t, unsigned int units, Table &tab, str
 }				
 
 /// Finds a column in a table
-unsigned int Data::findcol(const Table &tab, string name) const
+unsigned int Data::find_column(const Table &tab, string name) const
 {
 	unsigned int c;
 	for(c = 0; c < tab.ncol; c++) if(tab.heading[c] == name) break;
@@ -571,7 +567,7 @@ unsigned int Data::findcol(const Table &tab, string name) const
 }		
 			
 /// Copies data from core zero to all the others
-void Data::copydata(unsigned int core)
+void Data::copy_data(unsigned int core)
 {
 	unsigned int si;
 

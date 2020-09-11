@@ -25,24 +25,24 @@ ofstream quenchplot;
 /// In initialises the inference algorithm
 Mcmc::Mcmc(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
-	nsamp = inputs.find_int("nsamp",UNSET);                                                 // Sets the number of samples for inference
+	nsamp = inputs.find_integer("nsamp",UNSET);                                                 // Sets the number of samples for inference
 	if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	
 	burnin = nsamp/4;                                                                       // Sets the burnin to be a quater of the samples
 	
-	nchaintot = inputs.find_int("nchain",UNSET);                                            // Sets the total number of mcmc chains
-	if(nchaintot == UNSET) emsgroot("The number of chains must be set");
-	if(nchaintot%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
+	nchain_total = inputs.find_integer("nchain",UNSET);                                            // Sets the total number of mcmc chains
+	if(nchain_total == UNSET) emsgroot("The number of chains must be set");
+	if(nchain_total%mpi.ncore != 0) emsgroot("The number of chains must be a multiple of the number of cores");
 
-	nchain = nchaintot/mpi.ncore;                                                           // The number of chains per core
+	nchain = nchain_total/mpi.ncore;                                                           // The number of chains per core
 	if(nchain == 0) emsgroot("'nchain' must be non-zero");
 			
 	string propsmethod_str = inputs.find_string("propsmethod","fixedtime");                 // Sets the proposal method
-	if(propsmethod_str == "allchainsallparams") propsmethod = proposalsmethod::allchainsallparams;
+	if(propsmethod_str == "allchainsallparams") propsmethod = proposal_method::allchainsallparams;
 	else{
-		if(propsmethod_str == "fixednum") propsmethod = proposalsmethod::fixednum;
+		if(propsmethod_str == "fixednum") propsmethod = proposal_method::fixednum;
 		else{
-			if(propsmethod_str == "fixedtime") propsmethod = proposalsmethod::fixedtime;
+			if(propsmethod_str == "fixedtime") propsmethod = proposal_method::fixedtime;
 			else emsg("Parameter propsmethod set to an unrecognised value \""+propsmethod_str+"\"");
 		}
 	}
@@ -55,12 +55,12 @@ Mcmc::Mcmc(const Details &details, const Data &data, const Model &model, const A
 	auto quench = burnin;                                                                  // Initialises model_evidence
 	auto invTmin = inputs.find_double("invTmin",0);                 
 	auto invTmax = inputs.find_double("invTmax",0.25);       
-	model_evidence.init(nchaintot,quench,invTmin,invTmax);
+	model_evidence.init(nchain_total,quench,invTmin,invTmax);
 
-	if(mpi.core == 0){ output.trace_plot_init(); output.L_trace_plot_init(mpi.ncore*nchain);}
-	if(quenchpl == 1){ quenchplot.open((details.outputdir+"/quenchplot.txt").c_str());}
+	if(mpi.core == 0){ output.trace_plot_inititialise(); output.L_trace_plot_inititialise(mpi.ncore*nchain);}
+	if(quenchpl == 1){ quenchplot.open((details.output_directory+"/quenchplot.txt").c_str());}
 	
-	if(mpi.core == 0){ nac_swap.resize(nchaintot); for(auto& nac_swa : nac_swap) nac_swa = 0;}
+	if(mpi.core == 0){ nac_swap.resize(nchain_total); for(auto& nac_swa : nac_swap) nac_swa = 0;}
 
 	assert(mpi.ncore > 0);
   assert(mpi.core < mpi.ncore);
@@ -85,11 +85,11 @@ void Mcmc::run()
 		model_evidence.set_invT(samp,chain);
 		
 		long time = clock();
-		for(auto& cha : chain) cha.standard_prop();
+		for(auto& cha : chain) cha.standard_proposal();
 		
 		timeprop -= clock();
 		switch(propsmethod){
-		case proposalsmethod::allchainsallparams:
+		case proposal_method::allchainsallparams:
 			for(auto& cha : chain){
 				for(auto th = 0u; th < model.param.size(); th++){
 					if(model.param[th].min != model.param[th].max){ cha.mbp_proposal(th); ntimeprop++;}
@@ -97,7 +97,7 @@ void Mcmc::run()
 			}
 			break;
 			
-		case proposalsmethod::fixednum:
+		case proposal_method::fixednum:
 			for(auto lo = 0u; lo < 10; lo++){
 				auto p = int(ran()*nchain);
 				auto th = (unsigned int)(ran()*model.param.size());
@@ -105,7 +105,7 @@ void Mcmc::run()
 			}
 			break;
 			
-		case proposalsmethod::fixedtime:
+		case proposal_method::fixedtime:
 			do{                         // Does proposals for timeloop seconds (on average 20 proposals)
 				auto p = int(ran()*nchain);
 				auto th = int(ran()*model.param.size());
@@ -138,11 +138,11 @@ void Mcmc::run()
 		}
 		MPI_Bcast(&timeloop,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 		
-		if(duplicate == 0) swap(nac_swap,samp,nchain);
+		if(duplicate == 0) swap_chains(nac_swap,samp,nchain);
 		
 		if(samp%1 == 0) model_evidence.store(mpi,chain);
-		if(samp%1 == 0) output_param(output,psamp);
-		if(samp%5 == 0) output_meas(opsamp,nchain);
+		if(samp%1 == 0) output_parameters(output,psamp);
+		if(samp%5 == 0) output_measurements(opsamp,nchain);
 		
 		if(mpi.core == 0 && quenchpl == 1){ 
 			quenchplot << chain[0].invT;
@@ -153,33 +153,33 @@ void Mcmc::run()
 		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){
 			if(mpi.core == 0){
-				output.results(psamp,opsamp);
+				output.final_results(psamp,opsamp);
 				cout << "Model evidence: " << model_evidence.calculate() << endl;
 			}
-			diagnostic(nac_swap);
+			diagnostics(nac_swap);
 		}
 	}	
 }
 
 /// Stochastically swaps chains with similar inverse temperatures 
-void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchain)
+void Mcmc::swap_chains(vector <double> &nac_swap, unsigned int samp, unsigned int nchain)
 {
- 	unsigned int nparam = model.param.size(), nchaintot = nchain*mpi.ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
-	auto loopmax = nchaintot*nchaintot;
-	vector <double> L(nchain), Ltot(nchaintot);
-	vector <double> invT(nchain), invTtot(nchaintot);		
-	vector <unsigned int> ch(nchain), chtot(nchaintot);
-	vector <long> timeprop(nchain), timeproptot(nchaintot);
+ 	unsigned int nparam = model.param.size(), nchain_total = nchain*mpi.ncore, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
+	auto loopmax = nchain_total*nchain_total;
+	vector <double> L(nchain), Ltot(nchain_total);
+	vector <double> invT(nchain), invTtot(nchain_total);		
+	vector <unsigned int> ch(nchain), chtot(nchain_total);
+	vector <long> timeprop(nchain), timeproptot(nchain_total);
 	vector <unsigned int> jump_mbp_ntr(nchainparam), jump_mbp_ntrtot(nparamtot);
 	vector <unsigned int> jump_mbp_nac(nchainparam), jump_mbp_nactot(nparamtot);
 	vector <float> jump_mbp(nchainparam), jump_mbptot(nparamtot);
 	vector <unsigned int> jump_stand_ntr(nchainparam), jump_stand_ntrtot(nparamtot);
 	vector <unsigned int> jump_stand_nac(nchainparam), jump_stand_nactot(nparamtot);
 	vector <float> jump_stand(nchainparam), jump_standtot(nparamtot);
-	vector <float> sigmajump(nchain), sigmajumptot(nchaintot);
-	vector <float> jump_naddrem(nchain), jump_naddremtot(nchaintot);
-	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchaintot);
-	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchaintot);
+	vector <float> sigmajump(nchain), sigmajumptot(nchain_total);
+	vector <float> jump_naddrem(nchain), jump_naddremtot(nchain_total);
+	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchain_total);
+	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchain_total);
 
 	timers.timeswap -= clock();
 		
@@ -218,8 +218,8 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 
 	if(mpi.core == 0){   // Swaps different chains
 		for(auto loop = 0u; loop < loopmax; loop++){
-			auto p1 = (unsigned int)(ran()*nchaintot);
-			auto p2 = (unsigned int)(ran()*nchaintot); 
+			auto p1 = (unsigned int)(ran()*nchain_total);
+			auto p2 = (unsigned int)(ran()*nchain_total); 
 			if(p1 != p2){
 				auto al = exp((invTtot[p1]-invTtot[p2])*(Ltot[p2]-Ltot[p1]));
 				
@@ -292,14 +292,14 @@ void Mcmc::swap(vector <double> &nac_swap, unsigned int samp, unsigned int nchai
 }
 
 /// Ouputs a parameter sample from the MBP algorithm
-void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
+void Mcmc::output_parameters(Output &output, vector <ParamSample> &psamp) const
 {
-	unsigned int nchaintot = mpi.ncore*nchain, samp = psamp.size();
+	unsigned int nchain_total = mpi.ncore*nchain, samp = psamp.size();
 	 
 	timers.timeoutput -= clock();
 		
-	vector <double> L(nchain), Ltot(nchaintot);
-	vector <unsigned int> ch(nchain), chtot(nchaintot);
+	vector <double> L(nchain), Ltot(nchain_total);
+	vector <unsigned int> ch(nchain), chtot(nchain_total);
 	for(auto p = 0u; p < nchain; p++){ L[p] = chain[p].initial.L; ch[p] = chain[p].ch;}
 		
 	MPI_Gather(&L[0],nchain,MPI_DOUBLE,&Ltot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -307,8 +307,8 @@ void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
 
 	unsigned int ppost;
 	if(mpi.core == 0){
-		vector <double> Lord(nchaintot);
-		for(auto p = 0u; p < nchaintot; p++){
+		vector <double> Lord(nchain_total);
+		for(auto p = 0u; p < nchain_total; p++){
 			if(chtot[p] == 0) ppost = p;
 			Lord[chtot[p]] = Ltot[p];
 		}
@@ -325,7 +325,7 @@ void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
 		if(ppost < nchain){
 			paramsamp.paramval = chain[ppost].initial.paramval;
 			L = chain[ppost].initial.L; Pr = chain[ppost].initial.Pr;
-			ninfplot = chain[ppost].initial.x.size();
+			ninfplot = chain[ppost].initial.infev.size();
 		}
 		else{
 			unsigned int si;
@@ -350,7 +350,7 @@ void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
 			pack(chain[p].initial.paramval);
 			pack(chain[p].initial.L);
 			pack(chain[p].initial.Pr);
-			pack((unsigned int) chain[p].initial.x.size());
+			pack((unsigned int) chain[p].initial.infev.size());
 			unsigned int si = packsize();
 			MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
 			MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
@@ -361,20 +361,20 @@ void Mcmc::output_param(Output &output, vector <ParamSample> &psamp) const
 }
 
 /// Ouputs a measurement sample from the MBP algorithm
-void Mcmc::output_meas(vector <Sample> &opsamp, unsigned int nchain) const
+void Mcmc::output_measurements(vector <Sample> &opsamp, unsigned int nchain) const
 {
-	unsigned int nchaintot = mpi.ncore*nchain;
+	unsigned int nchain_total = mpi.ncore*nchain;
 
 	timers.timeoutput -= clock();
 
-	vector <unsigned int> ch(nchain), chtot(nchaintot);
+	vector <unsigned int> ch(nchain), chtot(nchain_total);
 	for(auto p = 0u; p < nchain; p++) ch[p] = chain[p].ch;
 			
 	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 	
 	unsigned int ppost = UNSET;
 	if(mpi.core == 0){
-		for(auto p = 0u; p < nchaintot; p++){ if(chtot[p] == 0){ ppost = p; break;}}
+		for(auto p = 0u; p < nchain_total; p++){ if(chtot[p] == 0){ ppost = p; break;}}
 		if(ppost == UNSET) emsgEC("MBP",100);
 	}
 	
@@ -383,8 +383,8 @@ void Mcmc::output_meas(vector <Sample> &opsamp, unsigned int nchain) const
 	if(mpi.core == 0){
 		Sample sample;
 		if(ppost < nchain){
-			sample.meas = obsmodel.getmeas(chain[ppost].initial.trev,chain[ppost].initial.indev);
-			sample.R0 = model.calculate_R_func_time(chain[ppost].initial.paramval);
+			sample.meas = obsmodel.get_measured_quantities(chain[ppost].initial.transev,chain[ppost].initial.indev);
+			sample.R0 = model.calculate_R_vs_time(chain[ppost].initial.paramval);
 			sample.phi = model.create_disc_spline(model.phispline_ref,chain[ppost].initial.paramval); 
 		}
 		else{
@@ -405,8 +405,8 @@ void Mcmc::output_meas(vector <Sample> &opsamp, unsigned int nchain) const
 		if(mpi.core == ppost/nchain){
 			auto p = ppost%nchain;
 			
-			Measurements meas = obsmodel.getmeas(chain[p].initial.trev,chain[p].initial.indev);
-			vector <double> R0 = model.calculate_R_func_time(chain[p].initial.paramval);
+			Measurements meas = obsmodel.get_measured_quantities(chain[p].initial.transev,chain[p].initial.indev);
+			vector <double> R0 = model.calculate_R_vs_time(chain[p].initial.paramval);
 	
 			packinit(0);
 			pack(meas.transnum);
@@ -424,21 +424,21 @@ void Mcmc::output_meas(vector <Sample> &opsamp, unsigned int nchain) const
 }
 
 /// Outputs MCMC diagnoistic information
-void Mcmc::diagnostic(vector <double> &nac_swap) const
+void Mcmc::diagnostics(vector <double> &nac_swap) const
 {
-	unsigned int nparam = model.param.size(), nchaintot = mpi.ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
-	vector <double> L(nchain), Ltot(nchaintot);
-	vector <unsigned int> ch(nchain), chtot(nchaintot);
-	//vector <long> timeprop(nchain), timeproptot(nchaintot);
+	unsigned int nparam = model.param.size(), nchain_total = mpi.ncore*nchain, nchainparam = nchain*nparam, nparamtot = nchainparam*mpi.ncore;
+	vector <double> L(nchain), Ltot(nchain_total);
+	vector <unsigned int> ch(nchain), chtot(nchain_total);
+	//vector <long> timeprop(nchain), timeproptot(nchain_total);
 	vector <unsigned int> jump_mbp_ntr(nchainparam), jump_mbp_ntrtot(nparamtot);
 	vector <unsigned int> jump_mbp_nac(nchainparam), jump_mbp_nactot(nparamtot);
 	vector <float> jump_mbp(nchainparam), jump_mbptot(nparamtot);
 	vector <unsigned int> jump_stand_ntr(nchainparam), jump_stand_ntrtot(nparamtot);
 	vector <unsigned int> jump_stand_nac(nchainparam), jump_stand_nactot(nparamtot);
 	vector <float> jump_stand(nchainparam), jump_standtot(nparamtot);
-	vector <float> jump_naddrem(nchain), jump_naddremtot(nchaintot);
-	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchaintot);
-	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchaintot);
+	vector <float> jump_naddrem(nchain), jump_naddremtot(nchain_total);
+	vector <unsigned int> jump_standev_ntr(nchain), jump_standev_ntrtot(nchain_total);
+	vector <unsigned int> jump_standev_nac(nchain), jump_standev_nactot(nchain_total);
 
 	for(auto p = 0u; p < nchain; p++){ 
 		L[p] = chain[p].initial.L; 
@@ -472,13 +472,13 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 	MPI_Gather(&jump_standev_nac[0],nchain,MPI_UNSIGNED,&jump_standev_nactot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
 	if(mpi.core == 0){
-		stringstream ss; ss << details.outputdir << "/MCMCdiagnostic.txt";
+		stringstream ss; ss << details.output_directory << "/MCMCdiagnostic.txt";
 		ofstream diag(ss.str().c_str()); 
-		ofstream timings(details.outputdir+"/MCMCdiagnostic_timings.txt"); 
+		ofstream timings(details.output_directory+"/MCMCdiagnostic_timings.txt"); 
 
-		for(auto c = 0u; c < nchaintot; c++){
-			unsigned int cc = 0; while(cc < nchaintot && c != chtot[cc]) cc++;
-			if(cc == nchaintot) emsgEC("MBP",101);			
+		for(auto c = 0u; c < nchain_total; c++){
+			unsigned int cc = 0; while(cc < nchain_total && c != chtot[cc]) cc++;
+			if(cc == nchain_total) emsgEC("MBP",101);			
 		
 			diag << "-------- Chain: " << c << " ----------" << endl << endl;
 			diag << "invT: " << model_evidence.get_invT(c) << "  ";
@@ -512,7 +512,7 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 		}
 		
 		diag << "Swaping with a chain at lower inverse temperature" << endl;
-		for(auto c = 0u; c < nchaintot; c++){
+		for(auto c = 0u; c < nchain_total; c++){
 			diag << "Chain " << c << ": " << nac_swap[c] << endl; 
 		}
 				

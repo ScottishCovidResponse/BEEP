@@ -1,13 +1,12 @@
 // Stores details of the simulation / inference
 
 #include <math.h> 
-
+#include <cstring>
+#include <sstream>
 
 using namespace std;
 
 #include "details.hh"
-#include <cstring>
-#include <sstream>
 
 Mpi::Mpi()
 {
@@ -27,13 +26,13 @@ Details::Details(const Inputs &inputs)
 {
 	mode = inputs.mode();
 	
-	outputdir = inputs.find_string("outputdir","Ouput");                              // Output directory
+	output_directory = inputs.find_string("outputdir","Ouput");                              // Output directory
 
 	string timeformat = inputs.find_string("timeformat","number");                    // Time format
-	if(timeformat == "number"){ tform = tform_num; tformat = "time";}
+	if(timeformat == "number"){ time_format = TIME_FORMAT_NUM; time_format_str = "time";}
 	else{ 
-		if(timeformat == "year-month-day"){ tform = tform_ymd; tformat = "date";}
-		else emsgroot("Do not recognise time format '"+tformat+"'.");
+		if(timeformat == "year-month-day"){ time_format = TIME_FORMAT_YMD; time_format_str = "date";}
+		else emsgroot("Do not recognise time format '"+time_format_str+"'.");
 	}
 	
 	string startstr = inputs.find_string("start","UNSET");                            // Beginning and ending times
@@ -46,14 +45,10 @@ Details::Details(const Inputs &inputs)
 
 	period = end - start;
 	
-	fepertime = 10;                                                                   // Discretiation of time line 
-	
-	settpertime = 1;
-	nsettime = settpertime*period;
-	settime.resize(nsettime+1);
-	for(auto s = 0u; s <= nsettime; s++) settime[s] = double(s*period)/nsettime;
-			
-	fediv = nsettime*fepertime;
+	division_per_time = 1;
+	ndivision = division_per_time*period;
+	division_time.resize(ndivision+1);
+	for(auto s = 0u; s <= ndivision; s++) division_time[s] = double(s*period)/ndivision;
 }
 
 /// Gets the time from a string
@@ -65,13 +60,13 @@ unsigned int Details::gettime(string st) const
 	auto t = 0u;
 	const char *buf = st.c_str();
 	
-	switch(tform){
-	case tform_num:
+	switch(time_format){
+	case TIME_FORMAT_NUM:
 		t = atoi(buf);
 		if(isnan(t)) emsg("The time '"+st+"' is not a number");
 		break;
 
-	case tform_ymd:
+	case TIME_FORMAT_YMD:
 		struct tm result;		
 		memset(&result, 0, sizeof(result));
 		if(strptime(buf,"%Y-%m-%d",&result) != NULL){
@@ -95,12 +90,12 @@ string Details::getdate(unsigned int t) const
 	t += start;
 
 	stringstream ss; 
-	switch(tform){
-	case tform_num:
+	switch(time_format){
+	case TIME_FORMAT_NUM:
 		ss << t;
 		break;
 		
-	case tform_ymd:
+	case TIME_FORMAT_YMD:
 		time_t tt = (t + 0.5)*(60*60*24);	
 		
 		struct tm *timeinfo;

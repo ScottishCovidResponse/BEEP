@@ -22,9 +22,9 @@ public:
 	
 private:
 	void mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain);
-	void cholesky(const vector <vector <double> > &param_samp);
-	void cholesky_propose(vector <double> &paramval, double fac);
-	double mix(const vector <Particle> &part, unsigned int *partcopy) const;
+	void calculate_cholesky_matrix(const vector <vector <double> > &param_samp);
+	void mvn_propose(vector <double> &paramval, double fac);
+	double calculate_mixing(const vector <Particle> &part, unsigned int *partcopy) const;
 	vector <double> variance_vector(const vector <vector <double> > &param_samp) const;
 	vector <vector <double> > covariance_matrix(const vector <vector <double> > &param_samp) const;
 	double mvn_prob(const vector<double> &pend, const vector<double> &pstart, double fac) const;
@@ -33,10 +33,10 @@ private:
 	void results_mpi(const vector <Generation> &generation, const vector <Particle> &part, Chain &chain) const;
 	Sample get_sample(const Particle &part, Chain &chain) const;
 	double acceptance(double rate) const;
-	void calculate_w(vector <Generation> &generation, double jump);
-	unsigned int Neff(vector <double> w);
+	void calculate_particle_weight(vector <Generation> &generation, double jump);
+	unsigned int effective_particle_number(vector <double> w);
 	
-	vector <vector <double> > invert_matrix(const vector <vector <double> > &mat) const;
+	vector <vector <double> > inv_Mert_matrix(const vector <vector <double> > &mat) const;
 
 	unsigned int total_time;                 // The time the algorithm is run for
 	
@@ -48,9 +48,9 @@ private:
 	unsigned int nvar;                       // The number of variables which can change
 	vector <unsigned int> param_not_fixed;   // A list of all parameters which actualy change 
 	
-	vector < vector <double> > Zchol;        // The matrix for Cholesky decompostion
+	vector < vector <double> > cholesky_matrix;        // The matrix for Cholesky decompostion
 	vector < vector <double> > M; 
-	vector < vector <double> > inv; 
+	vector < vector <double> > inv_M; 
 		
 	vector <double> jumpv;
 	

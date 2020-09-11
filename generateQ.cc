@@ -33,9 +33,9 @@ struct SPARSEMATRIX {                      // Loads a matrix
 	vector <double> val;                     // The elements of the matrix
 };
 
-Table loadtable(const string& file, const string& head);
+Table load_table(const string& file, const string& head);
 Table loadarray(const string& file, const string& dir);
-unsigned int findcol(const Table &tab, const string& name);
+unsigned int find_column(const Table &tab, const string& name);
 vector <Area> loadarea(const Table& tab);
 MATRIX matfromtable(const Table& tab, unsigned int N);
 SPARSEMATRIX loadsparse(const string& file, const string& dir, unsigned int N);
@@ -48,7 +48,7 @@ string strip(const string& line);
 
 DataPipeline *datapipeline;             // DataPipeline object
 
-void generateQ(unsigned int nage, const string& datadir, GenerateQ &genQ, vector <Area> &area,
+void generateQ(unsigned int nage, const string& data_directory, GenerateQ &genQ, vector <Area> &area,
 							 DataPipeline *dp)
 {
 	datapipeline = dp;
@@ -56,34 +56,34 @@ void generateQ(unsigned int nage, const string& datadir, GenerateQ &genQ, vector
 	cout << "Generating Q tensors." << endl;
 	
 	Table tab;
-	tab = loadarray(genQ.Nall, datadir);        // Loads age stratified mixing matrices for different activities
+	tab = loadarray(genQ.Nall, data_directory);        // Loads age stratified mixing matrices for different activities
 	MATRIX N_all = matfromtable(tab,nage);
 	
-	tab = loadarray(genQ.Nhome, datadir);
+	tab = loadarray(genQ.Nhome, data_directory);
 	MATRIX N_home = matfromtable(tab,nage);
 	
 	if (false) {
-		tab = loadarray(genQ.Nother, datadir);
+		tab = loadarray(genQ.Nother, data_directory);
 		MATRIX N_other = matfromtable(tab,nage);
 		plotmat(N_other,"'Other' matrix");
 	}
 	
 	if (false) {
-		tab = loadarray(genQ.Nschool, datadir);
+		tab = loadarray(genQ.Nschool, data_directory);
 		MATRIX N_school = matfromtable(tab,nage);
 		plotmat(N_school,"'School' matrix");
 	}
 
 	if (false) {
-		tab = loadarray(genQ.Nwork, datadir);
+		tab = loadarray(genQ.Nwork, data_directory);
 		MATRIX N_work = matfromtable(tab,nage);
 		plotmat(N_work,"'Work' matrix");
 	}
 
-	//tab = loadtable(datadir+"/"+genQ.areadata,"head");           // Loads information about the areas
+	//tab = load_table(data_directory+"/"+genQ.areadata,"head");           // Loads information about the areas
 	//area = loadarea(tab);
 	
-	SPARSEMATRIX M = loadsparse(genQ.M,datadir,area.size());
+	SPARSEMATRIX M = loadsparse(genQ.M,data_directory,area.size());
 	
 	SPARSEMATRIX I = identity(area.size());                                 // Generates the identity matrix
 	
@@ -115,20 +115,20 @@ vector <Area> loadarea(const Table& tab)
 	vector <int> agecol;
 	switch(nage){
 	case 1:
-		agecol.push_back(findcol(tab,"age0-14"));
+		agecol.push_back(find_column(tab,"age0-14"));
 		break;
 		
 	case 3:		
-		agecol.push_back(findcol(tab,"age0-19"));
-		agecol.push_back(findcol(tab,"age20-64"));
-		agecol.push_back(findcol(tab,"age65+"));
+		agecol.push_back(find_column(tab,"age0-19"));
+		agecol.push_back(find_column(tab,"age20-64"));
+		agecol.push_back(find_column(tab,"age65+"));
 		break;
 		
 	case 4:	
-		agecol.push_back(findcol(tab,"age0-14"));
-		agecol.push_back(findcol(tab,"age15-44"));
-		agecol.push_back(findcol(tab,"age45-64"));
-		agecol.push_back(findcol(tab,"age65+"));
+		agecol.push_back(find_column(tab,"age0-14"));
+		agecol.push_back(find_column(tab,"age15-44"));
+		agecol.push_back(find_column(tab,"age45-64"));
+		agecol.push_back(find_column(tab,"age65+"));
 		break;
 	
 	default: emsg("The number of age categories 'nage' is not recognised"); break;	
@@ -408,12 +408,12 @@ Table loadarrayfromdatapipeline(const string& file)
 /// Loads a table from a file
 Table loadarray(const string& file, const string& dir)
 {
-	if (stringhasending(file, ".txt")) return loadtable(dir+"/"+file, "nohead");
+	if (stringhasending(file, ".txt")) return load_table(dir+"/"+file, "nohead");
 	else return loadarrayfromdatapipeline(file);
 }
 
 /// Loads a table from a file
-Table loadtable(const string& file, const string& head)
+Table load_table(const string& file, const string& head)
 {
 	ifstream in(file.c_str());                             // Loads information about areas
 	if(!in) emsg("Cannot open the file '"+file+"'");
@@ -462,7 +462,7 @@ Table loadtable(const string& file, const string& head)
 }
 
 /// Finds a column in a table
-unsigned int findcol(const Table &tab, const string& name)
+unsigned int find_column(const Table &tab, const string& name)
 {
 	unsigned int c;
 	

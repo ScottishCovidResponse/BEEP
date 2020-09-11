@@ -13,22 +13,22 @@ class ObservationModel;
 
 class Simulate
 {
-public:	
-	Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel);	
-	void run();
-	void multirun();
-	
-private:
-	void proportions(const vector< vector <Event> > &indev);
-	unsigned int nsamp;                                   // The number of simulations 
-	
-	const Details &details;
-	const Data &data;
-	const Model &model;
-	const AreaTree &areatree;
-	const Mpi &mpi;
-	const ObservationModel &obsmodel;
-	Output &output;
+	public:	
+		Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel);	
+		void run();
+		void multirun();
+		
+	private:
+		void compartmental_proportions(const vector< vector <Event> > &indev);
+		unsigned int nsamp;                                   // The number of simulations 
+		
+		const Details &details;
+		const Data &data;
+		const Model &model;
+		const AreaTree &areatree;
+		const Mpi &mpi;
+		const ObservationModel &obsmodel;
+		Output &output;
 };
 
 #endif

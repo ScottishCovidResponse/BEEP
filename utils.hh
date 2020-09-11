@@ -33,6 +33,6 @@ double exp_sample(double rate);
 vector<string> split(const string& s, char delimiter);
 string filebasename(const string &path);
 bool stringhasending (std::string const &fullString, std::string const &ending);
-unsigned int getint(const std::string& st, unsigned int threshold);
+unsigned int get_integer(const std::string& st, unsigned int threshold);
 
 #endif

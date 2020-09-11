@@ -32,7 +32,7 @@ TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
 	REQUIRE(i == 2u);
 	REQUIRE(packsize() == 2);
 }
-TEST_CASE("Pack can store and read back large unsigned ints", tag_pack) {
+TEST_CASE("Pack can store and read back LARGE unsigned ints", tag_pack) {
 	packinit(0);
 	pack(std::numeric_limits<unsigned int>::max());
 	pack(std::numeric_limits<unsigned int>::max()-1u);
@@ -73,7 +73,7 @@ TEST_CASE("Pack can store and read back two unsigned shorts", tag_pack) {
 	REQUIRE(i == (unsigned short) 2);
 	REQUIRE(packsize() == 2);
 }
-TEST_CASE("Pack can store and read back large unsigned shorts", tag_pack) {
+TEST_CASE("Pack can store and read back LARGE unsigned shorts", tag_pack) {
 	packinit(0);
 	pack(std::numeric_limits<unsigned short>::max());
 	pack((unsigned short) (std::numeric_limits<unsigned short>::max()-1));

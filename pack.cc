@@ -154,10 +154,10 @@ void pack(const vector <Event> &vec)
 	}
 }
 
-void pack(const vector< vector <Event> > &vec, unsigned int fedivmin, unsigned int fedivmax)
+void pack(const vector< vector <Event> > &vec, unsigned int time_division_per_timesAmin, unsigned int time_division_per_timesAmax)
 {
 	auto imax = vec.size(); buffer.push_back(imax); k++;
-	for(auto i = fedivmin; i < fedivmax; i++){
+	for(auto i = time_division_per_timesAmin; i < time_division_per_timesAmax; i++){
 		auto jmax = vec[i].size(); buffer.push_back(jmax); k++;
 		for(auto j = 0u; j < jmax; j++){
 			buffer.push_back(vec[i][j].trans); k++;
@@ -331,10 +331,10 @@ void unpack(vector <Event> &vec)
 	}
 }
 
-void unpack(vector< vector <Event> > &vec, unsigned int fedivmin, unsigned int fedivmax)
+void unpack(vector< vector <Event> > &vec, unsigned int time_division_per_timesAmin, unsigned int time_division_per_timesAmax)
 {
 	unsigned int imax = buffer[k]; k++; vec.resize(imax);
-	for(auto i = fedivmin; i < fedivmax; i++){
+	for(auto i = time_division_per_timesAmin; i < time_division_per_timesAmax; i++){
 		unsigned int jmax = buffer[k]; k++; vec[i].resize(jmax);
 		for(auto j = 0u; j < jmax; j++){ 
 			vec[i][j].trans = buffer[k]; k++;

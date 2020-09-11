@@ -21,8 +21,8 @@ struct EventRef {                          // Used to reference an event
 };
 
 struct DQinfo {                            // Stores information about a change in the Q matrix
-	vector <unsigned int> q;
-	vector <double> fac;
+	vector <unsigned int> q;                 // Gives which Q tensor is used before and after a transition
+	vector <double> fac;                     // Gives the factor which multiplies tensor (accounts for infectivity)
 };
 
 struct PriorComp {											   // Stores information about priors on compartmental probabilities
@@ -35,135 +35,123 @@ struct Param{                              // Store information about a model pa
  	string name;                             // Its name
   double min;                              // The minimum value (assuming a uniform prior) 
 	double max;                              // The maximum value (assuming a uniform prior)
-	unsigned int used;                       // Determins if the parameter is used in the model.
+	bool used;                               // Determins if the parameter is used in the model.
 	unsigned int ntr, nac;                   // Stores the number of proposals tried and accepted	
 	double jump;                             // Stores the size of jumps in parameter space
-	ParamType type;                          // Set to one if parameter used for transition times and 2 for branching probabilities
+	ParamType type;                          // Set to one if parameter for transition times and 2 for branching probabilities
 };
 
-struct Compartment{                               // Stores information about a compartment in the model
-	string name;                             // Its name
+struct Compartment{                        // Stores information about a compartment in the model
+	string name;                             // The compartments name
 	double infectivity;                      // How infectious that compartment is
 
 	vector <unsigned int> trans;             // The transitions leaving that compartment
 	unsigned int transtimep;                 // The transition used to represent a change in timep in that compartment
 };
 
-struct CompTrans                           // If in a compartment this gives probabilities of going down transitions
+struct CompTransProb                       // If in a compartment this gives probabilities of going down transitions
 {
 	vector <vector <double> > prob;          // The age-dependent probability of going down transition
 	vector <vector <double> > probsum;       // The sum of the age-dependent probability of going down transition
 };
 
-struct CompProb{
-	vector <double> value;                  // The prob ind goes to compartment (used to calculate R0)
+struct CompProb{                           // Gives compartmental probabilities
+	vector <double> value;                   // The probability an indidividuals goes to compartment (used to calculate R)
 };
 
-struct Transition{                              // Stores information about a compartmental model transition
+struct Transition{                         // Stores information about a compartmental model transition
 	unsigned int from;                       // Which compartment the individual is coming from
 	unsigned int to;                         // Which compartment the individual is going to
 	
-	unsigned int type;                       // The type of distribution (exponential or gamma)
+	unsigned int type;                       // The type of distribution (exponential, gamma or lognormal)
 	int param_mean;                          // The parameter for the mean of the distribution
 	int param_cv;                            // The parameter for the coefficient of variation (if used)
 	
-	unsigned int istimep;                    // Set to one if the transition is in time period
+	bool istimep;                            // Set to true if the transition changes the time period
 	vector <unsigned int> probparam;         // The parameter for the probability of going down transition (age dependant)
 	vector <unsigned int> DQ;                // The change in the Q tensor for going down the transition (age dependant)
 };
 
-struct TransInfo{                          // Stores information about transition when doing compartmental parameter proposals 
-	vector <unsigned int> num;               // The number of times down transition 
-	unsigned int numvisittot;                // The number of times the compartment is visited
-	double dtsum;                            // Sums up the total time spent
-	vector <double> dtlist;                  // Keeps a list of waiting time
-};
-
-struct SplinePoint{                            // Stores information about a spline point
+struct SplinePoint{                        // Stores information about a spline point
 	double t;                                // The time of the point
 	unsigned int param;                      // The parameter which defines the value
-	double multfac;                             // A multiplicative factor
+	double multfac;                          // A multiplicative factor
 };
 
 struct Particle
 {
 	vector <double> paramval;                // The parameter values for the particle
-	vector <Event> ev;                         // The event sequence for the particle
+	vector <Event> ev;                       // The event sequence for the particle
 	double EF;                               // The value of the error function
 };
 
-struct Generation
+struct Generation                          // Stores inforamtion about a generation when doing ABC methods
 {
 	vector < vector <double> > param_samp;   // Parameter samples generated
 	vector <double> EF_samp;                 // Likelihood samples generated
 	vector <unsigned int> partcopy;          // Shows which are copies particles
 	vector <double> w;                       // The weight of parameter samples (used in ABC-SMC)
-	
-	double EFcut;                            // The cut off likelihood used 
-	
+	double EFcut;                            // The error function cut-off used 
 	long time;                               // The clock time
 };
 
-class Model                                // Stores all the information about the model
+class Model                                // Stores information about the model
 {
-public:
-	Model(const Inputs &inputs, const Details &details, Data &data);
+	public:
+		Model(const Inputs &inputs, const Details &details, Data &data);
 
-	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DemographicCategory> democat;                // Stores the demographic categories
-	
-	vector <vector <SplinePoint> > spline;       // Stores all the splines used in the model (for beta and phi)  
- 
-	unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
-	unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
+		unsigned int ndemocat;                   // The number of demographic categories
+		vector <DemographicCategory> democat;    // Stores the demographic categories
+		
+		vector <vector <SplinePoint> > spline;   // Stores all the splines used in the model (for beta and phi)  
+	 
+		unsigned int betaspline_ref;             // Denotes which spline refers to variation in beta
+		unsigned int phispline_ref;              // Denotes which spline refers to variation in phi
 
-	vector <Param> param;                    // Information about parameters in the model
-	vector <PriorComp> priorcomps;           // Priors on compartmental probabilities
-	vector <Transition> trans;                    // Stores model transitions
-	vector <Compartment> comp;	                     // Stores model compartments
+		vector <Param> param;                    // Information about parameters in the model
+		vector <PriorComp> priorcomps;           // Priors on compartmental probabilities
+		vector <Transition> trans;               // Stores model transitions
+		vector <Compartment> comp;	             // Stores model compartments
 
-	unsigned int infmax;                     // The maximum number of infected individuals
-	
-	vector< vector <unsigned int> > sus_param;// The parameters related to fixed effect for susceptibility
-	vector <unsigned int> covar_param;       // The parameters related to covariates for areas
-	
-	unsigned int regioneffect;               // Set to 1 if a regional random effect is put in the force of infection
-	unsigned int sigma_param;                // The standard deviation of the regional effect
-	vector <unsigned int> regioneff_param;   // The parameters related to regional effects
+		unsigned int maximum_infected;           // The maximum number of infected individuals
+		
+		vector< vector <unsigned int> > suscetibility_param;// The parameters related to fixed effect for susceptibility
+		vector <unsigned int> covariate_param;   // The parameters related to covariates for areas
+		
+		unsigned int region_effect;              // Set to 0 of no effect, 1 if random effect, 2 if fixed effect
+		unsigned int sigma_param;                // The standard deviation of the regional effect (if random effect)
+		vector <unsigned int> regioneffect_param;// The parameters related to regional effects
 
-	vector <TimePeriod> timeperiod;               // The timings of changes to Q;
-	unsigned int ntimeperiod;
-	
-	vector <DQinfo> DQ;                      // Keeps track of the change in the Q matrix 
-	
-	double getinfectivity(const string& name) const;
-	
-	void print_to_terminal() const;
-	vector <double> sample_from_prior() const;
-	vector <double> calculate_R_func_time(const vector <double> &paramv) const;
-	bool do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const;
-	void print_events(const string& name, const vector <Event> &ev) const;
-	double prior(const vector<double> &paramv) const;
-	
-	vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
-	vector <double> create_sus(const vector<double> &paramv) const;  
-	vector <double> create_areafac(const vector<double> &paramv) const;
-	unsigned int create_comptrans(vector <CompTrans> &comptrans, const vector<double> &paramv) const;
-	vector <CompProb> create_compprob(const vector <CompTrans> &comptrans) const;
-	bool inbounds(const vector <double> &paramv) const;
-	bool inbounds(double val, unsigned int th) const;
-	
-private:
-	void add_Q();
-	void add_compartment(const string& name, double infectivity);
-	void add_parameter(const string& name, double min, double max);
-	void add_transition(const string& from, const string& to, const string& prpar,
-								unsigned int type, const string& param1, const string& param2);
-	unsigned int find_parameter(const string& name);
-	
-	void check_data_files() const;
-	
-	const Details &details;
-	Data &data;
+		vector <TimePeriod> time_period;         // The timings of changes to Q (e.g. before and after lockdown)
+		unsigned int ntime_period;               // The number of time periods
+		
+		vector <DQinfo> DQ;                      // Keeps track of the change in the Q matrix 
+		
+		double get_infectivity(const string& name) const;
+		void print_to_terminal() const;
+		vector <double> sample_from_prior() const;
+		vector <double> calculate_R_vs_time(const vector <double> &paramv) const;
+		bool do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const;
+		void print_events(const string& name, const vector <Event> &ev) const;
+		double prior(const vector<double> &paramv) const;
+		vector <double> create_disc_spline(unsigned int ref, const vector<double> &paramv) const;
+		vector <double> create_susceptibility(const vector<double> &paramv) const;  
+		vector <double> create_areafactor(const vector<double> &paramv) const;
+		unsigned int create_comptransprob(vector <CompTransProb> &comptransprob, const vector<double> &paramv) const;
+		vector <CompProb> create_compprob(const vector <CompTransProb> &comptransprob) const;
+		bool inbounds(const vector <double> &paramv) const;
+		bool inbounds(double val, unsigned int th) const;
+		
+	private:
+		void add_Q();
+		void add_compartment(const string& name, double infectivity);
+		void add_parameter(const string& name, double min, double max);
+		void add_transition(const string& from, const string& to, const string& prpar,
+									unsigned int type, const string& param1, const string& param2);
+		unsigned int find_parameter(const string& name);
+		void check_data_files() const;
+		
+		const Details &details;
+		Data &data;
 };
 #endif

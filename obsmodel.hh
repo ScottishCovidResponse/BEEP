@@ -16,21 +16,23 @@ using namespace std;
 
 class ObservationModel
 {
-public:
-	ObservationModel(const Details &details, const Data &data, const Model &model);
+	public:
+		ObservationModel(const Details &details, const Data &data, const Model &model);
 
-	vector <unsigned int> getnumtrans(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
+		vector <unsigned int> get_transition_numbers(const vector < vector <EventRef> > &transev, 
+																								const vector < vector <Event> > &indev, 
+																		unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const;
 
-	double Lobs(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const;
+		double observation_likelihood(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev) const;
 
-	Measurements getmeas(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev) const ;
+		Measurements get_measured_quantities(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev) const ;
 
-private:
-	double singobs(unsigned int mean, unsigned int val) const;
-	
-	const Details &details;
-	const Data &data;
-	const Model &model;
+	private:
+		double single_observation(unsigned int mean, unsigned int val) const;
+		
+		const Details &details;
+		const Data &data;
+		const Model &model;
 };
 
 #endif

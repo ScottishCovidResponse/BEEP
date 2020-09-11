@@ -10,16 +10,16 @@ State::State(const Details &details, const Data &data, const Model &model, const
 {
 	disc_spline.resize(model.spline.size());
 
-	trev.resize(details.nsettime); 
+	transev.resize(details.ndivision); 
 	indev.resize(data.popsize);
 
-	Qmap.resize(details.nsettime);
-	for(auto sett = 0u; sett < details.nsettime; sett++){
+	Qmap.resize(details.ndivision);
+	for(auto sett = 0u; sett < details.ndivision; sett++){
 		Qmap[sett].resize(data.narage); for(auto v = 0u; v < data.narage; v++) Qmap[sett][v] = 0;
 	}
 	
 	popw.resize(data.nardp);                                        // Used for event based changes	
-	lam.resize(data.nsettardp);
+	lambda.resize(data.nsettardp);
 }
 
 /// This simulates from the model and generates an event list
@@ -27,7 +27,7 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 {
 	vector <Event> &evlist = indev[i];
 
-	auto timep = 0u; while(timep < model.ntimeperiod && t > model.timeperiod[timep].tend) timep++;
+	auto timep = 0u; while(timep < model.ntime_period && t > model.time_period[timep].tend) timep++;
 
 	Event ev;
 	ev.ind = i; ev.timep = timep; 
@@ -51,24 +51,24 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 		
 		if(kmax == 1) tra = comp[c].trans[0];
 		else{
-			z = ran(); auto k = 0u; while(k < kmax && z > comptrans[c].probsum[a][k]) k++;
+			z = ran(); auto k = 0u; while(k < kmax && z > comptransprob[c].probsum[a][k]) k++;
 			if(k == kmax) emsgEC("Model",2);
 			tra = comp[c].trans[k];
 		}
 		
 		switch(trans[tra].type){
-		case exp_dist:
+		case EXP_DIST:
 			dt = -log(ran())*paramval[trans[tra].param_mean];
 			break;
 		
-		case gamma_dist:
+		case GAMMA_DIST:
 			{
 				auto mean = paramval[trans[tra].param_mean]; auto sd = paramval[trans[tra].param_cv]*mean;
 				dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
 			}
 			break;
 			
-		case lognorm_dist:
+		case LOGNORM_DIST:
 			{
 				auto mean_ns = paramval[trans[tra].param_mean], cv_ns = paramval[trans[tra].param_cv];
 				auto sd = sqrt(log((1+cv_ns*cv_ns))), mean = log(mean_ns) - sd*sd/2;
@@ -79,11 +79,11 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 		default: emsgEC("Model",3); break;
 		}
 
-		if(dt < tiny) dt = tiny;
+		if(dt < TINY) dt = TINY;
 		t += dt;
 		
-		while(timep < model.ntimeperiod-1 && model.timeperiod[timep].tend < t){    // Adds in changes in time period
-			ev.trans = comp[c].transtimep; ev.t = model.timeperiod[timep].tend;
+		while(timep < model.ntime_period-1 && model.time_period[timep].tend < t){    // Adds in changes in time period
+			ev.trans = comp[c].transtimep; ev.t = model.time_period[timep].tend;
 			evlist.push_back(ev);
 			timep++;
 			ev.timep = timep; 
@@ -97,7 +97,7 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 }
 
 /// Calculates the latent process likelihood 
-void State::set_likelihood()
+void State::set_process_likelihood()
 {		
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
@@ -109,27 +109,27 @@ void State::set_likelihood()
 	Lev = 0.0;
 	auto t = 0.0; 
 	auto n = 0u;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
+	for(auto sett = 0u; sett < details.ndivision; sett++){
 		auto phi = disc_spline[model.phispline_ref][sett]; 
 		auto beta = disc_spline[model.betaspline_ref][sett];
 	
-		auto tmax = details.settime[sett+1];
+		auto tmax = details.division_time[sett+1];
 		
 		for(auto c = 0u; c < data.narea; c++){
-			auto fac = beta*areafac[c];
+			auto fac = beta*areafactor[c];
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];
-				lam[w] = sus[dp]*(fac*Qmap[sett][v] + phi);		
-				if(lam[w] < 0) emsgEC("Chain",46);
+				lambda[w] = susceptibility[dp]*(fac*Qmap[sett][v] + phi);		
+				if(lambda[w] < 0) emsgEC("Chain",46);
 				
-				Lev -= lam[w]*popw[w]*(tmax-t);
+				Lev -= lambda[w]*popw[w]*(tmax-t);
 			}
 		}
 		
-		while(n < x.size()){
-			auto i = x[n].ind;
-			auto ev = indev[i][x[n].e];
+		while(n < infev.size()){
+			auto i = infev[n].ind;
+			auto ev = indev[i][infev[n].e];
 			auto tt = ev.t;
 			if(tt >= tmax) break;
 	
@@ -137,67 +137,67 @@ void State::set_likelihood()
 			
 			auto c = data.ind[i].area;
 			auto w = c*data.ndemocatpos + data.ind[i].dp;
-			Lev += log(lam[w]);
+			Lev += log(lambda[w]);
 			if(std::isnan(L)) emsgEC("Chain",47);
 			popw[w]--;
 			n++;
 			
-			Lev += lam[w]*(tmax-t);
+			Lev += lambda[w]*(tmax-t);
 		}
 		t = tmax;
 	} 
 }
 
 /// Checks the likelihood and prior ire correct 
-void State::check_LevPr() 
+void State::check_Lev_and_Pr()
 {
 	auto Levst = Lev;
-	set_likelihood();
-	double dd = Levst - Lev; if(dd*dd > tiny) emsgEC("State",49);
+	set_process_likelihood();
+	double dd = Levst - Lev; if(dd*dd > TINY) emsgEC("State",49);
 	
-	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("State",51);
+	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > TINY) emsgEC("State",51);
 }
 	
 /// Clears the state
 void State::clear()
 {
-	for(const auto& i : x) indev[i.ind].clear();
+	for(const auto& i : infev) indev[i.ind].clear();
 	
-	x.clear();
-	trev.clear(); trev.resize(details.nsettime);
+	infev.clear();
+	transev.clear(); transev.resize(details.ndivision);
 }
 
 /// Copies from another state
-void State::copy(const State &from)
+void State::copy_state(const State &from)
 {
 	paramval = from.paramval;
 	L = from.L;
 	EF = from.EF;
 	Pr = from.Pr;
 	
-	for(const auto& xx : x) indev[xx.ind].clear();
-	for(const auto& xx : from.x) indev[xx.ind] = from.indev[xx.ind];
+	for(const auto& iev : infev) indev[iev.ind].clear();
+	for(const auto& iev : from.infev) indev[iev.ind] = from.indev[iev.ind];
 	//indev = from.indev;
 		
-	x = from.x;
-	trev = from.trev;
+	infev = from.infev;
+	transev = from.transev;
 	Qmap = from.Qmap;
 		
 	disc_spline = from.disc_spline;
-	sus = from.sus;
-	areafac = from.areafac;
-	comptrans = from.comptrans;
+	susceptibility = from.susceptibility;
+	areafactor = from.areafactor;
+	comptransprob = from.comptransprob;
 }
 
 /// Checks quanties in the state are correct
 void State::check() const
 {
-	for(auto j = 0u; j < x.size(); j++){ // Checks order
-		auto i = x[j].ind, e = x[j].e;
+	for(auto j = 0u; j < infev.size(); j++){ // Checks order
+		auto i = infev[j].ind, e = infev[j].e;
 		if(i >= indev.size()) emsgEC("Chain",16);
 		if(e >= indev[i].size()) emsgEC("Chain",17);
-		if(j < x.size()-1){
-			if(indev[i][e].t > indev[x[j+1].ind][x[j+1].e].t) emsgEC("State",18);
+		if(j < infev.size()-1){
+			if(indev[i][e].t > indev[infev[j+1].ind][infev[j+1].e].t) emsgEC("State",18);
 		}
 	}
 	
@@ -214,12 +214,12 @@ void State::check() const
 			}
 			if(comp[c].trans.size() != 0) emsgEC("Chain",21);
 			
-			for(auto timep = 0u; timep < model.ntimeperiod; timep++){
-				tt = model.timeperiod[timep].tend;
+			for(auto timep = 0u; timep < model.ntime_period; timep++){
+				tt = model.time_period[timep].tend;
 				if(tt > iev[0].t && tt < iev[emax-1].t){
 					unsigned int e;
 					for(e = 0u; e < emax; e++) if(iev[e].t == tt) break;
-					if(timep <  model.ntimeperiod-1){
+					if(timep <  model.ntime_period-1){
 						if(e == emax) emsgEC("Chain",22);
 					}
 					else{
@@ -230,12 +230,12 @@ void State::check() const
 		}
 	}
 	
-	for(auto j = 0u; j < x.size(); j++){
-		auto i = x[j].ind, e = x[j].e;
+	for(auto j = 0u; j < infev.size(); j++){
+		auto i = infev[j].ind, e = infev[j].e;
 		if(i >= indev.size()) emsgEC("Chain",37);
 		if(e >= indev[i].size()) emsgEC("Chain",38);
-		if(j < x.size()-1){
-			if(indev[i][e].t > indev[x[j+1].ind][x[j+1].e].t) emsgEC("Chain",39);
+		if(j < infev.size()-1){
+			if(indev[i][e].t > indev[infev[j+1].ind][infev[j+1].e].t) emsgEC("Chain",39);
 		}
 	}
 
@@ -249,14 +249,14 @@ void State::check() const
 			for(auto e = 0u; e < indev[i].size(); e++) done[i][e] = 0;
 		}
 	}
-	if(num != x.size()) emsgEC("Chain",40);
+	if(num != infev.size()) emsgEC("Chain",40);
 
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		for(auto j = 0u; j < trev[sett].size(); j++){
-			auto i = trev[sett][j].ind, e = trev[sett][j].e;
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		for(auto j = 0u; j < transev[sett].size(); j++){
+			auto i = transev[sett][j].ind, e = transev[sett][j].e;
 			if(e >= indev[i].size()) emsgEC("Chain",41);
 			
-			auto se = (unsigned int)(details.nsettime*indev[i][e].t/details.period); 
+			auto se = (unsigned int)(details.ndivision*indev[i][e].t/details.period); 
 			if(se != sett) emsgEC("Chain",42);
 			if(done[i][e] != 0) emsgEC("Chain",43);
 			done[i][e] = 1;
@@ -275,40 +275,40 @@ void State::check() const
 	}
 	
 	double dd;
-	dd = L - obsmodel.Lobs(trev,indev); if(sqrt(dd*dd) > tiny) emsgEC("State",1);
-	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("State",2);
+	dd = L - obsmodel.observation_likelihood(transev,indev); if(sqrt(dd*dd) > TINY) emsgEC("State",1);
+	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > TINY) emsgEC("State",2);
 }
 
 /// Sets up the state with a specifies set of parameters
 Status State::set_param(const vector <double> &paramv)
 {
 	paramval = paramv;
-	if(model.create_comptrans(comptrans,paramval) == 1) return fail;
+	if(model.create_comptransprob(comptransprob,paramval) == 1) return FAIL;
 	for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline[sp] = model.create_disc_spline(sp,paramval);
-	sus = model.create_sus(paramval);    
-	areafac = model.create_areafac(paramval);    
-	return success;
+	susceptibility = model.create_susceptibility(paramval);    
+	areafactor = model.create_areafactor(paramval);    
+	return SUCCESS;
 }
 
 /// Sets the values of phi and beta (this is used to speed up computation)
-void State::set_betaphi(unsigned int sett)
+void State::set_beta_and_phi(unsigned int sett)
 {	
 	phi = disc_spline[model.phispline_ref][sett]; 
 	beta = disc_spline[model.betaspline_ref][sett]; 
 }
 
 /// Sets the initial observation likelihood and prior
-void State::set_LPr()
+void State::set_L_and_Pr()
 {
-	L = obsmodel.Lobs(trev,indev);
+	L = obsmodel.observation_likelihood(transev,indev);
 	Pr = model.prior(paramval);
 }
 
 /// Gets the time of an infection event
 double State::get_infection_time(unsigned int n) const
 {
-	if(n == x.size()) return large;
-	return indev[x[n].ind][x[n].e].t;
+	if(n == infev.size()) return LARGE;
+	return indev[infev[n].ind][infev[n].e].t;
 }
 
 /// Adds an individual event sequence
@@ -321,11 +321,11 @@ void State::add_indev(unsigned int i)
 	if(emax == 0) return;
 	
 	evref.ind = i; evref.e = 0;
-	x.push_back(evref);
+	infev.push_back(evref);
 	for(e = 0; e < emax; e++){
 		evref.e = e;
-		se = (unsigned int)(details.nsettime*indev[i][e].t/details.period); 
-		if(se < details.nsettime) trev[se].push_back(evref);
+		se = (unsigned int)(details.ndivision*indev[i][e].t/details.period); 
+		if(se < details.ndivision) transev[se].push_back(evref);
 	}
 }
 
@@ -334,7 +334,7 @@ void State::set_Qmap_using_dQ(unsigned int sett, const State &state, const vecto
 {
 	for(auto v = 0u; v < data.narage; v++){
 		double val = state.Qmap[sett][v] + dQmap[v];
-		if(val < -tiny){ cout << val << "val\n"; emsgEC("Chain",1);}
+		if(val < -TINY){ cout << val << "val\n"; emsgEC("Chain",1);}
 		if(val < 0) val = 0;	
 		Qmap[sett][v] = val;
 	}
@@ -348,19 +348,19 @@ void State::set_Qmap(unsigned int check)
  	for(auto& Qm : Qma) Qm = 0;
 
 	auto nage = data.nage;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
+	for(auto sett = 0u; sett < details.ndivision; sett++){
 		for(auto v = 0u; v < data.narage; v++){
 			auto val = Qma[v];
 			if(check == 1){
-				if(val < -tiny) emsgEC("Chain",2);
-				if(val < Qmap[sett][v]-tiny || val > Qmap[sett][v]+tiny) emsgEC("Chain",3);
+				if(val < -TINY) emsgEC("Chain",2);
+				if(val < Qmap[sett][v]-TINY || val > Qmap[sett][v]+TINY) emsgEC("Chain",3);
 			}
 			if(val < 0){ val = 0; Qma[v] = 0;}	
 			
 			Qmap[sett][v] = val;
 		}
 		
-		for(const auto& tre : trev[sett]){
+		for(const auto& tre : transev[sett]){
 			auto i = tre.ind;
 			Event fev = indev[i][tre.e];
 
@@ -409,21 +409,21 @@ static bool compEventRefT(EventRefT lhs, EventRefT rhs)
 };
 
 /// Time orders x
-void State::sort_x()
+void State::sort_infev()
 {
 	vector <EventRefT> xt;
-	for(const auto& xx : x){
+	for(const auto& iev : infev){
 		EventRefT evreft;
-		evreft.ind = xx.ind; evreft.e = xx.e;
-		if(indev[xx.ind].size() == 0) emsgEC("Chain",54);
+		evreft.ind = iev.ind; evreft.e = iev.e;
+		if(indev[iev.ind].size() == 0) emsgEC("Chain",54);
 		
-		evreft.t = indev[xx.ind][xx.e].t;
+		evreft.t = indev[iev.ind][iev.e].t;
 		xt.push_back(evreft);	
 	}
 	sort(xt.begin(),xt.end(),compEventRefT);
 
-	for(auto i = 0u; i < x.size(); i++){
-		x[i].ind = xt[i].ind;	x[i].e = xt[i].e;
+	for(auto i = 0u; i < infev.size(); i++){
+		infev[i].ind = xt[i].ind;	infev[i].e = xt[i].e;
 	}
 }
 
@@ -432,10 +432,10 @@ void State::initialise_from_particle(const Particle &part)
 {
 	paramval = part.paramval;
 	
-	for(const auto& xx : x) indev[xx.ind].clear();   // Removes the existing initial sequence 
-	x.clear();
+	for(const auto& iev : infev) indev[iev.ind].clear();   // Removes the existing initial sequence 
+	infev.clear();
 	
-	trev.clear(); trev.resize(details.nsettime); 
+	transev.clear(); transev.resize(details.ndivision); 
 	
 	vector <int> indlist;
 	for(const auto& ev : part.ev){
@@ -446,26 +446,22 @@ void State::initialise_from_particle(const Particle &part)
 	
 	for(auto i : indlist) add_indev(i);
 	
-	sort_x();
+	sort_infev();
 	
 	set_Qmap(0);
 
 	EF = part.EF;
 	Pr = model.prior(paramval);
 	
-	if(EF != obsmodel.Lobs(trev,indev)) emsg("Observation does not agree");
+	if(EF != obsmodel.observation_likelihood(transev,indev)) emsg("Observation does not agree");
 }
 		
-/// STANDARD ParamETER PROPOSALS
+/// STANDARD PARAMETER PROPOSALS
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
 void State::standard_parameter_prop(Jump &jump)
 {
 	timers.timestandard -= clock();
-	
-	timers.timembptemp -= clock();
-	set_likelihood();
-	timers.timembptemp += clock();
 	
 	timers.timeparam -= clock();
 	stand_param_betaphi_prop(jump);
@@ -474,7 +470,7 @@ void State::standard_parameter_prop(Jump &jump)
 	
 	timers.timeparam += clock();
 		
-	if(checkon == 1) check_LevPr();
+	if(checkon == 1) check_Lev_and_Pr();
 
 	timers.timestandard += clock();
 }
@@ -502,37 +498,37 @@ void State::stand_param_betaphi_prop(Jump &jump)
 	}		
 	
 	vector <double> betafac, phifac;
-	betafac.resize(details.nsettime); phifac.resize(details.nsettime);
+	betafac.resize(details.ndivision); phifac.resize(details.ndivision);
 	
 	auto t = 0.0; 
 	auto n = 0u;
 	
 	vector<	vector <LCONT> > lc;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
-		auto tmax = details.settime[sett+1];
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		auto tmax = details.division_time[sett+1];
 		vector <LCONT> lcontlist;
 		
 		auto betasum = 0.0, phisum = 0.0;
 		for(auto c = 0u; c < data.narea; c++){
-			auto fac = areafac[c];
+			auto fac = areafactor[c];
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];	
-				betasum -= fac*sus[dp]*Qmap[sett][v]*popw[w]*(tmax-t);
-				phisum -= sus[dp]*popw[w]*(tmax-t);
+				betasum -= fac*susceptibility[dp]*Qmap[sett][v]*popw[w]*(tmax-t);
+				phisum -= susceptibility[dp]*popw[w]*(tmax-t);
 			}
 		}
 		
-		while(n < x.size()){
-			auto i = x[n].ind;
-			Event ev = indev[i][x[n].e];
+		while(n < infev.size()){
+			auto i = infev[n].ind;
+			Event ev = indev[i][infev[n].e];
 			auto tt = ev.t;
 			if(tt >= tmax) break;
 	
 			t = tt;
 			
 			auto c = data.ind[i].area;
-			auto fac = areafac[c];
+			auto fac = areafactor[c];
 			
 			auto dp = data.ind[i].dp;
 			auto w = c*data.ndemocatpos + dp;
@@ -540,13 +536,13 @@ void State::stand_param_betaphi_prop(Jump &jump)
 			
 			if(map[w] == 0){
 				LCONT lcont;
-				lcont.w = w; lcont.betafac = fac*sus[dp]*Qmap[sett][v]; lcont.phifac = sus[dp]; lcont.num = UNSET;
+				lcont.w = w; lcont.betafac = fac*susceptibility[dp]*Qmap[sett][v]; lcont.phifac = susceptibility[dp]; lcont.num = UNSET;
 				lcontlist.push_back(lcont);
 			}
 			map[w]++;
 		
-			betasum += fac*sus[dp]*Qmap[sett][v]*(tmax-t);
-			phisum += sus[dp]*(tmax-t);
+			betasum += fac*susceptibility[dp]*Qmap[sett][v]*(tmax-t);
+			phisum += susceptibility[dp]*(tmax-t);
 			popw[w]--;
 			n++;
 		}
@@ -587,7 +583,7 @@ void State::stand_param_betaphi_prop(Jump &jump)
 					for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline_prop.push_back(model.create_disc_spline(sp,paramval));
 
 					Lev_prop = 0;
-					for(auto sett = 0u; sett < details.nsettime; sett++){
+					for(auto sett = 0u; sett < details.ndivision; sett++){
 						auto phi = disc_spline_prop[model.phispline_ref][sett]; 
 						auto beta = disc_spline_prop[model.betaspline_ref][sett];
 	
@@ -623,9 +619,9 @@ void State::stand_param_area_prop(Jump &jump)
 {	
 	timers.timecovarinit -= clock();
 
-	vector <double> lamareafac, lamphifac;
-	lamareafac.resize(data.nardp);
-	lamphifac.resize(data.nardp);
+	vector <double> lambdaareafactor, lambdaphifac;
+	lambdaareafactor.resize(data.nardp);
+	lambdaphifac.resize(data.nardp);
 	
 	vector < vector <double> >	mult, add;
 	mult.resize(data.narea);
@@ -644,27 +640,27 @@ void State::stand_param_area_prop(Jump &jump)
 	
 	auto L0 = 0.0, t = 0.0;
 	auto n = 0u;
-	for(auto sett = 0u; sett < details.nsettime; sett++){
+	for(auto sett = 0u; sett < details.ndivision; sett++){
 		auto phi = disc_spline[model.phispline_ref][sett]; 
 		auto beta = disc_spline[model.betaspline_ref][sett];
 	
-		auto tmax = details.settime[sett+1];
+		auto tmax = details.division_time[sett+1];
 		
 		for(auto c = 0u; c < data.narea; c++){
 			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 				auto w = c*data.ndemocatpos + dp;
 				auto v = c*data.nage + data.democatpos[dp][0];
-				lamareafac[w] = sus[dp]*beta*Qmap[sett][v];
-				lamphifac[w] = sus[dp]*phi;
+				lambdaareafactor[w] = susceptibility[dp]*beta*Qmap[sett][v];
+				lambdaphifac[w] = susceptibility[dp]*phi;
 				
-				areasum[c] -= lamareafac[w]*popw[w]*(tmax-t);
-				L0 -= lamphifac[w] *popw[w]*(tmax-t);
+				areasum[c] -= lambdaareafactor[w]*popw[w]*(tmax-t);
+				L0 -= lambdaphifac[w] *popw[w]*(tmax-t);
 			}
 		}
 		
-		while(n < x.size()){
-			auto i = x[n].ind;
-			Event ev = indev[i][x[n].e];
+		while(n < infev.size()){
+			auto i = infev[n].ind;
+			Event ev = indev[i][infev[n].e];
 			auto tt = ev.t;
 			if(tt >= tmax) break;
 	
@@ -673,14 +669,14 @@ void State::stand_param_area_prop(Jump &jump)
 			auto c = data.ind[i].area;
 			auto w = c*data.ndemocatpos + data.ind[i].dp;
 			
-			mult[c].push_back(lamareafac[w]);
-			add[c].push_back(lamphifac[w]);
+			mult[c].push_back(lambdaareafactor[w]);
+			add[c].push_back(lambdaphifac[w]);
 		
 			popw[w]--;
 			n++;
 			
- 			areasum[c] += lamareafac[w]*(tmax-t);
-			L0 += lamphifac[w]*(tmax-t);
+ 			areasum[c] += lambdaareafactor[w]*(tmax-t);
+			L0 += lambdaphifac[w]*(tmax-t);
 		}
 		
 		t = tmax;
@@ -691,13 +687,13 @@ void State::stand_param_area_prop(Jump &jump)
 	timers.timecovar -= clock();
 	
 	vector <unsigned int> thlist;
-	for(auto th : model.covar_param) thlist.push_back(th); 
+	for(auto th : model.covariate_param) thlist.push_back(th); 
 	
-	if(model.regioneffect > 0){
-		for(auto th : model.regioneff_param) thlist.push_back(th); 
+	if(model.region_effect > 0){
+		for(auto th : model.regioneffect_param) thlist.push_back(th); 
 	}
 	
-	if(model.regioneffect == 1) thlist.push_back(model.sigma_param);
+	if(model.region_effect == 1) thlist.push_back(model.sigma_param);
 		
 	unsigned int loopmax = 12/thlist.size(); if(loopmax == 0) loopmax = 1;
 	
@@ -708,14 +704,14 @@ void State::stand_param_area_prop(Jump &jump)
 				paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
 
 				double al, Lev_prop=Lev, Pr_prop=Pr;
-				vector <double> areafac_prop;
+				vector <double> areafactor_prop;
 				if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
 				else{
-					areafac_prop = model.create_areafac(paramval); 
+					areafactor_prop = model.create_areafactor(paramval); 
 				
 					Lev_prop = L0;
 					for(auto c = 0u; c < data.narea; c++){
-						auto fac = areafac_prop[c];
+						auto fac = areafactor_prop[c];
 						Lev_prop += areasum[c]*fac;
 						auto kmax = mult[c].size();
 						for(auto k = 0u; k < kmax; k++) Lev_prop += log(mult[c][k]*fac + add[c][k]);
@@ -730,7 +726,7 @@ void State::stand_param_area_prop(Jump &jump)
 				if(ran() < al){
 					Lev = Lev_prop;
 					Pr = Pr_prop;
-					areafac = areafac_prop;
+					areafactor = areafactor_prop;
 					
 					jump.stand_accept(th);
 					//nacstand[th]++;
@@ -755,21 +751,21 @@ void State::stand_param_compparam_prop(Jump &jump)
 	vector <TransInfo> transinfo(trans.size());
 	
 	for(auto tra = 0u; tra < trans.size(); tra++){
-		if(trans[tra].istimep == 0){
+		if(trans[tra].istimep == false){
 			transinfo[tra].num.resize(data.nage); for(auto& num : transinfo[tra].num) num = 0;
 		}
 		transinfo[tra].numvisittot = 0; transinfo[tra].dtsum = 0; transinfo[tra].dtlist.clear();
 	}
 
-	for(const auto& xx : x){                  // Extracts values based on the event sequence
-		auto i = xx.ind;
+	for(const auto& iev : infev){                  // Extracts values based on the event sequence
+		auto i = iev.ind;
 		auto dp = data.ind[i].dp;
 		auto a = data.democatpos[dp][0];
 				
 		auto t = 0.0;
 		for(const auto& ev : indev[i]){
 			auto tra = ev.trans;
-			if(trans[tra].istimep == 0){
+			if(trans[tra].istimep == false){
 				transinfo[tra].num[a]++;
 	
 				auto dt = ev.t-t;
@@ -778,9 +774,9 @@ void State::stand_param_compparam_prop(Jump &jump)
 				
 				transinfo[tra].numvisittot++;
 				switch(trans[tra].type){
-				case exp_dist: transinfo[tra].dtsum += dt; break;
-				case gamma_dist: case lognorm_dist: transinfo[tra].dtlist.push_back(dt); break;
-				case infection_dist: break;
+				case EXP_DIST: transinfo[tra].dtsum += dt; break;
+				case GAMMA_DIST: case LOGNORM_DIST: transinfo[tra].dtlist.push_back(dt); break;
+				case INFECTION_DIST: break;
 				default: emsgEC("model",99); break;
 				}
 			}
@@ -788,10 +784,10 @@ void State::stand_param_compparam_prop(Jump &jump)
 	}
 
 	auto Li_dt = likelihood_dt(transinfo,paramval);
-	auto Li_prob = likelihood_prob(transinfo,comptrans);
+	auto Li_prob = likelihood_prob(transinfo,comptransprob);
 
 	for(auto th = 0u; th < param.size(); th++){
-		if((param[th].type == distval_paramtype || param[th].type == branchprob_paramtype) && param[th].min != param[th].max){
+		if((param[th].type == DISTVAL_PARAM || param[th].type == BRANCHPROB_PARAM) && param[th].min != param[th].max){
 			vector <double> param_store = paramval;	
 		
 			paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
@@ -801,12 +797,12 @@ void State::stand_param_compparam_prop(Jump &jump)
 			auto Pr_prop = Pr;
 			auto flag=0u;
 	
-			vector <CompTrans> comptransp;
+			vector <CompTransProb> comptransprobp;
 			if(paramval[th] < param[th].min || paramval[th] > param[th].max) flag = 0;
 			else{	
-				if(param[th].type == branchprob_paramtype){
-					if(model.create_comptrans(comptransp,paramval) == 1) Lp_prob = -large;
-					else Lp_prob = likelihood_prob(transinfo,comptransp);
+				if(param[th].type == BRANCHPROB_PARAM){
+					if(model.create_comptransprob(comptransprobp,paramval) == 1) Lp_prob = -LARGE;
+					else Lp_prob = likelihood_prob(transinfo,comptransprobp);
 				}
 				else Lp_prob = Li_prob;
 				
@@ -821,7 +817,7 @@ void State::stand_param_compparam_prop(Jump &jump)
 				Li_dt += dL;
 				Li_prob = Lp_prob;
 				Pr = Pr_prop;
-				if(param[th].type == branchprob_paramtype) comptrans = comptransp;
+				if(param[th].type == BRANCHPROB_PARAM) comptransprob = comptransprobp;
 				
 				jump.stand_accept(th);
 			}
@@ -834,15 +830,15 @@ void State::stand_param_compparam_prop(Jump &jump)
 	
 	if(checkon == 1){
 		double dd;
-		dd = likelihood_dt(transinfo,paramval)-Li_dt; if(dd*dd > tiny) emsgEC("Model",13);
-		dd = likelihood_prob(transinfo,comptrans)-Li_prob; if(dd*dd > tiny) emsgEC("Model",14);
+		dd = likelihood_dt(transinfo,paramval)-Li_dt; if(dd*dd > TINY) emsgEC("Model",13);
+		dd = likelihood_prob(transinfo,comptransprob)-Li_prob; if(dd*dd > TINY) emsgEC("Model",14);
 	}
 	
 	timers.timecompparam += clock();
 }
 
 /// Calculates the likelihood relating to branching probabilities
-double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> &comptrans) const
+double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTransProb> &comptransprob) const
 {
 	auto L = 0.0;
 	for(auto c = 0u; c < comp.size(); c++){	
@@ -851,7 +847,7 @@ double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTrans> 
 			for(auto k = 0u; k < kmax; k++){
 				for(auto a = 0u; a < data.nage; a++){
 					auto num = transinfo[comp[c].trans[k]].num[a];
-					if(num > 0) L += num*log(comptrans[c].prob[a][k]);
+					if(num > 0) L += num*log(comptransprob[c].prob[a][k]);
 				}
 			}
 		}
@@ -865,21 +861,21 @@ double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &para
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
 		switch(trans[tra].type){
-		case exp_dist:
+		case EXP_DIST:
 			{
 				auto r = 1.0/paramv[trans[tra].param_mean];
 				L += transinfo[tra].numvisittot*log(r) - r*transinfo[tra].dtsum;
 			}
 			break;
 		
-		case gamma_dist:
+		case GAMMA_DIST:
 			{
 				auto mean = paramv[trans[tra].param_mean], sd = paramv[trans[tra].param_cv]*mean;
 				for(auto dt : transinfo[tra].dtlist) L += gammaprob(dt,mean*mean/(sd*sd),mean/(sd*sd));
 			}
 			break;
 			
-		case lognorm_dist:
+		case LOGNORM_DIST:
 			{
 				auto mean_ns = paramv[trans[tra].param_mean], cv_ns = paramv[trans[tra].param_cv];
 				auto sd = sqrt(log(1+cv_ns*cv_ns)), mean = log(mean_ns) - sd*sd/2;
@@ -898,7 +894,7 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
 		switch(trans[tra].type){
-		case exp_dist:
+		case EXP_DIST:
 			{
 				auto ri = 1.0/paramvi[trans[tra].param_mean], rf = 1.0/paramvf[trans[tra].param_mean];
 				if(ri != rf){
@@ -908,7 +904,7 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 			}
 			break;
 		
-		case gamma_dist:
+		case GAMMA_DIST:
 			{
 				auto meani = paramvi[trans[tra].param_mean], sdi = paramvi[trans[tra].param_cv]*meani;
 				auto meanf = paramvf[trans[tra].param_mean], sdf = paramvf[trans[tra].param_cv]*meanf;
@@ -922,7 +918,7 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 			}
 			break;
 			
-		case lognorm_dist:
+		case LOGNORM_DIST:
 			{
 				auto mean_nsi = paramvi[trans[tra].param_mean], cv_nsi = paramvi[trans[tra].param_cv];
 				auto mean_nsf = paramvf[trans[tra].param_mean], cv_nsf = paramvf[trans[tra].param_cv];

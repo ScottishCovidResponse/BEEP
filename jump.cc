@@ -35,10 +35,10 @@ vector <double> Jump::mbp_prop(const vector <double> &p, unsigned int th)
 void Jump::setburnin(unsigned int samp, unsigned int burnin)
 {
 	if(samp < burnin){
-		if(samp < 50) alter = fast;
-		else alter = slow;
+		if(samp < 50) alter = FAST;
+		else alter = SLOW;
 	}
-	else alter = none;
+	else alter = NONE;
 }
 
 /// A MBP is accepted
@@ -47,9 +47,9 @@ void Jump::mbp_accept(unsigned int th)
 	mbp_ntr[th]++;
 	mbp_nac[th]++;
 	switch(alter){
-		case fast: mbp[th] *= 2; break;
-		case slow: mbp[th] *= 1.1; break;
-		case none: break;
+		case FAST: mbp[th] *= 2; break;
+		case SLOW: mbp[th] *= 1.1; break;
+		case NONE: break;
 	}
 }
 
@@ -58,9 +58,9 @@ void Jump::mbp_reject(unsigned int th)
 {
 	mbp_ntr[th]++;
 	switch(alter){
-		case fast: mbp[th] *= 0.5; break;
-		case slow: mbp[th] *= 0.95; break;
-		case none: break;
+		case FAST: mbp[th] *= 0.5; break;
+		case SLOW: mbp[th] *= 0.95; break;
+		case NONE: break;
 	}
 }
 
@@ -70,9 +70,9 @@ void Jump::stand_accept(unsigned int th)
 	stand_ntr[th]++;
 	stand_nac[th]++;
 	switch(alter){
-		case fast: stand[th] *= 1.05; break;
-		case slow: stand[th] *= 1.01; break;
-		case none: break;
+		case FAST: stand[th] *= 1.05; break;
+		case SLOW: stand[th] *= 1.01; break;
+		case NONE: break;
 	}
 }
 
@@ -81,9 +81,9 @@ void Jump::stand_reject(unsigned int th)
 {
 	stand_ntr[th]++;
 	switch(alter){
-		case fast: stand[th] *= 0.975; break;
-		case slow: stand[th] *= 0.995; break;
-		case none: break;
+		case FAST: stand[th] *= 0.975; break;
+		case SLOW: stand[th] *= 0.995; break;
+		case NONE: break;
 	}
 }
 
@@ -92,9 +92,9 @@ void Jump::standev_accept()
 	standev_ntr++;
 	standev_nac++;
 	switch(alter){
-		case fast: naddrem *= 1.05; break;
-		case slow: naddrem *= 1.05; break;
-		case none: break;
+		case FAST: naddrem *= 1.05; break;
+		case SLOW: naddrem *= 1.05; break;
+		case NONE: break;
 	}
 }
 
@@ -102,9 +102,9 @@ void Jump::standev_reject()
 {
 	standev_ntr++;
 	switch(alter){
-		case fast: naddrem *= 0.95; break;
-		case slow: naddrem *= 0.95;break;
-		case none: break;
+		case FAST: naddrem *= 0.95; break;
+		case SLOW: naddrem *= 0.95;break;
+		case NONE: break;
 	}
 	if(naddrem < 1) naddrem = 1;
 }

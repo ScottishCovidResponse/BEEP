@@ -19,11 +19,11 @@ using namespace std;
 
 Output::Output(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel) :  details(details), data(data), model(model), obsmodel(obsmodel)
 {
-	ensuredirectory(details.outputdir);
+	ensure_directory(details.output_directory);
 }
 	
 /// Create a directory if it doesn't already exist
-void Output::ensuredirectory(const string &path) const
+void Output::ensure_directory(const string &path) const
 {
 	struct stat st;
 	if (stat(path.c_str(), &st) == -1){  	// Directory not found
@@ -33,17 +33,17 @@ void Output::ensuredirectory(const string &path) const
 }
 
 /// Prints the populations to the terminal	
-void Output::populations(unsigned int sett, const vector <int> &N) const
+void Output::print_populations(unsigned int sett, const vector <int> &N) const
 {
-	cout  << "  Time: " << details.settime[sett];
+	cout  << "  Time: " << details.division_time[sett];
 	for(auto c = 0u; c < model.comp.size(); c++) cout << "  " << model.comp[c].name << ":"	<< N[c];
 	cout << endl;	
 }
 		
 /// Initialises trace plot for parameters
-void Output::trace_plot_init()
+void Output::trace_plot_inititialise()
 {
-	stringstream ss; ss << details.outputdir << "/trace.txt";
+	stringstream ss; ss << details.output_directory << "/trace.txt";
 
 	trace.open(ss.str().c_str());		
 	trace << "state";
@@ -62,9 +62,9 @@ void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int 
 	for(const auto& pval : paramval) trace << "\t" << pval; 
 	
 	if(model.priorcomps.size() > 0){
-		vector <CompTrans> comptrans;
-		model.create_comptrans(comptrans,paramval);
-		vector <CompProb> compprob = model.create_compprob(comptrans);
+		vector <CompTransProb> comptransprob;
+		model.create_comptransprob(comptransprob,paramval);
+		vector <CompProb> compprob = model.create_compprob(comptransprob);
 	
 		for(const auto& pri : model.priorcomps){
 			auto c = pri.comp;
@@ -80,13 +80,13 @@ void  Output::trace_plot(unsigned int samp, double Li, double Pri, unsigned int 
 }
 
 /// Initialises trace plot for likelihoods on difference chains (MBP only)
-void Output::L_trace_plot_init(unsigned int nchaintot)
+void Output::L_trace_plot_inititialise(unsigned int nchain_total)
 {
-	stringstream ss; ss << details.outputdir << "/traceLi.txt";
+	stringstream ss; ss << details.output_directory << "/traceLi.txt";
 
 	traceLi.open(ss.str().c_str());		
 	traceLi << "state";
-	for(auto p = 0u; p < nchaintot; p++) traceLi << "\tchain" <<  p; 
+	for(auto p = 0u; p < nchain_total; p++) traceLi << "\tchain" <<  p; 
 	traceLi << endl;
 }
 
@@ -106,9 +106,9 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 	
 	string name;
 	switch(type){
-	case pop_data: name = data.popdata[d].file; break;
-	case trans_data: name = data.transdata[d].file; break;
-	case marg_data: name = data.margdata[d].file; break;
+	case POP_DATA: name = data.popdata[d].file; break;
+	case TRANS_DATA: name = data.transdata[d].file; break;
+	case MARG_DATA: name = data.margdata[d].file; break;
 	default: emsgEC("Output",1); break;
 	}
 	
@@ -124,25 +124,25 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 	default: file = "Posterior_"+name+"_"+data.region[r].code+".txt"; break;
 	}
 	
-	auto filefull = details.outputdir+"/"+file;
+	auto filefull = details.output_directory+"/"+file;
 	ofstream dataout(filefull.c_str());
 	if(!dataout) emsg("Cannot output the file '"+filefull+"'");
 				
 	unsigned int nrow = UNSET;
 	switch(type){
-	case pop_data: 
+	case POP_DATA: 
 		cout << "'" << file << "' gives the population in '" << data.popdata[d].compstr << "'";
 		dataout << "# The population in '" << data.popdata[d].compstr << "'"; 
 		nrow = data.popdata[d].rows;
 		break;
 		
-	case trans_data:
+	case TRANS_DATA:
 		cout << "'" << file << "' gives numbers of " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		dataout << "# Population in " << data.transdata[d].fromstr << "→" << data.transdata[d].tostr << " transitions";
 		nrow = data.transdata[d].rows;
 		break;
 	
-	case marg_data:
+	case MARG_DATA:
 		auto dc = data.margdata[d].democat;
 		nrow = data.democat[dc].value.size();
 		cout << "'" << file << "' gives " << data.margdata[d].fromstr << "→" << data.margdata[d].tostr << " transitions stratified by '" << data.democat[dc].name << "'";
@@ -162,13 +162,13 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 	unsigned int rrmin, rrmax;
 	switch(r){
 	case UNSET: rrmin = 0; rrmax = 1; break;
-	case ADD: rrmin = 0; rrmax = data.nregion; if(type == marg_data) emsgEC("Output",2); break;
+	case ADD: rrmin = 0; rrmax = data.nregion; if(type == MARG_DATA) emsgEC("Output",2); break;
 	default: rrmin = r; rrmax = r+1; break;
 	}
 
 	switch(type){
-	case trans_data: case pop_data: dataout << "# Time from start, " << details.tformat; break;
-	case marg_data: dataout << "category"; break;
+	case TRANS_DATA: case POP_DATA: dataout << "# Time from start, " << details.time_format_str; break;
+	case MARG_DATA: dataout << "category"; break;
 	}	
 	dataout << ", data, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 	for(auto row = 0u; row < nrow; row++){
@@ -177,9 +177,9 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 			auto valsum = 0.0;
 			for(auto rr = rrmin; rr < rrmax; rr++){
 				switch(type){
-				case pop_data: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
-				case trans_data: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
-				case marg_data:
+				case POP_DATA: valsum += opsamp[s].meas.popnum[d][row][rr]; break;
+				case TRANS_DATA: valsum += opsamp[s].meas.transnum[d][row][rr]; break;
+				case MARG_DATA:
 					auto dc = data.margdata[d].democat;
 					auto sum = 0.0; for(auto jj = 0u; jj < data.democat[dc].value.size(); jj++) sum += opsamp[s].meas.margnum[d][jj][rr];
 					valsum += 100.0*opsamp[s].meas.margnum[d][row][rr]/sum;
@@ -189,28 +189,28 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 			vec.push_back(valsum);
 		}
 		
-		auto stat = getstat(vec);
+		auto stat = get_statastic(vec);
 		
 		unsigned int t=0;
 		switch(type){
-		case pop_data: t = data.popdata[d].start+row*data.popdata[d].units; break;
-		case trans_data: t = data.transdata[d].start+row*data.transdata[d].units; break;
+		case POP_DATA: t = data.popdata[d].start+row*data.popdata[d].units; break;
+		case TRANS_DATA: t = data.transdata[d].start+row*data.transdata[d].units; break;
 		}
-		if(type == marg_data){
+		if(type == MARG_DATA){
 			auto dc = data.margdata[d].democat;
 			dataout << data.democat[dc].value[row] << " ";
 		}
 		else dataout << t << " " << details.getdate(t) << " ";
 		
-		if(details.mode != sim){
+		if(details.mode != SIM && details.mode != MULTISIM){
 			auto valsum = 0.0;
 			for(auto rr = rrmin; rr < rrmax; rr++){
-				if(type == marg_data) valsum += data.margdata[d].percent[rr][row]; 
+				if(type == MARG_DATA) valsum += data.margdata[d].percent[rr][row]; 
 				else{
 					unsigned int jj = 0;
 					switch(type){
-					case pop_data: jj = data.popdata[d].num[rr][row]; break;
-					case trans_data: jj = data.transdata[d].num[rr][row]; break;
+					case POP_DATA: jj = data.popdata[d].num[rr][row]; break;
+					case TRANS_DATA: jj = data.transdata[d].num[rr][row]; break;
 					}
 					switch(jj){
 					case UNKNOWN: break;
@@ -227,38 +227,38 @@ void Output::posterior_plot(const vector <Sample> &opsamp, unsigned int d, unsig
 }
 
 /// Generates posterior plots for transitions, variation in R0 over time, parameter statistics and MCMC diagnostics 
-void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &opsamp) const
+void Output::final_results(const vector <ParamSample> &psamp, const vector <Sample> &opsamp) const
 { 
 	auto nopsamp = opsamp.size();
 	auto opsampmin = nopsamp/4;
 	
 	cout << endl;
-	if(details.mode == sim || details.mode == multisim) cout << "Outputs in directory '" << details.outputdir << "':" << endl;
-	else cout << "Posterior outputs in directory '" << details.outputdir << "':" << endl;
+	if(details.mode == SIM || details.mode == MULTISIM) cout << "Outputs in directory '" << details.output_directory << "':" << endl;
+	else cout << "Posterior outputs in directory '" << details.output_directory << "':" << endl;
 	
 	for(auto d = 0u; d < data.transdata.size(); d++){
 		if(data.transdata[d].type == "reg"){
-			for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,trans_data);
-			posterior_plot(opsamp,d,ADD,trans_data);
+			for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,TRANS_DATA);
+			posterior_plot(opsamp,d,ADD,TRANS_DATA);
 		}
-		if(data.transdata[d].type == "all") posterior_plot(opsamp,d,UNSET,trans_data);
+		if(data.transdata[d].type == "all") posterior_plot(opsamp,d,UNSET,TRANS_DATA);
 	}
 	
 	for(auto d = 0u; d < data.popdata.size(); d++){
 		if(data.popdata[d].type == "reg"){
-			for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,pop_data);
-			posterior_plot(opsamp,d,ADD,pop_data);
+			for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,POP_DATA);
+			posterior_plot(opsamp,d,ADD,POP_DATA);
 		}
-		if(data.popdata[d].type == "all") posterior_plot(opsamp,d,UNSET,pop_data);
+		if(data.popdata[d].type == "all") posterior_plot(opsamp,d,UNSET,POP_DATA);
 	}
 	
 	for(auto d = 0u; d < data.margdata.size(); d++){
-		if(data.margdata[d].type == "reg"){ for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,marg_data);}
-		if(data.margdata[d].type == "all") posterior_plot(opsamp,d,UNSET,marg_data);
+		if(data.margdata[d].type == "reg"){ for(auto r = 0u; r < data.nregion; r++) posterior_plot(opsamp,d,r,MARG_DATA);}
+		if(data.margdata[d].type == "all") posterior_plot(opsamp,d,UNSET,MARG_DATA);
 	}
 
 	auto file = "Posterior_R0.txt";
-	auto filefull = details.outputdir+"/"+file;
+	auto filefull = details.output_directory+"/"+file;
 	ofstream R0out(filefull.c_str());
 	if(!R0out) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -266,17 +266,17 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	R0out << "# Gives the time variation in R0." << endl;	
 	R0out << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	vector <double> Rav(details.nsettime);
-	for(auto st = 0u; st < details.nsettime; st++){
+	vector <double> Rav(details.ndivision);
+	for(auto st = 0u; st < details.ndivision; st++){
 		vector <double> vec; for(auto s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].R0[st]);
-		auto stat = getstat(vec);
+		auto stat = get_statastic(vec);
 		Rav[st] = atof(stat.mean.c_str());
 		
-		R0out << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		R0out << (st+0.5)*details.period/details.ndivision << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	file = "Posterior_phi.txt";
-	filefull = details.outputdir+"/"+file;
+	filefull = details.output_directory+"/"+file;
 	ofstream phiout(filefull.c_str());
 	if(!phiout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -284,18 +284,18 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	phiout << "# Gives the time variation in phi (expressed as the number of infected per 1000000 individuals)." << endl;	
 	phiout << "# Time from start, mean, minimum of 95% credible interval, maximum of 95% credible interval, estimated sample size" << endl;
 
-	for(auto st = 0u; st < details.nsettime; st++){
+	for(auto st = 0u; st < details.ndivision; st++){
 		vector <double> vec; for(auto s = opsampmin; s < nopsamp; s++) vec.push_back(opsamp[s].phi[st]*1000000);
-		auto stat = getstat(vec);
+		auto stat = get_statastic(vec);
 	
-		phiout << (st+0.5)*details.period/details.nsettime << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
+		phiout << (st+0.5)*details.period/details.ndivision << " " << stat.mean << " " << stat.CImin << " "<< stat.CImax << " " << stat.ESS << endl; 
 	}
 
 	auto npsamp = psamp.size();
 	auto psampmin = npsamp/4;
 	
 	file = "Posterior_parameters.txt";
-	filefull = details.outputdir+"/"+file;
+	filefull = details.output_directory+"/"+file;
 	ofstream paramout(filefull.c_str());
 	if(!paramout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -309,7 +309,7 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	vector <double> paramav(model.param.size());
 	for(auto p = 0u; p < model.param.size(); p++){
 		vector <double> vec; for(auto s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
-		auto stat = getstat(vec);
+		auto stat = get_statastic(vec);
 		paramav[p] = atof(stat.mean.c_str());
 		if(p < model.param.size()-1){
 			paramout << model.param[p].name  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << endl; 
@@ -317,7 +317,7 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	}
 	
 	file = "Posterior_distributions.txt";
-	filefull = details.outputdir+"/"+file;
+	filefull = details.output_directory+"/"+file;
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -329,7 +329,7 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	vector <Distribution> paramdist(model.param.size()-1);
 	for(auto p = 0u; p < model.param.size()-1; p++){
 		vector <double> vec; for(auto s = psampmin; s < npsamp; s++) vec.push_back(psamp[s].paramval[p]);
-		paramdist[p] = getdist(vec);
+		paramdist[p] = get_distribution(vec);
 	}
 	
 	for(auto p = 0u; p < model.param.size()-1; p++){
@@ -345,35 +345,35 @@ void Output::results(const vector <ParamSample> &psamp, const vector <Sample> &o
 	}
 	
 	file = "Posterior_Rmap.txt";
-	filefull = details.outputdir+"/"+file;
+	filefull = details.output_directory+"/"+file;
 	ofstream Rmapout(filefull.c_str());
 	if(!Rmapout) emsg("Cannot output the file '"+filefull+"'");
 	
 	cout << "'" << file << "' gives the time and spatial variation in R0." << endl;
 	Rmapout << "# Gives the time and spatial variation in R." << endl;	
 	Rmapout << "# Area, Day: ";
-	for(auto st = 0u; st < details.nsettime; st++){ Rmapout << (st+1); if(st < details.nsettime-1) Rmapout << ", ";}
+	for(auto st = 0u; st < details.ndivision; st++){ Rmapout << (st+1); if(st < details.ndivision-1) Rmapout << ", ";}
 	Rmapout << endl;
 	
-	vector <double> areafac = model.create_areafac(paramav);
-	auto areaav = 0.0; for(const auto& areafa : areafac) areaav += areafa/data.narea;
+	vector <double> areafactor = model.create_areafactor(paramav);
+	auto areaav = 0.0; for(const auto& areafa : areafactor) areaav += areafa/data.narea;
 
 	for(auto c = 0u; c < data.narea; c++){
 		Rmapout << data.area[c].code;
-		for(auto st = 0u; st < details.nsettime; st++) Rmapout << "\t" << (areafac[c]/areaav)*Rav[st];
+		for(auto st = 0u; st < details.ndivision; st++) Rmapout << "\t" << (areafactor[c]/areaav)*Rav[st];
 		Rmapout << endl;
 	}
 	
-	if(details.mode != sim){
+	if(details.mode != SIM){
 		cout << "'trace.txt' gives trace plots for model parameters." << endl;
 	}
 	
-	if(details.mode == inf){
+	if(details.mode == MCMCMC){
 		cout << "'traceLi.txt' gives trace plots for the observation likelihoods on different chains." << endl;
 	}
 }
 
-void Output::combinedtrace(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
+void Output::combined_trace_file(const vector <string> &paramname, const vector < vector < vector <double> > > &vals, 
                            string file, string distfile, unsigned int burnin) const
 {
 	ofstream paramout(file.c_str());
@@ -386,7 +386,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 	paramout << endl;
 
 	auto M = vals.size();
-	auto nmax = large;
+	auto nmax = LARGE;
 	for(const auto& vs : vals){ if(vs[0].size() < nmax) nmax = vs[0].size();}
 
 	auto nmin = nmax/4;
@@ -414,7 +414,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 					
 			auto W = 0.0; for(auto var : vari) W += var/M;
 			auto B = 0.0; for(auto muu : mu) B += (muu-muav)*(muu-muav)*N/(M-1);
-			if(W > tiny) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
+			if(W > TINY) GR = to_string(sqrt(((1-1.0/N)*W+B/N)/W));
 		}
 	
 		vector <double> vec;
@@ -427,8 +427,8 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 			}
 			for(auto s = psampmin; s < npsamp; s++) vec.push_back(vs[p][s]);
 		}
-		paramdist[p] = getdist(vec);
-		Statistics stat = getstat(vec);
+		paramdist[p] = get_distribution(vec);
+		Statistics stat = get_statastic(vec);
 				
 		paramout << paramname[p]  << " " <<  stat.mean << " (" << stat.CImin << " - "<< stat.CImax << ") " << stat.ESS << " " << GR << endl; 
 	}
@@ -453,7 +453,7 @@ void Output::combinedtrace(const vector <string> &paramname, const vector < vect
 }
 	
 /// Outputs an event sample fev
-void Output::eventsample(const vector < vector <Event> > &fev) const
+void Output::save_event_sample(const vector < vector <Event> > &fev) const
 {
 	auto nind = data.ind.size();
 	vector< vector <Event> > indev;
@@ -462,7 +462,7 @@ void Output::eventsample(const vector < vector <Event> > &fev) const
 		for(auto& ev : fe) indev[ev.ind].push_back(ev);
 	}
 	
-	stringstream sst; sst << details.outputdir << "/events.txt";
+	stringstream sst; sst << details.output_directory << "/events.txt";
 	ofstream evsamp(sst.str().c_str());
 	if(!evsamp) emsg("Cannot output the file '"+sst.str()+"'");
 	
@@ -482,41 +482,10 @@ void Output::eventsample(const vector < vector <Event> > &fev) const
 	*/
 }
 
-/// Outputs a population plot for event sequence xi
-void Output::plot(string file, const vector < vector <Event> > &xi, double tmin, double period) const
-{
-	vector <int> N(model.comp.size());
-	for(auto& NN : N) NN = 0;
-	N[0] = data.popsize;
-		
-	auto td = 0u, tdf = 0u; while(td < details.fediv && xi[td].size()==0) td++;
-	
-	ofstream plot(file.c_str());
-	if(!plot) emsg("Cannot output the file '"+file+"'");
-	
-	for(auto t = tmin; t < period; t += (period-tmin)/100){
-		while(td < details.fediv && xi[td][tdf].t < t){
-			auto tra = xi[td][tdf].trans;
-			Transition tr = model.trans[tra];
-			N[tr.from]--; N[tr.to]++;
-			
-			tdf++;
-			if(tdf == xi[td].size()){
-				td++; tdf = 0; 
-				while(td < details.fediv && xi[td].size() == 0) td++;
-			}
-		}
-		
-		plot << t << " ";
-		for(auto NN : N) plot << NN << " ";
-		plot << endl;
-	}
-}
-
 /// Generates case data based on a simulation using the MBP algorithm
-void Output::simulateddata(const vector < vector <EventRef> > &trev, const vector < vector <Event> > &indev, string dir) const
+void Output::simulated_data(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev, string dir) const
 {	
-	Measurements meas = obsmodel.getmeas(trev,indev);
+	Measurements meas = obsmodel.get_measured_quantities(transev,indev);
 	
 	cout << "Simulated data in directory '" << dir <<"':" << endl;
 	for(auto td = 0u; td < data.transdata.size(); td++){
@@ -538,9 +507,9 @@ void Output::simulateddata(const vector < vector <EventRef> > &trev, const vecto
 		if(tdata.type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(details.tform){
-		case tform_num: transout << "time"; break;
-		case tform_ymd: transout << "date"; break;
+		switch(details.time_format){
+		case TIME_FORMAT_NUM: transout << "time"; break;
+		case TIME_FORMAT_YMD: transout << "date"; break;
 		}
 
 		if(tdata.type == "reg"){ for(const auto& reg : data.region){ transout << "\t" << reg.code;}}
@@ -565,9 +534,9 @@ void Output::simulateddata(const vector < vector <EventRef> > &trev, const vecto
 		if(pdata.type == "reg") cout << " for different regions." << endl;
 		else cout << "." << endl;
 		
-		switch(details.tform){
-		case tform_num: popout << "time"; break;
-		case tform_ymd: popout << "date"; break;
+		switch(details.time_format){
+		case TIME_FORMAT_NUM: popout << "time"; break;
+		case TIME_FORMAT_YMD: popout << "date"; break;
 		}
 		
 		if(pdata.type == "reg"){ for(const auto& reg : data.region){ popout << "\t" << reg.code;}}
@@ -614,7 +583,7 @@ void Output::simulateddata(const vector < vector <EventRef> > &trev, const vecto
 bool WeightedPoint_ord (WeightedPoint p1,WeightedPoint p2) { return (p1.val < p2.val); }
 
 /// Gets mean and credible interval for a series of weighted samples
-Statistics Output::getstat_with_w(vector <WeightedPoint> vec) const  
+Statistics Output::get_statistic_with_weight(vector <WeightedPoint> vec) const  
 {
 	Statistics stat;
 	
@@ -654,7 +623,7 @@ Statistics Output::getstat_with_w(vector <WeightedPoint> vec) const
 }
 		
 /// Calculates diagnostic statistics
-Statistics Output::getstat(const vector <double> &vec) const                       
+Statistics Output::get_statastic(const vector <double> &vec) const                       
 {
 	Statistics stat;
 	
@@ -684,7 +653,7 @@ Statistics Output::getstat(const vector <double> &vec) const
 
 		vec2 = vec;
 		auto var = sum2 - sum*sum;
-		if(var <= tiny || n <= 2)  stat.ESS = "---";
+		if(var <= TINY || n <= 2)  stat.ESS = "---";
 		else{	
 			auto sd = sqrt(var);
 			for(auto& v : vec2) v = (v-sum)/sd;
@@ -705,11 +674,11 @@ Statistics Output::getstat(const vector <double> &vec) const
 
 
 /// Gets the probability distributions for a given set of samples
-Distribution Output::getdist(const vector <double> &vec) const
+Distribution Output::get_distribution(const vector <double> &vec) const
 {
 	Distribution dist;
 	
-	auto min = large, max = -large;	
+	auto min = LARGE, max = -LARGE;	
 	for(auto v : vec){
 		if(v < min) min = v;
 		if(v > max) max = v;
@@ -729,7 +698,7 @@ Distribution Output::getdist(const vector <double> &vec) const
 		for(auto b = 0u; b < BIN; b++) bin[b] = 0;
 		
 		for(auto v : vec){
-			auto b = (unsigned int)(BIN*(v-min)/(max-min+tiny)); if(b >= BIN) emsgEC("Output",3);
+			auto b = (unsigned int)(BIN*(v-min)/(max-min+TINY)); if(b >= BIN) emsgEC("Output",3);
 			bin[b]++;
 		}
 
@@ -745,9 +714,9 @@ Distribution Output::getdist(const vector <double> &vec) const
 /// Outputs the probability distributions generated by abc
 void Output::plot_distribution(string file, const Generation &gen) const 
 {
-	if(details.mode != abcsmc) emsg("The mode should be ANC-SMC");
+	if(details.mode != ABC_SMC) emsg("The mode should be ABC-SMC");
 	
-	string filefull = details.outputdir+"/"+file;
+	string filefull = details.output_directory+"/"+file;
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot output the file '"+filefull+"'");
 	
@@ -774,7 +743,7 @@ void Output::plot_distribution(string file, const Generation &gen) const
 			vec.push_back(gen.param_samp[k][th]);
 		}
 	
-		paramdist[th] = getdist(vec);
+		paramdist[th] = get_distribution(vec);
 	}
 	
 	for(auto th = 0u;th < model.param.size()-1; th++){
@@ -795,7 +764,7 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 {
 	auto nparam = model.param.size(); 
 
-	string filefull = details.outputdir+"/"+file;
+	string filefull = details.output_directory+"/"+file;
 	ofstream genout(filefull.c_str());
 	if(!genout) emsg("Cannot output the file '"+filefull+"'");
 
@@ -814,14 +783,14 @@ void Output::generation_plot(string file, const vector <Generation> generation) 
 				WeightedPoint pw;
 				pw.val = gen.param_samp[i][th];
 				switch(details.mode){
-					case abcsmc: pw.w = gen.w[i]; break;
-					case abcmbp: pw.w = 1; break;
+					case ABC_SMC: pw.w = gen.w[i]; break;
+					case ABC_MBP: pw.w = 1; break;
 					default: emsgEC("Output",11); break;
 				}
 				vec.push_back(pw);
 			}
 
-			Statistics stat = getstat_with_w(vec);
+			Statistics stat = get_statistic_with_weight(vec);
 			
 			genout << " " << stat.mean << " " << stat.CImin << " " << stat.CImax;
 		}
@@ -834,7 +803,7 @@ double Output::model_evidence_plot(string file, const vector<Generation> &genera
 {
 	cout << "'" << file << "' gives the log model evidence as a function of the cutoff in the log of the observation probability." << endl;
 
-	string filefull = details.outputdir+"/"+file;
+	string filefull = details.output_directory+"/"+file;
 	ofstream MEout(filefull.c_str());
 	if(!MEout) emsg("Cannot output the file '"+filefull+"'");
 	

@@ -22,10 +22,9 @@ struct Level {                            // Stores information about different 
 class AreaTree
 {
  	public:
-
-	AreaTree(Data &data);
-	
-	vector <Level> lev;                     // Stores information about different levels on the tree
-	unsigned int level;                     // The number of levels of scale in the model
+		AreaTree(Data &data);
+		
+		vector <Level> lev;                     // Stores information about different levels on the tree
+		unsigned int level;                     // The number of levels of scale in the model
 };
 #endif

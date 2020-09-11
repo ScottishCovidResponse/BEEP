@@ -21,10 +21,10 @@ using namespace std;
 /// Initilaises the simulation
 Simulate::Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), obsmodel(obsmodel), output(output)
 {	
-	if(details.mode != inf && mpi.ncore != 1) emsgroot("Simulation only requires one core");
+	if(mpi.ncore != 1) emsgroot("Simulation only requires one core");
 
-	nsamp = inputs.find_int("nsamp",UNSET);                                             // Sets the number of samples for inference
-	if(details.mode == multisim){
+	nsamp = inputs.find_integer("nsamp",UNSET);                                             // Sets the number of samples for inference
+	if(details.mode == MULTISIM){
 		if(nsamp == UNSET) emsgroot("The number of samples must be set");
 	}
 }
@@ -33,9 +33,9 @@ Simulate::Simulate(const Details &details, const Data &data, const Model &model,
 void Simulate::run()
 {
 	Chain chain(details,data,model,areatree,obsmodel,output,0);
-	proportions(chain.propose.indev);
+	compartmental_proportions(chain.propose.indev);
 	
-	output.simulateddata(chain.propose.trev,chain.propose.indev,details.outputdir);
+	output.simulated_data(chain.propose.transev,chain.propose.indev,details.output_directory);
 	
 	if(1 == 0){ // This is switched on to see distribution for R and eta from the simulated data
 		Sample sample; 
@@ -43,15 +43,15 @@ void Simulate::run()
 		vector <Sample> opsamp; 
 		vector <ParamSample> psamp;
 		
-		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
+		sample.meas = obsmodel.get_measured_quantities(chain.propose.transev,chain.propose.indev);
 		
-		sample.R0 = model.calculate_R_func_time(chain.initial.paramval);
+		sample.R0 = model.calculate_R_vs_time(chain.initial.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
 		paramsamp.paramval = chain.initial.paramval;
 		opsamp.push_back(sample);
 		psamp.push_back(paramsamp);
 		
-		output.results(psamp,opsamp);
+		output.final_results(psamp,opsamp);
 	}
 }
 
@@ -66,8 +66,8 @@ void Simulate::multirun()
 		Chain chain(details,data,model,areatree,obsmodel,output,0);
 		
 		Sample sample;
-		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);
-		sample.R0 = model.calculate_R_func_time(chain.initial.paramval);
+		sample.meas = obsmodel.get_measured_quantities(chain.propose.transev,chain.propose.indev);
+		sample.R0 = model.calculate_R_vs_time(chain.initial.paramval);
 		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
 		
 		ParamSample paramsamp;		
@@ -75,11 +75,11 @@ void Simulate::multirun()
 		opsamp.push_back(sample);
 		psamp.push_back(paramsamp);
 	}
-	output.results(psamp,opsamp);
+	output.final_results(psamp,opsamp);
 }
 
 /// Works out the proportion of individuals which visit different compartments
-void Simulate::proportions(const vector< vector <Event> > &indev)
+void Simulate::compartmental_proportions(const vector< vector <Event> > &indev)
 {
 	vector <unsigned int> visit(model.comp.size());
 	for(auto& visi : visit) visi = 0;

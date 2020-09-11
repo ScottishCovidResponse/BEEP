@@ -19,8 +19,8 @@ void Model_Evidence::init(const unsigned int _nchaintot, const unsigned int _que
 
 void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 {
-	auto pmax = 1-pow(invTmin,1.0/Tpower);
-	auto pmin = 1-pow(invTmax,1.0/Tpower);
+	auto pmax = 1-pow(invTmin,1.0/INVT_POWER);
+	auto pmin = 1-pow(invTmax,1.0/INVT_POWER);
 	
 	for(auto p = 0u; p < nchaintot; p++){
 		if(nchaintot == 1 || duplicate == 1) invT[p] = invTmax;
@@ -31,7 +31,7 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 			auto kappa = double(p)/(nchaintot-1);
 			auto ppf = pmin+kappa*(pmax-pmin);
 			auto ppeff = 1-fac*(1-ppf);	
-			invT[p] = pow(1-ppeff,Tpower);
+			invT[p] = pow(1-ppeff,INVT_POWER);
 		}
 	}
 	
@@ -63,7 +63,7 @@ double Model_Evidence::calculate() const
 		auto dinvT = invT[ch-1]-invT[ch];
 		auto jmax = L[ch].size();
 		auto jmin = jmax/3;
-		auto max = -large; 
+		auto max = -LARGE; 
 		for(auto j = jmin; j < jmax; j++){ 
 			if(L[ch][j] > max) max = L[ch][j];
 		}
@@ -71,7 +71,7 @@ double Model_Evidence::calculate() const
 		auto sum = 0.0; for(auto j = jmin; j < jmax; j++) sum += exp(dinvT*(L[ch][j]-max));
 		ME += dinvT*max + log(sum/(jmax-jmin));
 	}
-	if(ME < -large) ME = -large;
+	if(ME < -LARGE) ME = -LARGE;
 	
 	return ME;
 }

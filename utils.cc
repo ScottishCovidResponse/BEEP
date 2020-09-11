@@ -60,7 +60,7 @@ double normal(float mu, float sd)
 double exp_sample(double rate)
 {
 	if(rate < 0) emsgEC("Utils",8);
-	if(rate == 0) return large;
+	if(rate == 0) return LARGE;
 	return - log(ran())/rate;
 }
 
@@ -180,7 +180,7 @@ bool stringhasending (std::string const &fullString, std::string const &ending)
 	}
 }
 /// Gets a positive integer from a string
-unsigned int getint(
+unsigned int get_integer(
 	const std::string& st,
 	unsigned int threshold
 	)

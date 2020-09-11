@@ -3,41 +3,42 @@
 
 using namespace std;
 
-enum Mode { sim, inf, multisim, abcsmc, abcmbp, combinetrace};                                    // Different modes of operation 
+enum Mode { SIM, MULTISIM, MCMCMC, ABC_SMC, ABC_MBP, COMBINE_TRACE};          // Different modes of operation 
 	
-enum Dist { exp_dist, gamma_dist, lognorm_dist, infection_dist, timep_dist};              // Different time distributions
+enum Dist { EXP_DIST, GAMMA_DIST, LOGNORM_DIST, INFECTION_DIST, TIMEP_DIST};  // Different time distributions
 
-enum Alter { fast, slow, none };                                                          // Different speeds of altering proposals  
+enum Alter { FAST, SLOW, NONE };                                              // Different speeds of altering proposals  
 
-enum ParamType { other_paramtype, distval_paramtype, branchprob_paramtype};               // Different types of parameters
+enum ParamType { OTHER_PARAM, DISTVAL_PARAM, BRANCHPROB_PARAM};               // Different types of parameters
 	
-enum DataType { trans_data, pop_data, marg_data};                                         // Different types of data
+enum DataType { TRANS_DATA, POP_DATA, MARG_DATA};                             // Different types of data
 
-enum Status { success, fail};                                                             // Determines if successful
+enum Status { SUCCESS, FAIL};                                                 // Determines if successfulful
 
-enum TimeFormat { tform_num, tform_ymd };                                                 // Different type of time format
+enum TimeFormat { TIME_FORMAT_NUM, TIME_FORMAT_YMD };                         // Different type of time format
 
-enum IndSus { both_sus, ponly_sus, not_sus };                                             // Use to classify if individual is susceptible in initial/proposed state
+enum IndSus { BOTH_SUSCEPTIBLE, ONLY_PROPOSE_SUSCEPTIBLE         // Classifies if individual is susceptible in initial/propose
+						, NOT_SUSCEPTIBLE }; 
 
-const double vtiny = 0.00000000000000001;                        // Used to represent a very tiny number
-const double tiny = 0.00000001;                                  // Used to represent a tiny number
-const double large = 10000000;                                   // Used to represent a big number
+const double VTINY = 0.00000000000000001;                        // Used to represent a very tiny number
+const double TINY = 0.00000001;                                  // Used to represent a tiny number
+const double LARGE = 10000000;                                   // Used to represent a big number
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 const unsigned int THRESH = 999999998;                           // Represents a number is under the threshold set
 const unsigned int UNKNOWN = 999999997;                          // Represents a number is unknown
 const unsigned int ADD = 999999996;                              // Used for summing posterior plots
 
-const double minvar = 5; 																				 // The minimum variance for the observation model
-const double Tpower = 4;                                         // The power used for the temerature progression
+const double MINIMUM_VARIANCE = 5; 													  	 // The minimum variance for the observation model
+const double INVT_POWER = 4;                                     // The power used for the temerature progression
 
 const unsigned int quenchpl = 0;                                 // Set to 1 if performing a quench plot
 
 const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
-const unsigned int duplicate = 0;                                // Set to one to duplicate chains (this is used as a diagnostic check)
+const unsigned int duplicate = 0;                                // Set to one to duplicate chains (diagnostic)
 
-const unsigned int BIN=50;                                       // The number of bins used for plotting probability distributions
+const unsigned int BIN=50;                                       // Number of bins used for plotting distributions
 
-const unsigned int smooth_spline = 1;                            // Set to 1 if smoothing on splines is being done
+const unsigned int smooth_spline = 1;                            // Set to 1 if smoothing of splines is being done
 const double smooth = 0.4;                                       // Used for the smoothing priors on splines
 
 #endif
