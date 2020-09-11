@@ -341,8 +341,8 @@ TEST_CASE("Pack can store and read back a string vector", tag_pack) {
 }
 TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 	packinit(0);
-	std::vector<AREA> av;
-	AREA a;
+	std::vector<Area> av;
+	Area a;
 	a.code = "code";
 	a.region = 1u;
 	a.x = 1.;
@@ -378,7 +378,7 @@ TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 }
 TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 	packinit(0);
-	std::vector<REGION> rv;
+	std::vector<DataRegion> rv;
 	REGION r;
 	r.name = "name1";
 	r.code = "code1";
