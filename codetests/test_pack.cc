@@ -399,7 +399,7 @@ TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 }
 TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
 	packinit(0);
-	std::vector<DEMOCAT> rv;
+	std::vector<DemographicCategory> rv;
 	DEMOCAT r;
 	r.name = "name1";
 	r.value = std::vector<std::string>{"value1a","value1b"};
@@ -422,7 +422,7 @@ TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
 }
 TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
 	packinit(0);
-	std::vector<std::vector<EVREF>> rv;
+	std::vector<std::vector<EventRef>> rv;
 	rv.resize(2);
 	EVREF r;
 	r.ind = 1;
@@ -443,20 +443,6 @@ TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
 	REQUIRE(rv[1][0].e == 4);
 }
 
-#if 0
-TEST_CASE("Unpack handles buffer overflow", tag_pack) {
-	packinit();
-	emsg_throws = true;
-	for (long i=0; i<MAX_NUMBERS; ++i)
-		pack(1u);
-	REQUIRE(packsize() == MAX_NUMBERS);
-	packinit();
-	unsigned int n;
-	for (long i=0; i<MAX_NUMBERS; ++i)
-		unpack(n);
-	REQUIRE(packsize() == MAX_NUMBERS);
-	CHECK_THROWS_AS(unpack(n),std::runtime_error);
-}
 
 // Other cases to address
 void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax);
