@@ -379,7 +379,7 @@ TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 	packinit(0);
 	std::vector<DataRegion> rv;
-	REGION r;
+	DataRegion r;
 	r.name = "name1";
 	r.code = "code1";
 	rv.push_back(r);
@@ -400,7 +400,7 @@ TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
 	packinit(0);
 	std::vector<DemographicCategory> rv;
-	DEMOCAT r;
+	DemographicCategory r;
 	r.name = "name1";
 	r.value = std::vector<std::string>{"value1a","value1b"};
 	rv.push_back(r);
@@ -424,7 +424,7 @@ TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
 	packinit(0);
 	std::vector<std::vector<EventRef>> rv;
 	rv.resize(2);
-	EVREF r;
+	EventRef r;
 	r.ind = 1;
 	r.e = 2;
 	rv[0].push_back(r);
@@ -443,7 +443,3 @@ TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
 	REQUIRE(rv[1][0].e == 4);
 }
 
-
-// Other cases to address
-void pack(const vector< vector <FEV> > &vec, unsigned int fedivmin, unsigned int fedivmax);
-#endif
