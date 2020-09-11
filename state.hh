@@ -40,22 +40,23 @@ public:
 	
 	vector <int> popw;                                    // The population in w
 
-	void setlikelihood();
-	void checkLevPr();
+	void simulate_compartmental_transitions(unsigned int i, unsigned int c, double t);
+	void set_likelihood();
 	void clear();
 	void copy(const State &from);
 	void check() const;
-	Status setparam(const vector <double> &paramv);
-	void setbetaphi(unsigned int sett);
-	void setLPr();
-	FEV getinfev(unsigned int n) const;
-	void addindev(unsigned int i);
-	void simmodel(unsigned int i, unsigned int c, double t);
-	void setQmapUsingdQ(unsigned int sett, const State &state, const vector <double> &dQmap);
-	void setQmap(unsigned int check);
-	void sortx();
+	Status set_param(const vector <double> &paramv);
+	void set_betaphi(unsigned int sett);
+	void set_LPr();
+	double get_infection_time(unsigned int n) const;
+	void add_indev(unsigned int i);
+	void sim_model(unsigned int i, unsigned int c, double t);
+	void set_Qmap_using_dQ(unsigned int sett, const State &state, const vector <double> &dQmap);
+	void set_Qmap(unsigned int check);
+	void sort_x();
 	void initialise_from_particle(const Particle &part);
 	void standard_parameter_prop(Jump &jump);
+	void check_LevPr();
 	
 private:
 	void stand_param_betaphi_prop(Jump &jump);	   // These function make up the "standard" proposal

@@ -138,10 +138,6 @@ public:
 	
 	double getinfectivity(const string& name) const;
 	
-	void simmodel(const vector<double> &paramv, const vector <CompTrans> &comptrans, vector <FEV> &evlist,
-              	unsigned int i, unsigned int c, double t) const;
-	void mbpmodel(vector <FEV> &evlisti, vector <FEV> &evlistp, vector <double> &parami, vector <double> &paramp,
-              	const vector <CompTrans> &comptransi, const vector <CompTrans> &comptransp) const;
 	void print_to_terminal() const;
 	vector <double> priorsamp() const;
 	vector <double> R0calc(const vector <double> &paramv) const;

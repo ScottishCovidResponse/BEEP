@@ -32,7 +32,7 @@ Simulate::Simulate(const Details &details, const DATA &data, const MODEL &model,
 /// Performs a simulation
 void Simulate::run()
 {
-	Chain chain(details,data,model,poptree,obsmodel,0);
+	Chain chain(details,data,model,poptree,obsmodel,output,0);
 	proportions(chain.propose.indev);
 	
 	output.simulateddata(chain.propose.trev,chain.propose.indev,details.outputdir);
@@ -63,7 +63,7 @@ void Simulate::multirun()
 	
 	for(auto s = 0u; s < nsamp; s++){
 		cout << "Simulating sample " << (s+1) << endl;
-		Chain chain(details,data,model,poptree,obsmodel,0);
+		Chain chain(details,data,model,poptree,obsmodel,output,0);
 		
 		SAMPLE sample;
 		sample.meas = obsmodel.getmeas(chain.propose.trev,chain.propose.indev);

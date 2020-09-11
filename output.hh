@@ -43,6 +43,7 @@ class Output
 public:
 	Output(const Details &details, const DATA &data, const MODEL &model, const Obsmodel &obsmodel);
 	
+	void populations(unsigned int sett, const vector <int> &N) const;
 	void trace_plot_init();
 	void trace_plot(unsigned int samp, double Li, double Pri, unsigned int ninf, const vector <double> &paramval);
 	void L_trace_plot_init(unsigned int nchaintot);

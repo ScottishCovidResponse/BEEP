@@ -28,6 +28,7 @@ double normalprob(double x, double mean, double var);
 double lognormprob(double x, double mean, double var);
 double gammasamp(double a, double b);
 double gammaprob(double x, double a, double b);
+double exp_sample(double rate);
 
 vector<string> split(const string& s, char delimiter);
 string filebasename(const string &path);

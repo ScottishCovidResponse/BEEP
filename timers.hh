@@ -19,7 +19,7 @@ struct TIMERS {
 	long timecovar;
 	long timecompparam;
 	long timeaddrem;
-	long timembpconRtot;
+	long infection_sampler;
 	long timeswap;
 	long timeoutput;
 	long timeabc;

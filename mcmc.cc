@@ -48,7 +48,7 @@ Mcmc::Mcmc(const Details &details, const DATA &data, const MODEL &model, const P
 	}
 		
 	for(auto p = 0u; p < nchain; p++){                                                     // Initialises the chains
-		Chain ch = Chain(details,data,model,poptree,obsmodel,mpi.core*nchain+p);
+		Chain ch = Chain(details,data,model,poptree,obsmodel,output,mpi.core*nchain+p);
 		chain.push_back(ch);
 	}
 	
@@ -116,7 +116,7 @@ void Mcmc::run()
 		
 		timeprop += clock();
 
-		if(samp%10 == 0){ for(auto& cha : chain) cha.initial.setQmap(0);}  // Recalcualtes Qmapi (numerical)
+		if(samp%10 == 0){ for(auto& cha : chain) cha.initial.set_Qmap(0);}  // Recalcualtes Qmapi (numerical)
 	
 		timers.timewait -= clock();
 		
@@ -521,7 +521,7 @@ void Mcmc::diagnostic(vector <double> &nac_swap) const
 		timings << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
 		timings << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
 		timings << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-		timings << double(timers.timembpconRtot)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
+		timings << double(timers.infection_sampler)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
 		timings << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
 		timings << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
 		timings << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;

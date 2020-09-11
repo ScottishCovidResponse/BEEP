@@ -22,8 +22,82 @@ State::State(const Details &details, const DATA &data, const MODEL &model, const
 	lam.resize(data.nsettardp);
 }
 
+/// This simulates from the model and generates an event list
+void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, double t)
+{
+	vector <FEV> &evlist = indev[i];
+
+	auto timep = 0u; while(timep < model.ntimeperiod && t > model.timeperiod[timep].tend) timep++;
+
+	FEV ev;
+	ev.ind = i; ev.timep = timep; 
+		
+	auto a = data.democatpos[data.ind[i].dp][0];
+		
+	unsigned int tra;
+	if(c == 0){
+		evlist.clear();	
+		tra = 0;
+		ev.trans = tra; ev.ind = i; ev.t = t; 
+		evlist.push_back(ev);
+	
+		c = trans[tra].to;
+	}
+	
+	double dt, z;
+	do{
+		auto kmax = comp[c].trans.size();
+		if(kmax == 0) break;
+		
+		if(kmax == 1) tra = comp[c].trans[0];
+		else{
+			z = ran(); auto k = 0u; while(k < kmax && z > comptrans[c].probsum[a][k]) k++;
+			if(k == kmax) emsgEC("Model",2);
+			tra = comp[c].trans[k];
+		}
+		
+		switch(trans[tra].type){
+		case exp_dist:
+			dt = -log(ran())*paramval[trans[tra].param_mean];
+			break;
+		
+		case gamma_dist:
+			{
+				auto mean = paramval[trans[tra].param_mean]; auto sd = paramval[trans[tra].param_cv]*mean;
+				dt = gammasamp(mean*mean/(sd*sd),mean/(sd*sd));
+			}
+			break;
+			
+		case lognorm_dist:
+			{
+				auto mean_ns = paramval[trans[tra].param_mean], cv_ns = paramval[trans[tra].param_cv];
+				auto sd = sqrt(log((1+cv_ns*cv_ns))), mean = log(mean_ns) - sd*sd/2;
+				dt = exp(normal(mean,sd));
+			}
+			break;
+			
+		default: emsgEC("MODEL",3); break;
+		}
+
+		if(dt < tiny) dt = tiny;
+		t += dt;
+		
+		while(timep < model.ntimeperiod-1 && model.timeperiod[timep].tend < t){    // Adds in changes in time period
+			ev.trans = comp[c].transtimep; ev.t = model.timeperiod[timep].tend;
+			evlist.push_back(ev);
+			timep++;
+			ev.timep = timep; 
+		}
+		
+		ev.trans = tra; ev.t = t;
+		evlist.push_back(ev);
+
+		c = trans[tra].to; 
+	}while(1 == 1);
+}
+
 /// Calculates the latent process likelihood 
-void State::setlikelihood()
+void State::set_likelihood()
 {		
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
@@ -75,10 +149,10 @@ void State::setlikelihood()
 }
 
 /// Checks the likelihood and prior ire correct 
-void State::checkLevPr() 
+void State::check_LevPr() 
 {
 	auto Levst = Lev;
-	setlikelihood();
+	set_likelihood();
 	double dd = Levst - Lev; if(dd*dd > tiny) emsgEC("State",49);
 	
 	dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > tiny) emsgEC("State",51);
@@ -206,7 +280,7 @@ void State::check() const
 }
 
 /// Sets up the state with a specifies set of parameters
-Status State::setparam(const vector <double> &paramv)
+Status State::set_param(const vector <double> &paramv)
 {
 	paramval = paramv;
 	if(model.create_comptrans(comptrans,paramval) == 1) return fail;
@@ -217,27 +291,28 @@ Status State::setparam(const vector <double> &paramv)
 }
 
 /// Sets the values of phi and beta (this is used to speed up computation)
-void State::setbetaphi(unsigned int sett)
+void State::set_betaphi(unsigned int sett)
 {	
 	phi = disc_spline[model.phispline_ref][sett]; 
 	beta = disc_spline[model.betaspline_ref][sett]; 
 }
 
 /// Sets the initial observation likelihood and prior
-void State::setLPr()
+void State::set_LPr()
 {
 	L = obsmodel.Lobs(trev,indev);
 	Pr = model.prior(paramval);
 }
 
-/// Gets an infection event
-FEV State::getinfev(unsigned int n) const
+/// Gets the time of an infection event
+double State::get_infection_time(unsigned int n) const
 {
-	return indev[x[n].ind][x[n].e];
+	if(n == x.size()) return large;
+	return indev[x[n].ind][x[n].e].t;
 }
 
 /// Adds an individual event sequence
-void State::addindev(unsigned int i)
+void State::add_indev(unsigned int i)
 {
 	unsigned int e, emax, se;
 	EVREF evref;
@@ -255,7 +330,7 @@ void State::addindev(unsigned int i)
 }
 
 /// For a given time sett, sets Qmap by using the Qmao from another state and the difference given by dQmap
-void State::setQmapUsingdQ(unsigned int sett, const State &state, const vector <double> &dQmap)
+void State::set_Qmap_using_dQ(unsigned int sett, const State &state, const vector <double> &dQmap)
 {
 	for(auto v = 0u; v < data.narage; v++){
 		double val = state.Qmap[sett][v] + dQmap[v];
@@ -266,7 +341,7 @@ void State::setQmapUsingdQ(unsigned int sett, const State &state, const vector <
 }
 
 /// Sets Qmap
-void State::setQmap(unsigned int check)
+void State::set_Qmap(unsigned int check)
 {
 	vector <double> Qma(data.narage);
 	
@@ -334,7 +409,7 @@ static bool compEVREFT(EVREFT lhs, EVREFT rhs)
 };
 
 /// Time orders x
-void State::sortx()
+void State::sort_x()
 {
 	vector <EVREFT> xt;
 	for(const auto& xx : x){
@@ -369,11 +444,11 @@ void State::initialise_from_particle(const Particle &part)
 		indev[i].push_back(ev);
 	}	
 	
-	for(auto i : indlist) addindev(i);
+	for(auto i : indlist) add_indev(i);
 	
-	sortx();
+	sort_x();
 	
-	setQmap(0);
+	set_Qmap(0);
 
 	EF = part.EF;
 	Pr = model.prior(paramval);
@@ -389,7 +464,7 @@ void State::standard_parameter_prop(Jump &jump)
 	timers.timestandard -= clock();
 	
 	timers.timembptemp -= clock();
-	setlikelihood();
+	set_likelihood();
 	timers.timembptemp += clock();
 	
 	timers.timeparam -= clock();
@@ -399,7 +474,7 @@ void State::standard_parameter_prop(Jump &jump)
 	
 	timers.timeparam += clock();
 		
-	if(checkon == 1) checkLevPr();
+	if(checkon == 1) check_LevPr();
 
 	timers.timestandard += clock();
 }
@@ -618,15 +693,13 @@ void State::stand_param_area_prop(Jump &jump)
 	vector <unsigned int> thlist;
 	for(auto th : model.covar_param) thlist.push_back(th); 
 	
-	// ZZ This should be modified for when model.regioneffect == 2
-	if(model.regioneffect == 1){
+	if(model.regioneffect > 0){
 		for(auto th : model.regioneff_param) thlist.push_back(th); 
-		thlist.push_back(model.sigma_param);
 	}
+	
+	if(model.regioneffect == 1) thlist.push_back(model.sigma_param);
 		
-	auto num = model.covar_param.size(); if(model.regioneffect == 1) num += data.nregion;
-	unsigned int loopmax = 12/num; if(loopmax == 0) loopmax = 1;
-	// ZZ This should be replaced by 	unsigned int loopmax = 12/thlist.size(); if(loopmax == 0) loopmax = 1;
+	unsigned int loopmax = 12/thlist.size(); if(loopmax == 0) loopmax = 1;
 	
 	for(auto loop = 0u; loop < loopmax; loop++){
 		for(auto th : thlist){

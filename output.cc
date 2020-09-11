@@ -31,7 +31,15 @@ void Output::ensuredirectory(const string &path) const
 		if(ret == -1) emsg("Error creating directory '"+path+"'");
 	}
 }
-	
+
+/// Prints the populations to the terminal	
+void Output::populations(unsigned int sett, const vector <int> &N) const
+{
+	cout  << "  Time: " << details.settime[sett];
+	for(auto c = 0u; c < model.comp.size(); c++) cout << "  " << model.comp[c].name << ":"	<< N[c];
+	cout << endl;	
+}
+		
 /// Initialises trace plot for parameters
 void Output::trace_plot_init()
 {

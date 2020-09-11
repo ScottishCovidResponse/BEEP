@@ -56,7 +56,7 @@ ABC::ABC(const Details &details, const DATA &data, const MODEL &model, const POP
 /// Implements a version of abc which uses model-based proposals in MCMC
 void ABC::mbp()
 {
-	Chain chain(details,data,model,poptree,obsmodel,0);
+	Chain chain(details,data,model,poptree,obsmodel,output,0);
 	chain.jump.setburnin(0,1);
 	 
 	vector <Particle> part;					
@@ -76,12 +76,12 @@ void ABC::mbp()
 			gen.EFcut = large;
 			
 			for(auto& pa : part){ 
-				chain.sample_from_prior();
-				double EF = obsmodel.Lobs(chain.propose.trev,chain.propose.indev);
+				chain.sample_state();
+				double EF = obsmodel.Lobs(chain.initial.trev,chain.initial.indev);
 
 				pa.paramval = chain.initial.paramval;
 				pa.EF = EF;
-				pa.ev = chain.event_compress(chain.propose.indev);
+				pa.ev = chain.event_compress(chain.initial.indev);
 				
 				gen.param_samp.push_back(chain.initial.paramval);
 				gen.EF_samp.push_back(EF);
@@ -160,7 +160,7 @@ void ABC::mbp()
 /// This is an implementation of an ABC-SMC algorithm, which is used to compare against the MBP-MCMC approach 
 void ABC::smc()
 {	
-	Chain chain(details,data,model,poptree,obsmodel,0);
+	Chain chain(details,data,model,poptree,obsmodel,output,0);
 	
 	const double jump = 1;
 	
@@ -175,10 +175,10 @@ void ABC::smc()
 		gen.time = clock();
 		if(g == 0){
 			for(auto i = 0u; i < N; i++){     // For the first generation 
-				chain.sample_from_prior();
+				chain.sample_state();
 				
 				gen.param_samp.push_back(chain.initial.paramval);
-				gen.EF_samp.push_back(obsmodel.Lobs(chain.propose.trev,chain.propose.indev));
+				gen.EF_samp.push_back(obsmodel.Lobs(chain.initial.trev,chain.initial.indev));
 			}
 		}
 		else{

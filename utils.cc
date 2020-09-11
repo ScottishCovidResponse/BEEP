@@ -56,6 +56,14 @@ double normal(float mu, float sd)
 	return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());
 }
 
+/// Samples from the exponential distribution
+double exp_sample(double rate)
+{
+	if(rate < 0) emsgEC("Utils",8);
+	if(rate == 0) return large;
+	return - log(ran())/rate;
+}
+
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
 double gammasamp(double a, double b)
 {

@@ -58,7 +58,7 @@ void Jump::mbp_reject(unsigned int th)
 {
 	mbp_ntr[th]++;
 	switch(alter){
-		case fast: mbp[th] *= 0.5*0.95; break;
+		case fast: mbp[th] *= 0.5; break;
 		case slow: mbp[th] *= 0.95; break;
 		case none: break;
 	}

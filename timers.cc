@@ -24,7 +24,7 @@ void timersinit()
 	timers.timecovar = 0;
 	timers.timeaddrem = 0;	
 	timers.timecompparam = 0;
-	timers.timembpconRtot = 0;
+	timers.infection_sampler = 0;
 	
 	timers.timeswap = 0;
 	timers.timeoutput = 0;	
