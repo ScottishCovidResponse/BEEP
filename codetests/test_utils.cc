@@ -237,41 +237,41 @@ TEST_CASE("stringhasending with matching string does match",tag_string) {
 
 
 TEST_CASE("getint reads an integer",tag_string) {
-	unsigned int i = getint("42", UNSET);
+	unsigned int i = get_integer("42", UNSET);
 	REQUIRE(i == 42);
 }
 	
 TEST_CASE("getint reads 'NA' as UNKNOWN",tag_string) {
-	unsigned int i = getint("NA", UNSET);
+	unsigned int i = get_integer("NA", UNSET);
 	REQUIRE(i == UNKNOWN);
 }
 
 TEST_CASE("getint reads '*' as THRESH if threshold is given",tag_string) {
-	unsigned int i = getint("*", 5);
+	unsigned int i = get_integer("*", 5);
 	REQUIRE(i == THRESH);
 }
 
 TEST_CASE("getint fails on '*' if no threshold is given",tag_string) {
 	unsigned int i;
-	REQUIRE_THROWS_AS(i = getint("*", UNSET),std::runtime_error);
+	REQUIRE_THROWS_AS(i = get_integer("*", UNSET),std::runtime_error);
 }
 
 TEST_CASE("getint fails on negative",tag_string) {
 	unsigned int i;
-	REQUIRE_THROWS_AS(i = getint("-42", UNSET),std::runtime_error);
+	REQUIRE_THROWS_AS(i = get_integer("-42", UNSET),std::runtime_error);
 }
 TEST_CASE("getint fails on huge",tag_string) {
 	unsigned int i;
-	REQUIRE_THROWS_AS(i = getint("55555555555555555555", UNSET),
+	REQUIRE_THROWS_AS(i = get_integer("55555555555555555555", UNSET),
 										std::runtime_error);
 }
 
 TEST_CASE("getint fails on junk",tag_string) {
 	unsigned int i;
-	REQUIRE_THROWS_AS(i = getint("xx", UNSET),std::runtime_error);
+	REQUIRE_THROWS_AS(i = get_integer("xx", UNSET),std::runtime_error);
 }
 
 TEST_CASE("getint fails on trailing junk",tag_string) {
 	unsigned int i;
-	REQUIRE_THROWS_AS(i = getint("xx", UNSET),std::runtime_error);
+	REQUIRE_THROWS_AS(i = get_integer("xx", UNSET),std::runtime_error);
 }
