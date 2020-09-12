@@ -460,36 +460,74 @@ void State::initialise_from_particle(const Particle &part)
 
 /// This incorporates standard proposals which adds and removes events as well as changes parameters
 void State::standard_parameter_prop(Jump &jump)
-{
-	timers.timestandard -= clock();
-	
-	timers.timeparam -= clock();
+{	
 	stand_param_betaphi_prop(jump);
 	stand_param_area_prop(jump);
 	stand_param_compparam_prop(jump);
-	
-	timers.timeparam += clock();
-		
+
 	if(checkon == 1) check_Lev_and_Pr();
-
-	timers.timestandard += clock();
 }
-
-struct LCONT {                
-	unsigned int w;       
-	unsigned int num;       	
-	double betafac;	              
-	double phifac;	 
-};
 
 /// Makes proposal to beta and phi
 void State::stand_param_betaphi_prop(Jump &jump)
 {	
 	timers.timebetaphiinit -= clock();
+	PrecalcBetaPhi precalc;
 	
+	likelihood_beta_phi_initialise(precalc);
+	
+	vector <unsigned int> parampos;
+	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
+	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
+		
+	timers.timebetaphiinit += clock();
+		
+	unsigned int loopmax = 12/parampos.size(); if(loopmax == 0) loopmax = 1;
+	
+	timers.timebetaphi -= clock();
+	for(auto loop = 0u; loop < loopmax; loop++){
+		for(auto th : parampos){
+			if(param[th].min != param[th].max){
+				auto param_store = paramval[th];	
+				paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
+
+				vector < vector <double> > disc_spline_prop;
+
+				double al, Lev_prop=Lev, Pr_prop=Pr;
+				if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
+				else{
+					for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline_prop.push_back(model.create_disc_spline(sp,paramval));
+
+					Lev_prop = likelihood_beta_phi(disc_spline_prop,precalc);
+					
+					if(smooth_spline == 1) Pr_prop = model.prior(paramval);
+					al = exp(Pr_prop - Pr + Lev_prop-Lev);
+				}
+			
+				if(ran() < al){
+					Pr = Pr_prop;
+					Lev = Lev_prop;
+					disc_spline = disc_spline_prop;
+					jump.stand_accept(th);
+				}
+				else{
+					paramval[th] = param_store;
+					jump.stand_reject(th);					
+				}
+			}
+		}
+	}
+	timers.timebetaphi += clock();
+}
+
+
+/// Initialise quantities for fast likelihood calculation
+void State::likelihood_beta_phi_initialise(PrecalcBetaPhi &precalc)
+{
 	vector <unsigned int> map;
 	map.resize(data.nardp); for(auto& ma : map) ma = 0;
 	
+	popw.resize(data.nardp);                                        
 	for(auto c = 0u; c < data.narea; c++){
 		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
 			auto w = c*data.ndemocatpos + dp;
@@ -497,16 +535,14 @@ void State::stand_param_betaphi_prop(Jump &jump)
 		}
 	}		
 	
-	vector <double> betafac, phifac;
-	betafac.resize(details.ndivision); phifac.resize(details.ndivision);
+	precalc.betafac.resize(details.ndivision); precalc.phifac.resize(details.ndivision);
 	
 	auto t = 0.0; 
 	auto n = 0u;
 	
-	vector<	vector <LCONT> > lc;
 	for(auto sett = 0u; sett < details.ndivision; sett++){
 		auto tmax = details.division_time[sett+1];
-		vector <LCONT> lcontlist;
+		vector <BetaPhiFactors> lcontlist;
 		
 		auto betasum = 0.0, phisum = 0.0;
 		for(auto c = 0u; c < data.narea; c++){
@@ -535,7 +571,7 @@ void State::stand_param_betaphi_prop(Jump &jump)
 			auto v = c*data.nage + data.democatpos[dp][0]; 
 			
 			if(map[w] == 0){
-				LCONT lcont;
+				BetaPhiFactors lcont;
 				lcont.w = w; lcont.betafac = fac*susceptibility[dp]*Qmap[sett][v]; lcont.phifac = susceptibility[dp]; lcont.num = UNSET;
 				lcontlist.push_back(lcont);
 			}
@@ -547,7 +583,7 @@ void State::stand_param_betaphi_prop(Jump &jump)
 			n++;
 		}
 		
-		betafac[sett] = betasum; phifac[sett] = phisum;
+		precalc.betafac[sett] = betasum; precalc.phifac[sett] = phisum;
 					
 		for(auto& lcont : lcontlist){
 			auto w = lcont.w;
@@ -555,135 +591,36 @@ void State::stand_param_betaphi_prop(Jump &jump)
 			map[w] = 0;
 		}
 					
-		lc.push_back(lcontlist);
+		precalc.lc.push_back(lcontlist);
 		
 		t = tmax;
-	} 
-	
-	vector <unsigned int> parampos;
-	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
-	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
-		
-	timers.timebetaphiinit += clock();
-		
-	unsigned int loopmax = 12/parampos.size(); if(loopmax == 0) loopmax = 1;
-	
-	timers.timebetaphi -= clock();
-	for(auto loop = 0u; loop < loopmax; loop++){
-		for(auto th : parampos){
-			if(param[th].min != param[th].max){
-				auto param_store = paramval[th];	
-				paramval[th] += normal(0,jump.stand[th]);               // Makes a change to a parameter
-
-				vector < vector <double> > disc_spline_prop;
-
-				double al, Lev_prop=Lev, Pr_prop=Pr;
-				if(paramval[th] < param[th].min || paramval[th] > param[th].max) al = 0;
-				else{
-					for(auto sp = 0u; sp < model.spline.size(); sp++) disc_spline_prop.push_back(model.create_disc_spline(sp,paramval));
-
-					Lev_prop = 0;
-					for(auto sett = 0u; sett < details.ndivision; sett++){
-						auto phi = disc_spline_prop[model.phispline_ref][sett]; 
-						auto beta = disc_spline_prop[model.betaspline_ref][sett];
-	
-						
-						Lev_prop += betafac[sett]*beta + phifac[sett]*phi;
-						
-						for(const auto& l : lc[sett]) Lev_prop += l.num*log(l.betafac*beta + l.phifac*phi);
-						if(std::isnan(Lev_prop)) emsgEC("Chain",52);
-					}
-					
-					if(smooth_spline == 1) Pr_prop = model.prior(paramval);
-					al = exp(Pr_prop - Pr + Lev_prop-Lev);
-				}
-			
-				if(ran() < al){
-					Pr = Pr_prop;
-					Lev = Lev_prop;
-					disc_spline = disc_spline_prop;
-					jump.stand_accept(th);
-				}
-				else{
-					paramval[th] = param_store;
-					jump.stand_reject(th);					
-				}
-			}
-		}
 	}
-	timers.timebetaphi += clock();
+}
+
+/// Calculates the latent likelihood using pre-calculated quantities
+double State::likelihood_beta_phi(const vector < vector <double> > &disc_spline, const PrecalcBetaPhi &precalc) const 
+{
+	auto Lev = 0.0;
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		auto phi = disc_spline[model.phispline_ref][sett]; 
+		auto beta = disc_spline[model.betaspline_ref][sett];
+
+		Lev += precalc.betafac[sett]*beta + precalc.phifac[sett]*phi;
+		
+		for(const auto& l : precalc.lc[sett]) Lev += l.num*log(l.betafac*beta + l.phifac*phi);
+		if(std::isnan(Lev)) emsgEC("Chain",52);
+	}
+	
+	return Lev;
 }
 
 /// Makes proposal to change factors affecting transmission rates in areas
 void State::stand_param_area_prop(Jump &jump)
 {	
-	timers.timecovarinit -= clock();
+	PrecalcArea precalc;
+	
+	likelihood_area_initialise(precalc);
 
-	vector <double> lambdaareafactor, lambdaphifac;
-	lambdaareafactor.resize(data.nardp);
-	lambdaphifac.resize(data.nardp);
-	
-	vector < vector <double> >	mult, add;
-	mult.resize(data.narea);
-	add.resize(data.narea);
-	
-	vector <double> areasum;
-	areasum.resize(data.narea);
-	
-	for(auto c = 0u; c < data.narea; c++){
-		areasum[c] = 0;
-		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-			auto w = c*data.ndemocatpos + dp;
-			popw[w] = data.area[c].ind[dp].size();
-		}
-	}		
-	
-	auto L0 = 0.0, t = 0.0;
-	auto n = 0u;
-	for(auto sett = 0u; sett < details.ndivision; sett++){
-		auto phi = disc_spline[model.phispline_ref][sett]; 
-		auto beta = disc_spline[model.betaspline_ref][sett];
-	
-		auto tmax = details.division_time[sett+1];
-		
-		for(auto c = 0u; c < data.narea; c++){
-			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-				auto w = c*data.ndemocatpos + dp;
-				auto v = c*data.nage + data.democatpos[dp][0];
-				lambdaareafactor[w] = susceptibility[dp]*beta*Qmap[sett][v];
-				lambdaphifac[w] = susceptibility[dp]*phi;
-				
-				areasum[c] -= lambdaareafactor[w]*popw[w]*(tmax-t);
-				L0 -= lambdaphifac[w] *popw[w]*(tmax-t);
-			}
-		}
-		
-		while(n < infev.size()){
-			auto i = infev[n].ind;
-			Event ev = indev[i][infev[n].e];
-			auto tt = ev.t;
-			if(tt >= tmax) break;
-	
-			t = tt;
-			
-			auto c = data.ind[i].area;
-			auto w = c*data.ndemocatpos + data.ind[i].dp;
-			
-			mult[c].push_back(lambdaareafactor[w]);
-			add[c].push_back(lambdaphifac[w]);
-		
-			popw[w]--;
-			n++;
-			
- 			areasum[c] += lambdaareafactor[w]*(tmax-t);
-			L0 += lambdaphifac[w]*(tmax-t);
-		}
-		
-		t = tmax;
-	} 
-	
-	timers.timecovarinit += clock();
-		
 	timers.timecovar -= clock();
 	
 	vector <unsigned int> thlist;
@@ -709,33 +646,22 @@ void State::stand_param_area_prop(Jump &jump)
 				else{
 					areafactor_prop = model.create_areafactor(paramval); 
 				
-					Lev_prop = L0;
-					for(auto c = 0u; c < data.narea; c++){
-						auto fac = areafactor_prop[c];
-						Lev_prop += areasum[c]*fac;
-						auto kmax = mult[c].size();
-						for(auto k = 0u; k < kmax; k++) Lev_prop += log(mult[c][k]*fac + add[c][k]);
-					}
-					if(std::isnan(Lev_prop)) emsgEC("Chain",53);
-				
+					Lev_prop = likelihood_area(areafactor_prop,precalc);
 					Pr_prop = model.prior(paramval);
+					
 					al = exp(Pr_prop-Pr + Lev_prop-Lev);
 				}
 
-				//ntrstand[th]++;
 				if(ran() < al){
 					Lev = Lev_prop;
 					Pr = Pr_prop;
 					areafactor = areafactor_prop;
 					
 					jump.stand_accept(th);
-					//nacstand[th]++;
-					//if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 1.05; else paramjumpstand[th] *= 1.01;}
 				}
 				else{
 					paramval[th] = param_store;
 					jump.stand_reject(th);
-					//if(samp < burnin){ if(samp < 50) paramjumpstand[th] *= 0.975; else paramjumpstand[th] *= 0.995;}
 				}
 			}
 		}
@@ -743,18 +669,102 @@ void State::stand_param_area_prop(Jump &jump)
 	timers.timecovar += clock();
 }
 
-/// Makes proposal to compartmental paramters
+/// Initialise quantities for fast likelihood calculation
+void State::likelihood_area_initialise(PrecalcArea &precalc)
+{
+	timers.timecovarinit -= clock();
+
+	vector <double> lambdaareafactor, lambdaphifac;
+	lambdaareafactor.resize(data.nardp);
+	lambdaphifac.resize(data.nardp);
+
+	precalc.mult.resize(data.narea);
+	precalc.add.resize(data.narea);
+	precalc.areasum.resize(data.narea);
+	
+	for(auto c = 0u; c < data.narea; c++){
+		precalc.areasum[c] = 0;
+		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+			auto w = c*data.ndemocatpos + dp;
+			popw[w] = data.area[c].ind[dp].size();
+		}
+	}		
+	
+	auto L0 = 0.0, t = 0.0;
+	auto n = 0u;
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		auto phi = disc_spline[model.phispline_ref][sett]; 
+		auto beta = disc_spline[model.betaspline_ref][sett];
+	
+		auto tmax = details.division_time[sett+1];
+		
+		for(auto c = 0u; c < data.narea; c++){
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				auto w = c*data.ndemocatpos + dp;
+				auto v = c*data.nage + data.democatpos[dp][0];
+				lambdaareafactor[w] = susceptibility[dp]*beta*Qmap[sett][v];
+				lambdaphifac[w] = susceptibility[dp]*phi;
+				
+				precalc.areasum[c] -= lambdaareafactor[w]*popw[w]*(tmax-t);
+				L0 -= lambdaphifac[w] *popw[w]*(tmax-t);
+			}
+		}
+		
+		while(n < infev.size()){
+			auto i = infev[n].ind;
+			Event ev = indev[i][infev[n].e];
+			auto tt = ev.t;
+			if(tt >= tmax) break;
+	
+			t = tt;
+			
+			auto c = data.ind[i].area;
+			auto w = c*data.ndemocatpos + data.ind[i].dp;
+			
+			precalc.mult[c].push_back(lambdaareafactor[w]);
+			precalc.add[c].push_back(lambdaphifac[w]);
+		
+			popw[w]--;
+			n++;
+			
+ 			precalc.areasum[c] += lambdaareafactor[w]*(tmax-t);
+			L0 += lambdaphifac[w]*(tmax-t);
+		}
+		
+		t = tmax;
+	} 
+	precalc.L0_store = L0;
+	
+	timers.timecovarinit += clock();
+}
+
+/// Calculates the latent likelihood using pre-calculated quantities
+double State::likelihood_area(const vector <double> &areafactor, const PrecalcArea &precalc) const
+{
+	double Lev = precalc.L0_store;
+	for(auto c = 0u; c < data.narea; c++){
+		auto fac = areafactor[c];
+		Lev += precalc.areasum[c]*fac;
+		auto kmax = precalc.mult[c].size();
+		for(auto k = 0u; k < kmax; k++) Lev += log(precalc.mult[c][k]*fac + precalc.add[c][k]);
+	}
+	if(std::isnan(Lev)) emsgEC("Chain",53);
+	
+	return Lev;
+}
+					
+/// Makes proposal to compartmental parameters
 void State::stand_param_compparam_prop(Jump &jump)
 {	
 	timers.timecompparam -= clock();
 
-	vector <TransInfo> transinfo(trans.size());
+	vector <PrecalcCompParam> precalc(trans.size());
 	
 	for(auto tra = 0u; tra < trans.size(); tra++){
 		if(trans[tra].istimep == false){
-			transinfo[tra].num.resize(data.nage); for(auto& num : transinfo[tra].num) num = 0;
+			precalc[tra].num.resize(data.nage); for(auto& num : precalc[tra].num) num = 0;
 		}
-		transinfo[tra].numvisittot = 0; transinfo[tra].dtsum = 0; transinfo[tra].dtlist.clear();
+		precalc[tra].numvisittot = 0; precalc[tra].dtsum = 0; precalc[tra].dtlist.clear();
 	}
 
 	for(const auto& iev : infev){                  // Extracts values based on the event sequence
@@ -766,16 +776,16 @@ void State::stand_param_compparam_prop(Jump &jump)
 		for(const auto& ev : indev[i]){
 			auto tra = ev.trans;
 			if(trans[tra].istimep == false){
-				transinfo[tra].num[a]++;
+				precalc[tra].num[a]++;
 	
 				auto dt = ev.t-t;
 				if(dt == 0) emsgEC("Model",10);
 				t += dt;
 				
-				transinfo[tra].numvisittot++;
+				precalc[tra].numvisittot++;
 				switch(trans[tra].type){
-				case EXP_DIST: transinfo[tra].dtsum += dt; break;
-				case GAMMA_DIST: case LOGNORM_DIST: transinfo[tra].dtlist.push_back(dt); break;
+				case EXP_DIST: precalc[tra].dtsum += dt; break;
+				case GAMMA_DIST: case LOGNORM_DIST: precalc[tra].dtlist.push_back(dt); break;
 				case INFECTION_DIST: break;
 				default: emsgEC("model",99); break;
 				}
@@ -783,8 +793,8 @@ void State::stand_param_compparam_prop(Jump &jump)
 		}
 	}
 
-	auto Li_dt = likelihood_dt(transinfo,paramval);
-	auto Li_prob = likelihood_prob(transinfo,comptransprob);
+	auto Li_dt = likelihood_dt(precalc,paramval);
+	auto Li_prob = likelihood_prob(precalc,comptransprob);
 
 	for(auto th = 0u; th < param.size(); th++){
 		if((param[th].type == DISTVAL_PARAM || param[th].type == BRANCHPROB_PARAM) && param[th].min != param[th].max){
@@ -802,11 +812,11 @@ void State::stand_param_compparam_prop(Jump &jump)
 			else{	
 				if(param[th].type == BRANCHPROB_PARAM){
 					if(model.create_comptransprob(comptransprobp,paramval) == 1) Lp_prob = -LARGE;
-					else Lp_prob = likelihood_prob(transinfo,comptransprobp);
+					else Lp_prob = likelihood_prob(precalc,comptransprobp);
 				}
 				else Lp_prob = Li_prob;
 				
-				dL = dlikelihood_dt(transinfo,param_store,paramval);
+				dL = dlikelihood_dt(precalc,param_store,paramval);
 				Pr_prop = model.prior(paramval);
 				
 				auto al = exp(dL+ Lp_prob - Li_prob + Pr_prop - Pr);
@@ -830,15 +840,15 @@ void State::stand_param_compparam_prop(Jump &jump)
 	
 	if(checkon == 1){
 		double dd;
-		dd = likelihood_dt(transinfo,paramval)-Li_dt; if(dd*dd > TINY) emsgEC("Model",13);
-		dd = likelihood_prob(transinfo,comptransprob)-Li_prob; if(dd*dd > TINY) emsgEC("Model",14);
+		dd = likelihood_dt(precalc,paramval)-Li_dt; if(dd*dd > TINY) emsgEC("Model",13);
+		dd = likelihood_prob(precalc,comptransprob)-Li_prob; if(dd*dd > TINY) emsgEC("Model",14);
 	}
 	
 	timers.timecompparam += clock();
 }
 
 /// Calculates the likelihood relating to branching probabilities
-double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTransProb> &comptransprob) const
+double State::likelihood_prob(vector <PrecalcCompParam> &precalc, vector <CompTransProb> &comptransprob) const
 {
 	auto L = 0.0;
 	for(auto c = 0u; c < comp.size(); c++){	
@@ -846,7 +856,7 @@ double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTransPr
 		if(kmax > 1){
 			for(auto k = 0u; k < kmax; k++){
 				for(auto a = 0u; a < data.nage; a++){
-					auto num = transinfo[comp[c].trans[k]].num[a];
+					auto num = precalc[comp[c].trans[k]].num[a];
 					if(num > 0) L += num*log(comptransprob[c].prob[a][k]);
 				}
 			}
@@ -856,7 +866,7 @@ double State::likelihood_prob(vector <TransInfo> &transinfo, vector <CompTransPr
 }
 			
 /// Calculates the likelihood for the timings of the transitions
-double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const
+double State::likelihood_dt(vector <PrecalcCompParam> &precalc, vector <double> &paramv) const
 {
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
@@ -864,14 +874,14 @@ double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &para
 		case EXP_DIST:
 			{
 				auto r = 1.0/paramv[trans[tra].param_mean];
-				L += transinfo[tra].numvisittot*log(r) - r*transinfo[tra].dtsum;
+				L += precalc[tra].numvisittot*log(r) - r*precalc[tra].dtsum;
 			}
 			break;
 		
 		case GAMMA_DIST:
 			{
 				auto mean = paramv[trans[tra].param_mean], sd = paramv[trans[tra].param_cv]*mean;
-				for(auto dt : transinfo[tra].dtlist) L += gammaprob(dt,mean*mean/(sd*sd),mean/(sd*sd));
+				for(auto dt : precalc[tra].dtlist) L += gammaprob(dt,mean*mean/(sd*sd),mean/(sd*sd));
 			}
 			break;
 			
@@ -879,7 +889,7 @@ double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &para
 			{
 				auto mean_ns = paramv[trans[tra].param_mean], cv_ns = paramv[trans[tra].param_cv];
 				auto sd = sqrt(log(1+cv_ns*cv_ns)), mean = log(mean_ns) - sd*sd/2;
-				for(auto dt : transinfo[tra].dtlist) L += lognormprob(dt,mean,sd*sd);
+				for(auto dt : precalc[tra].dtlist) L += lognormprob(dt,mean,sd*sd);
 			}
 			break;
 		}
@@ -889,7 +899,7 @@ double State::likelihood_dt(vector <TransInfo> &transinfo, vector <double> &para
 }
 
 /// Calculates the change in likelihood for a given change in parameters
-double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const
+double State::dlikelihood_dt(vector <PrecalcCompParam> &precalc, vector <double> &paramvi, vector <double> &paramvf) const
 {
 	auto L = 0.0;
 	for(auto tra = 0u; tra < trans.size(); tra++){
@@ -898,8 +908,8 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 			{
 				auto ri = 1.0/paramvi[trans[tra].param_mean], rf = 1.0/paramvf[trans[tra].param_mean];
 				if(ri != rf){
-					L += transinfo[tra].numvisittot*log(rf) - rf*transinfo[tra].dtsum;
-					L -= transinfo[tra].numvisittot*log(ri) - ri*transinfo[tra].dtsum;
+					L += precalc[tra].numvisittot*log(rf) - rf*precalc[tra].dtsum;
+					L -= precalc[tra].numvisittot*log(ri) - ri*precalc[tra].dtsum;
 				}
 			}
 			break;
@@ -910,7 +920,7 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 				auto meanf = paramvf[trans[tra].param_mean], sdf = paramvf[trans[tra].param_cv]*meanf;
 		
 				if(meani != meanf || sdi != sdf){
-					for(auto dt : transinfo[tra].dtlist){
+					for(auto dt : precalc[tra].dtlist){
 						L += gammaprob(dt,meanf*meanf/(sdf*sdf),meanf/(sdf*sdf));
 						L -= gammaprob(dt,meani*meani/(sdi*sdi),meani/(sdi*sdi));
 					}
@@ -926,7 +936,7 @@ double State::dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &par
 					auto sdi = sqrt(log(1+cv_nsi*cv_nsi)), meani = log(mean_nsi) - sdi*sdi/2;
 					auto sdf = sqrt(log(1+cv_nsf*cv_nsf)), meanf = log(mean_nsf) - sdf*sdf/2;
 		
-					for(auto dt : transinfo[tra].dtlist){
+					for(auto dt : precalc[tra].dtlist){
 						L += lognormprob(dt,meanf,sdf*sdf);
 						L -= lognormprob(dt,meani,sdi*sdi);
 					}

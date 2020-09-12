@@ -38,12 +38,18 @@ Chain::Chain(const Details &details, const Data &data, const Model &model, const
 /// Performs a "standard" set of proposals
 void Chain::standard_proposal(double EFcut) 
 {
+	timers.timestandard -= clock();
+	
 	timers.timembptemp -= clock();
 	initial.set_process_likelihood();              // First sets the latent process likelihood
 	timers.timembptemp += clock();
 	
+	timers.timeparam -= clock();
 	initial.standard_parameter_prop(jump);         // Makes changes to parameters with fixed event sequence
-	standard_event_prop(EFcut);                     // Makes changes to event sequences with fixed parameters
+	standard_event_prop(EFcut);                    // Makes changes to event sequences with fixed parameters
+	timers.timeparam += clock();
+
+	timers.timestandard += clock();
 }
 
 		

@@ -10,7 +10,27 @@ using namespace std;
 #include "consts.hh"
 #include "jump.hh"
 
-struct TransInfo{                          // Stores information about transition when doing compartmental parameter proposals 
+struct BetaPhiFactors {                
+	unsigned int w;       
+	unsigned int num;       	
+	double betafac;	              
+	double phifac;	 
+};
+
+struct PrecalcBetaPhi     // Precalculates quantities for likelihood calculation for changes in beta and phi 
+{
+	vector <double> betafac, phifac;
+	vector<	vector <BetaPhiFactors> > lc;
+};
+
+struct PrecalcArea        // Precalculates quantities for likelihood calculation for changes in area 
+{
+	double L0_store;
+	vector <double> areasum;
+	vector < vector <double> > mult, add;
+};
+
+struct PrecalcCompParam{                          // Stores information about transition when doing compartmental parameter proposals 
 	vector <unsigned int> num;               // The number of times down transition 
 	unsigned int numvisittot;                // The number of times the compartment is visited
 	double dtsum;                            // Sums up the total time spent
@@ -65,13 +85,18 @@ class State
 						
 	private:
 		void stand_param_betaphi_prop(Jump &jump);	   // These function make up the "standard" proposal
+		void likelihood_beta_phi_initialise(PrecalcBetaPhi &precalc);
+		double likelihood_beta_phi(const vector < vector <double> > &disc_spline, const PrecalcBetaPhi &precalc) const;
+		
 		void stand_param_area_prop(Jump &jump);
+		void likelihood_area_initialise(PrecalcArea &precalc);
+		double likelihood_area(const vector <double> &areafactor, const PrecalcArea &precalc) const;
+		
 		void stand_param_compparam_prop(Jump &jump);
-		double likelihood_prob(vector <TransInfo> &transinfo, vector <CompTransProb> &comptransprob) const;
-		double likelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramv) const;
-		double dlikelihood_dt(vector <TransInfo> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
+		double likelihood_prob(vector <PrecalcCompParam> &transinfo, vector <CompTransProb> &comptransprob) const;
+		double likelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramv) const;
+		double dlikelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
 		void check_Lev_and_Pr();
-
 		
 		const vector <Compartment> &comp;
 		const vector <Transition> &trans;
@@ -82,5 +107,6 @@ class State
 		const Model &model;
 		const ObservationModel &obsmodel;
 };
+
 
 #endif
