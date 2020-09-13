@@ -177,6 +177,10 @@ void Model::print_to_terminal() const
 				else cout << "Uniform(" << param[p].min << " - " << param[p].max << ")" << endl;
 			}
 			break;
+		
+		default: 
+			emsg("Mode not recognised");
+			break;
 	}
 	cout << endl;
 		
@@ -276,7 +280,7 @@ vector <double> Model::sample_from_prior() const
 	}
 	
 	if(region_effect == 1){
-		for(auto th : regioneffect_param) paramv[th] = normal(0,paramv[sigma_param]);
+		for(auto th : regioneffect_param) paramv[th] = normal_sample(0,paramv[sigma_param]);
 	}
 	
 	if(smooth_spline == 1){
@@ -289,7 +293,7 @@ vector <double> Model::sample_from_prior() const
 				if(spli[i].t != spli[i+1].t && th1 != th2 && param[th2].min != param[th2].max){
 					double val;
 					do{
-						double fac = exp(normal(0,smooth));
+						double fac = exp(normal_sample(0,smooth));
 						val = paramv[th1]*fac;
 					}while(val <= param[th2].min || val >= param[th2].max);
 					paramv[th2] = val;
@@ -502,14 +506,14 @@ double Model::prior(const vector<double> &paramv) const
 		for(pc = 0; pc < priorcomps.size(); pc++){
 			c = priorcomps[pc].comp;
 			prob = 0; for(a = 0; a < data.nage; a++) prob += data.agedist[a]*comp[c].probin[a];
-			Pr += normalprob(prob,priorcomps[pc].value,priorcomps[pc].sd*priorcomps[pc].sd);
+			Pr += normal_probability(prob,priorcomps[pc].value,priorcomps[pc].sd*priorcomps[pc].sd);
 		}
 	}
 	*/
 	
 	if(region_effect == 1){
 		auto sd = paramv[sigma_param];
-		for(auto th : regioneffect_param) Pr += normalprob(paramv[th],0,sd*sd);
+		for(auto th : regioneffect_param) Pr += normal_probability(paramv[th],0,sd*sd);
 	}
 	
 	if(smooth_spline == 1){

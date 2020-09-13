@@ -27,7 +27,7 @@ void Jump::init(const vector <double> &paramv)
 vector <double> Jump::mbp_prop(const vector <double> &p, unsigned int th)
 {
 	vector <double> paramv = p;
-	paramv[th] += normal(0,mbp[th]);  
+	paramv[th] += normal_sample(0,mbp[th]);  
 	
 	return paramv;  
 }

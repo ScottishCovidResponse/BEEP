@@ -51,12 +51,12 @@ double ran()
 }
 
 /// Draws a normally distributed number with mean mu and standard deviation sd
-double normal(float mu, float sd)
+double normal_sample(float mu, float sd)
 {
 	return mu + sd*sqrt(-2*log(ran()))*cos(2*M_PI*ran());
 }
 
-/// Samples from the exponential distribution
+/// Samples from the exponential distribution using a rate
 double exp_sample(double rate)
 {
 	if(rate < 0) emsgEC("Utils",8);
@@ -64,14 +64,21 @@ double exp_sample(double rate)
 	return - log(ran())/rate;
 }
 
+/// Samples from the exponential distribution using a mean time
+double exp_sample_time(double time)
+{
+	return - log(ran())*time;
+}
+
+
 /// Draws a sample from the gamma distribution x^(a-1)*exp(-b*x)
-double gammasamp(double a, double b)
+double gamma_sample(double a, double b)
 {
   if(a < 0 || b < 0) emsgEC("Utils",1);
 
   if(a < 1){
     double u = ran();
-    return gammasamp(1.0+a,b)*pow(u,1.0/a);
+    return gamma_sample(1.0+a,b)*pow(u,1.0/a);
   }
   else{
     double d = a - 1.0/3.0;
@@ -96,14 +103,14 @@ double gammasamp(double a, double b)
 }
 
 /// The log of the probability from the normal distribution
-double normalprob(double x, double mean, double var)
+double normal_probability(double x, double mean, double var)
 {
   if(var <= 0) emsgEC("Utils",2);
   return -0.5*log(2*M_PI*var) - (x-mean)*(x-mean)/(2*var);
 }
 
 /// The log of the probability from the gamma distribution
-double gammaprob(double x, double a, double b)
+double gamma_probability(double x, double a, double b)
 {
 	// Scale parameter is 1/b in several sources
   if(x <= 0 || a <= 0 || b <= 0) emsgEC("Utils",3);
@@ -111,12 +118,17 @@ double gammaprob(double x, double a, double b)
 }
 
 /// The log of the lognormal probability distribution
-double lognormprob(double x, double mean, double var)
+double lognormal_probability(double x, double mean, double var)
 {
 	if(x <= 0) emsgEC("Utils",4);
 	if(var <= 0) emsgEC("Utils",5); 
 	auto val = log(x);
 	return -0.5*log(2*M_PI*var) - (mean-val)*(mean-val)/(2*var) - val;
+}
+
+double lognormal_sample(double mean, double sd)
+{
+	return exp(normal_sample(mean,sd));
 }
 
 /// Split up a string at a specified delimiter

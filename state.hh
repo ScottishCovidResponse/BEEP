@@ -10,34 +10,40 @@ using namespace std;
 #include "consts.hh"
 #include "jump.hh"
 
-struct BetaPhiFactors {                
+struct BetaPhiFactors {                    // Used in PrecalcBetaPhi        
 	unsigned int w;       
 	unsigned int num;       	
 	double betafac;	              
 	double phifac;	 
 };
 
-struct PrecalcBetaPhi     // Precalculates quantities for likelihood calculation for changes in beta and phi 
+struct PrecalcBetaPhi                      // Precalculates quantities for likelihood calculation for changes in beta/phi 
 {
 	vector <double> betafac, phifac;
 	vector<	vector <BetaPhiFactors> > lc;
 };
 
-struct PrecalcArea        // Precalculates quantities for likelihood calculation for changes in area 
+struct PrecalcArea                         // Precalculates quantities for likelihood calculation for changes in area 
 {
 	double L0_store;
 	vector <double> areasum;
 	vector < vector <double> > mult, add;
 };
 
-struct PrecalcCompParam{                          // Stores information about transition when doing compartmental parameter proposals 
+struct PrecalcCompParam{                   // Stores information about transition when doing compartmental parameter proposals 
 	vector <unsigned int> num;               // The number of times down transition 
 	unsigned int numvisittot;                // The number of times the compartment is visited
 	double dtsum;                            // Sums up the total time spent
 	vector <double> dtlist;                  // Keeps a list of waiting time
 };
 
-class State
+struct EventRefTime{                       // Event reference used for sorting infection events        
+	unsigned int ind;                        // Individual
+	unsigned int e;	                         // Event number
+	double t;	                               // Time
+};
+
+class State                                              // Store information about the state of the system
 {
 	public:
 		State(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel);
@@ -60,7 +66,7 @@ class State
 		vector < vector <double> > disc_spline;              // A discretisation of the splines	
 		vector <CompTransProb> comptransprob;                // Stores the probabilities of going down transitions
 		
-		/* The quantities below are temporary */
+		/* The quantities below are derived and used to speed up calculation */
 		double beta, phi;                                    // A store for the values of beta and phi
 		vector <double> lambda;                              // Total force of infecion for an area
 		double Lev; 																	   	   // The latent process likelihood 
@@ -80,11 +86,13 @@ class State
 		void set_Qmap(unsigned int check);
 		void sort_infev();
 		void initialise_from_particle(const Particle &part);
+		void generate_particle(Particle &part) const;
+		
 		void standard_parameter_prop(Jump &jump);
 		void check() const;
 						
 	private:
-		void stand_param_betaphi_prop(Jump &jump);	   // These function make up the "standard" proposal
+		void stand_param_betaphi_prop(Jump &jump);
 		void likelihood_beta_phi_initialise(PrecalcBetaPhi &precalc);
 		double likelihood_beta_phi(const vector < vector <double> > &disc_spline, const PrecalcBetaPhi &precalc) const;
 		
@@ -97,7 +105,7 @@ class State
 		double likelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramv) const;
 		double dlikelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
 		void check_Lev_and_Pr();
-		
+	 
 		const vector <Compartment> &comp;
 		const vector <Transition> &trans;
 		const vector <Param> &param;

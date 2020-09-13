@@ -23,12 +23,14 @@ extern bool emsg_throws;
 
 double ran();
 void sran(int seed);
-double normal(float mu, float sd);
-double normalprob(double x, double mean, double var);
-double lognormprob(double x, double mean, double var);
-double gammasamp(double a, double b);
-double gammaprob(double x, double a, double b);
+double normal_sample(float mu, float sd);
+double normal_probability(double x, double mean, double var);
+double lognormal_sample(double mean, double sd);
+double lognormal_probability(double x, double mean, double var);
+double gamma_sample(double a, double b);
+double gamma_probability(double x, double a, double b);
 double exp_sample(double rate);
+double exp_sample_time(double rate);
 
 vector<string> split(const string& s, char delimiter);
 string filebasename(const string &path);

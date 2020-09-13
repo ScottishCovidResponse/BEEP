@@ -32,8 +32,6 @@ class Chain                                             // Stores all the things
 		void sample_state();
 		Status simulate(const vector <double>& paramv);
 		void mbp_proposal(unsigned int th);
-		vector <Event> event_compress(const vector < vector <Event> > &indev) const;
-		void generate_particle(Particle &part) const;
 		Status abcmbp_proposal(const vector <double> &param_propose, double EFcut);
 		void standard_event_prop(double EFcut);
 		

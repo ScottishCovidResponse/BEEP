@@ -119,7 +119,7 @@ double ObservationModel::single_observation(unsigned int mean, unsigned int val)
 	default:                    // A measurement is made
 		auto var = mean; if(var < MINIMUM_VARIANCE) var = MINIMUM_VARIANCE;
 		if(details.mode == ABC_MBP || details.mode == ABC_SMC) return (val-mean)*(val-mean)/var;
-		return normalprob(val,mean,var);
+		return normal_probability(val,mean,var);
 	}
 }
 
@@ -155,7 +155,7 @@ double ObservationModel::observation_likelihood(const vector < vector <EventRef>
 				auto mean = data.margdata[md].percent[r][row]*sum/100.0;
 				auto var = mean; if(var < MINIMUM_VARIANCE) var = MINIMUM_VARIANCE;
 				if(details.mode == ABC_MBP || details.mode == ABC_SMC) L += (val-mean)*(val-mean)/var;
-				else L += normalprob(val,mean,var);
+				else L += normal_probability(val,mean,var);
 			}
 		}
 	}

@@ -911,25 +911,6 @@ void Chain::infection_sampler(const vector< vector<double> > &Qmap)
 	}
 }
 
-/// Compresses the events to take up as little memory as possible (used for abcmbp)
-vector <Event> Chain::event_compress(const vector < vector <Event> > &indev) const
-{
-	vector <Event> store;
-	for(const auto& inde : indev){
-		for(const auto& ev : inde) store.push_back(ev);
-	}
-	
-	return store;
-}
-
-/// Generates a particle (used for abcmbp)
-void Chain::generate_particle(Particle &part) const
-{
-	part.EF = initial.EF;
-	part.paramval = initial.paramval;
-	part.ev = event_compress(initial.indev);
-}
-
 Status Chain::abcmbp_proposal(const vector <double> &paramv, double EFcut)  
 {
 	auto al = 1.0;

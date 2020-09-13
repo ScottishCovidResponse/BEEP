@@ -77,14 +77,12 @@ void ABC::mbp()
 			
 			for(auto& pa : part){ 
 				chain.sample_state();
-				double EF = obsmodel.observation_likelihood(chain.initial.transev,chain.initial.indev);
-
-				pa.paramval = chain.initial.paramval;
-				pa.EF = EF;
-				pa.ev = chain.event_compress(chain.initial.indev);
 				
+				chain.initial.EF = obsmodel.observation_likelihood(chain.initial.transev,chain.initial.indev);
+				chain.initial.generate_particle(pa);
+		
 				gen.param_samp.push_back(chain.initial.paramval);
-				gen.EF_samp.push_back(EF);
+				gen.EF_samp.push_back(chain.initial.EF);
 			}
 		}
 		else{
@@ -285,7 +283,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 				auto th = param_not_fixed[v];
 					
 				vector <double> param_propose = chain.initial.paramval;
-				param_propose[th] += normal(0,jumpv[v]*sqrt(M[v][v]));
+				param_propose[th] += normal_sample(0,jumpv[v]*sqrt(M[v][v]));
 						
 				timers.timeabcprop -= clock();
 				ntr_v[v]++;
@@ -297,7 +295,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 			}
 		}
 			
-		chain.generate_particle(pa);
+		chain.initial.generate_particle(pa);
 	}	
 			
 	for(auto v = 0u; v < nvar; v++){
@@ -459,10 +457,6 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 		for(const auto& pa : part) opsamp.push_back(get_sample(pa,chain));
 		
 		for(auto co = 1u; co < mpi.ncore; co++){
-			//unsigned int si;
-			//MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-			//pack_initialise(si);
-			//MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 			pack_mpi_recv(co);
 			for(auto i = 0u; i < N; i++){
 				Particle part;
@@ -477,9 +471,6 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 		pack_initialise(0);
 		for(auto i = 0u; i < N; i++) pack(part[i]);
 		pack_mpi_send(0);
-		//unsigned int si = packsize();
-		//pack_mpi_send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
-		//pack_mpi_send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 	}
 }
 
@@ -488,10 +479,6 @@ void ABC::exchange_samples_mpi(Generation &gen)
 {
 	if(mpi.core == 0){
 		for(auto co = 1u; co < mpi.ncore; co++){
-			//unsigned int si;
-			//MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-			//pack_initialise(si);
-			//MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 			pack_mpi_recv(co);		
 			vector< vector <double> > paramsa;
 			unpack(paramsa);
@@ -507,9 +494,6 @@ void ABC::exchange_samples_mpi(Generation &gen)
 		pack(gen.param_samp);
 		pack(gen.EF_samp);
 		pack_mpi_send(0);
-		//unsigned int si = packsize();
-		//pack_mpi_send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
-		//pack_mpi_send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 	}
 	
 	unsigned int si;
@@ -867,7 +851,7 @@ double ABC::mvn_prob(const vector<double> &pend,const vector<double> &pstart, do
 void ABC::mvn_propose(vector <double> &paramval, double fac)
 {
 	double norm[nvar];	
-	for(auto v = 0u; v < nvar; v++) norm[v] = normal(0,1);
+	for(auto v = 0u; v < nvar; v++) norm[v] = normal_sample(0,1);
 	
   for(auto v = 0u; v < nvar; v++){
 		double dva = 0; for(auto v2 = 0u; v2 <= v; v2++) dva += cholesky_matrix[v][v2]*norm[v2];
