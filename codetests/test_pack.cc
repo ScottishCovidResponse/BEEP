@@ -4,14 +4,14 @@
 
 const char* tag_pack = "[pack]";
 TEST_CASE("Pack initializes to zero size", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	REQUIRE(packsize() == 0);
 }
 TEST_CASE("Pack can store and read back an unsigned int", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(1u);
 	REQUIRE(packsize() == 1);
-	packinit(1);
+	pack_init(1);
 	CHECK(packsize() == 0);
 	unsigned int i=0;
 	unpack(i);	
@@ -19,12 +19,12 @@ TEST_CASE("Pack can store and read back an unsigned int", tag_pack) {
 	REQUIRE(packsize() == 1);
 }
 TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(1u);
 	pack(2u);
 	REQUIRE(packsize() == 2);
 	// Unpack
-	packinit(2);
+	pack_init(2);
 	unsigned int i=0;
 	unpack(i);	
 	REQUIRE(i == 1u);
@@ -33,12 +33,12 @@ TEST_CASE("Pack can store and read back two unsigned ints", tag_pack) {
 	REQUIRE(packsize() == 2);
 }
 TEST_CASE("Pack can store and read back LARGE unsigned ints", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(std::numeric_limits<unsigned int>::max());
 	pack(std::numeric_limits<unsigned int>::max()-1u);
 	pack(std::numeric_limits<unsigned int>::max()-2u);
 	// Unpack
-	packinit(3);
+	pack_init(3);
 	unsigned int i=0;
 	unpack(i);	
 	REQUIRE(i == std::numeric_limits<unsigned int>::max());
@@ -49,10 +49,10 @@ TEST_CASE("Pack can store and read back LARGE unsigned ints", tag_pack) {
 }
 
 TEST_CASE("Pack can store and read back an unsigned short", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack((unsigned short) 1);
 	REQUIRE(packsize() == 1);
-	packinit(1);
+	pack_init(1);
 	CHECK(packsize() == 0);
 	unsigned short i=0;
 	unpack(i);	
@@ -60,12 +60,12 @@ TEST_CASE("Pack can store and read back an unsigned short", tag_pack) {
 	REQUIRE(packsize() == 1);
 }
 TEST_CASE("Pack can store and read back two unsigned shorts", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack((unsigned short) 1);
 	pack((unsigned short) 2);
 	REQUIRE(packsize() == 2);
 	// Unpack
-	packinit(2);
+	pack_init(2);
 	unsigned short i=0;
 	unpack(i);	
 	REQUIRE(i == (unsigned short) 1);
@@ -74,12 +74,12 @@ TEST_CASE("Pack can store and read back two unsigned shorts", tag_pack) {
 	REQUIRE(packsize() == 2);
 }
 TEST_CASE("Pack can store and read back LARGE unsigned shorts", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(std::numeric_limits<unsigned short>::max());
 	pack((unsigned short) (std::numeric_limits<unsigned short>::max()-1));
 	pack((unsigned short) (std::numeric_limits<unsigned short>::max()-2));
 	// Unpack
-	packinit(3);
+	pack_init(3);
 	unsigned short i=0;
 	unpack(i);	
 	REQUIRE(i == std::numeric_limits<unsigned short>::max());
@@ -90,10 +90,10 @@ TEST_CASE("Pack can store and read back LARGE unsigned shorts", tag_pack) {
 }
 
 TEST_CASE("Pack can store and read back a double", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(1.);
 	REQUIRE(packsize() == 1);
-	packinit(1);
+	pack_init(1);
 	CHECK(packsize() == 0);
 	double i=0;
 	unpack(i);	
@@ -101,12 +101,12 @@ TEST_CASE("Pack can store and read back a double", tag_pack) {
 	REQUIRE(packsize() == 1);
 }
 TEST_CASE("Pack can store and read back two doubles", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(1.);
 	pack(2.);
 	REQUIRE(packsize() == 2);
 	// Unpack
-	packinit(2);
+	pack_init(2);
 	double i=0;
 	unpack(i);	
 	REQUIRE(i == 1.);
@@ -115,10 +115,10 @@ TEST_CASE("Pack can store and read back two doubles", tag_pack) {
 	REQUIRE(packsize() == 2);
 }
 TEST_CASE("Pack can store and read back a string", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	pack(std::string("Hello, world"));
 	REQUIRE(packsize() == 13);
-	packinit(1);
+	pack_init(1);
 	CHECK(packsize() == 0);
 	std::string s;
 	unpack(s);	
@@ -131,10 +131,10 @@ TEST_CASE("Pack can store and read back a vector of unsigned int", tag_pack) {
 	std::vector<unsigned int> vec;	
 	vec.push_back(1u);
 	vec.push_back(2u);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 3);
-	packinit(3);
+	pack_init(3);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -148,10 +148,10 @@ TEST_CASE("Pack can store and read back a vector of int", tag_pack) {
 	vec.push_back(1);
 	vec.push_back(2);
 	vec.push_back(-2);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 4);
-	packinit(4);
+	pack_init(4);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -165,10 +165,10 @@ TEST_CASE("Pack can store and read back a vector of unsigned short", tag_pack) {
 	std::vector<unsigned short> vec;	
 	vec.push_back(1u);
 	vec.push_back(2u);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 3);
-	packinit(3);
+	pack_init(3);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -181,10 +181,10 @@ TEST_CASE("Pack can store and read back a vector of double", tag_pack) {
 	std::vector<double> vec;	
 	vec.push_back(1.);
 	vec.push_back(2.);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 3);
-	packinit(3);
+	pack_init(3);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -200,10 +200,10 @@ TEST_CASE("Pack can store and read back a vector of vector of unsigned int",
 	vec[0].push_back(1u);
 	vec[0].push_back(2u);
 	vec[1].push_back(3u);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 6);
-	packinit(6);
+	pack_init(6);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -223,10 +223,10 @@ TEST_CASE("Pack can store and read back a vector of vector of double",
 	vec[0].push_back(1.);
 	vec[0].push_back(2.);
 	vec[1].push_back(-3.);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 6);
-	packinit(6);
+	pack_init(6);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -246,10 +246,10 @@ TEST_CASE("Pack can store and read back a vector of vector of float",
 	vec[0].push_back(1.f);
 	vec[0].push_back(2.f);
 	vec[1].push_back(-3.f);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 6);
-	packinit(6);
+	pack_init(6);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -272,10 +272,10 @@ TEST_CASE("Pack can store and read back a vector^3 of unsigned int",
 	vec[1][0].push_back(2u);
 	vec[1][1].push_back(3u);
 	vec[1][2].push_back(4u);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 11);
-	packinit(6);
+	pack_init(6);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -302,10 +302,10 @@ TEST_CASE("Pack can store and read back a vector^3 of double",
 	vec[1][0].push_back(2.);
 	vec[1][1].push_back(-3.);
 	vec[1][2].push_back(4.);
-	packinit(0);
+	pack_init(0);
 	pack(vec);
 	REQUIRE(packsize() == 11);
-	packinit(6);
+	pack_init(6);
 	CHECK(packsize() == 0);
 	vec.resize(0);
 	unpack(vec);	
@@ -324,13 +324,13 @@ TEST_CASE("Pack can store and read back a vector^3 of double",
 }
 
 TEST_CASE("Pack can store and read back a string vector", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	std::vector<std::string> s;
 	s.push_back("Hello");
 	s.push_back("world");
 	pack(s);
 	REQUIRE(packsize() == 13);
-	packinit(13);
+	pack_init(13);
 	CHECK(packsize() == 0);
 	s.resize(0);
 	unpack(s);	
@@ -340,7 +340,7 @@ TEST_CASE("Pack can store and read back a string vector", tag_pack) {
 	REQUIRE(packsize() == 13);
 }
 TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	std::vector<Area> av;
 	Area a;
 	a.code = "code";
@@ -367,7 +367,7 @@ TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 	av.push_back(a);
 	pack(av);
 	size_t size = packsize();
-	packinit(size);
+	pack_init(size);
 	av.resize(0);
 	unpack(av);
 	REQUIRE(av.size() == 2u);
@@ -377,7 +377,7 @@ TEST_CASE("Pack can store and read back an AREA vector", tag_pack) {
 	REQUIRE(av[1].ind[1][1] == 10);
 }
 TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	std::vector<DataRegion> rv;
 	DataRegion r;
 	r.name = "name1";
@@ -388,7 +388,7 @@ TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 	rv.push_back(r);
 	pack(rv);
 	size_t size = packsize();
-	packinit(size);
+	pack_init(size);
 	rv.resize(0);
 	unpack(rv);
 	REQUIRE(rv.size() == 2u);
@@ -398,7 +398,7 @@ TEST_CASE("Pack can store and read back an REGION vector", tag_pack) {
 	REQUIRE(rv[1].name == "name2");
 }
 TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	std::vector<DemographicCategory> rv;
 	DemographicCategory r;
 	r.name = "name1";
@@ -409,7 +409,7 @@ TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
 	rv.push_back(r);
 	pack(rv);
 	size_t size = packsize();
-	packinit(size);
+	pack_init(size);
 	rv.resize(0);
 	unpack(rv);
 	REQUIRE(rv.size() == 2u);
@@ -421,7 +421,7 @@ TEST_CASE("Pack can store and read back an DEMOCAT vector", tag_pack) {
 	REQUIRE(rv[1].value[1] == "value2b");
 }
 TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
-	packinit(0);
+	pack_init(0);
 	std::vector<std::vector<EventRef>> rv;
 	rv.resize(2);
 	EventRef r;
@@ -433,7 +433,7 @@ TEST_CASE("Pack can store and read back an EVREF vector of vector", tag_pack) {
 	rv[1].push_back(r);
 	pack(rv);
 	size_t size = packsize();
-	packinit(size);
+	pack_init(size);
 	rv.resize(0);
 	unpack(rv);
 	REQUIRE(rv.size() == 2u);
