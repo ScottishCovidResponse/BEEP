@@ -4,12 +4,17 @@
 using namespace std;
 
 #include "model.hh"
+#include "jump.hh"
+#include "mcmc.hh"
 
-void packinit(size_t size);
+void pack_initialise(size_t size);
 size_t packsize();
 double * packbuffer();
 vector <double> copybuffer();
 void setbuffer(const vector <double> &vec);
+
+void pack_mpi_send(unsigned int co);
+void pack_mpi_recv(unsigned int co);
 
 void pack(const unsigned int num);
 void pack(const unsigned short num);
@@ -31,6 +36,8 @@ void pack(const vector <Area> &vec);
 void pack(const vector <DataRegion> &vec);
 void pack(const vector <DemographicCategory> &vec);
 void pack(const vector <vector <EventRef> > &vec);
+void pack(const Jump& jump);
+void pack(const ChainInfo& cinfo);
 void pack(const vector < vector <vector <unsigned int> > > &vec);
 
 void unpack(unsigned int &num);
@@ -53,6 +60,8 @@ void unpack(vector <Area> &vec);
 void unpack(vector <DataRegion> &vec);
 void unpack(vector <DemographicCategory> &vec);
 void unpack(vector <vector <EventRef> > &vec);
+void unpack(Jump &jump);
+void unpack(ChainInfo& cinfo);
 void unpack(vector < vector <vector <unsigned int> > > &vec);
 
 #endif

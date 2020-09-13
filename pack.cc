@@ -12,6 +12,8 @@ using namespace std;
 #include "utils.hh"
 #include "data.hh"
 #include "model.hh"
+#include "jump.hh"
+#include "mcmc.hh"
 
 namespace {
 	unsigned int k;
@@ -19,7 +21,7 @@ namespace {
 	std::vector<double> buffer;
 }
 
-void packinit(size_t size)
+void pack_initialise(size_t size)
 {
 	k = 0;
 	buffer.resize(size);
@@ -46,6 +48,21 @@ double * packbuffer()
 	return &buffer[0];
 }
 
+void pack_mpi_send(unsigned int co)
+{
+	unsigned int si = packsize();
+	MPI_Send(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD);
+	MPI_Send(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD);
+}
+		
+void pack_mpi_recv(unsigned int co)
+{
+	unsigned int si;
+	MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+	pack_initialise(si);
+	MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+}	
+		
 template <class T>
 void pack_item(T t)
 {
@@ -218,6 +235,26 @@ void pack_item(const EventRef& ev)
 {
 	pack_item(ev.ind);
 	pack_item(ev.e);
+}
+
+void pack(const Jump& jump)
+{
+	pack_item(jump.mbp);
+	pack_item(jump.mbp_ntr);
+	pack_item(jump.mbp_nac);
+	pack_item(jump.stand);		
+	pack_item(jump.stand_ntr);		
+	pack_item(jump.stand_nac);
+	pack_item(jump.naddrem);	
+	pack_item(jump.standev_ntr);	
+	pack_item(jump.standev_nac);	
+}
+
+void pack(const ChainInfo& cinfo)
+{
+	pack(cinfo.invT);
+	pack(cinfo.ch);
+	pack(cinfo.jump);
 }
 
 void pack(const vector <vector <EventRef> > &vec)
@@ -400,6 +437,26 @@ void unpack_item(EventRef& ev)
 void unpack(vector <vector <EventRef> > &vec)
 {
 	unpack_item(vec);
+}
+
+void unpack(Jump &jump)
+{
+	unpack_item(jump.mbp);
+	unpack_item(jump.mbp_ntr);
+	unpack_item(jump.mbp_nac);
+	unpack_item(jump.stand);		
+	unpack_item(jump.stand_ntr);		
+	unpack_item(jump.stand_nac);
+	unpack_item(jump.naddrem);	
+	unpack_item(jump.standev_ntr);	
+	unpack_item(jump.standev_nac);	
+}
+
+void unpack(ChainInfo& cinfo)
+{
+	unpack(cinfo.invT);
+	unpack(cinfo.ch);
+	unpack(cinfo.jump);
 }
 
 void unpack(vector < vector <vector <unsigned int> > > &vec)

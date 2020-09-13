@@ -20,6 +20,13 @@ class AreaTree;
 class Output;
 class ObservationModel;
 
+struct ChainInfo
+{
+	double invT;
+	unsigned int ch;
+	Jump jump;
+};
+
 class Mcmc
 {
 	public:	
@@ -29,10 +36,14 @@ class Mcmc
 		void run();
 
 	private:
+		void update();
 		void output_measurements(vector <Sample> &opsamp, unsigned int nchain) const;
 		void output_parameters(Output &output, vector <ParamSample> &psamp) const;
-		void diagnostics(vector <double> &nac_swap) const;
-		void swap_chains(vector <double> &nac_swap, unsigned int samp, unsigned int nchain);
+		void diagnostics() const;
+		void chaininfo_set(ChainInfo &chinf, const Chain &cha) const;
+		void chain_set(Chain &cha, const ChainInfo &chinf) const;
+		void swap_chains();
+		void optimise_timeloop();
 
 		vector <Chain> chain; 
 		
@@ -43,6 +54,9 @@ class Mcmc
 		unsigned int nchain;                     // The number of chains per core
 		
 		vector <double> nac_swap;                // Stores the rate at which swaps are accepted
+		
+		long timeprop, ntimeprop;                // Stores times so that number of proposals can be optimised
+		double timeloop;
 		
 		Model_Evidence model_evidence;           // Stores information used to calculate the model evidence
 		

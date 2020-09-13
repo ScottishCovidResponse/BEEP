@@ -459,11 +459,11 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 		for(const auto& pa : part) opsamp.push_back(get_sample(pa,chain));
 		
 		for(auto co = 1u; co < mpi.ncore; co++){
-			unsigned int si;
-			MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-			packinit(si);
-			MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-			
+			//unsigned int si;
+			//MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			//pack_initialise(si);
+			//MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			pack_mpi_recv(co);
 			for(auto i = 0u; i < N; i++){
 				Particle part;
 				unpack(part);
@@ -474,12 +474,12 @@ void ABC::results_mpi(const vector <Generation> &generation, const vector <Parti
 		output.final_results(psamp,opsamp);
 	}
 	else{
-		packinit(0);
+		pack_initialise(0);
 		for(auto i = 0u; i < N; i++) pack(part[i]);
-		
-		unsigned int si = packsize();
-		MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
-		MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+		pack_mpi_send(0);
+		//unsigned int si = packsize();
+		//pack_mpi_send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
+		//pack_mpi_send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 	}
 }
 
@@ -488,10 +488,11 @@ void ABC::exchange_samples_mpi(Generation &gen)
 {
 	if(mpi.core == 0){
 		for(auto co = 1u; co < mpi.ncore; co++){
-			unsigned int si;
-			MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-			packinit(si);
-			MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			//unsigned int si;
+			//MPI_Recv(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			//pack_initialise(si);
+			//MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+			pack_mpi_recv(co);		
 			vector< vector <double> > paramsa;
 			unpack(paramsa);
 			for(auto i = 0u; i < paramsa.size(); i++) gen.param_samp.push_back(paramsa[i]);
@@ -502,25 +503,25 @@ void ABC::exchange_samples_mpi(Generation &gen)
 		}
 	}
 	else{
-		packinit(0);
+		pack_initialise(0);
 		pack(gen.param_samp);
 		pack(gen.EF_samp);
-		
-		unsigned int si = packsize();
-		MPI_Send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
-		MPI_Send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+		pack_mpi_send(0);
+		//unsigned int si = packsize();
+		//pack_mpi_send(&si,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD);
+		//pack_mpi_send(packbuffer(),si,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
 	}
 	
 	unsigned int si;
 	if(mpi.core == 0){
-		packinit(0);
+		pack_initialise(0);
 		pack(gen.param_samp);
 		pack(gen.EF_samp);
 		si = packsize();
 	}
 	
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	if(mpi.core != 0) packinit(si);
+	if(mpi.core != 0) pack_initialise(si);
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 	if(mpi.core != 0){ unpack(gen.param_samp); unpack(gen.EF_samp);}
 }
@@ -574,7 +575,7 @@ double ABC::next_generation_mpi(vector<Particle> &part, unsigned int *partcopy)
 		if(partcopy[itot] == UNSET){
 			for(auto iitot = 0u; iitot < Ntot; iitot++){
 				if(partcopy[iitot] == itot && iitot/N != itot/N){
-					packinit(0);
+					pack_initialise(0);
 					pack(part[i]);
 		
 					sendbuffer.push_back(copybuffer()); 

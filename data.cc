@@ -572,7 +572,7 @@ void Data::copy_data(unsigned int core)
 	unsigned int si;
 
 	if(core == 0){                                  				   // Copies the above information to all the other cores
-		packinit(0);
+		pack_initialise(0);
 		pack(nregion);
 		pack(region);
 		pack(narea);
@@ -598,7 +598,7 @@ void Data::copy_data(unsigned int core)
 
 	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 
-	if(core != 0) packinit(si);
+	if(core != 0) pack_initialise(si);
 
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
@@ -641,7 +641,7 @@ void Data::copy_data(unsigned int core)
 			auto vmax = vmin+1000; if(vmax > num) vmax = num;
 			
 			if(core == 0){
-				packinit(0);
+				pack_initialise(0);
 				for(auto v = vmin; v < vmax; v++){
 					pack(Qten.ntof[v]);
 					pack(Qten.tof[v]);
@@ -652,7 +652,7 @@ void Data::copy_data(unsigned int core)
 
 			MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 			if(core != 0){
-				packinit(si);
+				pack_initialise(si);
 			}
 			MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
