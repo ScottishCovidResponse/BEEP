@@ -114,31 +114,31 @@ TEST_CASE("logged lognormprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_THROWS_AS(d = lognorm_probability(0.0,0.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognorm_probability(-1.0,0.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognorm_probability(100.0,0.0,0.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognorm_probability(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormal_probability(0.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormal_probability(-1.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormal_probability(100.0,0.0,0.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognormal_probability(100.0,0.0,-1.0),std::runtime_error);
 }
 
 TEST_CASE("logged lognormprob at mean with variance 1./(2*pi) is -1.0",
 					tag_distributions) {
-	REQUIRE(lognorm_probability(exp(1.0),1.0,1.0/(2*M_PI)) == Approx( -1.0 ));
+	REQUIRE(lognormal_probability(exp(1.0),1.0,1.0/(2*M_PI)) == Approx( -1.0 ));
 }
 
 TEST_CASE("logged lognormprob at mean+1sd with variance 1./(2*pi) is -1.8989",
 					tag_distributions) {
 	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
-	REQUIRE(lognorm_probability(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
+	REQUIRE(lognormal_probability(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
 }
 
 TEST_CASE("logged lognormprob in left wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognorm_probability(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormal_probability(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged lognormprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognorm_probability(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognormal_probability(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged gammaprob throws out of domain",
