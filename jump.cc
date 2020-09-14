@@ -1,5 +1,8 @@
 /// This provides all the functions relating to generating MCMC proposals in parameter space
 
+#include <assert.h>
+#include <math.h>
+
 using namespace std;
 
 #include "jump.hh"
