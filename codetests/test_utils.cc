@@ -27,7 +27,7 @@ TEST_CASE("ran after seed set to 0 returns result expected for std::mt19937",
 TEST_CASE("normal after seed set to 0 returns result expected for std::mt19937",
 					tag_random) {
 	sran(0);
-	double r = normal(1.,1.);
+	double r = normal_sample(1.,1.);
 	
 	REQUIRE(r == Approx(1.5708607051));
 }
@@ -38,16 +38,16 @@ TEST_CASE("gammasamp with invalid bounds throws",
 	double r;
 	emsg_throws = true;
 	
-	CHECK_THROWS_AS(r = gammasamp(-1.,1.),std::runtime_error);
-	CHECK_NOTHROW(r = gammasamp(0.,1.));
-	CHECK_THROWS_AS(r = gammasamp(1.,-1.),std::runtime_error);
-	CHECK_NOTHROW(r = gammasamp(1.,0.));
+	CHECK_THROWS_AS(r = gamma_sample(-1.,1.),std::runtime_error);
+	CHECK_NOTHROW(r = gamma_sample(0.,1.));
+	CHECK_THROWS_AS(r = gamma_sample(1.,-1.),std::runtime_error);
+	CHECK_NOTHROW(r = gamma_sample(1.,0.));
 }
 
 TEST_CASE("gammasamp after seed set to 0 returns result expected for small a with std::mt19937",
 					tag_random) {
 	sran(0);
-	double r = gammasamp(0.5,1.);
+	double r = gamma_sample(0.5,1.);
 	
 	REQUIRE(r == Approx(0.5648378411));
 }
@@ -58,20 +58,20 @@ TEST_CASE("gammasamp after seed set to 0 returns result expected for large a wit
 
 	// Loop sizes are chosen to exercise all code branches
 	// Would be easier to ensure using a mock RNG
-	REQUIRE(gammasamp(2.,1.) == Approx(2.5176090456));
+	REQUIRE(gamma_sample(2.,1.) == Approx(2.5176090456));
 	for (int i=0; i<11; ++i) {
-		(void) gammasamp(2.,1.);
+		(void) gamma_sample(2.,1.);
 	}
-	REQUIRE(gammasamp(2.,1.) == Approx(0.482169407));
+	REQUIRE(gamma_sample(2.,1.) == Approx(0.482169407));
 	for (int i=0; i<53; ++i) {
-		(void) gammasamp(2.,1.);
+		(void) gamma_sample(2.,1.);
 	}
-	REQUIRE(gammasamp(2.,1.) == Approx(1.4667583414));
+	REQUIRE(gamma_sample(2.,1.) == Approx(1.4667583414));
 }
 TEST_CASE("gammasamp after seed set to 0 returns result expected for a at boundary with std::mt19937",
 					tag_random) {
 	sran(0);
-	double r = gammasamp(1.,1.);
+	double r = gamma_sample(1.,1.);
 	
 	REQUIRE(r == Approx(1.2498384326));
 }
@@ -85,78 +85,78 @@ TEST_CASE("logged normalprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_THROWS_AS(d = normalprob(100.0,0.0,0.0),std::runtime_error);
-	REQUIRE_THROWS_AS(d = normalprob(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = normal_probability(100.0,0.0,0.0),std::runtime_error);
+	REQUIRE_THROWS_AS(d = normal_probability(100.0,0.0,-1.0),std::runtime_error);
 }
 
 TEST_CASE("logged normalprob at mean with variance 1./(2*pi) is 0.",
 					tag_distributions) {
-	REQUIRE(normalprob(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
+	REQUIRE(normal_probability(1.0,1.0,1.0/(2*M_PI)) == Approx( 0.0 ));
 }
 
 TEST_CASE("logged normalprob at mean+1sd with variance 1./(2*pi) is -0.5",
 					tag_distributions) {
 	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
-	REQUIRE(normalprob(mean+sd,mean,var) == Approx( -0.5 ));
+	REQUIRE(normal_probability(mean+sd,mean,var) == Approx( -0.5 ));
 }
 
 TEST_CASE("logged normalprob in left wing is tiny",
 					tag_distributions) {
-	REQUIRE(normalprob(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(normal_probability(-100.0,0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged normalprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(normalprob(100.0,0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(normal_probability(100.0,0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged lognormprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_THROWS_AS(d = lognormprob(0.0,0.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognormprob(-1.0,0.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognormprob(100.0,0.0,0.0),std::runtime_error);
-	CHECK_THROWS_AS(d = lognormprob(100.0,0.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognorm_probability(0.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognorm_probability(-1.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognorm_probability(100.0,0.0,0.0),std::runtime_error);
+	CHECK_THROWS_AS(d = lognorm_probability(100.0,0.0,-1.0),std::runtime_error);
 }
 
 TEST_CASE("logged lognormprob at mean with variance 1./(2*pi) is -1.0",
 					tag_distributions) {
-	REQUIRE(lognormprob(exp(1.0),1.0,1.0/(2*M_PI)) == Approx( -1.0 ));
+	REQUIRE(lognorm_probability(exp(1.0),1.0,1.0/(2*M_PI)) == Approx( -1.0 ));
 }
 
 TEST_CASE("logged lognormprob at mean+1sd with variance 1./(2*pi) is -1.8989",
 					tag_distributions) {
 	double var = 1.0/(2*M_PI), sd = sqrt(var), mean=1.0;
-	REQUIRE(lognormprob(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
+	REQUIRE(lognorm_probability(exp(mean+sd),mean,var) == Approx( -0.5-(mean+sd) ));
 }
 
 TEST_CASE("logged lognormprob in left wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormprob(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognorm_probability(exp(-100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged lognormprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(lognormprob(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
+	REQUIRE(lognorm_probability(exp(100.0),0.0,1.0/(2*M_PI)) < -100.0);
 }
 
 TEST_CASE("logged gammaprob throws out of domain",
 					tag_distributions) {
 	double d;
 	emsg_throws = true;
-	CHECK_NOTHROW(d = gammaprob(1.0,1.0,1.0));
-	CHECK_THROWS_AS(d = gammaprob(0.0,1.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = gammaprob(-1.0,1.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = gammaprob(1.0,-1.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = gammaprob(1.0,0.0,1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = gammaprob(1.0,1.0,-1.0),std::runtime_error);
-	CHECK_THROWS_AS(d = gammaprob(1.0,1.0,0.0),std::runtime_error);
+	CHECK_NOTHROW(d = gamma_probability(1.0,1.0,1.0));
+	CHECK_THROWS_AS(d = gamma_probability(0.0,1.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gamma_probability(-1.0,1.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gamma_probability(1.0,-1.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gamma_probability(1.0,0.0,1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gamma_probability(1.0,1.0,-1.0),std::runtime_error);
+	CHECK_THROWS_AS(d = gamma_probability(1.0,1.0,0.0),std::runtime_error);
 }
 
 TEST_CASE("logged gammaprob at (x=1,a=1,b=1) is -1.",
 					tag_distributions) {
-	REQUIRE(gammaprob(1.0,1.0,1.0) == Approx( -1.0 ));
+	REQUIRE(gamma_probability(1.0,1.0,1.0) == Approx( -1.0 ));
 }
 
 //>>> import scipy.stats as stats
@@ -168,7 +168,7 @@ TEST_CASE("logged gammaprob at (x=1,a=1,b=1) is -1.",
 //(%o)    - 1.90138771133189
 TEST_CASE("logged gammaprob at (x=3,a=2,b=1) is -1.90138771133189",
 					tag_distributions) {
-	REQUIRE(gammaprob(3.0,2.0,1.0) == Approx( -1.90138771133189 ));
+	REQUIRE(gamma_probability(3.0,2.0,1.0) == Approx( -1.90138771133189 ));
 }
 
 // Note different convention for b parameter in maxima
@@ -179,12 +179,12 @@ TEST_CASE("logged gammaprob at (x=3,a=2,b=1) is -1.90138771133189",
 //(%o)    - 1.306852819440054
 TEST_CASE("logged gammaprob at (x=1,a=1,b=2) is -1.3068528194400546",
 					tag_distributions) {
-	REQUIRE(gammaprob(1.0,1.0,2.0) == Approx( -1.3068528194400546 ));
+	REQUIRE(gamma_probability(1.0,1.0,2.0) == Approx( -1.3068528194400546 ));
 }
 
 TEST_CASE("logged gammaprob in right wing is tiny",
 					tag_distributions) {
-	REQUIRE(gammaprob(200.0,4.0,1.0) < -100.0);
+	REQUIRE(gamma_probability(200.0,4.0,1.0) < -100.0);
 }
 
 
