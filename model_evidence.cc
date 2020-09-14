@@ -23,7 +23,7 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 	auto pmin = 1-pow(invTmax,1.0/INVT_POWER);
 	
 	for(auto p = 0u; p < nchaintot; p++){
-		if(nchaintot == 1 || duplicate == 1) invT[p] = invTmax;
+		if(nchaintot == 1) invT[p] = invTmax;
 		else{
 			auto fac=1.0;
 			if(samp < quench) fac = double(samp)/quench;

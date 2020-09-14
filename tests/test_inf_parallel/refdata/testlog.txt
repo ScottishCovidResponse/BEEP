@@ -117,4 +117,4 @@ Posterior outputs in directory 'regression_test_results/test_inf_parallel':
 'trace.txt' gives trace plots for model parameters.
 'traceLi.txt' gives trace plots for the observation likelihoods on different chains.
 Model evidence: 0
-0.25 Total time (seconds)
+1.07 Total time (seconds)

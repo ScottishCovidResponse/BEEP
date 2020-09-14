@@ -20,8 +20,6 @@ using namespace std;
 #include "obsmodel.hh"
 #include "model_evidence.hh"
 
-ofstream quenchplot;
-
 /// In initialises the inference algorithm
 Mcmc::Mcmc(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
 {
@@ -58,7 +56,6 @@ Mcmc::Mcmc(const Details &details, const Data &data, const Model &model, const A
 	model_evidence.init(nchain_total,quench,invTmin,invTmax);
 
 	if(mpi.core == 0){ output.trace_plot_inititialise(); output.L_trace_plot_inititialise(mpi.ncore*nchain);}
-	if(quenchpl == 1){ quenchplot.open((details.output_directory+"/quenchplot.txt").c_str());}
 	
 	if(mpi.core == 0){ nac_swap.resize(nchain_total); for(auto& nac_swa : nac_swap) nac_swa = 0;}
 
@@ -89,17 +86,11 @@ void Mcmc::run()
 	
 		optimise_timeloop();
 	
-		if(duplicate == 0) swap_chains();
+		swap_chains();
 			
 		if(samp%1 == 0) model_evidence.store(mpi,chain);
 		if(samp%1 == 0) output_parameters(output,psamp);
 		if(samp%5 == 0) output_measurements(opsamp,nchain);
-		
-		if(mpi.core == 0 && quenchpl == 1){ 
-			quenchplot << chain[0].invT;
-			for(auto pval : chain[0].initial.paramval) quenchplot << "\t" << pval; 
-			quenchplot << endl;
-		}	
 	
 		if(samp == nsamp-1 || (samp != 0 && samp%1000 == 0)){
 		  //if(samp == nsamp-1){

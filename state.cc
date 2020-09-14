@@ -46,42 +46,11 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 		c = trans[tra].to;
 	}
 	
-	double dt, z;                                          // Generates the event sequence as a function of time
-	do{
-		auto kmax = comp[c].trans.size();
-		if(kmax == 0) break;
+	while(comp[c].trans.size() > 0){                       // Generates the event sequence as a function of time
+		auto tra = select_branch(c,a);                       // Selects which branch to go down
 		
-		if(kmax == 1) tra = comp[c].trans[0];
-		else{                                                // Uses the branching probability to select branch
-			z = ran(); auto k = 0u; while(k < kmax && z > comptransprob[c].probsum[a][k]) k++;
-			if(k == kmax) emsgEC("Model",2);
-			tra = comp[c].trans[k];
-		}
+		auto dt = sample_duration(tra);                      // Samples the time for the transition
 		
-		switch(trans[tra].type){                             // Samples duration spent in compartment
-		case EXP_DIST:
-			dt = exp_sample_time(paramval[trans[tra].param_mean]);
-			break;
-		
-		case GAMMA_DIST:
-			{
-				auto mean = paramval[trans[tra].param_mean]; auto sd = paramval[trans[tra].param_cv]*mean;
-				dt = gamma_sample(mean*mean/(sd*sd),mean/(sd*sd));
-			}
-			break;
-			
-		case LOGNORM_DIST:
-			{
-				auto mean_ns = paramval[trans[tra].param_mean], cv_ns = paramval[trans[tra].param_cv];
-				auto sd = sqrt(log((1+cv_ns*cv_ns))), mean = log(mean_ns) - sd*sd/2;
-				dt = lognormal_sample(mean,sd); 
-			}
-			break;
-			
-		default: emsgEC("Model",3); break;
-		}
-
-		if(dt < TINY) dt = TINY;
 		t += dt;
 		
 		while(timep < model.ntime_period-1 && model.time_period[timep].tend < t){    // Adds in changes in time period
@@ -95,9 +64,54 @@ void State::simulate_compartmental_transitions(unsigned int i, unsigned int c, d
 		evlist.push_back(ev);
 
 		c = trans[tra].to; 
-	}while(1 == 1);
+	}
 }
 
+/// Selects which branch to follow
+unsigned int State::select_branch(unsigned int c, unsigned int a)
+{
+	unsigned int tra, kmax = comp[c].trans.size();
+	if(kmax == 1) return comp[c].trans[0];
+	else{                                                // Uses the branching probability to select branch
+		double z = ran(); auto k = 0u; while(k < kmax && z > comptransprob[c].probsum[a][k]) k++;
+		if(k == kmax) emsgEC("Model",2);
+		tra = comp[c].trans[k];
+	}
+	return tra;
+}
+		
+/// Samples the time taken for a particular transition to happen
+double State::sample_duration(unsigned int tra)
+{
+	double dt;
+	
+	switch(trans[tra].type){                             // Samples duration spent in compartment
+	case EXP_DIST:
+		dt = exp_sample_time(paramval[trans[tra].param_mean]);
+		break;
+	
+	case GAMMA_DIST:
+		{
+			auto mean = paramval[trans[tra].param_mean]; auto sd = paramval[trans[tra].param_cv]*mean;
+			dt = gamma_sample(mean*mean/(sd*sd),mean/(sd*sd));
+		}
+		break;
+		
+	case LOGNORM_DIST:
+		{
+			auto mean_ns = paramval[trans[tra].param_mean], cv_ns = paramval[trans[tra].param_cv];
+			auto sd = sqrt(log((1+cv_ns*cv_ns))), mean = log(mean_ns) - sd*sd/2;
+			dt = lognormal_sample(mean,sd); 
+		}
+		break;
+		
+	default: emsgEC("Model",3); break;
+	}
+
+	if(dt < TINY) dt = TINY;
+	
+	return dt;
+}
 
 /// Calculates the latent process likelihood and puts the results in Lev
 void State::set_process_likelihood()
@@ -309,6 +323,13 @@ void State::set_L_and_Pr()
 }
 
 
+/// Sets the error function
+void State::set_EF()
+{
+	EF = obsmodel.observation_likelihood(transev,indev);
+}
+
+
 /// Gets the time of an infection event
 double State::get_infection_time(unsigned int n) const
 {
@@ -487,7 +508,7 @@ void State::standard_parameter_prop(Jump &jump)
 	stand_param_area_prop(jump);
 	stand_param_compparam_prop(jump);
 
-	if(checkon == 1) check_Lev_and_Pr();
+	if(checkon == true) check_Lev_and_Pr();
 }
 
 
@@ -860,7 +881,7 @@ void State::stand_param_compparam_prop(Jump &jump)
 		}
 	}
 	
-	if(checkon == 1){
+	if(checkon == true){
 		double dd;
 		dd = likelihood_dt(precalc,paramval)-Li_dt; if(dd*dd > TINY) emsgEC("Model",13);
 		dd = likelihood_prob(precalc,comptransprob)-Li_prob; if(dd*dd > TINY) emsgEC("Model",14);

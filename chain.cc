@@ -31,7 +31,7 @@ Chain::Chain(const Details &details, const Data &data, const Model &model, const
 	
 	if(details.mode != MCMCMC) return;
 	
-	initial.set_L_and_Pr();                            // Sets the initial observation likelihood
+	initial.set_L_and_Pr();                      // Sets the initial observation likelihood and prior
 }
 
 
@@ -41,7 +41,7 @@ void Chain::standard_proposal(double EFcut)
 	timers.timestandard -= clock();
 	
 	timers.timembptemp -= clock();
-	initial.set_process_likelihood();              // First sets the latent process likelihood
+	initial.set_process_likelihood();              // First sets the latent process likelihood Lev
 	timers.timembptemp += clock();
 	
 	timers.timeparam -= clock();
@@ -53,11 +53,11 @@ void Chain::standard_proposal(double EFcut)
 }
 
 		
-/// Randomly samples a state by sampling from the prior and simulating an event sequence
+/// Randomly generates a state by sampling from the prior and simulating an event sequence
 void Chain::sample_state()
 {
 	unsigned int loop, loopmax = 100;
-	for(loop = 0; loop < loopmax; loop++){       // Keeps simulating until SUCCESSful
+	for(loop = 0; loop < loopmax; loop++){       // Keeps simulating until successful
 		if(simulate(model.sample_from_prior()) == SUCCESS) break;
 	}
 	
@@ -70,30 +70,30 @@ void Chain::sample_state()
 }
 
 
-/// Performs a MBP proposal on parameter 'th'
+/// Performs an MBP proposal on parameter 'th'
 void Chain::mbp_proposal(unsigned int th)  
 {
 	timers.timembpprop -= clock();
 
-	vector <double> paramv = jump.mbp_prop(initial.paramval,th);
+	auto paramv = jump.mbp_prop(initial.paramval,th); // Generates a proposed parameter set 
 
 	double al = 0; 
-	if(mbp(paramv) == SUCCESS){              // Performs the MBP and is SUCCESSful calculates acceptance probability
+	if(mbp(paramv) == SUCCESS){                       // Performs the MBP and if successful calculates acceptance probability
 		propose.set_L_and_Pr();
 		
 		al = exp(propose.Pr-initial.Pr + invT*(propose.L-initial.L));		
-		if(checkon == 1) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
+		if(checkon == true) cout << al << " " << invT << " " << propose.L << " " << initial.L << " al" << endl;
 	}
 
 	if(ran() < al){
-		initial.copy_state(propose);                 // If SUCCESSful copies the proposed state into the initial
+		initial.copy_state(propose);                    // If successful copies the proposed state into the initial state
 		jump.mbp_accept(th);
 	}
 	else{
 		jump.mbp_reject(th);
 	}
 
-	if(checkon == 1) initial.check();
+	if(checkon == true) initial.check();
 	
 	timers.timembpprop += clock();
 }
@@ -106,9 +106,9 @@ Status Chain::mbp(const vector<double> &paramv)
 	
 	if(model.inbounds(paramv) == false) return FAIL;      // Checks parameters are within the prior bounds
 		
-	if(propose.set_param(paramv) == FAIL) return FAIL;    // Sets quantities derived from parameters (if not possible FAILs)
+	if(propose.set_param(paramv) == FAIL) return FAIL;    // Sets quantities derived from parameters (if not possible fails)
 	
-	mbp_initialise();                                           // Prepares for the proposal
+	mbp_initialise();                                     // Prepares for the proposal
 
 	timers.timembpinit += clock();
 	
@@ -117,10 +117,10 @@ Status Chain::mbp(const vector<double> &paramv)
 	auto n = 0u;                                          // Indexes infections in the initial state 
 	double t = 0;                                         // Current time
 	
-	for(auto sett = 0u; sett < details.ndivision; sett++){ // Goes across discrete timesteps
+	for(auto sett = 0u; sett < details.ndivision; sett++){// Goes across discrete timesteps
 		if(details.mode == SIM) output.print_populations(sett,N);
 		
-		initial.set_beta_and_phi(sett);                          // Sets beta and phi variables used later
+		initial.set_beta_and_phi(sett);                     // Sets beta and phi variables used later
 		propose.set_beta_and_phi(sett); 
 		
 		propose.set_Qmap_using_dQ(sett,initial,dQmap);      // Calculates proposed Qmap from initial Qmap plus dQ
@@ -129,8 +129,8 @@ Status Chain::mbp(const vector<double> &paramv)
 	
 		double tmax = details.division_time[sett+1];
 		do{
-			auto tini = initial.get_infection_time(n);
-			auto tinf = t + exp_sample(new_infection_rate[0][0]);
+			auto tini = initial.get_infection_time(n);        // Gets time of next infection event in initial state
+			auto tinf = t + exp_sample(new_infection_rate[0][0]);// Gets time of new added infection event
 			
 			if(tini >= tmax && tinf >= tmax){ t = tmax; break;}
 			
@@ -138,19 +138,19 @@ Status Chain::mbp(const vector<double> &paramv)
 				t = tinf;
 				add_infection_in_area(area_of_next_infection(),t);	
 			}
-			else{                                             // An event on initial sequence is considered
+			else{                                             // An event on initial sequence is considered to be copies
 				t = tini;
 				copy_event_or_not(n);
 				n++;
 			}
 	
-			if(propose.infev.size() >= model.maximum_infected){             // If the number of infections exceeds the prior limit then FAILs
+			if(propose.infev.size() >= model.maximum_infected){// If the number of infections exceeds the prior limit then fails
 				reset_susceptible_lists(); return FAIL;
 			}
 		}while(1 == 1);
 		
 		update_dQmap(initial.transev[sett],propose.transev[sett]);// Based on infections updates dQmap
-		if(checkon == 1) check(t,sett);
+		if(checkon == true) check(t,sett);
 	}
 
 	timers.timembp += clock();
@@ -160,17 +160,17 @@ Status Chain::mbp(const vector<double> &paramv)
 	return SUCCESS;
 }
 
-/// Decides to copy infection event i from the initial to proposed states or not
+/// Decides to copy infection event n from the initial to proposed states or not
 void Chain::copy_event_or_not(unsigned int n)
 {
 	auto i = initial.infev[n].ind;
 
-	if(susceptible_status[i] == BOTH_SUSCEPTIBLE){                // The copy can only be done if individual is suscepticle
+	if(susceptible_status[i] == BOTH_SUSCEPTIBLE){    // The copy can only be done if individual in propose is suscepticle
 		auto w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 
-		auto al = propose.lambda[w]/initial.lambda[w];
-		if(ran() < al){                                     // Copies the infection event to propose
-			change_susceptible_status(i,NOT_SUSCEPTIBLE,1);
+		auto al = propose.lambda[w]/initial.lambda[w];  // Acceptance probability
+		if(ran() < al){                                
+			change_susceptible_status(i,NOT_SUSCEPTIBLE,1);// Copies the infection event to propose
 			
 			if(do_mbp_event == true) mbp_compartmental_transitions(i);
 			else propose.indev[i] = initial.indev[i];
@@ -182,7 +182,8 @@ void Chain::copy_event_or_not(unsigned int n)
 }
 
 
-/// Based on compartmental trasitions in the initial state for i, this uses MBPs to generates transitions for the proposal
+/// Based on compartmental trasitions in the initial state for i
+/// this uses MBPs to generates transitions for the proposal
 void Chain::mbp_compartmental_transitions(unsigned int i)
 {
 	const auto &evlisti = initial.indev[i];
@@ -192,34 +193,33 @@ void Chain::mbp_compartmental_transitions(unsigned int i)
 	
 	evlistp.clear();
 	
-	Event ev = evlisti[0];
+	auto ev = evlisti[0];
 	auto tra = ev.trans;
 	auto ti = ev.t; 
 	auto timep = ev.timep;
 	evlistp.push_back(ev);
 	
 	auto a = data.democatpos[data.ind[i].dp][0];
-		
 	auto c = trans[tra].to;
 	
 	auto tp = ti;
 	unsigned int emax = evlisti.size();
-	for(auto e = 1u; e < emax; e++){
+	bool switch_branch = false;
+	for(auto e = 1u; e < emax; e++){                              // Goes through each event in initial
 		tra = evlisti[e].trans;
-		if(trans[tra].istimep == false){		
-			auto dt = evlisti[e].t - ti;
-			ti = evlisti[e].t;
-			
+		if(trans[tra].istimep == false){		                        // Igonores transtions related to change in time period
 			unsigned int kmax = comp[c].trans.size();
 			if(kmax == 0) break;
 			
-			if(kmax > 1){
+			double dtnew;
+			if(kmax > 1){                                             // Looks at switching to another branch
 				auto k = 0u; while(k < kmax && tra != comp[c].trans[k]) k++;
 				if(k == kmax) emsgEC("model",4);
 				
-				if(comptransprobp[c].prob[a][k] < comptransprobi[c].prob[a][k]){  // Looks at switching to another branch
-					if(ran() < 1 - comptransprobp[c].prob[a][k]/comptransprobi[c].prob[a][k]){
-						auto sum = 0.0; 
+				auto ratio = comptransprobp[c].prob[a][k]/comptransprobi[c].prob[a][k];
+				if(ratio < 1){ 
+					if(ran() < 1 - ratio){
+						auto sum = 0.0;                                     // Selects new branch to go down
 						vector <double> sumst;
 						for(auto k = 0u; k < kmax; k++){
 							auto dif = comptransprobp[c].prob[a][k] - comptransprobi[c].prob[a][k];
@@ -230,45 +230,52 @@ void Chain::mbp_compartmental_transitions(unsigned int i)
 						auto z = ran()*sum; auto k = 0u; while(k < kmax && z > sumst[k]) k++;
 						if(k == kmax) emsgEC("Model",5);
 						tra = comp[c].trans[k];
+						switch_branch = true;
+						dtnew = propose.sample_duration(tra);     
 					}
 				}	
 			}
 			
-			double dtnew;
-			switch(trans[tra].type){
-			case EXP_DIST:
-				{
-					auto p = trans[tra].param_mean;
-					dtnew = dt*paramp[p]/parami[p];
-				}
-				break;
+			if(switch_branch == false){
+				auto dt = evlisti[e].t - ti;
+				ti = evlisti[e].t;	
 			
-			case GAMMA_DIST:
-				emsgEC("model",6);
-				break;
-				
-			case LOGNORM_DIST:
-				{
-					auto p = trans[tra].param_mean, p2 = trans[tra].param_cv;
-					
-					auto mean_nsi = parami[p], cv_nsi = parami[p2];
-					auto mean_nsp = paramp[p], cv_nsp = paramp[p2];
-					
-					if(mean_nsi == mean_nsp && cv_nsi == cv_nsp) dtnew = dt;
-					else{
-						auto sdi = sqrt(log(1+cv_nsi*cv_nsi)), meani = log(mean_nsi) - sdi*sdi/2;
-						auto sdp = sqrt(log(1+cv_nsp*cv_nsp)), meanp = log(mean_nsp) - sdp*sdp/2;
-						dtnew = exp(meanp + (log(dt) - meani)*sdp/sdi); 
+				switch(trans[tra].type){
+				case EXP_DIST:
+					{
+						auto p = trans[tra].param_mean;
+						dtnew = dt*paramp[p]/parami[p];
 					}
-				}
-				break;
+					break;
 				
-			default:
-				emsgEC("Model",7);
-				break;
+				case GAMMA_DIST:
+					emsgEC("model",6);
+					break;
+					
+				case LOGNORM_DIST:
+					{
+						auto p = trans[tra].param_mean, p2 = trans[tra].param_cv;
+						
+						auto mean_nsi = parami[p], cv_nsi = parami[p2];
+						auto mean_nsp = paramp[p], cv_nsp = paramp[p2];
+						
+						if(mean_nsi == mean_nsp && cv_nsi == cv_nsp) dtnew = dt;
+						else{
+							auto sdi = sqrt(log(1+cv_nsi*cv_nsi)), meani = log(mean_nsi) - sdi*sdi/2;
+							auto sdp = sqrt(log(1+cv_nsp*cv_nsp)), meanp = log(mean_nsp) - sdp*sdp/2;
+							dtnew = exp(meanp + (log(dt) - meani)*sdp/sdi); 
+						}
+					}
+					break;
+					
+				default:
+					emsgEC("Model",7);
+					break;
+				}
+		
+				if(dtnew < TINY) dtnew = TINY;
 			}
-	
-			if(dtnew < TINY) dtnew = TINY;
+		
 			tp += dtnew;
 	
 			while(timep < model.ntime_period-1 && model.time_period[timep].tend < tp){    // Adds in changes in time period
@@ -282,15 +289,18 @@ void Chain::mbp_compartmental_transitions(unsigned int i)
 			evlistp.push_back(ev);
 	
 			c = trans[tra].to; 
-			if(evlisti[e].trans != tra) break;
+			if(switch_branch == true) break;
 		}
 	}
 	
-	if(comp[c].trans.size() != 0)	propose.simulate_compartmental_transitions(i,c,tp);
+	
+	if(switch_branch == true){  // If the branch is switched then need to simulate rest of sequence
+		if(comp[c].trans.size() != 0)	propose.simulate_compartmental_transitions(i,c,tp);
+	}
 }
 
 
-/// Constructs a FAST Gillespie sampler for finding the next infection to be added	
+/// Constructs a fast Gillespie sampler for finding the area of the next infection to be added	
 void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector <double> &Qmp)
 {
 	timers.infection_sampler -= clock();
@@ -310,7 +320,7 @@ void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector
 			auto a = data.democatpos[dp][0];
 			initial.lambda[w] = initial.susceptibility[dp]*(faci*Qmi[v+a] + initial.phi);
 			propose.lambda[w] = propose.susceptibility[dp]*(facp*Qmp[v+a] + propose.phi);
-			auto dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+			auto dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 			if(std::isnan(dlambda)){ emsgEC("Chain",400);}
 			sum += dlambda + npropose_only_susceptible_list[w]*propose.lambda[w];
 			dp++;
@@ -332,16 +342,16 @@ void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector
 }
 	
 
-/// Sets up lists of individual (those suscepticle in both initial and propose, only propose, and not at all)
+/// Sets up lists of individuals (those suscepticle in both initial and propose states, only propose, and not at all)
 void Chain::setup_susceptible_lists()
 {	
 	BOTH_SUSCEPTIBLE_list.clear(); BOTH_SUSCEPTIBLE_list.resize(data.nardp); 
 	propose_only_susceptible_list.clear(); propose_only_susceptible_list.resize(data.nardp); 
-	NOT_SUSCEPTIBLEceptible_list.clear(); NOT_SUSCEPTIBLEceptible_list.resize(data.nardp);
+	not_susceptible_list.clear(); not_susceptible_list.resize(data.nardp);
 
-	nBOTH_SUSCEPTIBLE_list.resize(data.nardp); 
+	nboth_sysceptible_list.resize(data.nardp); 
 	npropose_only_susceptible_list.resize(data.nardp); 
-	nNOT_SUSCEPTIBLEceptible_list.resize(data.nardp);
+	nnot_susceptible_list.resize(data.nardp);
 	
 	susceptible_status.resize(data.popsize); susceptible_list_ref.resize(data.popsize); 
 
@@ -354,9 +364,9 @@ void Chain::setup_susceptible_lists()
 				susceptible_list_ref[i] = BOTH_SUSCEPTIBLE_list[w].size();
 				BOTH_SUSCEPTIBLE_list[w].push_back(i);
 			}
-			nBOTH_SUSCEPTIBLE_list[w] = data.area[c].ind[dp].size();
+			nboth_sysceptible_list[w] = data.area[c].ind[dp].size();
 			npropose_only_susceptible_list[w] = 0;
-			nNOT_SUSCEPTIBLEceptible_list[w] = 0;
+			nnot_susceptible_list[w] = 0;
 		}
 	}	
 }
@@ -369,8 +379,8 @@ void Chain::change_susceptible_status(unsigned int i, unsigned int st, unsigned 
 	auto w = c*data.ndemocatpos + data.ind[i].dp;
 	
 	double dval = 0;
-	if(updateR == 1){		
-		auto dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+	if(updateR == 1){		               // Updates the event sampler for new events 
+		auto dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 		dval = -(dlambda + npropose_only_susceptible_list[w]*propose.lambda[w]);
 	}
 	
@@ -385,7 +395,7 @@ void Chain::change_susceptible_status(unsigned int i, unsigned int st, unsigned 
 			susceptible_list_ref[BOTH_SUSCEPTIBLE_list[w][l]] = l;
 		}
 		BOTH_SUSCEPTIBLE_list[w].pop_back();
-		nBOTH_SUSCEPTIBLE_list[w]--;
+		nboth_sysceptible_list[w]--;
 		break;
 		
 	case ONLY_PROPOSE_SUSCEPTIBLE:
@@ -400,14 +410,14 @@ void Chain::change_susceptible_status(unsigned int i, unsigned int st, unsigned 
 		break;
 		
 	case NOT_SUSCEPTIBLE:
-		if(NOT_SUSCEPTIBLEceptible_list[w][l] != i) emsgEC("Chain",9);
-		n = NOT_SUSCEPTIBLEceptible_list[w].size();
+		if(not_susceptible_list[w][l] != i) emsgEC("Chain",9);
+		n = not_susceptible_list[w].size();
 		if(l < n-1){
-			NOT_SUSCEPTIBLEceptible_list[w][l] = NOT_SUSCEPTIBLEceptible_list[w][n-1];
-			susceptible_list_ref[NOT_SUSCEPTIBLEceptible_list[w][l]] = l;
+			not_susceptible_list[w][l] = not_susceptible_list[w][n-1];
+			susceptible_list_ref[not_susceptible_list[w][l]] = l;
 		}
-		NOT_SUSCEPTIBLEceptible_list[w].pop_back();
-		nNOT_SUSCEPTIBLEceptible_list[w]--;
+		not_susceptible_list[w].pop_back();
+		nnot_susceptible_list[w]--;
 		break;
 	
 	default: emsgEC("Chain",10); break;
@@ -422,22 +432,22 @@ void Chain::change_susceptible_status(unsigned int i, unsigned int st, unsigned 
 		break;
 		
 	case NOT_SUSCEPTIBLE:
-		susceptible_list_ref[i] = NOT_SUSCEPTIBLEceptible_list[w].size();
-		NOT_SUSCEPTIBLEceptible_list[w].push_back(i);
-		nNOT_SUSCEPTIBLEceptible_list[w]++;
+		susceptible_list_ref[i] = not_susceptible_list[w].size();
+		not_susceptible_list[w].push_back(i);
+		nnot_susceptible_list[w]++;
 		break;
 	
 	case BOTH_SUSCEPTIBLE:
 		susceptible_list_ref[i] = BOTH_SUSCEPTIBLE_list[w].size();
 		BOTH_SUSCEPTIBLE_list[w].push_back(i);
-		nBOTH_SUSCEPTIBLE_list[w]++;
+		nboth_sysceptible_list[w]++;
 		break;
 		
 	default: emsgEC("Chain",11); break;
 	}
 	
-	if(updateR == 1){                                       // Updates the infection sampler
-		auto dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+	if(updateR == 1){                              // Updates the infection sampler
+		auto dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 		dval += dlambda + npropose_only_susceptible_list[w]*propose.lambda[w];
 		
 		if(dval != 0){
@@ -459,19 +469,19 @@ void Chain::reset_susceptible_lists()
 			susceptible_status[i] = BOTH_SUSCEPTIBLE;
 			susceptible_list_ref[i] = BOTH_SUSCEPTIBLE_list[w].size();
 			BOTH_SUSCEPTIBLE_list[w].push_back(i);
-			nBOTH_SUSCEPTIBLE_list[w]++;
+			nboth_sysceptible_list[w]++;
 		}
 		propose_only_susceptible_list[w].clear();
 		npropose_only_susceptible_list[w] = 0;
 		
-		for(const auto& i : NOT_SUSCEPTIBLEceptible_list[w]){
+		for(const auto& i : not_susceptible_list[w]){
 			susceptible_status[i] = BOTH_SUSCEPTIBLE;
 			susceptible_list_ref[i] = BOTH_SUSCEPTIBLE_list[w].size();
 			BOTH_SUSCEPTIBLE_list[w].push_back(i);
-			nBOTH_SUSCEPTIBLE_list[w]++;
+			nboth_sysceptible_list[w]++;
 		}
-		NOT_SUSCEPTIBLEceptible_list[w].clear();
-		nNOT_SUSCEPTIBLEceptible_list[w] = 0;
+		not_susceptible_list[w].clear();
+		nnot_susceptible_list[w] = 0;
 	}
 }
 
@@ -573,7 +583,7 @@ void Chain::update_dQmap(const vector <EventRef> &trei, const vector <EventRef> 
 	
 	
 /// This samples which area the next new infection occurs in 
-/// Starting at the top level l=0 the algorith proceeds to finer and finer scales
+/// Starting at the top level l=0 the algorithm proceeds to finer and finer scales
 unsigned int Chain::area_of_next_infection()
 {
 	double sumst[4];
@@ -611,7 +621,7 @@ void Chain::add_infection_in_area(unsigned int c, double t)
 	double sum = 0;                                      // Selects which demographic possibility from the area
 	for(auto dp = 0u; dp < dpmax; dp++){
 		auto w = c*dpmax + dp;
-		double dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+		double dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 		sum += dlambda + npropose_only_susceptible_list[w]*propose.lambda[w];
 		sumst[dp] = sum;
 	}
@@ -619,7 +629,7 @@ void Chain::add_infection_in_area(unsigned int c, double t)
 	double z = ran()*sum; auto dp = 0u; while(dp < dpmax && z > sumst[dp]) dp++; if(dp == dpmax) emsgEC("Chain",13);
 	
 	auto w = c*dpmax + dp;                               // Next selects susceptible list type
-	double dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+	double dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 
 	unsigned int i;
 	if(ran() < dlambda/(dlambda + npropose_only_susceptible_list[w]*propose.lambda[w])){ // Both suscetible
@@ -631,7 +641,7 @@ void Chain::add_infection_in_area(unsigned int c, double t)
 		i = propose_only_susceptible_list[w][(unsigned int)(ran()*n)];
 	}
 	
-	change_susceptible_status(i,NOT_SUSCEPTIBLE,1);              // Changes the susceptibility status
+	change_susceptible_status(i,NOT_SUSCEPTIBLE,1);      // Changes the susceptibility status
 	
 	propose.simulate_compartmental_transitions(i,0,t);   // Simulates compartmental transitions after infection
 
@@ -639,30 +649,32 @@ void Chain::add_infection_in_area(unsigned int c, double t)
 }
 
 
-/// Simulates an event sequence given a parameter set (returns FAIL if it is found not to be possible)
+/// Simulates an event sequence given a parameter set (returns fail if it is found not to be possible)
 Status Chain::simulate(const vector <double>& paramv)
 {
 	vector <double> zero(paramv.size());                  // Sets up a parameter set with all zeros
 	for(auto& pval : zero) pval = 0;
-	
 	initial.set_param(zero);
+	
+	initial.clear();                                      // Clears the initial event sequence
 	
 	if(mbp(paramv) == FAIL) return FAIL;                  // Performs an MBP (this effectively simulates the system)
 	
-	initial.copy_state(propose);                                // Copies proposed state into initial
+	initial.copy_state(propose);                          // Copies proposed state into initial state
 	
 	return SUCCESS;
 }
 
+
 /// Used for checking the code is running correctly
 void Chain::check(double t, unsigned int sett) const
 {
-	for(auto i = 0u; i < data.popsize; i++){    // Checks stat is correct
+	for(auto i = 0u; i < data.popsize; i++){             // Checks susceptible lises are correct
 	  auto w = data.ind[i].area*data.ndemocatpos + data.ind[i].dp;
 		
-		if(nBOTH_SUSCEPTIBLE_list[w] != BOTH_SUSCEPTIBLE_list[w].size()) emsgEC("Chain",24);
+		if(nboth_sysceptible_list[w] != BOTH_SUSCEPTIBLE_list[w].size()) emsgEC("Chain",24);
 		if(npropose_only_susceptible_list[w] != propose_only_susceptible_list[w].size()) emsgEC("Chain",25);
-		if(nNOT_SUSCEPTIBLEceptible_list[w] != NOT_SUSCEPTIBLEceptible_list[w].size()) emsgEC("Chain",26);
+		if(nnot_susceptible_list[w] != not_susceptible_list[w].size()) emsgEC("Chain",26);
 		
 		if((initial.indev[i].size() == 0 || t < initial.indev[i][0].t) && propose.indev[i].size() == 0){
 			if(susceptible_status[i] != BOTH_SUSCEPTIBLE) emsgEC("Chain",27);
@@ -675,12 +687,12 @@ void Chain::check(double t, unsigned int sett) const
 			}
 			else{
 				if(susceptible_status[i] != NOT_SUSCEPTIBLE) emsgEC("Chain",31);
-				if(NOT_SUSCEPTIBLEceptible_list[w][susceptible_list_ref[i]] != i) emsgEC("Chain",32);
+				if(not_susceptible_list[w][susceptible_list_ref[i]] != i) emsgEC("Chain",32);
 			}
 		}
 	}
 	
-	auto l = areatree.level-1;
+	auto l = areatree.level-1;                         // Checks infection sampler is correct
 	for(auto c = 0u; c < data.narea; c++){
 		auto wmin = c*data.ndemocatpos, wmax = wmin + data.ndemocatpos;
 	
@@ -691,10 +703,14 @@ void Chain::check(double t, unsigned int sett) const
 			auto a = data.democatpos[dp][0];
 			
 			double dd;
-			dd = initial.lambda[w] - initial.susceptibility[dp]*(initial.beta*initial.areafactor[c]*initial.Qmap[sett][v+a] + initial.phi); if(sqrt(dd*dd) > TINY) emsgEC("Chain",33);
-			dd = propose.lambda[w] - propose.susceptibility[dp]*(propose.beta*propose.areafactor[c]*propose.Qmap[sett][v+a] + propose.phi); if(sqrt(dd*dd) > TINY) emsgEC("Chain",34);
+			dd = initial.lambda[w] - initial.susceptibility[dp]*(initial.beta*initial.areafactor[c]*initial.Qmap[sett][v+a] 
+			                                                    + initial.phi); 
+			if(sqrt(dd*dd) > TINY) emsgEC("Chain",33);
+			dd = propose.lambda[w] - propose.susceptibility[dp]*(propose.beta*propose.areafactor[c]*propose.Qmap[sett][v+a] 
+			                                                    + propose.phi); 
+			if(sqrt(dd*dd) > TINY) emsgEC("Chain",34);
 	
-			auto dlambda = nBOTH_SUSCEPTIBLE_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
+			auto dlambda = nboth_sysceptible_list[w]*(propose.lambda[w] - initial.lambda[w]); if(dlambda < 0) dlambda = 0;
 			sum += dlambda + npropose_only_susceptible_list[w]*propose.lambda[w];
 			dp++;
 		}
@@ -708,6 +724,7 @@ void Chain::check(double t, unsigned int sett) const
 	}
 }
 
+
 /// Calculates propose.Qmap based on the initial and final sequences
 void Chain::calculate_Qmap_for_propose()
 {	
@@ -719,124 +736,21 @@ void Chain::calculate_Qmap_for_propose()
 	} 
 }
 
+
 /// Adds and removes infectious individuals
 void Chain::standard_event_prop(double EFcut)
 {	
 	timers.timeaddrem -= clock();
 
-	auto probif = 0.0, probfi = 0.0;
-	
-	propose.copy_state(initial);                                   // Copies initial state into proposed state
+	propose.copy_state(initial);                             // Copies initial state into proposed state
 		
 	for(const auto& x : propose.infev) change_susceptible_status(x.ind,NOT_SUSCEPTIBLE,0);
 	 
-	if(ran() < 0.5){                                         // Adds individuals
-		timers.timembptemp2 -= clock();
-		infection_sampler(initial.Qmap);
-		timers.timembptemp2 += clock();
-		
-		for(auto j = 0u; j < jump.naddrem; j++){
-			if(propose.infev.size() >= model.maximum_infected){ reset_susceptible_lists(); return;}
-			
-			auto sumtot = lambdasum[data.nsettardp-1]; if(sumtot == 0) emsgEC("Chain",56);
-			auto z = ran()*sumtot;
-			
-			//k = 0; while(k < data.nsettardp && z > lambdasum[k]) k += 1;
-			//if(k == data.nsettardp) emsg("pr"); 
-			
-			auto k = 0u; auto dk = data.nsettardp/10; if(dk == 0) dk = 1;
-			do{
-				while(k < data.nsettardp && z > lambdasum[k]) k += dk;
-				if(dk == 1) break;
-				if(k >= dk) k -= dk;
-				dk /= 10; if(dk == 0) dk = 1;
-			}while(1 == 1);
-			if(k >= data.nsettardp) emsgEC("Chain",57);
-		
-			if(k > 0){
-				if(k >= lambdasum.size()) emsgEC("Chain",58);
-				if(!(z < lambdasum[k] && z > lambdasum[k-1])) emsgEC("Chain",59);
-			}
-			
-			probif += log(lambda[k]/sumtot);
-
-			auto sett = k/data.nardp, w = k%data.nardp;
-			
-			if(nBOTH_SUSCEPTIBLE_list[w] == 0){ reset_susceptible_lists(); return;}
-			auto i = BOTH_SUSCEPTIBLE_list[w][int(ran()*nBOTH_SUSCEPTIBLE_list[w])];
-			probif += log(1.0/nBOTH_SUSCEPTIBLE_list[w]);
-		
-			change_susceptible_status(i,NOT_SUSCEPTIBLE,0);
-			
-			auto dt = details.division_time[sett+1]-details.division_time[sett];
-			auto t = details.division_time[sett] + ran()*dt;
-			probif += log(1.0/dt);
-			
-			propose.simulate_compartmental_transitions(i,0,t);
-		
-			propose.add_indev(i);
-			
-			probfi += log(1.0/propose.infev.size());
-		}
-		
-		timers.timembptemp3 -= clock();
-		propose.sort_infev();
-		calculate_Qmap_for_propose();
-		timers.timembptemp3 += clock();
-	}
-	else{    // Removes individuals
-		vector <int> kst;
-		for(auto j = 0u; j < jump.naddrem; j++){
-			if(propose.infev.size() == 0){ reset_susceptible_lists(); return;}
-			
-			auto l = int(ran()*propose.infev.size());
-			probif += log(1.0/propose.infev.size());
-			auto i = propose.infev[l].ind;
-			auto sett = (unsigned int)(details.ndivision*initial.indev[i][propose.infev[l].e].t/details.period); 
-
-			auto c = data.ind[i].area;
-			auto w = c*data.ndemocatpos + data.ind[i].dp;
+	double dprob;
+	if(ran() < 0.5) dprob = add_individuals();
+	else dprob = remove_individuals();
 	
-			auto dt = details.division_time[sett+1]-details.division_time[sett];
-
-			probfi += log(1.0/dt);
-			kst.push_back(sett*data.nardp + w);
-			
-			propose.indev[i].clear();
-			
-			propose.infev[l] = propose.infev[propose.infev.size()-1];
-			propose.infev.pop_back();
-			
-			change_susceptible_status(i,BOTH_SUSCEPTIBLE,0);
-			
-			probfi += log(1.0/nBOTH_SUSCEPTIBLE_list[w]);
-		}
-		
-		for(auto& transev : propose.transev){  // Removes events in propose.transev
-			auto j = 0u;
-			auto jmax = transev.size();
-			while(j < jmax){
-				if(propose.indev[transev[j].ind].size() == 0){
-					jmax--;
-					transev[j] = transev[jmax];
-					transev.pop_back();
-				}
-				else j++;
-			}
-		}
-		
-		timers.timembptemp3 -= clock();
-		propose.sort_infev();
-		calculate_Qmap_for_propose();
-		timers.timembptemp3 += clock();
-		
-		timers.timembptemp2 -= clock();
-		infection_sampler(propose.Qmap);
-		timers.timembptemp2 += clock();
-		
-		auto sumtot = lambdasum[data.nsettardp-1]; 
-		for(const auto& ks : kst) probfi += log(lambda[ks]/sumtot);
-	}
+	if(dprob == UNSET){ reset_susceptible_lists(); return;}
 	
 	timers.timembptemp4 -= clock();
 	propose.set_process_likelihood();
@@ -844,16 +758,17 @@ void Chain::standard_event_prop(double EFcut)
 	double al;
 	switch(details.mode){
 	case ABC_MBP:
+	
 		propose.EF = obsmodel.observation_likelihood(propose.transev,propose.indev);
 		if(propose.EF > EFcut) al = 0;
-		else al = exp(propose.Lev-initial.Lev + probfi - probif);
-		if(checkon == 1) cout << al <<  " " << EFcut << " al" << endl;		
+		else al = exp(propose.Lev-initial.Lev + dprob);
+		if(checkon == true) cout << al <<  " " << EFcut << " al" << endl;		
 		break;
 	
 	case MCMCMC:
 		propose.L = obsmodel.observation_likelihood(propose.transev,propose.indev);
-		al = exp(invT*(propose.L-initial.L) + propose.Lev-initial.Lev + probfi - probif);
-		if(checkon == 1) cout << al << " al" << endl;		
+		al = exp(invT*(propose.L-initial.L) + propose.Lev-initial.Lev + dprob);
+		if(checkon == true) cout << al << " al" << endl;		
 		break;
 		
 	default: 
@@ -863,17 +778,7 @@ void Chain::standard_event_prop(double EFcut)
 	timers.timembptemp4 += clock();
 	
 	if(ran() < al){
-		initial.Lev = propose.Lev;
-		if(details.mode == ABC_MBP) initial.EF = propose.EF;
-		else initial.L = propose.L;
-		
-		initial.transev = propose.transev;
-		initial.Qmap = propose.Qmap;
-		
-		for(const auto& x : initial.infev) initial.indev[x.ind].clear();
-		for(const auto& x : propose.infev) initial.indev[x.ind] = propose.indev[x.ind];
-		
-		initial.infev = propose.infev;
+		initial.copy_state(propose);
 		jump.standev_accept();
 	}
 	else{
@@ -882,11 +787,135 @@ void Chain::standard_event_prop(double EFcut)
 	
 	reset_susceptible_lists();
 
-	if(checkon == 1) initial.check();
+	if(checkon == true) initial.check();
 	timers.timeaddrem += clock();
 }
 
-/// Generates a sampler for adding infected individuals into the system
+
+/// Adds jump.naddrem individuals into the propose state
+double Chain::add_individuals()
+{
+	auto probif = 0.0, probfi = 0.0;
+		
+	timers.timembptemp2 -= clock();
+	infection_sampler(initial.Qmap);
+	timers.timembptemp2 += clock();
+	
+	for(auto j = 0u; j < jump.naddrem; j++){
+		if(propose.infev.size() >= model.maximum_infected) return UNSET;
+		
+		auto sumtot = lambdasum[data.nsettardp-1]; if(sumtot == 0) emsgEC("Chain",56);
+		auto z = ran()*sumtot;
+		
+		//k = 0; while(k < data.nsettardp && z > lambdasum[k]) k += 1;
+		//if(k == data.nsettardp) emsg("pr"); 
+		
+		auto k = 0u; auto dk = data.nsettardp/10; if(dk == 0) dk = 1;
+		do{
+			while(k < data.nsettardp && z > lambdasum[k]) k += dk;
+			if(dk == 1) break;
+			if(k >= dk) k -= dk;
+			dk /= 10; if(dk == 0) dk = 1;
+		}while(1 == 1);
+		if(k >= data.nsettardp) emsgEC("Chain",57);
+	
+		if(k > 0){
+			if(k >= lambdasum.size()) emsgEC("Chain",58);
+			if(!(z < lambdasum[k] && z > lambdasum[k-1])) emsgEC("Chain",59);
+		}
+		
+		probif += log(lambda[k]/sumtot);
+
+		auto sett = k/data.nardp, w = k%data.nardp;
+		
+		if(nboth_sysceptible_list[w] == 0) return UNSET;
+		auto i = BOTH_SUSCEPTIBLE_list[w][int(ran()*nboth_sysceptible_list[w])];
+		probif += log(1.0/nboth_sysceptible_list[w]);
+	
+		change_susceptible_status(i,NOT_SUSCEPTIBLE,0);
+		
+		auto dt = details.division_time[sett+1]-details.division_time[sett];
+		auto t = details.division_time[sett] + ran()*dt;
+		probif += log(1.0/dt);
+		
+		propose.simulate_compartmental_transitions(i,0,t);
+	
+		propose.add_indev(i);
+		
+		probfi += log(1.0/propose.infev.size());
+	}
+	
+	timers.timembptemp3 -= clock();
+	propose.sort_infev();
+	calculate_Qmap_for_propose();
+	timers.timembptemp3 += clock();
+	
+	return probfi - probif;
+}
+
+
+/// Removes jump.naddrem individuals from the propose state
+double Chain::remove_individuals()
+{
+	auto probif = 0.0, probfi = 0.0;
+	
+	vector <int> kst;
+	for(auto j = 0u; j < jump.naddrem; j++){
+		if(propose.infev.size() == 0) return UNSET;
+		
+		auto l = int(ran()*propose.infev.size());
+		probif += log(1.0/propose.infev.size());
+		auto i = propose.infev[l].ind;
+		auto sett = (unsigned int)(details.ndivision*initial.indev[i][propose.infev[l].e].t/details.period); 
+
+		auto c = data.ind[i].area;
+		auto w = c*data.ndemocatpos + data.ind[i].dp;
+
+		auto dt = details.division_time[sett+1]-details.division_time[sett];
+
+		probfi += log(1.0/dt);
+		kst.push_back(sett*data.nardp + w);
+		
+		propose.indev[i].clear();
+		
+		propose.infev[l] = propose.infev[propose.infev.size()-1];
+		propose.infev.pop_back();
+		
+		change_susceptible_status(i,BOTH_SUSCEPTIBLE,0);
+		
+		probfi += log(1.0/nboth_sysceptible_list[w]);
+	}
+	
+	for(auto& transev : propose.transev){  // Removes events in propose.transev
+		auto j = 0u;
+		auto jmax = transev.size();
+		while(j < jmax){
+			if(propose.indev[transev[j].ind].size() == 0){
+				jmax--;
+				transev[j] = transev[jmax];
+				transev.pop_back();
+			}
+			else j++;
+		}
+	}
+	
+	timers.timembptemp3 -= clock();
+	propose.sort_infev();
+	calculate_Qmap_for_propose();
+	timers.timembptemp3 += clock();
+	
+	timers.timembptemp2 -= clock();
+	infection_sampler(propose.Qmap);
+	timers.timembptemp2 += clock();
+	
+	auto sumtot = lambdasum[data.nsettardp-1]; 
+	for(const auto& ks : kst) probfi += log(lambda[ks]/sumtot);
+	
+	return probfi - probif;
+}
+
+
+/// Generates a sampler for adding infected individuals into the system based on the force of infection
 void Chain::infection_sampler(const vector< vector<double> > &Qmap)
 {
 	auto sum = 0.0;
@@ -901,7 +930,7 @@ void Chain::infection_sampler(const vector< vector<double> > &Qmap)
 				auto tot = sett*data.nardp + w;
 				auto v = c*data.nage + data.democatpos[dp][0];
 				
-				auto val = nBOTH_SUSCEPTIBLE_list[w]*initial.susceptibility[dp]*(fac*Qmap[sett][v] + phi);
+				auto val = nboth_sysceptible_list[w]*initial.susceptibility[dp]*(fac*Qmap[sett][v] + phi);
 				sum += val;
 				
 				lambda[tot] = val;				
@@ -911,25 +940,16 @@ void Chain::infection_sampler(const vector< vector<double> > &Qmap)
 	}
 }
 
+/// Makes a MBP to a defined parameter set
 Status Chain::abcmbp_proposal(const vector <double> &paramv, double EFcut)  
 {
-	auto al = 1.0;
-	for(auto th = 0u; th < model.param.size(); th++){
-		if(paramv[th] < model.param[th].min || paramv[th] > model.param[th].max) al = 0;
-		if(paramv[th] < model.param[th].min || paramv[th] > model.param[th].max) al = 0;
-	}
-
-	if(al == 1){
-
-		if(mbp(propose.paramval) == FAIL) al = 0;
-		else{
-			propose.EF = obsmodel.observation_likelihood(propose.transev,propose.indev);
-			if(propose.EF >= EFcut) al = 0;
-			else{
-				propose.Pr = model.prior(propose.paramval);
-				al = exp(propose.Pr-initial.Pr);
-				//cout << al << " " << propose.Pr << " " << initial.Pr <<  "al\n";
-			}
+	auto al = 0.0;
+	if(mbp(paramv) == SUCCESS){
+		propose.set_EF();
+		if(propose.EF < EFcut){
+			propose.Pr = model.prior(propose.paramval);
+			al = exp(propose.Pr-initial.Pr);
+			if(checkon == true) cout << al << " " << propose.Pr << " " << initial.Pr <<  "al\n";
 		}
 	}
 	
@@ -941,6 +961,8 @@ Status Chain::abcmbp_proposal(const vector <double> &paramv, double EFcut)
 	return FAIL;
 }
 
+
+/// Initialises the variables within Chain
 void Chain::initialise_variables()
 {
 	setup_susceptible_lists();
@@ -965,6 +987,7 @@ void Chain::initialise_variables()
 	                                   // Used for event based changes
 	lambda.resize(data.nsettardp); lambdasum.resize(data.nsettardp);
 }
+
 
 /// Clears variables ready for a MBP
 void Chain::mbp_initialise()

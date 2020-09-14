@@ -1,10 +1,10 @@
 -------- Chain: 0 ----------
 
-invT: 0.25  Li average: -1903.05  
+invT: 0.25  Li average: -1934.48  
 MBP Accept: 
-beta0: 0.5 jump:0.146756, 
-beta1: --- 
-phi: 0 jump:2.30823, 
+beta0: 1 jump:0.146756, 
+beta1: 0 jump:0.0425205, 
+phi: 1 jump:2.30823, 
 muE: --- 
 cvE: --- 
 tA: --- 
@@ -19,21 +19,21 @@ probID_C: ---
 probID_A: --- 
 probID_E: --- 
 probHD_C: --- 
-probHD_A: 0 jump:0.472008, 
-probHD_E: 0.5 jump:0.490074, 
+probHD_A: --- 
+probHD_E: 1 jump:0.490074, 
 sus_adult: --- 
 sus_elderly: --- 
-den_slope: 1 jump:0.085575, 
-reff_r0: 0.5 jump:-0.0752798, 
-reff_r1: --- 
+den_slope: --- 
+reff_r0: 1 jump:-0.0752798, 
+reff_r1: 1 jump:-0.024909, 
 reff_r2: 0 jump:0.072568, 
 reff_r3: --- 
 zero: --- 
 
 Standard Accept: 
 beta0: 0 jump:0.0293512, 
-beta1: 0.25 jump:0.00850409, 
-phi: 1 jump:0.461646, 
+beta1: 0.5 jump:0.00850409, 
+phi: 0.75 jump:0.461646, 
 muE: --- 
 cvE: --- 
 tA: --- 

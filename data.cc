@@ -272,7 +272,7 @@ void Data::read_data_files(const Inputs &inputs, const Mpi &mpi)
 			for(auto c = 0u; c < narea; c++) area[c].covar[j] -= sum;
 		}		
 		
-		if(checkon == 1){
+		if(checkon == true){
 			for(const auto& are : area){
 				cout << nregion << " " << are.region << "region" << endl;
 				cout << are.code << " " << region[are.region].code << " " << are.x << " " <<  are.y << "  ***";
@@ -549,7 +549,7 @@ void Data::table_select_dates(unsigned int t, unsigned int units, Table &tab, st
 		}
 	}	
 	
-	if(checkon == 1){
+	if(checkon == true){
 		for(const auto& trow : tab.ele){
 			for(const auto& ele : trow) cout << ele << " ";
 			cout << endl;

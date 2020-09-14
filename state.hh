@@ -79,9 +79,12 @@ class State                                              // Store information ab
 		Status set_param(const vector <double> &paramv);
 		void set_beta_and_phi(unsigned int sett);
 		void set_L_and_Pr();
+		void set_EF();
 		double get_infection_time(unsigned int n) const;
 		void add_indev(unsigned int i);
 		void simulate_from_model(unsigned int i, unsigned int c, double t);
+		unsigned int select_branch(unsigned int c, unsigned int a);
+		double sample_duration(unsigned int tra);
 		void set_Qmap_using_dQ(unsigned int sett, const State &state, const vector <double> &dQmap);
 		void set_Qmap(unsigned int check);
 		void sort_infev();

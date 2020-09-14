@@ -31,10 +31,7 @@ const unsigned int ADD = 999999996;                              // Used for sum
 const double MINIMUM_VARIANCE = 5; 													  	 // The minimum variance for the observation model
 const double INVT_POWER = 4;                                     // The power used for the temerature progression
 
-const unsigned int quenchpl = 0;                                 // Set to 1 if performing a quench plot
-
-const unsigned int checkon = 0;                                  // Set to one to check algorithm is performing correctly
-const unsigned int duplicate = 0;                                // Set to one to duplicate chains (diagnostic)
+const bool checkon = false;                                  // Set to one to check algorithm is performing correctly
 
 const unsigned int BIN=50;                                       // Number of bins used for plotting distributions
 
