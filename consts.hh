@@ -9,6 +9,8 @@ enum Dist { EXP_DIST, GAMMA_DIST, LOGNORM_DIST, INFECTION_DIST, TIMEP_DIST};  //
 
 enum Alter { FAST, SLOW, NONE };                                              // Different speeds of altering proposals  
 
+enum Dir { X,Y};                                                              // Different directions areas sorted by
+
 enum ParamType { OTHER_PARAM, DISTVAL_PARAM, BRANCHPROB_PARAM};               // Different types of parameters
 	
 enum DataType { TRANS_DATA, POP_DATA, MARG_DATA};                             // Different types of data

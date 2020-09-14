@@ -128,7 +128,6 @@ void Jump::standev_reject()
 vector <double> Jump::variance_vector(const vector <vector <double> > &param_samp) const 
 {
 	vector <double> vec;
-	
 	auto N = param_samp.size();                             // Generates the covariance matrix
 
 	vec.resize(nvar);

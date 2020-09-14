@@ -19,7 +19,7 @@ void Model_Evidence::init(const unsigned int _nchaintot, const unsigned int _que
 }
 
 
-/// Sets the inverse temperature form the chains
+/// Sets the inverse temperature for the chains
 void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 {
 	auto pmax = 1-pow(invTmin,1.0/INVT_POWER);
@@ -41,6 +41,7 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 	for(auto& cha : chain) cha.invT = invT[cha.ch];
 }
 
+
 /// Stores the likelihood so the model evidence can be calculated later
 void Model_Evidence::store(const Mpi &mpi, const vector<Chain> &chain) 
 {
@@ -57,6 +58,7 @@ void Model_Evidence::store(const Mpi &mpi, const vector<Chain> &chain)
 		for(auto p = 0u; p < nchaintot; p++) L[chtot[p]].push_back(Lsttot[p]);
 	}
 }
+	
 	
 /// Calculates the model evidence
 double Model_Evidence::calculate() const
@@ -79,11 +81,15 @@ double Model_Evidence::calculate() const
 	return ME;
 }
 
+
+/// Returns the inverse temperature
 double Model_Evidence::get_invT(unsigned int ch) const
 {
 	return invT[ch];
 }
 
+
+/// Returns the average of the log-likelihood
 double Model_Evidence::average_L(unsigned int ch) const
 {
 	auto av = 0.0; 

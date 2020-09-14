@@ -22,32 +22,43 @@ namespace {
 	std::vector<double> buffer;
 }
 
+
+/// Initialises the buffer
 void pack_initialise(size_t size)
 {
 	k = 0;
 	buffer.resize(size);
 }
 
+
+/// Returns the size of the buffer
 size_t packsize()
 {
 	return k;
 }
 
+
+/// Makes a copy of the buffer
 vector <double> copybuffer()
 {
 	return buffer;
 }
 
+
+/// Sets the buffer to a given vector
 void setbuffer(const vector <double> &vec)
 {
 	k = 0;
 	buffer = vec;
 }
 
-double * packbuffer()
+
+/// The pointer to the buffer
+double *packbuffer()
 {
 	return &buffer[0];
 }
+
 
 /// Sends the buffer to core co
 void pack_mpi_send(unsigned int co)
@@ -56,6 +67,7 @@ void pack_mpi_send(unsigned int co)
 	MPI_Send(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD);
 	MPI_Send(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD);
 }
+
 
 /// Copies the buffer to all cores
 void pack_mpi_bcast()
@@ -70,6 +82,7 @@ void pack_mpi_bcast()
 	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
 }
 
+
 /// Recieves a message from core co and places it into the buffer
 void pack_mpi_recv(unsigned int co)
 {
@@ -78,6 +91,7 @@ void pack_mpi_recv(unsigned int co)
 	pack_initialise(si);
 	MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 }	
+
 
 /// Gathers a double vector across all cores and returns the combined vector to core 0
 vector <double> mpi_gather(const vector <double> &vec)
@@ -92,6 +106,7 @@ vector <double> mpi_gather(const vector <double> &vec)
 	return vectot;
 }
 
+
 /// Gathers a long across all cores and returns the combined vector to core 0
 vector <long> mpi_gather(const long val)
 {
@@ -105,6 +120,7 @@ vector <long> mpi_gather(const long val)
 	return valtot;
 }
 
+
 /// Sums up a value over all cores  
 long mpi_sum(const long val)
 {
@@ -113,11 +129,13 @@ long mpi_sum(const long val)
 	return sum;	
 }
 
+
 /// Copies a variable in core 0 to all the other cores
 void mpi_bcast(double &val)
 {
 	MPI_Bcast(&val,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 }
+
 
 /// Copies a variable in core 0 to all the other cores
 void mpi_bcast(unsigned int &val)
@@ -125,11 +143,13 @@ void mpi_bcast(unsigned int &val)
 	MPI_Bcast(&val,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
 }
 
+
 /// Copies a vector in core 0 to all the other cores
 void mpi_bcast(vector <unsigned int> &vec)
 {
 	MPI_Bcast(&vec[0],vec.size(),MPI_UNSIGNED,0,MPI_COMM_WORLD);
 }
+	
 	
 /// Calculates the time taken for other cores to finish what they are doing
 void mpi_barrier()
@@ -138,6 +158,7 @@ void mpi_barrier()
 	MPI_Barrier(MPI_COMM_WORLD);  
 	timers.timewait += clock();
 }
+
 
 /// Gathers an unsigned int vector across all cores and returns the combined vector to core 0
 vector <unsigned int> mpi_gather(const vector <unsigned int> &vec)
@@ -260,20 +281,6 @@ void pack(const vector <Event> &vec)
 	}
 }
 
-void pack(const vector< vector <Event> > &vec, unsigned int time_division_per_timesAmin, unsigned int time_division_per_timesAmax)
-{
-	auto imax = vec.size(); buffer.push_back(imax); k++;
-	for(auto i = time_division_per_timesAmin; i < time_division_per_timesAmax; i++){
-		auto jmax = vec[i].size(); buffer.push_back(jmax); k++;
-		for(auto j = 0u; j < jmax; j++){
-			buffer.push_back(vec[i][j].trans); k++;
-			buffer.push_back(vec[i][j].ind); k++;
-			buffer.push_back(vec[i][j].t); k++;
-			buffer.push_back(vec[i][j].timep); k++;
-		}
-	}
-}
-
 void pack(const Particle &part)
 {
 	pack(part.paramval);
@@ -337,6 +344,8 @@ void pack(const Jump& jump)
 	pack_item(jump.naddrem);	
 	pack_item(jump.standev_ntr);	
 	pack_item(jump.standev_nac);	
+	pack_item(jump.nvar);	
+	pack_item(jump.param_not_fixed);	
 }
 
 void pack(const ChainInfo& cinfo)
@@ -457,20 +466,6 @@ void unpack(vector <Event> &vec)
 	}
 }
 
-void unpack(vector< vector <Event> > &vec, unsigned int time_division_per_timesAmin, unsigned int time_division_per_timesAmax)
-{
-	unsigned int imax = buffer[k]; k++; vec.resize(imax);
-	for(auto i = time_division_per_timesAmin; i < time_division_per_timesAmax; i++){
-		unsigned int jmax = buffer[k]; k++; vec[i].resize(jmax);
-		for(auto j = 0u; j < jmax; j++){ 
-			vec[i][j].trans = buffer[k]; k++;
-			vec[i][j].ind = buffer[k]; k++;
-			vec[i][j].t = buffer[k]; k++;
-			vec[i][j].timep = buffer[k]; k++;
-		}
-	}
-}
-
 void unpack(Particle &part)
 {
 	unpack(part.paramval);
@@ -539,6 +534,8 @@ void unpack(Jump &jump)
 	unpack_item(jump.naddrem);	
 	unpack_item(jump.standev_ntr);	
 	unpack_item(jump.standev_nac);	
+	unpack_item(jump.nvar);
+	unpack_item(jump.param_not_fixed);	
 }
 
 void unpack(ChainInfo& cinfo)

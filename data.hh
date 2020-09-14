@@ -123,38 +123,6 @@ struct Individual {                               // Provides information about 
 	unsigned int dp;                         // The demographic category possibility
 };
 
-struct AreaRefComparatorX
-{
-	public:
-	AreaRefComparatorX(vector <Area> &area) : area(area)
-	{
-	}
-
-  bool operator()(const unsigned int &a, const unsigned int &b) const
-	{
-		return area[a].x < area[b].x;
-	}
-
-private:
-	vector <Area> &area;
-};
-
-struct AreaRefComparatorY
-{
-	public:
-	AreaRefComparatorY(vector <Area> &area) : area(area)
-	{
-	}
-
-  bool operator()(const unsigned int &a, const unsigned int &b) const
-	{
-		return area[a].y < area[b].y;
-	}
-
-private:
-	vector <Area> &area;
-};
-
 class DataPipeline;
 
 class Model;
@@ -209,11 +177,6 @@ class Data
 		vector <MarginalData> margdata;          // Store information about marginalised distribution data
 		
 		vector <double> agedist; 								 // Gives the overall age distribution
-		
-		void sortX(vector <unsigned int> &vec);	 // Used for sorting areas by x and y location
-		void sortY(vector <unsigned int> &vec);	
-		AreaRefComparatorX compX;
-		AreaRefComparatorY compY;
 		
 		void print_to_terminal() const;
 		

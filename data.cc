@@ -25,8 +25,7 @@ using namespace std;
 
 /// Initialises data
 Data::Data(const Inputs &inputs, const Details &details, const Mpi &mpi, DataPipeline *dp) :
-	datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")),
-	compX(area), compY(area), details(details)
+	datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details)
 {
 	// The data directory
 	if(data_directory == "UNSET") emsgroot("The 'data_directory' must be set.");
@@ -569,8 +568,6 @@ unsigned int Data::find_column(const Table &tab, string name) const
 /// Copies data from core zero to all the others
 void Data::copy_data(unsigned int core)
 {
-	unsigned int si;
-
 	if(core == 0){                                  				   // Copies the above information to all the other cores
 		pack_initialise(0);
 		pack(nregion);
@@ -593,7 +590,6 @@ void Data::copy_data(unsigned int core)
 		for(const auto& Qten : genQ.Qten){
 			pack(Qten.name);
 		}
-		si = packsize();
 	}
 
 	pack_mpi_bcast();
@@ -620,7 +616,6 @@ void Data::copy_data(unsigned int core)
 		for(auto& Qten : genQ.Qten){
 			unpack(Qten.name);
 		}
-		if(si != packsize()) emsgEC("Data",1);
 	}
 
 	for(auto& Qten : genQ.Qten){                                                   // Copies the Q matrices
@@ -644,7 +639,6 @@ void Data::copy_data(unsigned int core)
 					pack(Qten.tof[v]);
 					pack(Qten.valf[v]);
 				}
-				si = packsize();
 			}
 
 			pack_mpi_bcast();
@@ -655,7 +649,6 @@ void Data::copy_data(unsigned int core)
 					unpack(Qten.tof[v]);
 					unpack(Qten.valf[v]);
 				}
-				if(si != packsize()) emsgEC("Data",2);
 			}
 	
 			vmin = vmax;
@@ -677,7 +670,3 @@ string Data::strip(string line) const
 	
 	return line;
 }	
-
-void Data::sortX(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compX);}
-void Data::sortY(vector <unsigned int> &vec){ sort(vec.begin(),vec.end(),compY);}
-

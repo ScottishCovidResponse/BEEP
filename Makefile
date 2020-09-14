@@ -1,7 +1,7 @@
 CXX := mpicxx
 
-#CXXFLAGS := -g -O3 -W -Wall -std=c++11
-CXXFLAGS := -g -W -Wall -std=c++11
+CXXFLAGS := -g -O3 -W -Wall -std=c++11
+#CXXFLAGS := -g -W -Wall -std=c++11
 # -B flag forces compilation of all files
 BUILD_DIR := ./build
 MKDIR_P ?= mkdir -p

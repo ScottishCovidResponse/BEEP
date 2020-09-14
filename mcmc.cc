@@ -165,7 +165,7 @@ void Mcmc::update()
 /// Randomly selects from a vector of numbers
 unsigned int Mcmc::select_random(const vector <unsigned int> &vec) const 
 {
-	if(vec.size() == 0)emsgEC("Mcmc",56);
+	if(vec.size() == 0) emsgEC("Mcmc",56);
 	return vec[(unsigned int)(ran()*vec.size())];
 }
 

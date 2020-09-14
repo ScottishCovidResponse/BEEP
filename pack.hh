@@ -39,7 +39,6 @@ void pack(const vector< vector <float> > &vec);
 void pack(const vector< vector< vector <double> > > &vec);
 void pack(const vector <string> &vec);
 void pack(const vector <Event> &vec);
-void pack(const vector< vector <Event> > &vec, unsigned int time_division_per_timesAmin, unsigned int time_division_per_timesAmax);
 void pack(const Particle &part);
 void pack(const vector <Area> &vec);
 void pack(const vector <DataRegion> &vec);

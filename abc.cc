@@ -372,8 +372,9 @@ double ABC::calculate_mixing(const vector <Particle> &part, vector <unsigned int
 		}
 		vector <double> var_across = jump.variance_vector(across);
 		
-		for(auto i = 0u; i < jump.nvar; i++) mix += sqrt(var_between[i]/var_across[i]);
-		mix /= jump.nvar;
+		auto nvar = jump.nvar;
+		for(auto i = 0u; i < nvar; i++) mix += sqrt(var_between[i]/var_across[i]);
+		mix /= nvar;
 	}
 
 	return mix;
