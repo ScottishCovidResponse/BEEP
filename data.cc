@@ -596,11 +596,7 @@ void Data::copy_data(unsigned int core)
 		si = packsize();
 	}
 
-	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-
-	if(core != 0) pack_initialise(si);
-
-	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	pack_mpi_bcast();
 
 	if(core != 0){
 		unpack(nregion);
@@ -629,7 +625,8 @@ void Data::copy_data(unsigned int core)
 
 	for(auto& Qten : genQ.Qten){                                                   // Copies the Q matrices
 		auto num = narea*nage;
-		MPI_Bcast(&num,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+		mpi_bcast(num);
+		
 		if(core != 0){
 			Qten.ntof.resize(num);
 			Qten.tof.resize(num);
@@ -650,11 +647,7 @@ void Data::copy_data(unsigned int core)
 				si = packsize();
 			}
 
-			MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-			if(core != 0){
-				pack_initialise(si);
-			}
-			MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
+			pack_mpi_bcast();
 
 			if(core != 0){
 				for(auto v = vmin; v < vmax; v++){

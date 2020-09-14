@@ -6,6 +6,7 @@
 using namespace std;
 
 #include "model_evidence.hh"
+#include "pack.hh"
 
 /// Initialises quantities for calculating the model evidence
 void Model_Evidence::init(const unsigned int _nchaintot, const unsigned int _quench, const double _invTmin, const double _invTmax)
@@ -17,6 +18,8 @@ void Model_Evidence::init(const unsigned int _nchaintot, const unsigned int _que
 	L.resize(nchaintot); invT.resize(nchaintot);
 }
 
+
+/// Sets the inverse temperature form the chains
 void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 {
 	auto pmax = 1-pow(invTmin,1.0/INVT_POWER);
@@ -42,13 +45,13 @@ void Model_Evidence::set_invT(const unsigned int samp, vector<Chain>& chain)
 void Model_Evidence::store(const Mpi &mpi, const vector<Chain> &chain) 
 {
 	auto nchain = chain.size();
-	vector <double> Lst(nchain), Lsttot(nchaintot);
-	vector <unsigned int> ch(nchain), chtot(nchaintot);
-	
+	vector <double> Lst(nchain);
+	vector <unsigned int> ch(nchain);
+
 	for(auto p = 0u; p < nchain; p++){ Lst[p] = chain[p].initial.L; ch[p] = chain[p].ch;}
 		
-	MPI_Gather(&Lst[0],nchain,MPI_DOUBLE,&Lsttot[0],nchain,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	MPI_Gather(&ch[0],nchain,MPI_UNSIGNED,&chtot[0],nchain,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	auto Lsttot = mpi_gather(Lst);
+	auto chtot = mpi_gather(ch);
 
 	if(mpi.core == 0){
 		for(auto p = 0u; p < nchaintot; p++) L[chtot[p]].push_back(Lsttot[p]);

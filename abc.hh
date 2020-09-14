@@ -24,12 +24,12 @@ private:
 	void mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain);
 	void calculate_cholesky_matrix(const vector <vector <double> > &param_samp);
 	void mvn_propose(vector <double> &paramval, double fac);
-	double calculate_mixing(const vector <Particle> &part, unsigned int *partcopy) const;
+	double calculate_mixing(const vector <Particle> &part, vector <unsigned int> &partcopy) const;
 	vector <double> variance_vector(const vector <vector <double> > &param_samp) const;
 	vector <vector <double> > covariance_matrix(const vector <vector <double> > &param_samp) const;
 	double mvn_prob(const vector<double> &pend, const vector<double> &pstart, double fac) const;
 	void exchange_samples_mpi(Generation &gen);
-	double next_generation_mpi(vector<Particle> &part, unsigned int *partcopy);
+	double next_generation_mpi(vector<Particle> &part, vector <unsigned int> &partcopy);
 	void results_mpi(const vector <Generation> &generation, const vector <Particle> &part, Chain &chain) const;
 	Sample get_sample(const Particle &part, Chain &chain) const;
 	double acceptance(double rate) const;

@@ -15,6 +15,15 @@ void setbuffer(const vector <double> &vec);
 
 void pack_mpi_send(unsigned int co);
 void pack_mpi_recv(unsigned int co);
+void pack_mpi_bcast();
+vector <double> mpi_gather(const vector <double> &vec);
+vector <unsigned int> mpi_gather(const vector <unsigned int> &vec);
+vector <long> mpi_gather(const long val);
+void mpi_barrier();
+long mpi_sum(const long val);
+void mpi_bcast(double &val);
+void mpi_bcast(unsigned int &val);
+void mpi_bcast(vector <unsigned int> &vec);
 
 void pack(const unsigned int num);
 void pack(const unsigned short num);

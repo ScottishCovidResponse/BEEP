@@ -62,7 +62,7 @@ void ABC::mbp()
 	vector <Particle> part;					
 	part.resize(N);
 	
-	unsigned int partcopy[Ntot];
+	vector <unsigned int> partcopy(Ntot);
 
 	vector <Generation> generation; 
 	
@@ -138,10 +138,9 @@ void ABC::mbp()
 	
 	
 	
-		double timetaken = timers.timeabc/(60.0*CLOCKS_PER_SEC);
-		
-		MPI_Bcast(&timetaken,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-
+		double timetaken = timers.timeabc/(60.0*CLOCKS_PER_SEC);	
+		mpi_bcast(timetaken);
+	
 		if(timetaken > total_time) break;
 	}
 	
@@ -366,21 +365,18 @@ void ABC::calculate_particle_weight(vector <Generation> &generation, double jump
 }
 
 /// Calculate a measure of how well a generation is mixed (by comparing the similarity between the two sets of copied particles)
-double ABC::calculate_mixing(const vector <Particle> &part, unsigned int *partcopy) const
+double ABC::calculate_mixing(const vector <Particle> &part, vector <unsigned int> &partcopy) const
 {
 	auto nparam = model.param.size();
-	auto nparamgen = nparam*N;
-	auto nparamgentot = nparam*Ntot;
-	double paramval[nparamgen], paramvaltot[nparamgentot];
-	
+	vector <double> paramval(nparam*N);
+
 	for(auto p = 0u; p < N; p++){ 
 		for(auto th = 0u; th < nparam; th++){
 			paramval[p*nparam+th] = part[p].paramval[th];
 		}
 	}
-	
-	MPI_Gather(paramval,nparamgen,MPI_DOUBLE,paramvaltot,nparamgen,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	
+	auto paramvaltot = mpi_gather(paramval);
+
 	double mix = 0;
 	if(mpi.core == 0){
 		vector < vector <double> > between;
@@ -413,15 +409,10 @@ double ABC::calculate_mixing(const vector <Particle> &part, unsigned int *partco
 /// Calculates the acceptance rate averaged across cores
 double ABC::acceptance(double rate) const 
 {
-	double ratetot[mpi.ncore];
-	MPI_Gather(&rate,1,MPI_DOUBLE,ratetot,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	if(mpi.core == 0){
-		rate = 0;
-		for(auto co = 0u; co < mpi.ncore; co++) rate += ratetot[co];
-		rate /= mpi.ncore;
-	}
-	MPI_Bcast(&rate,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	
+	auto rate_av = mpi_sum(rate);
+	if(mpi.core == 0) rate_av /=  mpi.ncore;
+	mpi_bcast(rate);
+
 	return rate;	
 }
 
@@ -496,32 +487,26 @@ void ABC::exchange_samples_mpi(Generation &gen)
 		pack_mpi_send(0);
 	}
 	
-	unsigned int si;
 	if(mpi.core == 0){
 		pack_initialise(0);
 		pack(gen.param_samp);
 		pack(gen.EF_samp);
-		si = packsize();
 	}
 	
-	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	if(mpi.core != 0) pack_initialise(si);
-	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
+	pack_mpi_bcast();
+	
 	if(mpi.core != 0){ unpack(gen.param_samp); unpack(gen.EF_samp);}
 }
 
 /// Uses mpi to get the next generation of particles. It returns the EF cutoff used
-double ABC::next_generation_mpi(vector<Particle> &part, unsigned int *partcopy)
+double ABC::next_generation_mpi(vector<Particle> &part, vector <unsigned int> &partcopy)
 {
 	auto N = part.size();
-	const auto Ntot = N*mpi.ncore;
 	
-	double EF[N], EFtot[Ntot];
-		
+	vector <double> EF(N);
 	for(auto i = 0u; i < N; i++) EF[i] = part[i].EF; 
-	
-	MPI_Gather(EF,N,MPI_DOUBLE,EFtot,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-	
+	auto EFtot = mpi_gather(EF);
+
 	double EFcut;
 	if(mpi.core == 0){
 		PartEF partef[Ntot];
@@ -540,17 +525,16 @@ double ABC::next_generation_mpi(vector<Particle> &part, unsigned int *partcopy)
 			else partcopy[i] = partef[j-mid].i;
 		}
 	}
-	MPI_Bcast(&EFcut,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-		
-	MPI_Bcast(partcopy,Ntot,MPI_INT,0,MPI_COMM_WORLD);
-	
+	mpi_bcast(EFcut);
+	mpi_bcast(partcopy);
+
 	vector< vector<double> > sendbuffer;
 	vector< vector<double> > recibuffer;
 	vector <unsigned int> sendbuffer_to;
 	vector <unsigned int> recibuffer_from;
 	vector <unsigned int> recibuffer_to;
 		
-	unsigned int buffersize[N], buffersizetot[Ntot];
+	vector <unsigned int> buffersize(N);
 
 	for(auto i = 0u; i < N; i++){
 		buffersize[i] = 0;
@@ -584,9 +568,9 @@ double ABC::next_generation_mpi(vector<Particle> &part, unsigned int *partcopy)
 		}
 	}
 	
-	MPI_Gather(buffersize,N,MPI_UNSIGNED,buffersizetot,N,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-	MPI_Bcast(buffersizetot,Ntot,MPI_UNSIGNED,0,MPI_COMM_WORLD);
-		
+	auto buffersizetot = mpi_gather(buffersize);
+	mpi_bcast(buffersizetot);
+	
 	auto buftot = recibuffer.size()+sendbuffer.size();
 	if(buftot > 0){
 		MPI_Request reqs[buftot];                 // These are information used Isend and Irecv

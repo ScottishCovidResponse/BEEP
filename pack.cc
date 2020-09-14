@@ -14,6 +14,7 @@ using namespace std;
 #include "model.hh"
 #include "jump.hh"
 #include "mcmc.hh"
+#include "timers.hh"
 
 namespace {
 	unsigned int k;
@@ -48,13 +49,28 @@ double * packbuffer()
 	return &buffer[0];
 }
 
+/// Sends the buffer to core co
 void pack_mpi_send(unsigned int co)
 {
 	unsigned int si = packsize();
 	MPI_Send(&si,1,MPI_UNSIGNED,co,0,MPI_COMM_WORLD);
 	MPI_Send(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD);
 }
-		
+
+/// Copies the buffer to all cores
+void pack_mpi_bcast()
+{
+	auto si = packsize();
+	MPI_Bcast(&si,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+
+	int core;
+  MPI_Comm_rank(MPI_COMM_WORLD,&core); 
+	if(core != 0) pack_initialise(si);
+
+	MPI_Bcast(packbuffer(),si,MPI_DOUBLE,0,MPI_COMM_WORLD);
+}
+
+/// Recieves a message from core co and places it into the buffer
 void pack_mpi_recv(unsigned int co)
 {
 	unsigned int si;
@@ -62,7 +78,80 @@ void pack_mpi_recv(unsigned int co)
 	pack_initialise(si);
 	MPI_Recv(packbuffer(),si,MPI_DOUBLE,co,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 }	
-		
+
+/// Gathers a double vector across all cores and returns the combined vector to core 0
+vector <double> mpi_gather(const vector <double> &vec)
+{
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num);
+	vector <double> vectot;
+	vectot.resize(vec.size()*num);
+	
+	MPI_Gather(&vec[0],vec.size(),MPI_DOUBLE,&vectot[0],vec.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+	
+	return vectot;
+}
+
+/// Gathers a long across all cores and returns the combined vector to core 0
+vector <long> mpi_gather(const long val)
+{
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num);
+	vector <long> valtot;
+	valtot.resize(num);
+	
+	MPI_Gather(&val,1,MPI_LONG,&valtot[0],1,MPI_LONG,0,MPI_COMM_WORLD);
+	
+	return valtot;
+}
+
+/// Sums up a value over all cores  
+long mpi_sum(const long val)
+{
+	auto vec = mpi_gather(val);
+	long sum = 0; for(auto val : vec) sum += val;
+	return sum;	
+}
+
+/// Copies a variable in core 0 to all the other cores
+void mpi_bcast(double &val)
+{
+	MPI_Bcast(&val,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+}
+
+/// Copies a variable in core 0 to all the other cores
+void mpi_bcast(unsigned int &val)
+{
+	MPI_Bcast(&val,1,MPI_UNSIGNED,0,MPI_COMM_WORLD);
+}
+
+/// Copies a vector in core 0 to all the other cores
+void mpi_bcast(vector <unsigned int> &vec)
+{
+	MPI_Bcast(&vec[0],vec.size(),MPI_UNSIGNED,0,MPI_COMM_WORLD);
+}
+	
+/// Calculates the time taken for other cores to finish what they are doing
+void mpi_barrier()
+{
+	timers.timewait -= clock();
+	MPI_Barrier(MPI_COMM_WORLD);  
+	timers.timewait += clock();
+}
+
+/// Gathers an unsigned int vector across all cores and returns the combined vector to core 0
+vector <unsigned int> mpi_gather(const vector <unsigned int> &vec)
+{
+	int num;
+	MPI_Comm_size(MPI_COMM_WORLD,&num);
+	vector <unsigned int> vectot;
+	vectot.resize(vec.size()*num);
+	
+	MPI_Gather(&vec[0],vec.size(),MPI_UNSIGNED,&vectot[0],vec.size(),MPI_UNSIGNED,0,MPI_COMM_WORLD);
+	
+	return vectot;
+}
+
 template <class T>
 void pack_item(T t)
 {
