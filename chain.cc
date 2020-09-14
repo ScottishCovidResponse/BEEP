@@ -27,7 +27,7 @@ Chain::Chain(const Details &details, const Data &data, const Model &model, const
 	
 	sample_state();                              // Samples the prior and simulates to generate an initial state 
 	
-	jump.init(initial.paramval);                 // Initialises the kernel used for jumping in parameter space
+	jump.init(initial.paramval,model);                 // Initialises the kernel used for jumping in parameter space
 	
 	if(details.mode != MCMCMC) return;
 	

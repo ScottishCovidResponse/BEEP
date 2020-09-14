@@ -138,29 +138,35 @@ void Mcmc::update()
 	switch(propsmethod){                                                       // MBPs using different methods
 	case proposal_method::allchainsallparams:
 		for(auto& cha : chain){
-			for(auto th = 0u; th < model.param.size(); th++){
-				if(model.param[th].min != model.param[th].max){ cha.mbp_proposal(th); ntimeprop++;}
-			}
+			for(auto th : cha.jump.param_not_fixed){ cha.mbp_proposal(th); ntimeprop++;}
 		}
 		break;
 		
 	case proposal_method::fixednum:
 		for(auto lo = 0u; lo < 10; lo++){
 			auto p = int(ran()*nchain);
-			auto th = (unsigned int)(ran()*model.param.size());
-			if(model.param[th].min != model.param[th].max){ chain[p].mbp_proposal(th); ntimeprop++;}
+			auto th = select_random(chain[p].jump.param_not_fixed);
+			chain[p].mbp_proposal(th); ntimeprop++;
 		}
 		break;
 		
 	case proposal_method::fixedtime:
 		do{                         // Does proposals for timeloop seconds (on average 20 proposals)
 			auto p = int(ran()*nchain);
-			auto th = int(ran()*model.param.size());
-			if(model.param[th].min != model.param[th].max){ chain[p].mbp_proposal(th); ntimeprop++;}
+			auto th = select_random(chain[p].jump.param_not_fixed);
+			chain[p].mbp_proposal(th); ntimeprop++;
 		}while(double(clock()-time)/CLOCKS_PER_SEC < timeloop);
 		break;
 	}
 	timeprop += clock();
+}
+
+
+/// Randomly selects from a vector of numbers
+unsigned int Mcmc::select_random(const vector <unsigned int> &vec) const 
+{
+	if(vec.size() == 0)emsgEC("Mcmc",56);
+	return vec[(unsigned int)(ran()*vec.size())];
 }
 
 
@@ -365,6 +371,7 @@ void Mcmc::output_measurements(vector <Sample> &opsamp, unsigned int nchain) con
 
 	timers.timeoutput += clock();
 }
+
 
 /// Outputs MCMC diagnoistic information
 void Mcmc::diagnostics() const

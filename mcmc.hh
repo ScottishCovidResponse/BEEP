@@ -7,27 +7,27 @@ using namespace std;
 #include "chain.hh"
 #include "model_evidence.hh"
 
-enum class proposal_method
-{
-	allchainsallparams,
-	fixednum,
-	fixedtime
-};
-
 class Data;
 class Model;
 class AreaTree;
 class Output;
 class ObservationModel;
 
-struct ChainInfo
+enum class proposal_method                                                // Different types of MC3 proposal
+{
+	allchainsallparams,
+	fixednum,
+	fixedtime
+};
+
+struct ChainInfo                                                          // Stores information about chains (for swapping)
 {
 	double invT;
 	unsigned int ch;
 	Jump jump;
 };
 
-class Mcmc
+class Mcmc                                                                // Contains everything related to an MCMC chain
 {
 	public:	
 		Mcmc(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, 
@@ -44,13 +44,14 @@ class Mcmc
 		void chain_set(Chain &cha, const ChainInfo &chinf) const;
 		void swap_chains();
 		void optimise_timeloop();
+		unsigned int select_random(const vector <unsigned int> &vec) const;
 
 		vector <Chain> chain; 
 		
 		unsigned int nsamp;                      // The number of MCMC samples
 		unsigned int burnin;                     // The number of burnin samples
 		
-		unsigned int nchain_total;                  // The total number of chains (across all MPI processes);
+		unsigned int nchain_total;               // The total number of chains (across all MPI processes);
 		unsigned int nchain;                     // The number of chains per core
 		
 		vector <double> nac_swap;                // Stores the rate at which swaps are accepted

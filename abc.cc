@@ -29,7 +29,7 @@ struct PartEF                                                              // St
 bool PartEF_ord (PartEF p1,PartEF p2) { return (p1.EF < p2.EF); }          // Used to order by EF
 
 /// Initilaises the ABC class
-ABC::ABC(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
+ABC::ABC(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel) : chain(details,data,model,areatree,obsmodel,output,0), jump(chain.jump), details(details), data(data), model(model), areatree(areatree), mpi(mpi), output(output), obsmodel(obsmodel)
 {	
 	total_time = inputs.find_integer("cputime",UNSET);  
 	
@@ -43,20 +43,11 @@ ABC::ABC(const Details &details, const Data &data, const Model &model, const Are
 
 	N = Ntot/mpi.ncore;                                                           // The number of particles per core
 	if(N == 0) emsgroot("'nparticle' must be non-zero");
-	
-	param_not_fixed.clear();                                                           // Finds the list of model parameteres that change
-	for(auto th = 0u; th < model.param.size(); th++){
-		if(model.param[th].min != model.param[th].max) param_not_fixed.push_back(th);
-	}
-	nvar = param_not_fixed.size();
-	
-	jumpv.resize(nvar); for(auto v = 0u; v < nvar; v++) jumpv[v] = 1;
 }
 
 /// Implements a version of abc which uses model-based proposals in MCMC
 void ABC::mbp()
 {
-	Chain chain(details,data,model,areatree,obsmodel,output,0);
 	chain.jump.setburnin(0,1);
 	 
 	vector <Particle> part;					
@@ -96,7 +87,7 @@ void ABC::mbp()
 		generation.push_back(gen);
 
 		exchange_samples_mpi(generation[g]);	
-		calculate_cholesky_matrix(generation[g].param_samp);
+		jump.calculate_cholesky_matrix(generation[g].param_samp);
 			
 		timers.timeabc += clock();
 		
@@ -116,28 +107,9 @@ void ABC::mbp()
 		}
 
 		if(g%5 == 0 && mpi.core == 0){
-			string file = details.output_directory+"/M.txt";
-			ofstream Mpl(file.c_str());
-		
-			for(auto i1 = 0u; i1 < nvar; i1++){
-				for(auto i2 = 0u; i2 < nvar; i2++){
-					Mpl << M[i1][i2] << " ";
-				}
-				Mpl << "M\n";
-			}		
-			
-			Mpl << "coorela\n";
-			for(auto i1 = 0u; i1 < nvar; i1++){
-				for(auto i2 = 0u; i2 < nvar; i2++){
-					if(i1 == i2) Mpl  << "--- ";
-					else Mpl << M[i1][i2]/sqrt(M[i1][i1]*M[i2][i2]) << " ";
-				}
-				Mpl << "M\n";
-			}		
+			jump.output_M(details.output_directory+"/M.txt");
 		}
-	
-	
-	
+		
 		double timetaken = timers.timeabc/(60.0*CLOCKS_PER_SEC);	
 		mpi_bcast(timetaken);
 	
@@ -159,7 +131,7 @@ void ABC::smc()
 {	
 	Chain chain(details,data,model,areatree,obsmodel,output,0);
 	
-	const double jump = 1;
+	const double jumpsize = 1;
 	
 	vector <Generation> generation; 
 	
@@ -181,7 +153,7 @@ void ABC::smc()
 		else{
 			Generation &gen_last = generation[g-1];
 			
-			calculate_cholesky_matrix(gen_last.param_samp);      // Generated matrix for sampling MVN samples
+			jump.calculate_cholesky_matrix(gen_last.param_samp);      // Generated matrix for sampling MVN samples
 		
 			double EFcut = gen_last.EFcut;
 
@@ -199,7 +171,7 @@ void ABC::smc()
 					if(k == Ntot) emsg("Problem");
 			
 					vector <double> param_propose = gen_last.param_samp[k];
-					mvn_propose(param_propose,jump);
+					jump.mvn_propose(param_propose,jumpsize);
 					
 					for(auto th = 0u; th < nparam; th++){
 						if(param_propose[th] < model.param[th].min || param_propose[th] > model.param[th].max) fl = 1;
@@ -227,7 +199,7 @@ void ABC::smc()
 		
 		generation.push_back(gen);
 		
-		calculate_particle_weight(generation,jump);  // Calculates the weights for the next generation
+		calculate_particle_weight(generation,jumpsize);  // Calculates the weights for the next generation
 		
 		timers.timeabc += clock();
 			
@@ -248,6 +220,7 @@ void ABC::smc()
 /// Updates particles using MBPs
 void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 {	
+	const auto nvar = jump.nvar;
 	const auto p_mbp = 0.9;
 	const auto sampstep = 5u;
 	const double beta = 2;
@@ -259,7 +232,7 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	double EFcut = gen.EFcut;
 	
 	auto jmax = 0u;
-	for(auto& ju : jumpv){
+	for(auto& ju : jump.jumpv){
 		auto num = 1.0/(ju*ju);
 		if(num < 1) num = 1;
 		jmax += beta*num;
@@ -279,10 +252,10 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 			
 			if(ran() < p_mbp){
 				auto v = (unsigned int)(ran()*nvar);
-				auto th = param_not_fixed[v];
+				auto th = jump.param_not_fixed[v];
 					
 				vector <double> param_propose = chain.initial.paramval;
-				param_propose[th] += normal_sample(0,jumpv[v]*sqrt(M[v][v]));
+				param_propose[th] += normal_sample(0,jump.jumpv[v]*sqrt(jump.M[v][v]));
 						
 				timers.timeabcprop -= clock();
 				ntr_v[v]++;
@@ -300,9 +273,9 @@ void ABC::mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain)
 	for(auto v = 0u; v < nvar; v++){
 		double ac_rate = acceptance(double(nac_v[v])/(double(ntr_v[v])+0.01));
 		
-		if(ac_rate > 0.4){ jumpv[v] *= facup; if(jumpv[v] > 2) jumpv[v] = 2;}
+		if(ac_rate > 0.4){ jump.jumpv[v] *= facup; if(jump.jumpv[v] > 2) jump.jumpv[v] = 2;}
 		else{
-			if(ac_rate < 0.3) jumpv[v] *= facdown; 
+			if(ac_rate < 0.3) jump.jumpv[v] *= facdown; 
 		}
 	}
 }
@@ -318,7 +291,7 @@ unsigned int ABC::effective_particle_number(vector <double> w)
 }
 
 /// Calculates the weights for the different particles
-void ABC::calculate_particle_weight(vector <Generation> &generation, double jump)
+void ABC::calculate_particle_weight(vector <Generation> &generation, double jumpsize)
 {
 	unsigned int g = generation.size()-1;
 	Generation &gen = generation[g];
@@ -350,7 +323,7 @@ void ABC::calculate_particle_weight(vector <Generation> &generation, double jump
 			else{
 				
 				double sum = 0;
-				for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jump);
+				for(auto j = 0u; j < Ntot; j++)	sum += gen_last.w[j]*jump.mvn_prob(gen.param_samp[i],gen_last.param_samp[j],jumpsize);
 			
 				w = exp(model.prior(gen.param_samp[i]))/sum;
 			}
@@ -387,7 +360,7 @@ double ABC::calculate_mixing(const vector <Particle> &part, vector <unsigned int
 				between.push_back(vec);
 			}
 		}
-		vector <double> var_between	= variance_vector(between);
+		vector <double> var_between	= jump.variance_vector(between);
 	
 		vector < vector <double> > across;
 		for(auto i = 0u; i < 10*Ntot; i++){
@@ -397,10 +370,10 @@ double ABC::calculate_mixing(const vector <Particle> &part, vector <unsigned int
 			vector <double> vec; for(auto th = 0u; th < nparam; th++) vec.push_back(paramvaltot[p1*nparam+th] - paramvaltot[p2*nparam+th]);
 			across.push_back(vec);
 		}
-		vector <double> var_across = variance_vector(across);
+		vector <double> var_across = jump.variance_vector(across);
 		
-		for(auto i = 0u; i < nvar; i++) mix += sqrt(var_between[i]/var_across[i]);
-		mix /= nvar;
+		for(auto i = 0u; i < jump.nvar; i++) mix += sqrt(var_between[i]/var_across[i]);
+		mix /= jump.nvar;
 	}
 
 	return mix;
@@ -598,249 +571,4 @@ double ABC::next_generation_mpi(vector<Particle> &part, vector <unsigned int> &p
 	}
 	
 	return EFcut;
-}
-
-/// Generates a covariance matrix from a sets of parameter samples
-vector <double> ABC::variance_vector(const vector <vector <double> > &param_samp) const 
-{
-	vector <double> vec;
-	
-	auto N = param_samp.size();                             // Generates the covariance matrix
-
-	vec.resize(nvar);
-	for(auto i = 0u; i < nvar; i++){
-		auto th = param_not_fixed[i]; 
-	
-		double av = 0;
-		for(auto k = 0u; k < N; k++) av += param_samp[k][th];
-		av /= N;
-		
-		double av2 = 0;
-		for(auto k = 0u; k < N; k++){
-			double val = param_samp[k][th] - av;
-			av2 += val*val;
-		}		
-		vec[i] = av2/N;
-	}
-	
-	return vec;
-}
-
-/// Generates a covariance matrix from a sets of parameter samples
-vector <vector <double> > ABC::covariance_matrix(const vector <vector <double> > &param_samp) const 
-{
-	vector <vector <double> > M;
-	
-	auto N = param_samp.size();                             // Generates the covariance matrix
-
-	M.resize(nvar);
-	for(auto i1 = 0u; i1 < nvar; i1++){
-		M[i1].resize(nvar);
-		auto th1 = param_not_fixed[i1]; 
-		for(auto i2 = 0u; i2 < nvar; i2++){
-			auto th2 = param_not_fixed[i2];
-			
-			double av1 = 0, av2 = 0;
-			for(auto k = 0u; k < N; k++){
-				double val1 = param_samp[k][th1];
-				double val2 = param_samp[k][th2];
-				av1 += val1;
-				av2 += val2;
-			}
-			av1 /= N; av2 /= N; 
-			
-			double av12 = 0;
-			for(auto k = 0u; k < N; k++){
-				double val1 = param_samp[k][th1] - av1;
-				double val2 = param_samp[k][th2] - av2;
-				av12 += val1*val2;
-			}		
-			M[i1][i2] = av12/N;
-		
-			if(std::isnan(M[i1][i2])) emsg("not");
-			if(i1 == i2 && M[i1][i2] < 0) emsg("Negative");
-		}
-	}
-	
-	return M;
-}
-
-/// Calculates a lower diagonal matrix used in Cholesky decomposition
-void ABC::calculate_cholesky_matrix(const vector <vector <double> > &param_samp)
-{
-	M = covariance_matrix(param_samp);
-	
-	/*
-	cout << endl << endl;
-	for(auto i1 = 0u; i1 < nvar; i1++){
-		for(auto i2 = 0u; i2 < nvar; i2++){
-			cout << M[i1][i2] << " ";
-		}
-		cout << "M\n";
-	}
-	*/
-	//emsg("P");
-	
-	auto fl=0u;
-	do{
-		vector <vector <double> > A;
-		A.resize(nvar);
-		cholesky_matrix.resize(nvar);
-		for(auto v1 = 0u; v1 < nvar; v1++){
-			A[v1].resize(nvar);
-			cholesky_matrix[v1].resize(nvar);
-			for(auto v2 = 0u; v2 < nvar; v2++){
-				A[v1][v2] = M[v1][v2];
-				if(v1 == v2) cholesky_matrix[v1][v2] = 1; else cholesky_matrix[v1][v2] = 0;
-			}
-		}
-
-		double Lch[nvar][nvar];
-		double Tch[nvar][nvar];
-		for(auto i = 0u; i < nvar; i++){
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					if(v1 == v2) Lch[v1][v2] = 1; else Lch[v1][v2] = 0;
-				}
-			}
-
-			double aii = A[i][i];
-			Lch[i][i] = sqrt(aii);
-			for(auto j = i+1; j < nvar; j++){
-				Lch[j][i] = A[j][i]/sqrt(aii);
-			}
-
-			for(auto ii = i+1; ii < nvar; ii++){
-				for(auto jj = i+1; jj < nvar; jj++){
-					A[jj][ii] -= A[ii][i]*A[jj][i]/aii;
-				}
-			}
-			A[i][i] = 1;
-			for(auto j = i+1; j < nvar; j++){ A[j][i] = 0; A[i][j] = 0;}
-
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					double sum = 0u; for(auto ii = 0u; ii < nvar; ii++) sum += cholesky_matrix[v1][ii]*Lch[ii][v2];
-					Tch[v1][v2] = sum;
-				}
-			}
-
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					cholesky_matrix[v1][v2] = Tch[v1][v2];
-				}
-			}
-		}
-		
-		fl = 0;
-		for(auto v1 = 0u; v1 < nvar; v1++){
-			for(auto v2 = 0u; v2 < nvar; v2++){
-				if(std::isnan(cholesky_matrix[v1][v2])) fl = 1;
-			}
-		}
-		
-		if(fl == 1){    // Reduces correlations to allow for convergence
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					if(v1 != v2) M[v1][v2] /= 2;
-				}
-			}		
-			
-			/*
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					cout << M[v1][v2] << " ";
-				}
-				cout << "M\n";
-			}	
-			*/			
-			cout << "Cholesky converegence" << endl;
-		}
-	}while(fl == 1);
-	
-	inv_M = inv_Mert_matrix(M);
-}
-
-/// Inverts a matrix
-vector <vector <double> > ABC::inv_Mert_matrix(const vector <vector <double> > &mat) const    // inv_Merts the matrix
-{
-	unsigned int nvar = mat.size();
-	vector <vector <double> > inv_M;
-	
-	double A2[nvar][nvar];
-
-	inv_M.resize(nvar);
-  for(auto i = 0u; i < nvar; i++){
-		inv_M[i].resize(nvar);
-    for(auto j = 0u; j < nvar; j++){
-      A2[i][j] = mat[i][j];
-      if(i == j) inv_M[i][j] = 1; else inv_M[i][j] = 0;
-    }
-  }
-
-  for(auto ii = 0u; ii < nvar; ii++){
-    double r = A2[ii][ii];
-    for(auto i = 0u; i < nvar; i++){
-      A2[ii][i] /= r; inv_M[ii][i] /= r; 
-    }
-
-    for(auto jj = ii+1; jj < nvar; jj++){
-      double r = A2[jj][ii];
-      for(auto i = 0u; i < nvar; i++){ 
-        A2[jj][i] -= r*A2[ii][i];
-        inv_M[jj][i] -= r*inv_M[ii][i];
-      }
-    }
-  }
-
-  for(int ii = nvar-1; ii > 0; ii--){
-    for(int jj = ii-1; jj >= 0; jj--){
-      double r = A2[jj][ii];
-      for(auto i = 0u; i < nvar; i++){ 
-        A2[jj][i] -= r*A2[ii][i];
-        inv_M[jj][i] -= r*inv_M[ii][i];
-      }
-    }
-  }
-
-	// check inv_Merse
-	/*
-	for(auto j = 0u; j < nvar; j++){
-		for(auto i = 0u; i < nvar; i++){
-			double sum = 0; for(auto ii = 0u; ii < nvar; ii++) sum += mat[j][ii]*inv_M[ii][i];
-			cout << sum << "\t"; 
-		}
-		cout << " kk\n";
-	}
-	*/
-	
-	return inv_M;
-}
-
-/// The probability of drawing a vector from a MVN distribution
-double ABC::mvn_prob(const vector<double> &pend,const vector<double> &pstart, double fac) const
-{
-	double sum = 0;
-	for(auto v1 = 0u; v1 < nvar; v1++){
-		for(auto v2 = 0u; v2 < nvar; v2++){
-			double val1 = pend[param_not_fixed[v1]] - pstart[param_not_fixed[v1]];
-			double val2 = pend[param_not_fixed[v2]] - pstart[param_not_fixed[v2]];
-			sum += (val1/fac)*inv_M[v1][v2]*(val2/fac);
-		}
-	}	
-	return exp(-0.5*sum);
-}
-
-/// Generates a proposed set of parameters from a MVN distribution
-void ABC::mvn_propose(vector <double> &paramval, double fac)
-{
-	double norm[nvar];	
-	for(auto v = 0u; v < nvar; v++) norm[v] = normal_sample(0,1);
-	
-  for(auto v = 0u; v < nvar; v++){
-		double dva = 0; for(auto v2 = 0u; v2 <= v; v2++) dva += cholesky_matrix[v][v2]*norm[v2];
-
-		auto th = param_not_fixed[v];
-		paramval[th] += fac*dva;
-	}
 }

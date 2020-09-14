@@ -215,4 +215,4 @@ Simulated data in directory 'regression_test_results/test_sim':
   'IR_age.txt' gives the 'age' stratified number of I→R transitions.
   'HD_age.txt' gives the 'age' stratified number of H→D transitions.
 
-0.19 Total time (seconds)
+0.18 Total time (seconds)
