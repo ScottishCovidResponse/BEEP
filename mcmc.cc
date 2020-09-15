@@ -119,7 +119,7 @@ void Mcmc::optimise_timeloop()
 	auto sum_timeprop = mpi_sum(timeprop);                                      // The total time for proposals
 	auto sum_ntimeprop = mpi_sum(ntimeprop);                                    // The total number of proposals
 	
-	if(mpi.core == 0 && sum_timeprop > 0 && sum_ntimeprop  > 0){				
+	if(mpi.core == 0 && sum_timeprop > 0 && sum_ntimeprop > 0){				
 		timeloop = 20*double(sum_timeprop)/(sum_ntimeprop*CLOCKS_PER_SEC);
 	}
 	
@@ -256,8 +256,6 @@ void Mcmc::chain_set(Chain &cha, const ChainInfo &chinf) const
 void Mcmc::output_parameters(Output &output, vector <ParamSample> &psamp) const
 {
 	unsigned int nchain_total = mpi.ncore*nchain, samp = psamp.size();
-	 
-	timers.timeoutput -= clock();
 		
 	vector <double> L(nchain);
 	vector <unsigned int> ch(nchain);
@@ -312,16 +310,12 @@ void Mcmc::output_parameters(Output &output, vector <ParamSample> &psamp) const
 			pack_mpi_send(0);
 		}
 	}
-	
-	timers.timeoutput += clock();
 }
 
 /// Ouputs a measurement sample from the MBP algorithm
 void Mcmc::output_measurements(vector <Sample> &opsamp, unsigned int nchain) const
 {
 	unsigned int nchain_total = mpi.ncore*nchain;
-
-	timers.timeoutput -= clock();
 
 	vector <unsigned int> ch(nchain);
 	for(auto p = 0u; p < nchain; p++) ch[p] = chain[p].ch;		
@@ -368,8 +362,6 @@ void Mcmc::output_measurements(vector <Sample> &opsamp, unsigned int nchain) con
 			pack_mpi_send(0);
 		}
 	}
-
-	timers.timeoutput += clock();
 }
 
 
@@ -399,8 +391,7 @@ void Mcmc::diagnostics() const
 		
 		stringstream ss; ss << details.output_directory << "/MCMCdiagnostic.txt";
 		ofstream diag(ss.str().c_str()); 
-		ofstream timings(details.output_directory+"/MCMCdiagnostic_timings.txt"); 
-
+		
 		for(auto c = 0u; c < nchain_total; c++){
 			unsigned int cc = 0; while(cc < nchain_total && c != chaininfo[cc].ch) cc++;
 			if(cc == nchain_total) emsgEC("Mcmc",101);			
@@ -449,28 +440,8 @@ void Mcmc::diagnostics() const
 		for(auto c = 0u; c < nchain_total; c++){
 			diag << "Chain " << c << ": " << nac_swap[c] << endl; 
 		}
-				
-		timings << endl << "Timings for different parts of the algorithm:" << endl;
-		timings << double(timers.timewait)/CLOCKS_PER_SEC << " MBP waiting time (seconds)" << endl;
-		timings << double(timers.timembp)/CLOCKS_PER_SEC << " MBP time (seconds)" << endl;
-		timings << double(timers.timembpinit)/CLOCKS_PER_SEC << " MBP init (seconds)" << endl;
-		timings << double(timers.timembpQmap)/CLOCKS_PER_SEC << " MBP Qmap (seconds)" << endl;
-		timings << double(timers.infection_sampler)/CLOCKS_PER_SEC << " MBP conRtot (seconds)" << endl;
-		timings << double(timers.timembpprop)/CLOCKS_PER_SEC << " MBP prop (seconds)" << endl;
-		timings << double(timers.timembptemp)/CLOCKS_PER_SEC << " MBP temp (seconds)" << endl;
-		timings << double(timers.timembptemp2)/CLOCKS_PER_SEC << " MBP temp2 (seconds)" << endl;
-		timings << double(timers.timembptemp3)/CLOCKS_PER_SEC << " MBP temp3 (seconds)" << endl;
-		timings << double(timers.timembptemp4)/CLOCKS_PER_SEC << " MBP temp4 (seconds)" << endl;
-		timings << double(timers.timestandard)/CLOCKS_PER_SEC << " Standard (seconds)" << endl;			
-		timings << double(timers.timeparam)/CLOCKS_PER_SEC << " Param (seconds)" << endl;			
-		timings << double(timers.timebetaphiinit)/CLOCKS_PER_SEC << " Betaphiinit (seconds)" << endl;		
-		timings << double(timers.timebetaphi)/CLOCKS_PER_SEC << " Betaphi (seconds)" << endl;	
-		timings << double(timers.timecovarinit)/CLOCKS_PER_SEC << " Covarinit (seconds)" << endl;
-		timings << double(timers.timecovar)/CLOCKS_PER_SEC << " Covar (seconds)" << endl;
-		timings << double(timers.timecompparam)/CLOCKS_PER_SEC << " Compparam (seconds)" << endl;						
-		timings << double(timers.timeaddrem)/CLOCKS_PER_SEC << " Add / rem (seconds)" << endl;	
-		timings << double(timers.timeswap)/CLOCKS_PER_SEC << " Swap (seconds)" << endl;	
-		timings << double(timers.timeoutput)/CLOCKS_PER_SEC << " Output (seconds)" << endl;			
+			
+		output_timers(details.output_directory+"/MCMCdiagnostic_timings.txt");
 	}
 	else{
 		pack_initialise(0);

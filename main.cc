@@ -24,11 +24,8 @@ ABC-MBP: ./beepmbp inputfile="examples/inf.toml" mode="abcmbp"
 	
 	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="sim"
 	 nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  output_directory="OutputMSOATest" &
-		nohup  mpirun -n 10	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcsmc"  output_directory="OutputMSOATest1" &
 		
- nohup  mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  output_directory="OutputMSOATest" &     beta=2
-		
-		
+
 		 mpirun -n 20	 ./beepmbp inputfile="examples/infMSOAtest.toml" mode="abcmbp"  
  */
 
@@ -76,17 +73,19 @@ int main(int argc, char** argv)
   MPI_Init(&argc, &argv);
   #endif
 
-	Mpi mpi;                                                         // Stores mpi information (core and ncore)
+	Mpi mpi;                                                    // Stores mpi information (core and ncore)
 	
-	bool verbose = (mpi.core == 0);                                  // Paramater which ensures that only core 0 outputs results
+	bool verbose = (mpi.core == 0);                             // Parameter which ensures that only core 0 outputs results
 		
-	if(verbose) cout << "BEEPmbp version " << gitversion() << endl << endl;  // Outputs the git version
+	if(verbose){                                              	// Outputs the git version
+		cout << "BEEPmbp version " << gitversion() << endl << endl; 
+	}	
 
-	Inputs inputs(argc,argv);                                        // Loads command line arguments and TOML file into inputs
+	Inputs inputs(argc,argv);                                   // Loads command line arguments and TOML file into inputs
 
-	Details details(inputs);                                                 // Loads up various details of the model
+	Details details(inputs);                                    // Loads up various details of the model
 
-#ifdef USE_Data_PIPELINE                                                   // Sets up data
+#ifdef USE_Data_PIPELINE                                      // Sets up data
 	pybind11::scoped_interpreter guard{};
 
 	using namespace pybind11::literals;
@@ -103,61 +102,61 @@ int main(int argc, char** argv)
 	Data data(inputs,details,mpi); 
 #endif
 
-	if(details.mode == COMBINE_TRACE){                                        // If in 'combinetrace' mode then do this and exit
+	if(details.mode == COMBINE_TRACE){                          // If in 'combinetrace' mode then do this and exit
 		combine_trace(data,inputs);
 		return 0;
 	}
 	
-	Model model(inputs,details,data);                                        // Loads up the model
+	Model model(inputs,details,data);                           // Loads up the model
 	
-	AreaTree areatree(data);                                                   // Initialises areatree
+	AreaTree areatree(data);                                    // Initialises areatree (used later for sampling infections)
 
-	unsigned int seed = inputs.find_integer("seed",0);                           // Sets up the random seed
+	auto seed = inputs.find_integer("seed",0);                  // Sets up the random seed
 	sran(mpi.core*10000+seed);
 	
 	if(verbose){
-		data.print_to_terminal();                                              // Summarises the data and model to the terminal
+		data.print_to_terminal();                                 // Summarises the data and model to the terminal
 		model.print_to_terminal();
 		cout << "Running...." << endl;
 	}
 	
-	ObservationModel obsmodel(details,data,model);                           // Generates an observation model
+	ObservationModel obsmodel(details,data,model);              // Creates an observation model
 	
-	Output output(details,data,model,obsmodel);                              // Generates an output class
+	Output output(details,data,model,obsmodel);                 // Creates an output class
 	
 	timersinit();
 	timers.timetot = -clock();
 	
 	switch(details.mode){
-	case SIM:                                                                // Performs a single simulation from the model 
+	case SIM:                                                   // Performs a single simulation from the model 
 		{		
 			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.run();
 		}
 		break;
 	
-	case MULTISIM:                                                           // Performs multiple simulations from the model
+	case MULTISIM:                                              // Performs multiple simulations from the model
 		{
 			Simulate simu(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			simu.multirun();
 		}
 		break;
 			
-	case ABC_SMC:                                                             // Performs the ABC-SMC algorithm
+	case ABC_SMC:                                               // Performs inference using the ABC-SMC algorithm
 		{	
 			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.smc();
 		}
 		break;
 		
-	case ABC_MBP:                                                             // Peforms the ABC-MBP algorithm
+	case ABC_MBP:                                               // Peforms inference using the ABC-MBP algorithm
 		{	
 			ABC abc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			abc.mbp();
 		}
 		break;
 		
-	case MCMCMC:                                                                // Performs inference on actual data
+	case MCMCMC:                                                // Performs inference using the MC3 algoritm
 		{
 			Mcmc mcmc(details,data,model,areatree,mpi,inputs,output,obsmodel);
 			mcmc.run();

@@ -40,15 +40,14 @@ void Chain::standard_proposal(double EFcut)
 {
 	timers.timestandard -= clock();
 	
-	timers.timembptemp -= clock();
 	initial.set_process_likelihood();              // First sets the latent process likelihood Lev
-	timers.timembptemp += clock();
-	
+
 	timers.timeparam -= clock();
 	initial.standard_parameter_prop(jump);         // Makes changes to parameters with fixed event sequence
-	standard_event_prop(EFcut);                    // Makes changes to event sequences with fixed parameters
 	timers.timeparam += clock();
 
+	standard_event_prop(EFcut);                    // Makes changes to event sequences with fixed parameters
+	
 	timers.timestandard += clock();
 }
 
@@ -303,8 +302,6 @@ void Chain::mbp_compartmental_transitions(unsigned int i)
 /// Constructs a fast Gillespie sampler for finding the area of the next infection to be added	
 void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector <double> &Qmp)
 {
-	timers.infection_sampler -= clock();
-		
 	int l = areatree.level-1;
 	for(auto c = 0u; c < data.narea; c++){
 		auto wmin = c*data.ndemocatpos; 
@@ -337,8 +334,6 @@ void Chain::construct_infection_sampler(const vector <double> &Qmi, const vector
 			new_infection_rate[l][c] = sum;
 		}
 	}
-	
-	timers.infection_sampler += clock();
 }
 	
 
@@ -740,8 +735,6 @@ void Chain::calculate_Qmap_for_propose()
 /// Adds and removes infectious individuals
 void Chain::standard_event_prop(double EFcut)
 {	
-	timers.timeaddrem -= clock();
-
 	propose.copy_state(initial);                             // Copies initial state into proposed state
 		
 	for(const auto& x : propose.infev) change_susceptible_status(x.ind,NOT_SUSCEPTIBLE,0);
@@ -752,7 +745,6 @@ void Chain::standard_event_prop(double EFcut)
 	
 	if(dprob == UNSET){ reset_susceptible_lists(); return;}
 	
-	timers.timembptemp4 -= clock();
 	propose.set_process_likelihood();
 	
 	double al;
@@ -775,7 +767,6 @@ void Chain::standard_event_prop(double EFcut)
 		emsgEC("Chain",67);
 		break;
 	}
-	timers.timembptemp4 += clock();
 	
 	if(ran() < al){
 		initial.copy_state(propose);
@@ -788,7 +779,6 @@ void Chain::standard_event_prop(double EFcut)
 	reset_susceptible_lists();
 
 	if(checkon == true) initial.check();
-	timers.timeaddrem += clock();
 }
 
 
@@ -797,9 +787,7 @@ double Chain::add_individuals()
 {
 	auto probif = 0.0, probfi = 0.0;
 		
-	timers.timembptemp2 -= clock();
 	infection_sampler(initial.Qmap);
-	timers.timembptemp2 += clock();
 	
 	for(auto j = 0u; j < jump.naddrem; j++){
 		if(propose.infev.size() >= model.maximum_infected) return UNSET;
@@ -845,10 +833,8 @@ double Chain::add_individuals()
 		probfi += log(1.0/propose.infev.size());
 	}
 	
-	timers.timembptemp3 -= clock();
 	propose.sort_infev();
 	calculate_Qmap_for_propose();
-	timers.timembptemp3 += clock();
 	
 	return probfi - probif;
 }
@@ -899,14 +885,9 @@ double Chain::remove_individuals()
 		}
 	}
 	
-	timers.timembptemp3 -= clock();
 	propose.sort_infev();
 	calculate_Qmap_for_propose();
-	timers.timembptemp3 += clock();
-	
-	timers.timembptemp2 -= clock();
 	infection_sampler(propose.Qmap);
-	timers.timembptemp2 += clock();
 	
 	auto sumtot = lambdasum[data.nsettardp-1]; 
 	for(const auto& ks : kst) probfi += log(lambda[ks]/sumtot);

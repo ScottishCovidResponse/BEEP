@@ -515,7 +515,6 @@ void State::standard_parameter_prop(Jump &jump)
 /// Makes proposal to beta and phi
 void State::stand_param_betaphi_prop(Jump &jump)
 {	
-	timers.timebetaphiinit -= clock();
 	PrecalcBetaPhi precalc;
 	
 	likelihood_beta_phi_initialise(precalc);
@@ -524,11 +523,8 @@ void State::stand_param_betaphi_prop(Jump &jump)
 	for(const auto& spl : model.spline[model.betaspline_ref]) parampos.push_back(spl.param);
 	for(const auto& spl : model.spline[model.phispline_ref]) parampos.push_back(spl.param);
 		
-	timers.timebetaphiinit += clock();
-		
 	unsigned int loopmax = 12/parampos.size(); if(loopmax == 0) loopmax = 1;
 	
-	timers.timebetaphi -= clock();
 	for(auto loop = 0u; loop < loopmax; loop++){
 		for(auto th : parampos){
 			if(param[th].min != param[th].max){
@@ -560,7 +556,6 @@ void State::stand_param_betaphi_prop(Jump &jump)
 			}
 		}
 	}
-	timers.timebetaphi += clock();
 }
 
 
@@ -665,8 +660,6 @@ void State::stand_param_area_prop(Jump &jump)
 	
 	likelihood_area_initialise(precalc);
 
-	timers.timecovar -= clock();
-	
 	vector <unsigned int> thlist;
 	for(auto th : model.covariate_param) thlist.push_back(th); 
 	
@@ -709,15 +702,12 @@ void State::stand_param_area_prop(Jump &jump)
 			}
 		}
 	}
-	timers.timecovar += clock();
 }
 
 
 /// Initialise quantities for fast likelihood calculation
 void State::likelihood_area_initialise(PrecalcArea &precalc)
 {
-	timers.timecovarinit -= clock();
-
 	vector <double> lambdaareafactor, lambdaphifac;
 	lambdaareafactor.resize(data.nardp);
 	lambdaphifac.resize(data.nardp);
@@ -778,8 +768,6 @@ void State::likelihood_area_initialise(PrecalcArea &precalc)
 		t = tmax;
 	} 
 	precalc.L0_store = L0;
-	
-	timers.timecovarinit += clock();
 }
 
 
@@ -802,8 +790,6 @@ double State::likelihood_area(const vector <double> &areafactor, const PrecalcAr
 /// Makes proposals to compartmental parameters (branching probabilities and transition distributions)
 void State::stand_param_compparam_prop(Jump &jump)
 {	
-	timers.timecompparam -= clock();
-
 	vector <PrecalcCompParam> precalc(trans.size());
 	
 	for(auto tra = 0u; tra < trans.size(); tra++){
@@ -886,8 +872,6 @@ void State::stand_param_compparam_prop(Jump &jump)
 		dd = likelihood_dt(precalc,paramval)-Li_dt; if(dd*dd > TINY) emsgEC("Model",13);
 		dd = likelihood_prob(precalc,comptransprob)-Li_prob; if(dd*dd > TINY) emsgEC("Model",14);
 	}
-	
-	timers.timecompparam += clock();
 }
 
 
