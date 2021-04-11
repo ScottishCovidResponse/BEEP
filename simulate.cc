@@ -3,113 +3,90 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-
 #include <assert.h>
 #include <math.h>
 
-#include "simulate.hh"
-
-#include "utils.hh"
-#include "timers.hh"
-#include "chain.hh"
-#include "data.hh"
-#include "output.hh"
-#include "obsmodel.hh"
-
 using namespace std;
 
-/// Initilaises the simulation
-Simulate::Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel) : details(details), data(data), model(model), areatree(areatree), mpi(mpi), obsmodel(obsmodel), output(output)
-{	
-	if(mpi.ncore != 1) emsgroot("Simulation only requires one core");
+#include "simulate.hh"
+#include "data.hh"
+#include "model.hh"
+#include "output.hh"
 
-	nsamp = inputs.find_integer("nsamp",UNSET);                                             // Sets the number of samples for inference
-	if(details.mode == MULTISIM){
-		if(nsamp == UNSET) emsgroot("The number of samples must be set");
+/// Initilaises the simulation
+Simulate::Simulate(const Details &details, Data &data, const Model &model, const AreaTree &areatree, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), details(details), data(data), model(model), areatree(areatree), obsmodel(obsmodel), output(output), mpi(mpi)
+{	
+	if(details.mode == SIM && mpi.ncore != 1) emsgroot("Simulation only requires one core");
+
+	switch(details.mode){
+		case SIM: break;
+		case MULTISIM:                                                                      // Sets the number of simulations
+			nsim = inputs.find_integer("nsimulation",UNSET); 
+			if(nsim == UNSET) emsg("'nsimulation' must be specified.");
+			break; 
+		case COUNTER: inputs.find_nsample(nsample); break;                                  // The number of posterior samples
+		case PPC: inputs.find_nsample(nsample); break;
+		default: emsgEC("Simulate",14); break;
 	}
+	
+	percentage = UNSET;
 }
+
 
 /// Performs a simulation
 void Simulate::run()
 {
-	Chain chain(details,data,model,areatree,obsmodel,output,0);
-	compartmental_proportions(chain.propose.indev);
+	auto paramval = model.sample_from_prior();                                   // Sets up the parameters
 	
-	output.simulated_data(chain.propose.transev,chain.propose.indev,details.output_directory);
+	state.simulate(paramval);                                                    // Simulates the state
 	
-	if(1 == 0){ // This is switched on to see distribution for R and eta from the simulated data
-		Sample sample; 
-		ParamSample paramsamp;		
-		vector <Sample> opsamp; 
-		vector <ParamSample> psamp;
-		
-		sample.meas = obsmodel.get_measured_quantities(chain.propose.transev,chain.propose.indev);
-		
-		sample.R0 = model.calculate_R_vs_time(chain.initial.paramval);
-		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
-		paramsamp.paramval = chain.initial.paramval;
-		opsamp.push_back(sample);
-		psamp.push_back(paramsamp);
-		
-		output.final_results(psamp,opsamp);
-	}
+	auto obs_value = obsmodel.get_obs_value(&state);                             // Copies the observations into the data
+	for(auto ob = 0u; ob < data.obs.size(); ob++) data.obs[ob].value = obs_value[ob];
+	
+	output.simulated_data(obs_value,details.output_directory+"/Simulated_data"); // Outputs the simulated data files
+	
+	particle_store.push_back(state.create_particle());                           // Generate the pdf output file
+	output.generate_graphs(particle_store); 
 }
+
 
 /// Runs multiple simulations
 void Simulate::multirun()
 {		
-	vector <Sample> opsamp; 
-  vector <ParamSample> psamp;
+	auto nsim_per_core = nsim/mpi.ncore;
+	if(nsim_per_core*mpi.ncore != nsim) emsgroot("'nsimulation' must be a multiple of the number of cores");
 	
-	for(auto s = 0u; s < nsamp; s++){
-		cout << "Simulating sample " << (s+1) << endl;
-		Chain chain(details,data,model,areatree,obsmodel,output,0);
+	for(auto s = 0u; s < nsim_per_core; s++){
+		auto paramval = model.sample_from_prior();
 		
-		Sample sample;
-		sample.meas = obsmodel.get_measured_quantities(chain.propose.transev,chain.propose.indev);
-		sample.R0 = model.calculate_R_vs_time(chain.initial.paramval);
-		sample.phi = model.create_disc_spline(model.phispline_ref,chain.initial.paramval);
+		state.simulate(paramval);
 		
-		ParamSample paramsamp;		
-		paramsamp.paramval = chain.initial.paramval;
-		opsamp.push_back(sample);
-		psamp.push_back(paramsamp);
-	}
-	output.final_results(psamp,opsamp);
+		particle_store.push_back(state.create_particle());
+		
+		output.print_percentage(s+1,nsim,percentage);
+	}	
+
+	output.generate_graphs(particle_store);         
 }
 
-/// Works out the proportion of individuals which visit different compartments
-void Simulate::compartmental_proportions(const vector< vector <Event> > &indev)
+
+/// Runs a counter factual analysis or posterior predictive check
+void Simulate::counter()
 {
-	vector <unsigned int> visit(model.comp.size());
-	for(auto& visi : visit) visi = 0;
+	auto nsamp_per_core = nsample/mpi.ncore;
+
+	if(nsamp_per_core*mpi.ncore != nsample) emsgroot("'nsample' must be a multiple of the number of cores");
 	
-	vector <unsigned int> demo(data.ndemocatpos);
-	for(auto& dem : demo) dem = 0;
-	
-	auto ninf = 0u;
-	for(auto i = 0u; i < indev.size(); i++){
-		auto emax = indev[i].size();
-		if(emax > 0){ 
-			ninf++;
-			demo[data.ind[i].dp]++;
-			 
-			auto c = 0u;
-			visit[c]++;
-			for(auto& ev : indev[i]){
-				if(model.trans[ev.trans].from != model.trans[ev.trans].to){
-					visit[model.trans[ev.trans].to]++;
-				}
-			}
-		}
+	auto dir = details.output_directory+"/Posterior/samples/";
+	for(auto s = 0u; s < nsamp_per_core; s++){
+		state.load(dir+"sample"+to_string(nsamp_per_core*mpi.core+s)+".txt");
+		
+		state.simulate(model.countermod.sett_start,details.ndivision);
+		
+		particle_store.push_back(state.create_particle());
+		
+		output.print_percentage(s+1,nsample,percentage);
 	}
 	
-	cout << endl << "# Infected individuals: "<< ninf << endl << endl;
-	
-	cout << "Proportion of infected individuals visiting different compartments:" << endl;
-	
-	for(auto c = 0u; c < model.comp.size(); c++){
-		cout << "  " << model.comp[c].name << ": " << double(100*visit[c])/ninf << "%" << endl;
-	}
-	cout << endl;
+	output.generate_graphs(particle_store);         
 }

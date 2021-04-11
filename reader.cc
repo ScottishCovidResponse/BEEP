@@ -77,6 +77,11 @@ std::string InputNode::stringfield_unchecked(
 	return toml::find<std::string>(n().v,name);
 }
 
+std::vector <double> InputNode::find_vector(const std::string& name)  const
+{
+   return toml::find<std::vector<double>>(n().v,name);	
+}
+
 std::string InputNode::stringfield(
 	const char *name) const
 {

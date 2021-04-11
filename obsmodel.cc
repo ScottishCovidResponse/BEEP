@@ -1,184 +1,309 @@
 // This describes the observation model. This prescribes how likely the data is given a true event state.
 
-#include "utils.hh"
-#include "model.hh"
-#include "obsmodel.hh"
+#include <cmath>
 
 using namespace std;
 
-ObservationModel::ObservationModel(const Details &details, const Data &data, const Model &model) : details(details), data(data), model(model)
+#include "obsmodel.hh"
+#include "details.hh"
+#include "data.hh"
+#include "model.hh"
+#include "state.hh"
+
+ObservationModel::ObservationModel(const Details &details, Data &data, const Model &model) : details(details), data(data), model(model)
 {
+	if(modeltype == POP_MODEL) initialise_obs_change();
+	
+	if(details.mode == PMCMC_INF) split_observations();
 }
 
-/// Gets all measured quantities
-Measurements ObservationModel::get_measured_quantities(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev) const
+
+/// Measures how well the particle agrees with the observations 
+double ObservationModel::calculate(const State *state) const
 {
-	Measurements meas;
-	meas.transnum.resize(data.transdata.size());
-	for(auto td = 0u; td < data.transdata.size(); td++){                                   // Incorporates transition observations
-		meas.transnum[td].resize(data.transdata[td].rows);
-		for(auto row = 0u; row < data.transdata[td].rows; row++){
-			auto ti = data.transdata[td].start + row*data.transdata[td].units;
-			auto tf = ti + data.transdata[td].units;
-
-			auto num = get_transition_numbers(transev,indev,data.transdata[td].trans,ti,tf,UNSET,UNSET);
-			
-			if(data.transdata[td].type == "reg"){
-				meas.transnum[td][row].resize(data.nregion);
-				for(auto r = 0u; r < data.nregion; r++) meas.transnum[td][row][r] = num[r];
-			}
-			
-			if(data.transdata[td].type == "all"){
-				meas.transnum[td][row].resize(1);
-				auto sum = 0.0; for(auto r = 0u; r < data.nregion; r++) sum += num[r];
-				meas.transnum[td][row][0] = sum;
-			}
-		}
-	}
-	
-	meas.popnum.resize(data.popdata.size());
-	for(auto pd = 0u; pd < data.popdata.size(); pd++){                                   // Incorporates population observations
-		meas.popnum[pd].resize(data.popdata[pd].rows);
+	timer[TIME_OBSPROB].start();
 		
-		vector <unsigned int> num(data.nregion);
-		for(auto r = 0u; r < data.nregion; r++) num[r] = 0;
+	auto obs_value = get_obs_value(state);
+
+	auto L = 0.0;		
+	for(auto i = 0u; i < data.nobs; i++) L += obs_prob(obs_value[i],data.obs[i]);
 		
-		auto c = data.popdata[pd].comp;
-		
-		auto sett = 0u;
-		for(auto row = 0u; row < data.popdata[pd].rows; row++){
-			auto ti = data.popdata[pd].start + row*data.popdata[pd].units;
-				
-			while(details.division_time[sett] < ti){				
-				for(auto j = 0u; j < transev[sett].size(); j++){
-					auto i = transev[sett][j].ind;
-					auto tra = indev[i][transev[sett][j].e].trans;
-					if(model.trans[tra].from == c) num[data.area[data.ind[i].area].region]--;
-					if(model.trans[tra].to == c) num[data.area[data.ind[i].area].region]++;
-				}
-				sett++;
-			}
+	if(std::isnan(L)) emsg("Observation Likelihood is not a number");
+	timer[TIME_OBSPROB].stop();
 	
-			if(data.popdata[pd].type == "reg"){
-				meas.popnum[pd][row].resize(data.nregion);
-				for(auto r = 0u; r < data.nregion; r++) meas.popnum[pd][row][r] = num[r];
-			}
-			
-			if(data.popdata[pd].type == "all"){
-				meas.popnum[pd][row].resize(1);
-				auto sum = 0.0; for(auto r = 0u; r < data.nregion; r++) sum += num[r];
-				meas.popnum[pd][row][0] = sum;
-			}
-		}
-	}
-
-	meas.margnum.resize(data.margdata.size());
-	for(auto md = 0u; md < data.margdata.size(); md++){                                     // Incorporates marginal distributions
-		auto d = data.margdata[md].democat;
-		
-		meas.margnum[md].resize(data.democat[d].value.size());
-	
-		if(data.margdata[md].type == "reg"){
-			for(auto j = 0u; j < data.democat[d].value.size(); j++){
-				auto num = get_transition_numbers(transev,indev,data.margdata[md].trans,0,details.period,d,j);
-				
-				meas.margnum[md][j].resize(data.nregion);
-				for(auto r = 0u; r < data.nregion; r++) meas.margnum[md][j][r] = num[r];
-			}
-		}
-		
-		if(data.margdata[md].type == "all"){
-			for(auto j = 0u; j < data.democat[d].value.size(); j++){
-				auto num = get_transition_numbers(transev,indev,data.margdata[md].trans,0,details.period,d,j);
-				auto sum = 0.0; for(auto r = 0u; r < data.nregion; r++) sum += num[r];
-				
-				meas.margnum[md][j].resize(1);
-				meas.margnum[md][j][0] = sum;
-			}
-		}
-	}
-	
-	return meas;
-}
-
-/// The contribution from a single measurement 
-double ObservationModel::single_observation(unsigned int mean, unsigned int val) const
-{
-	switch(mean){
-	case UNKNOWN: return 0;     // The data value is unknown
-	case THRESH:                // The case in which there is a threshold applied to the observation
-		if(val <= data.threshold){
-			if(details.mode == ABC_MBP || details.mode == ABC_SMC) return 0;
-			else return data.thres_h;
-		}
-		else{
-			auto var = MINIMUM_VARIANCE;
-			if(details.mode == ABC_MBP || details.mode == ABC_SMC) return (val-data.threshold)*(val-data.threshold)/var;
-			else return data.thres_h - (val-data.threshold)*(val-data.threshold)/(2*var);
-		}
-	default:                    // A measurement is made
-		auto var = mean; if(var < MINIMUM_VARIANCE) var = MINIMUM_VARIANCE;
-		if(details.mode == ABC_MBP || details.mode == ABC_SMC) return (val-mean)*(val-mean)/var;
-		return normal_probability(val,mean,var);
-	}
-}
-
-/// Measures how well the particle agrees with the observations for a given time range t to t+1
-/// (e.g. weekly hospitalised case data)
-double ObservationModel::observation_likelihood(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev) const 
-{
-	Measurements meas = get_measured_quantities(transev,indev);
-	
-	auto L = 0.0;	
-	for(auto td = 0u; td < meas.transnum.size(); td++){                                   // Incorporates transition observations
-		for(auto row = 0u; row < meas.transnum[td].size(); row++){
-			for(auto r = 0u; r < meas.transnum[td][row].size(); r++){
-				L += single_observation(data.transdata[td].num[r][row],meas.transnum[td][row][r]);
-			}
-		}
-	}
-
-	for(auto pd = 0u; pd < meas.popnum.size(); pd++){                                   // Incorporates population observations
-		for(auto row = 0u; row < meas.popnum[pd].size(); row++){
-			for(auto r = 0u; r < meas.popnum[pd][row].size(); r++){
-				L += single_observation(data.popdata[pd].num[r][row],meas.popnum[pd][row][r]);
-			}
-		}
-	}
-	
-	for(auto md = 0u; md < meas.margnum.size(); md++){                                   // Incorporates marginal observations
-		for(auto row = 0u; row < meas.margnum[md].size(); row++){
-			for(auto r = 0u; r < meas.margnum[md][row].size(); r++){
-				auto sum = 0.0; for(auto j = 0u; j < meas.margnum[md].size(); j++) sum += meas.margnum[md][j][r];
-				
-				auto val = meas.margnum[md][row][r];
-				auto mean = data.margdata[md].percent[r][row]*sum/100.0;
-				auto var = mean; if(var < MINIMUM_VARIANCE) var = MINIMUM_VARIANCE;
-				if(details.mode == ABC_MBP || details.mode == ABC_SMC) L += (val-mean)*(val-mean)/var;
-				else L += normal_probability(val,mean,var);
-			}
-		}
-	}
-
 	return L;
 }
 
-/// Returns the number of transitions for individuals going down a transition
-/// in different regions over the time range ti - tf
-/// If the demographic catergoty d is set then it must have the value v
-vector <unsigned int> ObservationModel::get_transition_numbers(const vector < vector <EventRef> > &transev, const vector < vector <Event> > &indev, unsigned int tra, unsigned int ti, unsigned int tf, unsigned int d, unsigned int v) const
-{
-	vector <unsigned int> num(data.nregion);
-	for(auto& nu : num) nu = 0;
 
-	for(auto sett = details.division_per_time*ti; sett < details.division_per_time*tf; sett++){
-		for(const auto& tre : transev[sett]){
-			auto i = tre.ind;
-			if(d == UNSET || data.democatpos[data.ind[i].dp][d] == v){		
-				if(tra == indev[i][tre.e].trans) num[data.area[data.ind[i].area].region]++;
+/// Measures how well the particle agrees with the observations within a given section
+double ObservationModel::calculate_section(const State *state, unsigned int sec) const
+{
+	timer[TIME_OBSPROB].start();
+	
+	vector <double> obs_value(data.nobs);
+	
+	for(auto i : section_obs[sec]) obs_value[i] = 0;
+	
+	get_obs_value_section(state,obs_value,section_ti[sec],section_tf[sec]);
+		
+	auto L = 0.0;		
+
+	for(auto i : section_obs[sec]) L += obs_prob(obs_value[i],data.obs[i]);
+		
+	if(std::isnan(L)) emsg("Observation Liklihood is not a number");
+	
+	timer[TIME_OBSPROB].stop();
+	
+	return L;
+}
+
+
+/// Uses precalculated quantities to calculate measured quantities faster
+vector <double> ObservationModel::get_obs_value(const State *state) const
+{
+	vector <double> obs_value(data.nobs);
+	for(auto& ob : obs_value) ob = 0;
+	
+	get_obs_value_section(state,obs_value,0,details.ndivision);
+		
+	return obs_value;
+}
+	
+void ObservationModel::get_obs_value_section(const State *state,  vector <double> &obs_value, unsigned int ti, unsigned int tf) const
+{
+	for(auto sett = ti; sett < tf; sett++){
+		for(auto c = 0u; c < data.narea; c++){
+			for(auto tr = 0u; tr < model.trans.size(); tr++){
+				for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+					double num;
+					if(obsmodel_transmean == true && details.siminf == INFERENCE) num = state->transmean[sett][c][tr][dp];
+					else num = state->transnum[sett][c][tr][dp];
+					
+					if(num != 0){
+						for(auto ob : obs_trans[sett][c][tr][dp]){
+							auto spl = data.obs[ob].fraction_spline_ref;
+							if(spl != UNSET) emsg("Spline unset");
+							if(spl == UNSET) obs_value[ob] += num;
+							else obs_value[ob] += num*state->disc_spline[spl][sett];
+						}
+					}
+				}
+			}
+			
+			for(auto co = 0u; co < model.comp.size(); co++){
+				for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+					if(obs_pop[sett][c][co][dp].size() > 0){
+						auto num = state->pop[sett][c][co][dp];
+						for(auto ob : obs_pop[sett][c][co][dp]){
+							auto spl = data.obs[ob].fraction_spline_ref;
+							if(spl != UNSET) emsg("Spline unset");
+							if(spl == UNSET) obs_value[ob] += num;
+							else obs_value[ob] += num*state->disc_spline[spl][sett];
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+/// Generates the underlying dynamics for each of the graphs
+vector < vector <double> > ObservationModel::get_graph_state(const State *state) const
+{
+	vector < vector <double> > graph_state;
+
+	auto obs_value = get_obs_value(state);
+
+	graph_state.resize(data.graph.size());
+	for(auto gr = 0u; gr < data.graph.size(); gr++){
+		auto gra = data.graph[gr];
+		auto dt = gra.datatable;
+		auto spl = gra.fraction_spline_ref;
+		if(spl != UNSET) emsg("Spline unset");
+	
+		switch(gra.type){
+			case GRAPH_TIMESERIES:
+				{
+					auto fac_trans = double(details.division_per_time)/graph_step;
+					auto fac_pop = double(1.0)/graph_step;
+
+					for(auto sett = 0u; sett < details.ndivision - graph_step; sett += graph_step){
+						auto sum = 0.0;
+						for(auto step = 0u; step < graph_step; step++){
+							auto sett2 = sett+step;
+							
+							for(auto c : gra.area){
+								for(auto dp : gra.dp_sel){
+									for(auto tr : data.datatable[dt].translist){	
+										auto num = fac_trans*state->transnum[sett2][c][tr][dp];
+										if(spl == UNSET) sum += num;
+										else sum += num*state->disc_spline[spl][sett2];
+									}
+									
+									for(auto co : data.datatable[dt].complist){
+										auto num = fac_pop*state->pop[sett2][c][co][dp];
+										if(spl == UNSET) sum += num;
+										else sum += num*state->disc_spline[spl][sett2];
+									}
+								}
+							}
+						}
+						
+						if(false){
+							if(data.graph[gr].name  == "Posterior-transition-C1->D-area:S92000003-age-0-9"){
+								for(auto tr : data.datatable[dt].translist) model.print_transition(tr);
+							}
+						}
+						graph_state[gr].push_back(sum);
+					}
+				}
+				break;
+					
+			case GRAPH_MARGINAL:
+				{
+					for(const auto& p : gra.point){ 
+						if(p.obs.size() != 1) emsgEC("Obsmodel",54);
+						graph_state[gr].push_back(obs_value[p.obs[0]]);
+					}
+				}
+				break;
+		}
+	}
+	
+	return graph_state;
+}
+ 
+ 
+/// Initialises quantities related to how Measurements change when a transition changes
+void ObservationModel::initialise_obs_change()
+{
+	obs_trans.resize(details.ndivision);
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		obs_trans[sett].resize(data.narea); obs_trans[sett].resize(data.narea);
+		for(auto c = 0u; c < data.narea; c++){
+			obs_trans[sett][c].resize(model.trans.size());
+			for(auto tr = 0u; tr < model.trans.size(); tr++){
+				obs_trans[sett][c][tr].resize(data.ndemocatpos);
 			}
 		}
 	}
 	
-	return num;
+	obs_pop.resize(details.ndivision);
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		obs_pop[sett].resize(data.narea);
+		for(auto c = 0u; c < data.narea; c++){
+			obs_pop[sett][c].resize(model.comp.size());
+			for(auto co = 0u; co < model.comp.size(); co++){
+				obs_pop[sett][c][co].resize(data.ndemocatpos);
+			}			
+		}
+	}
+	
+	for(auto i = 0u; i < data.nobs; i++){
+		auto& ob = data.obs[i];
+		
+		auto dt = ob.datatable;
+		
+		for(auto sett = ob.sett_i; sett < ob.sett_f; sett++){
+			for(auto c : ob.area){
+				for(auto dp : ob.dp_sel){
+					for(auto tr : data.datatable[dt].translist){					
+						obs_trans[sett][c][tr][dp].push_back(i);
+					}
+					
+					for(auto co : data.datatable[dt].complist){	
+						obs_pop[sett][c][co][dp].push_back(i);
+					}
+				}
+			}
+		}
+	}
+}
+
+
+/// The error coming from a given observation
+double ObservationModel::obs_prob(double value, const Observation& ob) const
+{
+	double val;
+	
+	val = ob.value;
+	 
+	if(val == UNKNOWN) emsg("Unknown");//return 0;
+	
+	if(val == THRESH) emsg("Threshold");
+
+	switch(ob.obsmodel){
+	case NORMAL_OBSMODEL:
+		{
+			auto d = (value-val)*(value-val);
+			return -0.5*ob.invT*d/(val+0.5);
+		}
+		
+	case POISSON_OBSMODEL:
+		{
+			auto lam = value; if(lam < 1) lam = 1;
+			return ob.invT*poisson_probability(int(val+0.5),lam);
+		}
+		
+	case NEGBINO_OBSMODEL:
+		{
+			auto m = value; if(m < 1) m = 1;
+			return ob.invT*negative_binomial_probability(int(val+0.5),m,ob.shape);
+		}
+		
+	case SCALE_OBSMODEL:
+		{
+			//auto d = log((value+ob.logdif_offset)/(val+ob.logdif_offset));
+			auto d = log((value+0.5)/(val+0.5));
+			return -ob.invT*ob.w*d*d;
+		}
+		
+	default:
+		emsgEC("Obsmodel",18);
+		break;
+	}
+}
+
+
+/// Gets the error function split by data type	
+vector <double> ObservationModel::get_EF_datatable(const State *state) const
+{
+	vector <double> EF_datatable(data.datatable.size());
+	
+	auto obs_value = get_obs_value(state);
+		
+	for(auto& val : EF_datatable) val = 0;
+	
+	for(auto i = 0u; i < data.nobs; i++){		
+		EF_datatable[data.obs[i].datatable] += -2*obs_prob(obs_value[i],data.obs[i]);
+	}
+	
+	return EF_datatable;
+}
+
+
+/// Splits up obsevations so that particle filtering can be performed
+void ObservationModel::split_observations()
+{
+	nsection = (unsigned int)((details.ndivision+details.pmcmc_obs_period-1)/details.pmcmc_obs_period);
+
+	section_obs.resize(nsection);
+	for(auto s = 0u; s < nsection; s++){
+		auto ti = s*details.pmcmc_obs_period;
+		auto tf = ti + details.pmcmc_obs_period; if(tf > details.ndivision) tf = details.ndivision;
+		
+		section_ti.push_back(ti);
+		section_tf.push_back(tf);
+		
+		for(auto i = 0u; i < data.nobs; i++){
+			const auto &ob = data.obs[i];
+			if(ob.sett_i < tf && ob.sett_f >= ti){ 
+				if(ob.sett_i >= ti && ob.sett_f <= tf){
+					section_obs[s].push_back(i);
+				}
+			}
+		}
+	}
+	if(section_tf[nsection-1] != details.ndivision) emsgEC("Obsmodel",44);
 }

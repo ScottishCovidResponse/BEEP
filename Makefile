@@ -1,6 +1,6 @@
 CXX := mpicxx
 
-CXXFLAGS := -g -O3 -W -Wall -std=c++11
+CXXFLAGS := -g -O3 -W -Wall -std=c++11 -fmax-errors=3
 #CXXFLAGS := -g -W -Wall -std=c++11
 # -B flag forces compilation of all files
 BUILD_DIR := ./build
@@ -40,30 +40,46 @@ LDFLAGS := $(LDFLAGS) $(PYTHON_LDFLAGS) $(DATA_PIPELINE_LDFLAGS)
 endif
 
 # Please keep these in lexicographic order to aid merging
+ #abcsmc.cc \
+ #
+ 
 srcs := \
  abc.cc \
- chain.cc \
- combinetrace.cc \
+ abcmbp.cc \
+ abcmbp_gr.cc \
+ abcsmc.cc \
+ areatree.cc \
+ mbp.cc \
+ mbp_check.cc \
  data.cc \
+ data_matrix.cc \
+ data_raw.cc \
  details.cc \
- generateQ.cc \
  gitversion.cc \
  inputs.cc \
- jump.cc \
  main.cc \
- mcmc.cc \
+ mc3.cc \
  model.cc \
- model_evidence.cc \
+ mpi.cc \
+ mvn.cc \
  obsmodel.cc \
  output.cc \
- pack.cc \
- areatree.cc \
+ pais.cc \
+ param_prop.cc \
+ pmcmc.cc \
  reader.cc \
  simulate.cc \
  state.cc \
+ state_check.cc \
  timers.cc \
  utils.cc
 
+ # mcmc.cc \
+ # state_parameter.cc \
+  #state_event_pop.cc \
+	#model_evidence.cc \
+	# combinetrace.cc \
+	
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
 

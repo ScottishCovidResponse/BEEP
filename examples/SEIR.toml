@@ -1,0 +1,24 @@
+timeformat = "year-month-day"
+
+start = "2020-01-01"
+end = "2020-07-01"
+
+datadir = "examples/Data_SEIR"
+
+outputdir = "Output_SEIR"
+
+comps = [{name="S"},{name="E"},{name="I", inf="infI", inf_value="1"},{name="R"}]
+
+trans =	[{from="S", to="E", dist="Infection"},
+				{from="E", to="I", dist="Erlang", k=2, mean="tE", mean_value="4"},	  
+				{from="I", to="R", dist="Exp", mean="tI", mean_value="4"}] 
+
+areas = "areadata.csv"
+
+R_spline = [{ param="R", value="2.0", prior="Uniform(0.4,4)"}]
+
+efoi_spline = [{ param="eta", value="1"}]
+
+data_tables = [{type="transition", observation="E->I", file="EI.csv"}]
+
+counterfactual = [{start="2020-4-01", type="trans_rate_fac", trans="S->E", factor="0.5"  }]

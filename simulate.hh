@@ -1,34 +1,35 @@
 #ifndef BEEPMBP__SIMULATE_HH
 #define BEEPMBP__SIMULATE_HH
 
-#include "data.hh"
-#include "model.hh"
-
-struct ParamSample;
-class Data;
-class Model;
-class AreaTree;
-class Output;
-class ObservationModel;
+#include "struct.hh"
+#include "state.hh"
 
 class Simulate
 {
 	public:	
-		Simulate(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, Output &output, const ObservationModel &obsmodel);	
+		Simulate(const Details &details, Data &data, const Model &model, const AreaTree &areatree, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi);	
 		void run();
 		void multirun();
+		void counter();
 		
 	private:
-		void compartmental_proportions(const vector< vector <Event> > &indev);
-		unsigned int nsamp;                                   // The number of simulations 
+		unsigned int nsim;                                    // The number of simulations (MULTISIM)
+		
+		unsigned int nsample;                                 // The number of simulations (COUNTER)
+		
+		vector <Particle> particle_store;                     // Stores particles
+		
+		State state;                                          // Stores the state
+		
+		unsigned int percentage;                              // For displaying the percentage complete   
 		
 		const Details &details;
-		const Data &data;
+		Data &data;
 		const Model &model;
 		const AreaTree &areatree;
-		const Mpi &mpi;
 		const ObservationModel &obsmodel;
-		Output &output;
+		const Output &output;
+		Mpi &mpi;
 };
 
 #endif

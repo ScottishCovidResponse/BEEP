@@ -1,114 +1,70 @@
 #ifndef BEEPMBP__StatisticsE_HH
 #define BEEPMBP__StatisticsE_HH
 
-#include <vector>
-
 using namespace std;
 
+#include "struct.hh"
 #include "model.hh"
+#include "mvn.hh"
 #include "obsmodel.hh"
-#include "consts.hh"
-#include "jump.hh"
-
-struct BetaPhiFactors {                    // Used in PrecalcBetaPhi        
-	unsigned int w;       
-	unsigned int num;       	
-	double betafac;	              
-	double phifac;	 
-};
-
-struct PrecalcBetaPhi                      // Precalculates quantities for likelihood calculation for changes in beta/phi 
-{
-	vector <double> betafac, phifac;
-	vector<	vector <BetaPhiFactors> > lc;
-};
-
-struct PrecalcArea                         // Precalculates quantities for likelihood calculation for changes in area 
-{
-	double L0_store;
-	vector <double> areasum;
-	vector < vector <double> > mult, add;
-};
-
-struct PrecalcCompParam{                   // Stores information about transition when doing compartmental parameter proposals 
-	vector <unsigned int> num;               // The number of times down transition 
-	unsigned int numvisittot;                // The number of times the compartment is visited
-	double dtsum;                            // Sums up the total time spent
-	vector <double> dtlist;                  // Keeps a list of waiting time
-};
-
-struct EventRefTime{                       // Event reference used for sorting infection events        
-	unsigned int ind;                        // Individual
-	unsigned int e;	                         // Event number
-	double t;	                               // Time
-};
 
 class State                                              // Store information about the state of the system
 {
 	public:
 		State(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel);
 			
-		double L; 																			   	 // The observation likelihood (used with MC3 methods)
-		double EF; 																				   // The error function (used in abc methods)
+		double EF; 																				   // The error function
 		double Pr; 																		       // The prior probability
 		
 		vector <double> paramval;                            // The parameter values
+	
+		vector < vector< vector <double> > > Imap;           // The infectivity map coming from other areas
+		vector < vector< vector <double> > > Idiag;          // The infectivity coming from within an area
+		
+		vector < vector < vector < vector <double> > > > transmean;// The mean number of transitions (for Poisson distribution)  
+				
+		vector < vector < vector < vector <int> > > > transnum;// Realised number of transitions [sett][area][tr][dp]  
+		
+		vector < vector < vector < vector <int> > > > pop;   // The populations in different compartments [sett][area][comp][dp] 
 
-		vector < vector <Event> > indev;                     // The individual event sequences
-		vector <EventRef> infev;                             // Ordered list of references to infection events 
-		vector < vector <EventRef> > transev;                // Event references
-		
-		vector< vector <double> > Qmap;                      // The infectivty map 
-		
-	 	/* The quantities below are all derived from the parameter values */
+	 	/* The quantities below are all derived from the model parameter values */
 		vector <double> susceptibility;                      // The susceptibility for different demographic categories
 		vector <double> areafactor;                          // The modification due to area effects
 		vector < vector <double> > disc_spline;              // A discretisation of the splines	
-		vector <CompTransProb> comptransprob;                // Stores the probabilities of going down transitions
-		
-		/* The quantities below are derived and used to speed up calculation */
-		double beta, phi;                                    // A store for the values of beta and phi
-		vector <double> lambda;                              // Total force of infecion for an area
-		double Lev; 																	   	   // The latent process likelihood 
-		vector <int> popw;                                   // The population in w (use to calculate Lev)
-
-		void simulate_compartmental_transitions(unsigned int i, unsigned int c, double t);
-		void set_process_likelihood();
-		void clear();
-		void copy_state(const State &from);
-		Status set_param(const vector <double> &paramv);
-		void set_beta_and_phi(unsigned int sett);
-		void set_L_and_Pr();
+		vector <CompTransProb> comptransprob;                // The probabilities of going down transitions
+		vector < vector <double> > transrate;                // Rates for transitions
+		vector < vector < vector <double> > > Ntime;         // Time variation in age matrix
+		vector < vector <double> > beta_R_ratio;             // The ratio between beta and R [inft][sett]
+	
+		void set_param(const vector <double> &paramv);
+		void set_transmean(unsigned int sett, unsigned int c);
 		void set_EF();
-		double get_infection_time(unsigned int n) const;
-		void add_indev(unsigned int i);
-		void simulate_from_model(unsigned int i, unsigned int c, double t);
-		unsigned int select_branch(unsigned int c, unsigned int a);
-		double sample_duration(unsigned int tra);
-		void set_Qmap_using_dQ(unsigned int sett, const State &state, const vector <double> &dQmap);
-		void set_Qmap(unsigned int check);
-		void sort_infev();
+		void set_Pr();
 		void initialise_from_particle(const Particle &part);
-		void generate_particle(Particle &part) const;
+		Particle create_particle() const;
+		void obsmodel_prop(MVN &mvn, double EFcut, double invT, ObsModelMode obsmodel_mode);
+		void simulate(const vector <double> &paramval);
+		void simulate(const unsigned int ti, const unsigned int tf);
+		unsigned int get_ninf_total();
+		Sample create_sample() const;
+		ParamSample create_param_sample() const;
+		void save(string file) const;
+		void load(string file);
+		void check();
 		
-		void standard_parameter_prop(Jump &jump);
-		void check() const;
-						
+		// These functions are used for MBPs //
+		void set_Imap_sett(unsigned int sett);
+		void set_Imap_using_dI(unsigned int sett, const State *state, const vector< vector <double> > &dImap, const vector < vector <double> > &dIdiag);
+		void update_I_from_transnum(vector < vector <double> > &Ima, vector < vector <double> > &Idia, const vector < vector < vector <int> > > &dtransnum) const;
+		void update_pop(unsigned int sett);
+		void pop_init();
+		// These functions are used for MBPs //
+		
 	private:
-		void stand_param_betaphi_prop(Jump &jump);
-		void likelihood_beta_phi_initialise(PrecalcBetaPhi &precalc);
-		double likelihood_beta_phi(const vector < vector <double> > &disc_spline, const PrecalcBetaPhi &precalc) const;
+		void set_Imap(unsigned int check);
+		vector <double> get_NMI(unsigned int sett, unsigned int inft, unsigned int c);
+		string print_populations(unsigned int sett) const;
 		
-		void stand_param_area_prop(Jump &jump);
-		void likelihood_area_initialise(PrecalcArea &precalc);
-		double likelihood_area(const vector <double> &areafactor, const PrecalcArea &precalc) const;
-		
-		void stand_param_compparam_prop(Jump &jump);
-		double likelihood_prob(vector <PrecalcCompParam> &transinfo, vector <CompTransProb> &comptransprob) const;
-		double likelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramv) const;
-		double dlikelihood_dt(vector <PrecalcCompParam> &transinfo, vector <double> &paramvi, vector <double> &paramvf) const;
-		void check_Lev_and_Pr();
-	 
 		const vector <Compartment> &comp;
 		const vector <Transition> &trans;
 		const vector <Param> &param;
@@ -118,6 +74,5 @@ class State                                              // Store information ab
 		const Model &model;
 		const ObservationModel &obsmodel;
 };
-
 
 #endif

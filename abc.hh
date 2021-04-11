@@ -1,54 +1,39 @@
 #ifndef BEEPMBP__ABC_HH
 #define BEEPMBP__ABC_HH
 
-#include "data.hh"
-#include "model.hh"
-#include "chain.hh"
-
-struct ParamSample;
-class Data;
-class Model;
-class AreaTree;
-class Output;
-class ObservationModel;
-class Chain;
-struct Sample;
+#include "struct.hh"
+#include "state.hh"
+#include "output.hh"
+#include "details.hh"
 
 class ABC
 {
 public:	
-  ABC(const Details &details, const Data &data, const Model &model, const AreaTree &areatree, const Mpi &mpi, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel);	
-	void smc();
-	void mbp();
-	
+  ABC(const Details &details, const Data &data, const Model &model, const Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi);	
+	void run();
+
 private:
-	void mcmc_updates(Generation &gen, vector <Particle> &part, Chain &chain);
-	double calculate_mixing(const vector <Particle> &part, vector <unsigned int> &partcopy) const;
-	void exchange_samples_mpi(Generation &gen);
-	double next_generation_mpi(vector<Particle> &part, vector <unsigned int> &partcopy);
-	void results_mpi(const vector <Generation> &generation, const vector <Particle> &part, Chain &chain) const;
-	Sample get_sample(const Particle &part, Chain &chain) const;
-	double acceptance(double rate) const;
-	void calculate_particle_weight(vector <Generation> &generation, double jumpsize);
-	unsigned int effective_particle_number(vector <double> w);
+	void implement_cutoff_frac();
+	bool terminate() const;
+	void diagnostic() const;
+
+	double cutoff;                           // Sets the cut-off used in the rejection sampling
+
+	double cutoff_frac;                      // Sets the acceptance fraction
 	
-	unsigned int total_time;                 // The time the algorithm is run for
+	unsigned int Ntot;                       // Sets the total number of samples that need to be generated
 	
-	unsigned int N;                          // The number of particles per core
-	unsigned int Ntot;                       // The total number of particles
+	vector <Particle> particle_store;        // Stores the states
+
+	unsigned int percentage;                 // Stores the percentage progress
 	
-	unsigned int G;                          // The total number of generations 
-	
-	Chain chain;
-	Jump &jump;
+	State state;                             // Stores the state of the system
 	
 	const Details &details;
-	const Data &data;
 	const Model &model;
-	const AreaTree &areatree;
-	const Mpi &mpi;
 	const Output &output;
 	const ObservationModel &obsmodel;
+	Mpi &mpi;
 };
 
 #endif

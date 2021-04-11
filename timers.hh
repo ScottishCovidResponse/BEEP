@@ -3,26 +3,22 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
-struct TIMERS {
-	long timetot;
-	long timesim;
-	long timembp;
-	long timewait;
-	long timembpQmap;
-	long timembpprop;
-	long timembpinit;
-	long timestandard;
-	long timeparam;
-	long timeswap;
-	long timeabc;
-	long timeabcprop;
+#include "struct.hh"
+#include "mpi.hh"
+
+struct Timer { 
+	void start();
+	void stop();
+	
+	long val;
 };
 
-extern TIMERS timers;
+extern vector <Timer> timer;
 
 void timersinit();
-void output_timers(string file);
+void output_timers(string file, Mpi &mpi);
 #endif

@@ -1,4 +1,5 @@
-// This code generate a hierarchical representation of the houses at different levels of spatial scale
+// This code generate a hierarchical representation of areas at different levels of spatial scale
+// This is used when samping infection events under IND_MODEL
 
 #include <iostream>
 #include <algorithm>
@@ -7,10 +8,7 @@
 
 using namespace std;
 
-#include "utils.hh"
 #include "areatree.hh"
-#include "consts.hh"
-#include "data.hh"
 
 /// Initialises a tree of levels in which the entire population is subdivied onto a finer and finer scale
 AreaTree::AreaTree(const Data &data) : data(data)
@@ -99,19 +97,19 @@ AreaTree::AreaTree(const Data &data) : data(data)
 		}		
 	}
 	for(auto c = 0u; c < data.narea; c++) lev[level-1].node[c].arearef[0] = c;
+	
+	for(auto& le : lev){   // Sets parameters for fixed parameter proposals
+		for(auto& no : le.node){ 
+			no.mbp_sim.resize(data.narea);
+			for(auto& val : no.mbp_sim) val = MBP;
+			for(auto& c : no.arearef) no.mbp_sim[c] = SIMU;
+		}
+	}
 }
 
-struct AreaSort{
-	unsigned int area;
-	double num;
-};
 
-/// Used for time ordering event references	
-static bool compAreaSort(AreaSort lhs, AreaSort rhs)
-{
-	return lhs.num < rhs.num;
-};
-
+/// Used for sorting areas
+static bool compAreaSort(AreaSort lhs, AreaSort rhs){ return lhs.num < rhs.num;};
 
 /// Sorts areas defined in vec in the direction dir
 void AreaTree::geo_sort(vector <unsigned int> &vec, Dir dir)
@@ -133,5 +131,3 @@ void AreaTree::geo_sort(vector <unsigned int> &vec, Dir dir)
 	
 	for(auto i = 0u; i < vec.size(); i++) vec[i] = areasort[i].area;
 }
-
-
