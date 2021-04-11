@@ -1,110 +1,40 @@
+# BEEPmbp
 
-# CoronaPMCMC
+C. M. Pooley† \[1\], I. Hinder \[2\], R. Bailey \[3\], R. Williams\[4\], S. Catterall \[1\],  A. Doeschl-Wilson \[3\] and Glenn Marion \[1\]
 
-[![](https://github.com/ScottishCovidResponse/CoronaPMCMC/workflows/CI/badge.svg?branch=master)](https://github.com/ScottishCovidResponse/CoronaPMCMC/actions?query=workflow%3ACI)
+\[1\] Biomathematics and Statistics Scotland, James Clerk Maxwell Building, The King's Buildings, Peter Guthrie Tait Road, Edinburgh, EH9 3FD, UK.
 
-C. M. Pooley† [1] and Glenn Marion [1]
+\[2\] The University of Manchester, Oxford Rd, Manchester, M13 9PL, UK.
 
-[1] Biomathematics and Statistics Scotland, James Clerk Maxwell Building, The King's Buildings, Peter Guthrie Tait Road, Edinburgh, EH9 3FD, UK 
+\[3\] The Roslin Institute, The University of Edinburgh, Midlothian, EH25 9RG, UK. 
+
+\[4\] University of Bristol, Queen's Building, University Walk, Clifton BS8 1TR, UK.
 
 † Corresponding author
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-CoronaPMCMC is a code for analysing coronavirus using regional level data. This analysis is performed by dividing the area under study (e.g. Scotland or the UK) into small geographical groupings, e.g. at medium super output area (MSOA) level or output area (OA) level, and modelling the spread of disease. The model captures short range and long range disease transmission by making use of census flow data and previously published age mixing matrices. The data to be analysed is weekly case numbers at a healthboard level along with national mortality data. The time-varying disease transmission rate and infection rate from abroad are estimated, along with the effects of covariates (e.g. age, sex, and population density) on disease susceptibility. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model-Based Proposals) is a general-purpose software tool for simulating and performing inference on compartmental models. Inference is the method by which suitable model parameters are chosen from available data. To perform inference BEEPmbp accepts a variety of population-based data (time-series giving the rate of transitions, populations in different compartments and marginal distributions). For example, when analysing COVID-19 disease transmission the following data are used: daily hospitalisations, deaths, populations in hospital as well as overall age distributions for these quantities. 
 
-Parameter inference is performed using a multi-temperature model-based proposal MCMC (MBP-PMCMC). This runs MCMC chains at different "temperatures" spanning from the posterior to the prior. This enables the model evidence to be estimated allowing for reliable comparison between different potential models. 
+In BEEPmbp priors on model parameters can be specified from a large range of possibilities. The outputs consist of posterior estimates, a pdf containing numerous plots relating to posterior variation in the model parameters and system state as well as diagnostic information. 
 
-## Performing analysis
+## Features:
+*	Specify an arbitrary compartmental model.
+*	Incorporate spatial and age-structured models.
+*	Time-varying splines to capture variation in reproduction number R(t) and the external force of infection. 
+*	Split population into arbitrary demographic classifications (age, sex). 
+*	Incorporate susceptibility variation for different demographic groups.
+*	Add area-based covariates to modify the force of infection (e.g. population density). 
+*	Incorporate a user specified age-mixing matrix (along with potential time modification). 
+*	Specify matrix for mixing between different areas (along with potential time modification).
+*	Perform posterior predictive checks as well as analyse counterfactuals.
+*	Choose from 6 different inference algorithms.
+*	Efficient parallel implementation.
 
-Compilation: make
+## Downloading and running
 
-Simulation:  ./run inputfile="sim.toml" 
+All information about downloading and running BEEPmbp can be found in the [user manual](BEEPmbp_Manual_v1.0.pdf "User guide").
 
-Inference:   mpirun -n 2 ./run inputfile="inf.toml" nchain=2
-(nchain and -n must be the same; they are the number of chains run, and hence the number of processes used)
+## Requirements
 
-The input TOML file provides details of simulation or inference and contains all the information CoronaPMCMC needs to define the compartmental model and provide the filenames for the data. Examples of these files can be found in the repository, along with an example dataset in the directory "Dataset_example".
- 
-# INPUTS:
-
-Here is a description of the various commands used in the TOML files:
-
-DETAILS
-
-**mode** - Defines how the code operates:
-		"sim" generates simulated data.
-		"inf" performs inference using multi-temperature MBP-MCMC.
-
-**period** - The time period of simulation / inference (in weeks).
-
-**seed** - Sets the random seed when performing inference (this is set to zero by default)
-
-**nchain** - The total number of chains used when performing MCMC (should be a multiple of the number of cores).
-
-**nsamp** - The number of samples used for inference (note, burnin is assumed to be a quarter this value).
-
-**outputdir** - Gives the name of the output directory (optional).
-
-THE MODEL
-
-Note, for examples of how these commands are used, see 'inf.toml'.
-
-**comps** - Defines the compartments in the model.
-
-**trans** - Defines transitions between compartments.
-
-**params** - Defines parameters in the model (simulation only).
-
-**priors** - Defines priors in the model (inference only).
-
-**indmax** - The maximum number of infected individuals (placed as a prior).
-
-**betaspline** - Defines a linear spline used to capture time variation in transmission rate beta.
-
-**phispline** - Defines the linear spline used to represent external force of infection phi.
-
-**ages** - The age groups used in the analysis.
-
-**democats** - Used to define other demographic categories.
-
-THE DATA 
-
-**datadir** - The data directory.
-
-**regions** - Filename for a table giving data regions.
-
-**areas** - Filename for a table giving information about areas (e.g. MSOAs or OAs).
-
-**geocont** - Filename for a table informing the matrix of contacts between different areas.
- 
-**agecont** - Filename for a matrix giving the contact rates between different age groups.
-
-**transdata** - Transition data. Gives the observed numbers of transitions between different compartments. More than one set of transition data can be used in an analysis.
-
-Note, all the single variable quantities in the TOML file can be overridden using equivalent comand line definitions.
-
-For example: mpirun -n 1 ./run inputfile="inf.toml" nsamp=10000 
-
-generate 10000 samples (irrespective of the definition given in "inf.toml").
-	
-# OUTPUTS:
-
-Simulation - This creates the specified 'transdata' files along with an output directory containing:
-1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives time variation in R0.
-3) "parameter.txt", which gives the parameter values used in the simulation.
-
-Inference - The output directory contains posterior information (with means and 90% credible intervals) for:
-1) Plots for the transitions corresponding to the 'transdata' files.
-2) "R0.txt", which gives posterior plots time variation in R0.
-3) "parameter.txt", which gives information about parameters.
-4) "trace.txt", which gives trace plots for different models.
-5) "traceLi.txt", which gives trace plots for the likelihoods on different chains.
-6) "MCMCdiagnostic.txt", which gives diagnostic information on the MCMC algorithm.
-
-# Development
-
-- [Code documentation](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/index.html) -- not yet automatically updated
-  - [Call tree](https://projectdata.scrc.uk/coronapmcmc/branches/master/doxygen/html/analysis_8cc.html#a3c04138a5bfe5d72780bb7e82a18e627)
-- Currently work on feature branches and then merge into master
+You need to have MPI installed and the mpicxx compiler to compile and run this code.

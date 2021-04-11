@@ -1,0 +1,66 @@
+-------- Chain: 0 ----------
+
+invT: 0.25  Li average: -1749.98  
+MBP Accept: 
+beta0: 0.5 jump:0.146756, 
+beta1: 0 jump:0.0425205, 
+phi: 0 jump:2.30823, 
+muE: --- 
+cvE: --- 
+tA: --- 
+tP: --- 
+tI: --- 
+tH: 0 jump:5.12751, 
+probEP: --- 
+probIH_C: --- 
+probIH_A: --- 
+probIH_E: --- 
+probID_C: --- 
+probID_A: --- 
+probID_E: --- 
+probHD_C: 0 jump:0.332864, 
+probHD_A: 0.5 jump:0.472008, 
+probHD_E: --- 
+sus_adult: --- 
+sus_elderly: --- 
+den_slope: --- 
+reff_r0: 1 jump:-0.0752798, 
+reff_r1: 1 jump:-0.024909, 
+reff_r2: 0 jump:0.072568, 
+reff_r3: 1 jump:-0.0588462, 
+zero: --- 
+
+Standard Accept: 
+beta0: 0 jump:0.0293512, 
+beta1: 0.25 jump:0.00850409, 
+phi: 0.5 jump:0.461646, 
+muE: --- 
+cvE: --- 
+tA: --- 
+tP: --- 
+tI: --- 
+tH: 0 jump:1.0255, 
+probEP: --- 
+probIH_C: --- 
+probIH_A: --- 
+probIH_E: --- 
+probID_C: --- 
+probID_A: --- 
+probID_E: --- 
+probHD_C: 0.5 jump:0.0665729, 
+probHD_A: 0 jump:0.0944017, 
+probHD_E: 1 jump:0.0980149, 
+sus_adult: --- 
+sus_elderly: --- 
+den_slope: 1 jump:0.017115, 
+reff_r0: 1 jump:-0.015056, 
+reff_r1: 1 jump:-0.0049818, 
+reff_r2: 1 jump:0.0145136, 
+reff_r3: 0.5 jump:-0.0117692, 
+zero: --- 
+
+Add / remove infected: 
+0 num:20, 
+
+Swaping with a chain at lower inverse temperature
+Chain 0: 0

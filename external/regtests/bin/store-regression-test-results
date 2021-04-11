@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Setup shell options
+set -e
+set -u
+shopt -s nullglob
+
+# Read command line arguments
+results_dir=$1
+ref_dir=$2
+
+# Read test config
+source $(dirname ${BASH_SOURCE})/read-test-config
+
+if grep -rn -- "-dirty" ${results_dir}/${TEST_OUTPUT_SUBDIR}/; then
+    echo "ERROR: found string '-dirty' in an output file.  Test results must come from a committed version of the code." >&2
+    exit 1
+fi
+
+# Store test results
+rsync -az --no-links --exclude "*.diffs" --exclude "${TEST_STORE_EXCLUDE_PATTERN}" ${results_dir}/${TEST_OUTPUT_SUBDIR}/ ${ref_dir}/refdata/
+
+# Compress HDF5 data
+for f in ${ref_dir}/*.h5; do
+    h5repack -f GZIP=1 $f ${f}.tmp
+    mv ${f}.tmp $f
+done

@@ -1,0 +1,57 @@
+timeformat = "year-month-day"
+
+start = "2020-01-01"
+end = "2021-02-20"
+
+times = [{name="Lockdown", time="2020-03-23"}]
+
+datadir		= "examples/Data_COVID"
+
+outputdir	= "OutputScotland"
+
+comps			= [{name="S"},
+						 {name="E"},
+						 {name="R"},
+						 {name="I", inf="infI", inf_value="1", inf_trans="S->E"},
+						 {name="C"},
+						 {name="H"},
+						 {name="D"}
+							]
+						
+
+trans   	=	[{from="S", to="E", dist="Infection"},
+
+						 {from="E", to="I", dist="Erlang", k=2, mean="tE", mean_value="4"},	 
+						 
+						 {from="I", to="R", dist="Exp", mean="tI", mean_value="4", prob="IR", prob_value="0.79"},
+						 
+						 {from="I", to="H", dist="Exp", mean="tI", mean_value="4", prob="IH", prob_value="0.20"},
+						 
+						 {from="I", to="C", dist="Exp", mean="tI", mean_value="4", prob="IC", prob_value="0.01"},
+						 
+						 {from="C", to="D", dist="Exp", mean="tC", mean_value="12"},
+							
+						 {from="H", to="D", dist="Exp", mean="tH", mean_value="12", prob="HD", prob_value="0.3"},
+						
+						 {from="H", to="R", dist="Exp", mean="tH", mean_value="12", prob="HR", prob_value="0.7"},
+						] 
+			
+R_spline = [{ param="R|R_spline.txt", value="value|R_spline.txt", prior="Uniform(0.4,4)", bp="bp|R_spline.txt", smooth_type="log_smooth", smooth="0.4", inf_trans="S->E"}]
+
+efoi_spline	= [{ param="phi", age_dist = "1", value="908", bp="bp|phi_spline.txt", factor="factor|phi_spline.txt"}]
+					
+covars		= [{name="density", param="den_slope", value="0.0", func="log"}]
+
+prob_reach	= [{name="ifr", comp="D", inf_trans="S->E"}]
+
+areas			= "areadata.txt"
+
+data_tables	= [
+{type="transition", observation="I->H", geo="all", democats = "all", file="IH.txt", start="start", shift="0", units="days", weight=1.0, obsmodel="scale"},
+
+{type="transition", observation="C->D", geo="all", democats = "all", file="CD.txt", start="start", shift="0", units="days", weight=1.0, obsmodel="scale"},
+]
+
+counterfactual = [{start="2020-2-15", type="efoi_fac", trans="S->E", geo="all", factor="0.1"  }]
+
+ppc_start = "2020-4-01"

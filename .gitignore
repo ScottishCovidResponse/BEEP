@@ -5,3 +5,5 @@ gitversion.hh
 /deaths.txt
 /house.txt
 /run
+/build
+/regression_test_results

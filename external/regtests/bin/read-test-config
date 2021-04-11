@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Read test config
+source $(dirname $(dirname ${BASH_SOURCE}))/etc/testconfig.default
+if [ -r .testconfig ]; then
+    source .testconfig
+fi

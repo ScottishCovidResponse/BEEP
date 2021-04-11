@@ -1,23 +1,39 @@
-#pragma once
-
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <sys/stat.h>
-#include <sstream>
-#include <algorithm>
-#include <cmath>
-
+#ifndef BEEPMBP__OBSModel_HH
+#define BEEPMBP__OBSModel_HH
 
 using namespace std;
 
-#include "data.hh"
-#include "poptree.hh"
-#include "PART.hh"
+#include "struct.hh"
 
-vector <unsigned int> getnumtrans(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, string from, string to, unsigned int ti, unsigned int tf);
-double Lobstot(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <FEV> > &fev, double invT);
-double Lobs(DATA &data, MODEL &model, POPTREE &poptree, unsigned int w, vector < vector <FEV> > &fev, double invT);
+class ObservationModel
+{
+	public:
+		ObservationModel(const Details &details, Data &data, const Model &model);
+		
+		double calculate(const State *state) const;
+		double calculate_section(const State *state, unsigned int sec) const;
+		vector <double> get_EF_datatable(const State *state) const;
+		vector <double> get_obs_value(const State *state) const;
+		vector < vector <double> > get_graph_state(const State *state) const;
+				
+		unsigned int nsection;                            // The sections the obsevations are split into 
+		vector <unsigned int> section_ti;             
+		vector <unsigned int> section_tf;
+		
+	private:
+		void initialise_obs_change();
+		void split_observations();
+		void get_obs_value_section(const State *state,  vector <double> &obs_value, unsigned int ti, unsigned int tf) const;
+		double obs_prob(double value, const Observation& ob) const;
+		
+		vector < vector <unsigned int> > section_obs;
+		
+		vector < vector <vector < vector < vector <unsigned int> > > > > obs_trans;
+		vector < vector <vector < vector < vector <unsigned int> > > > > obs_pop;
+				
+		const Details &details;
+		const Data &data;
+		const Model &model;
+};
 
-double Lobs_mbp(DATA &data, MODEL &model, POPTREE &poptree,  vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev);
-vector <unsigned int> getnumtrans_mbp(DATA &data, MODEL &model, POPTREE &poptree, vector < vector <EVREF> > &trev, vector < vector <FEV> > &indev, string from, string to, unsigned int ti, unsigned int tf);
+#endif

@@ -1,176 +1,135 @@
-#pragma once
+#ifndef BEEPMBP__Data_HH
+#define BEEPMBP__Data_HH
 
-//#include "model.hh"
+#include <string>
 
-struct TABLE {                             // Loads a table
-	unsigned int ncol;                       // The number of columns
-	unsigned int nrow;                       // The number if rows
-	vector <string> heading;                 // The headings for the columns
-	vector <vector <string> > ele;        	 // The elements of the table
-};
+using namespace std;
 
-struct TIMEP { 														 // Stores a time period
-	string name;														 // The name of the time period
-	double tend;														 // The end time
-};
+#include "struct.hh"
+#include "details.hh"
+#include "inputs.hh"
+#include "mpi.hh"
 
-struct QTENSOR {                           // Stores information about a Q tensor
-	string comp;                             // The compartment on which the tensor acts
-	unsigned int timep;                      // The time period over which the tensor acts
-	string file;  													 // The name of the file
-	vector <vector <unsigned int> > to;      // Stores the mixing matrix between areas and ages at different times
-	vector <vector< vector <double> > > val; 	
-};
+class DataPipeline;
 
-struct TRANSDATA{                          // Stores data about transitions
-	string from;                             // The "from" compartment
- 	string to;                               // The "to" compartment 
-	string type;                             // The type (either "reg" for regional or "all" for global)
- 	string file;                             // The file name of the data 
-	unsigned int start;                      // The start time for the data
-	unsigned int units;                      // The units used (e.g. 1=days, 7=weeks) 
-	vector <vector <unsigned int> > num;     // A table giving the number of that transition type
-	unsigned int rows;                       // The number of rows of data
-};
-
-struct DEMOCAT {                           // Stores demographic categories
-	string name;                             // The name of the category
-	vector <string> value;                   // The postential values it can take
-	vector <string> param;                   // The parameters used for the susceptibility
-	vector <unsigned int> col;               // The columns in the table
-};
-
-struct COVAR {                             // Stores the  covariate for the area
-	string name;                             // The name of the covariate (i.e. the column in the area data file)
-	string param;                            // The parameters used
-	string func;                             // The functional transformation
-	unsigned int col;                        // The column in the table
-};
-
-struct REGION {                            // Provides information a data region
-	string name;														 // The name for the region
-	string code;														 // The code for the region
-};
-
-struct AREA {                              // Provides information about an area
-	string code;                             // The code for the area
-	unsigned int region;                     // The data region it belongs to
- 	double x, y;                             // The geographic position
-	vector <unsigned int> agepop;            // The populations in different age groups
-  vector <unsigned int> pop;               // The population in different demographic categories          
-	vector <double> covar;                   // The covariates for that area
-
-	vector <vector <unsigned int> > ind;     // The individuals in different demographic categories
-};
-
-struct IND {                               // Provides information about an individual
-	unsigned int area;                       // The area
-	unsigned int dp;                         // The demographic category
-};
-
-struct AreaRefComparatorX
+class Data
 {
 	public:
-	AreaRefComparatorX(vector <AREA> &area) : area(area)
-	{
-	}
+		Data(const Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp=0);
 
-  bool operator()(const unsigned int &a, const unsigned int &b) const
-	{
-		return area[a].x < area[b].x;
-	}
-
-private:
-	vector <AREA> &area;
-};
-
-struct AreaRefComparatorY
-{
-	public:
-	AreaRefComparatorY(vector <AREA> &area) : area(area)
-	{
-	}
-
-  bool operator()(const unsigned int &a, const unsigned int &b) const
-	{
-		return area[a].y < area[b].y;
-	}
-
-private:
-	vector <AREA> &area;
-};
-
-class DATA
-{
-	public:
-	
-	DATA() : compX(area), compY(area)
-	{
-	}
-
-	unsigned int mode;                       // Stores if doing simulation/mbp/pmcmc
-	string outputdir;                        // The output directory
-	unsigned int fediv;                      // # Divisions into which the global timeline is divided for events
-	unsigned int fepertime;                  // # fediv per nsettime
-	unsigned int settpertime;                // # nsettime per unit time
-
-	unsigned int nsettime;                   // # Divisions into which the global timeline is divided for update of Q
-	vector <double> settime;                 // The timings at which beta changes
-	
-	vector <TRANSDATA> transdata;            // Store information about transition data
-	
-	unsigned int period;                     // The time over which simulation/inference is performed (e.g. in weeks)
-	
-	string datadir; 												 // The data directory
-	string regiondatafile;                   // File giving information about data regions
-	string areadatafile;                     // File giving information about areas
-	//string Mdatafile;                        // File giving the spatial mixing matrix
-	//string Ndatafile;                        // File giving the mixing between age classes
-	
- 	unsigned int popsize;                    // The total population size 
- 
-	unsigned int nregion;                    // Number of data regions
-	vector <REGION> region;                  // The names of the data regions
-
-	unsigned int narea;                      // The number of areas
-	vector <AREA> area;                      // List of all the areas
-	
-	vector <IND> ind;                        // The individuals in the system
+		DataPipeline *datapipeline;              // DataPipeline object
 		
-	unsigned int ndemocat;                   // The number of demographic categories
-	vector <DEMOCAT> democat;                // Stores the demographic categories
-	
-	unsigned int ndemocatpos;                // The number of demographic possibilities
-	vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
-	
-	unsigned int ncovar;                     // The number of covariates for area  
-	vector <COVAR> covar;                    // Covariates for area
-	
-	vector <TIMEP> timeperiod;               // The timings of changes to Q;
-	
-	vector <QTENSOR> Q;                      // Stores the list of Q tensors
-	
-	unsigned int nage;                       // The number of age categories
-	unsigned int narage;                     // #area * #age
-	unsigned int nardp;                      // #area * #ndemocatpos
-	unsigned int ndemocatposperage;          // Demographic states per age group
-	unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
+		string data_directory; 						    	 // The data directory
 
-	void sortX(vector <unsigned int> &vec);	         // Used for sorting houses by x and y location
-	void sortY(vector <unsigned int> &vec);	
-	AreaRefComparatorX compX;
-	AreaRefComparatorY compY;
+		unsigned int threshold;                  // The limit under which numbers cannot be specified exactly 
 	
-	void readdata(unsigned int core, unsigned int ncore, unsigned int mod, unsigned int per); 
-	void adddemocat(string name, vector <string> &st, vector <string> &params);
-	void addcovar(string name, string param, string func);
-	void addtimep(string name, double tend);
-	void addQtensor(string timep, string comp, string file);
+		unsigned int ndemocat;                   // The number of demographic categories
+		vector <DemographicCategory> democat;    // Stores the demographic categories
+		
+		vector <unsigned int> age_from, age_to;  // Time ranges for different age classifications
+		
+		unsigned int ncovar;                     // The number of covariates for area  
+		vector <Covariate> covar;                // Coariate information
+
+		vector <GeographicMap> region_effect;    // If a regional effect is added this stores the map
+		ParamSpec sigma;                         // This gives the parameter specification for the standard deviation sigma
+		
+		unsigned int nage;                       // The number of age categories
+		unsigned int narage;                     // #area * #age
+		unsigned int nardp;                      // #area * #ndemocatpos
+		unsigned int ndemocatposperage;          // Demographic states per age group
+		unsigned int nsettardp;                  // #sett * #area * #ndemocatpos
+	
+		GenerateQ genQ; 								   			 // Stores information about age / geographical mixing
+	
+		unsigned int narea;                      // The number of areas
+		vector <Area> area;                      // List of all the areas
+		
+		vector <Individual> ind;                 // The individuals in the system
+			
+		unsigned int popsize;                    // The total population size 
+	 
+		unsigned int ndemocatpos;                // The number of demographic possibilities
+		vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
+
+		vector <DataTable> datatable;            // Stores information about data tables
+		
+		unsigned int nobs;
+		vector <Observation> obs;                // A list of all the individual observations
+		
+		vector <Graph> graph;                    // A list of all the graphs which need to be plotted
+	 	
+		vector <double> agedist; 				  	  	 // Gives the overall age distribution
+		
+		vector < vector <double> > democat_dist; // Gives distributions in different demographic categories
+		
+		vector <double> democatpos_dist; 				 // Gives the overall demographic possibility distribution
+		
+		vector <CounterFact> counterfact;        // Used to implement counterfactuals
+		
+		string print() const;
 	
 	private:
-	string strip(string line);
-	void copydata(unsigned int core);
-	TABLE loadtable(string file);
-	unsigned int findcol(TABLE &tab, string name);
-	void normaliseQ(unsigned int q);
+		void remove_empty_rows(Table& tab) const;
+		void calc_democatpos();
+		void read_data_files(const Inputs &inputs, Mpi &mpi);
+		void copy_data(unsigned int core);
+		Table load_table(string file, string dir="", bool heading=true) const;
+		Table load_table_from_datapipeline(string file) const;
+		Table load_table_from_file(string file, string dir, bool heading, char sep) const;
+		void read_areas(Table &tab, string file);
+		void load_counterfactual(const Inputs &inputs, const Table &tabarea);
+		
+		void filter_areas(Table &tab);
+		void filter_table(const string st, Table &tab) const;
+		void load_datatable(const Table &tabarea);
+		void check_datatable();
+		void load_timeseries_datatable(const Table &tabarea, unsigned int i, bool sim);
+		void load_marginal_datatable(const Table &tabarea, unsigned int i, bool sim);
+		vector <DataFilter> get_datafilter(const Table &tabarea, string geo, string democats);
+		void load_region_effect(const Inputs &inputs, const Table& tab);
+		void table_create_column(string head, const vector <unsigned int> &cols, Table &tab) const;
+		void table_select_dates(unsigned int t, unsigned int units, Table &tab, string type, unsigned int shift) const;
+		unsigned int find_column(const Table &tab, string name) const;
+		unsigned int get_integer(const string& st, const string& file) const;
+		void table_add_age(string name, unsigned int ti, unsigned int tf, Table &tab);
+		void generate_matrices();
+		void plotmat(const Matrix& mat, const string& title);
+		void geo_normalise(SparseMatrix &mat);
+		void agematrix_normalise(Matrix &mat);
+		Matrix matfromtable(const Table& tab, unsigned int N);
+		SparseMatrix loadsparse(const string& file, unsigned int N, GenerateQ &genQ);
+		vector <GeographicMap> create_geomap(const Table &tab, string geo) const;
+		vector <unsigned int> create_dp_sel(string dp_str) const;
+		void set_datatable_weights();
+		void coarse_grain(const Table &tab, string coarse);
+		vector <unsigned int> convert_areas(string type, vector <unsigned int> &vec, const vector <GeographicMap> &map) const;
+		bool vector_contains(const vector <unsigned int> &vec, unsigned int num) const;
+		bool vector_contains(const vector <string> &vec, string num) const;
+		void vector_remove(vector <unsigned int> &vec, unsigned int num) const;
+		void print_obs() const;
+		
+		/* Used for raw data analysis */
+		void raw();
+		void IFR();
+		void case_age_distribution();
+		void death_age_distribution();
+		string remove_comma(string st);
+		void calculate_IR();
+		void fractional_change(string file);
+		void fractional_change2(string file);
+		void plotrawdata(); 
+		void cases_age();
+		void generatehospdata();		
+		void generatedeathdata_scotland();
+		void generatedeathdata_england_wales();
+		void convert_Mdata();
+		void generate_admission_age();
+		void split_deaths_age_data();
+		void deaths_age();
+		void deaths_hospital_england();
+	
+		const Details &details;
 };
+
+#endif

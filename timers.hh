@@ -1,21 +1,24 @@
-#pragma once
+#ifndef BEEPMBP__TIMERS_HH
+#define BEEPMBP__TIMERS_HH
 
-struct TIMERS {
-	long timetot;
-	long timesim;
-	long timeboot;
-	long timembp;
-	long timewait;
-	long timembpQmap;
-	long timembpprop;
-	long timembpinit;
-	long timembptemp;	long timembptemp2;	long timembptemp3;	long timembptemp4;
-	long timestandard;
-	long timeparam;
-	long timebetaphiloop;
-	long timeaddrem;
+#include <string>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+#include "struct.hh"
+#include "mpi.hh"
+
+struct Timer { 
+	void start();
+	void stop();
+	
+	long val;
 };
 
-extern TIMERS timers;
+extern vector <Timer> timer;
 
 void timersinit();
+void output_timers(string file, Mpi &mpi);
+#endif

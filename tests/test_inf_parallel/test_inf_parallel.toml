@@ -1,0 +1,9 @@
+
+# NOTE: this is currently relative to the BEEPmbp process' CWD
+baseinputfile = "examples/inf.toml"
+
+# Shorten the runtime
+nsamp     = 2
+
+# Make the results deterministic
+propsmethod = "fixednum"
