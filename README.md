@@ -14,22 +14,29 @@ C. M. Pooley† \[1\], I. Hinder \[2\], R. Bailey \[3\], R. Williams\[4\], S. Ca
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model-Based Proposals) is a general-purpose software tool for simulating and performing inference on compartmental models. Inference is the method by which suitable model parameters are chosen from available data. To perform inference BEEPmbp accepts a variety of population-based data (time-series giving the rate of transitions, populations in different compartments and marginal distributions). For example, when analysing COVID-19 disease transmission the following data are used: daily hospitalisations, deaths, populations in hospital as well as overall age distributions for these quantities. 
+BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model-Based Proposals) is a general-purpose software tool for simulating and performing inference on epidemiological compartmental models. Inference is the method by which suitable model parameters are chosen from available data. To perform inference BEEPmbp accepts a variety of population-based data (time-series giving the rate of transitions, populations in different compartments and marginal distributions). For example, when analysing COVID-19 disease transmission the following data are used: daily hospitalisations, deaths, populations in hospital as well as overall age distributions for these quantities. 
 
 In BEEPmbp priors on model parameters can be specified from a large range of possibilities. The outputs consist of posterior estimates, a pdf containing numerous plots relating to posterior variation in the model parameters and system state as well as diagnostic information. 
 
-## Features:
-*	Specify an arbitrary compartmental model.
+## Epidemiological model features:
+*	Specify an arbitrary compartmental epidemiological model.
 *	Incorporate spatial and age-structured models.
-*	Time-varying splines to capture variation in reproduction number R(t) and the external force of infection. 
-*	Split population into arbitrary demographic classifications (age, sex). 
+*	Capture time-variation in reproduction number Rt and external force of infection. 
+*	Split population into arbitrary demographic classifications (e.g. age and/or sex). 
 *	Incorporate susceptibility variation for different demographic groups.
-*	Add area-based covariates to modify the force of infection (e.g. population density). 
+*	Incorporate area-based covariates to modify the force of infection, either fixed (e.g. population density) or time-varying (e.g. temperature). 
 *	Incorporate a user specified age-mixing matrix (along with potential time modification). 
-*	Specify matrix for mixing between different areas (along with potential time modification).
-*	Perform posterior predictive checks as well as analyse counterfactuals.
-*	Choose from 6 different inference algorithms.
-*	Efficient parallel implementation.
+*	Specify a matrix for mixing between different areas (along with potential time modification).
+*	Perform prediction, counterfactuals as well as posterior predictive checks.
+
+## Data features:
+*	Accepts a variety of different data types (informing transition, populations and marginal).
+*	Incorporate splines to relate measured data to system properties.
+
+## Software implementation features:
+*	Efficient parallel implementation (written in C++ with MPI).
+*	Choose from 7 different inference algorithms.
+*	Generates pdf report for easy visualisation of outputs.
 
 ## Downloading and running
 
