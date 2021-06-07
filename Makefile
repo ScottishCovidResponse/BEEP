@@ -44,41 +44,34 @@ endif
  #
  
 srcs := \
- abc.cc \
- abcmbp.cc \
- abcmbp_gr.cc \
- abcsmc.cc \
- areatree.cc \
- mbp.cc \
- mbp_check.cc \
- data.cc \
- data_matrix.cc \
- data_raw.cc \
- details.cc \
- gitversion.cc \
- inputs.cc \
- main.cc \
- mc3.cc \
- model.cc \
- mpi.cc \
- mvn.cc \
- obsmodel.cc \
- output.cc \
- pais.cc \
- param_prop.cc \
- pmcmc.cc \
- reader.cc \
- simulate.cc \
- state.cc \
- state_check.cc \
- timers.cc \
- utils.cc
+ src/state.cc \
+ src/inputs.cc \
+ src/model.cc \
+ src/abc.cc \
+ src/abcmbp.cc \
+ src/abcsmc.cc \
+ src/mbp.cc \
+ src/mbp_check.cc \
+ src/data.cc \
+ src/data_matrix.cc \
+ src/data_raw.cc \
+ src/details.cc \
+ src/gitversion.cc \
+ src/main.cc \
+ src/mc3.cc \
+ src/mpi.cc \
+ src/mvn.cc \
+ src/obsmodel.cc \
+ src/output.cc \
+ src/pais.cc \
+ src/param_prop.cc \
+ src/pmcmc.cc \
+ src/reader.cc \
+ src/simulate.cc \
+ src/state_check.cc \
+ src/timers.cc \
+ src/utils.cc
 
- # mcmc.cc \
- # state_parameter.cc \
-  #state_event_pop.cc \
-	#model_evidence.cc \
-	# combinetrace.cc \
 	
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)

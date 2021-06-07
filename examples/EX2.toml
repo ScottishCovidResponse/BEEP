@@ -1,0 +1,53 @@
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2020-09-01"
+
+datadir = "examples/Data_EX2"
+outputdir = "Output_EX2"
+
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="4"},
+{name="I", dist="Exp", mean_value="4", inf_value="1"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R", prob_value="0.9", prob_prior="Dir(*)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(*)"} 
+] 
+
+ages = {cats="age0-19 | age20-69 | age70+"}
+
+democats = [{name="Sex", cats="Male | Female"}]
+
+age_mixing_matrix = "AMM.csv"
+
+geo_mixing_matrix = "M.csv"
+
+R_spline = [{ value="2.0", prior="Uniform(0.4,4)"}]
+efoi_spline = [{ value="0.1"}]
+
+areas = "Scotland_LA.csv"
+
+#area_covars= [{name="density", param="b1", value="0.1", prior="Uniform(0,1)", func="log"}]
+
+tv_covars = [{name="temperature", file="tvcovar.csv", param="b2", value="0.1", prior="Uniform(0,1)", func="linear"}]        
+#area_tv_covars = [{name="covar", file="areatvcovar.csv", param="b2", value="0.1", prior="Uniform(0,1)", func="linear"}]       
+
+data_tables = [
+{type="transition", observation="E->I", geo_dep="area", timestep="7", file="EI.csv"},
+{type="transition", observation="I->D", geo_dep="area", timestep="7", file="ID.csv"}
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+modification = [{start="2020-04-01",type="beta_fac",factor="0.3"}]
