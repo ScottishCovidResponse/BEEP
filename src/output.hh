@@ -16,9 +16,11 @@ struct OutputLine{                                            // Specifies a lin
 
 
 struct OutputPlot{                                            // Specifies a plot to appear in the final pdf
-	OutputPlot(OutputPlotType type_, string title_, string xaxis_, string yaxis_, double min_, double max_);
+	OutputPlot(OutputPlotType type_, string title_, string fulldesc_, string tab_, string tab2_, string tab3_, string xaxis_, string yaxis_, double min_, double max_);
 
 	OutputPlotType type;                                        // The type of the output
+	string fulldesc;                                            // A full description of the output
+	string tab, tab2, tab3;                                     // Used for the menu
 	string title;                                               // The title of the plot
 	string xaxis;                                               // The name of the x axis
 	string yaxis;                                               // The name of the y axis
@@ -27,6 +29,8 @@ struct OutputPlot{                                            // Specifies a plo
 	
 	vector <string> label;                                      // Stores label (in the case of marginals)
 	bool legend_labelson;                                       // Determines if labels are put into description
+	
+	string source;                                              // Stores information about the source files.
 	
 	void addline(const string name, const string file, const unsigned int xcol, const unsigned int ycol, const LineType style);
 };
@@ -72,10 +76,13 @@ class Output
 		void generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp) const;
 		void generation_plot(const string file, const vector <Generation> &generation) const;
 		void generate_pdf(const string file, const string desc) const;
-		void generate_pdf_description(const vector <OutputPlot> &op, const string grfile) const;
+		void generate_visualisation(const vector <OutputPlot> &op, const string grfile) const;
+		void generate_pdf_description(vector <OutputPlot> &op, const string grfile) const;
 		void spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &opplot) const;
+		void datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void get_line_colours(vector <LineColour> line_colour, vector <LineType> &lt, vector <LineType> &lt2) const;
+		void posterior_parameter_estimates(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void susceptibility_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		vector <DemoDep> get_demodep(const string dep) const;
 		void area_effect_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
@@ -84,6 +91,10 @@ class Output
 		void branch_prob_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void derived_parameter_distributions(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void posterior_parameter_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
+		void spatial_R_map(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
+		void age_mixing_matrix(vector <OutputPlot> &op) const;
+		void spatial_mixing_map(vector <OutputPlot> &op) const;
+		void compartmental_model(vector <OutputPlot> &op) const;
 		void add_generation_plots(vector <OutputPlot> &op) const;
 		LineType get_linestyle(const unsigned int i) const;
 		void add_trace_plots(vector <OutputPlot> &op) const;
@@ -92,8 +103,7 @@ class Output
 		void add_pred_timeplot(const string name, unsigned int time, vector <TimePlot> &pred_timeplot) const;
 		vector <TimePlot> get_pred_timeplot() const;
 		void generate_gnuplot_file(const vector <OutputPlot> &op, const string grfile) const;
-		void posterior_parameter_estimates(const vector <ParamSample> &psamp) const;
-		void spatial_R_map(const vector <ParamSample> &psamp) const;
+		string load_boundaries() const;
 	
 		Statistics get_statistic_with_weight(vector <WeightedPoint> vec) const;	
 		Distribution get_distribution(const vector <double> &vec, const double priormin, const double priormax) const;
@@ -111,6 +121,8 @@ class Output
 		
 		string post_lab;                                        // Labels "Posterior" or "Distribution" depending on mode
 		string post_dir;                                        // The output directory depending on mode
+		
+		AreaPlot area_plot;                                     // Stores information about plotting areas
 		
 		const Inputs &inputs;
 		const Details &details;

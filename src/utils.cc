@@ -238,6 +238,22 @@ void strip(string &line)
 	}
 }	
 
+/// Removes page breaks and replaces them with "|" and '
+void rem_pagebreak(string &line) 
+{
+	auto i = 0u;
+	while(i < line.length()){
+		if(line.substr(i,1) == "\r") line = line.substr(0,i)+line.substr(i+1,line.length()-(i+1));
+		else{
+			if(line.substr(i,1) == "\n") line = line.substr(0,i)+"|"+line.substr(i+1,line.length()-(i+1));
+			else{
+				if(line.substr(i,1) == "'") line = line.substr(0,i)+"*"+line.substr(i+1,line.length()-(i+1));
+				else i++;
+			}
+		}
+	}
+}
+
 /// @cond EMSG
 
 // Alter error behaviour to throwing exception, which can be caught in unit

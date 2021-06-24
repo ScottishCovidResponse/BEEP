@@ -1,4 +1,0 @@
-Category	all
-age0-19	0
-age20-64	52.5424
-age65+	47.4576

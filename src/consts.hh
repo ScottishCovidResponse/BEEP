@@ -82,12 +82,13 @@ enum MbpSimType { ALL_MBP, FIXEDTREE, SLICETIME};                // Different MB
 enum InfUpdate { INF_UPDATE, INF_DIF_UPDATE};                    // Different ways to update infectivity map								
 
 enum PriorType { FIXED_PRIOR, UNIFORM_PRIOR, EXP_PRIOR,          // Different types of prior
-								 NORMAL_PRIOR, DIRICHLET_PRIOR}; 
+								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_FLAT_PRIOR}; 
 				
 enum JointType { UP_DOWN, SINE};                                 // Different type of joint proposal
 	
 enum OutputPlotType { OP_GRAPH, OP_GRAPH_MARGINAL, OP_MARGINAL,  // The type of output plot
-              OP_PARAMDIST, OP_SPLINE, OP_GENERATION, OP_LOG_GENERATION, OP_CPU, OP_TRACE, OP_ME};
+              OP_PARAMDIST, OP_SPLINE, OP_GENERATION, OP_LOG_GENERATION, OP_CPU, OP_TRACE, OP_ME, 
+							OP_ANIM_MAP, OP_MIXING_MAP, OP_AGE_MATRIX, OP_PARAM_TABLE, OP_COMP_MODEL, OP_FOI_MODEL};
 
 enum LineType { NOLINE, RED_SOLID, RED_DASHED, GREEN_SOLID,      // Different styles of line
                 GREEN_DASHED, BLUE_SOLID, BLUE_DASHED, BLACK_SOLID, BLACK_DASHED, 
@@ -96,6 +97,10 @@ enum LineType { NOLINE, RED_SOLID, RED_DASHED, GREEN_SOLID,      // Different st
 								YELLOW_SOLID, YELLOW_DASHED, CYAN_SOLID, CYAN_DASHED,MAGENTA_SOLID, MAGENTA_DASHED};
 
 enum LineColour { UNSET_COLOUR, RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, BLACK};// Different colours of line 
+	
+enum Project { EQUI_PROJ, UNIFROM_PROJ};                         // Different projections for maps
+
+enum FileType{ KML, GEOJSON};                                    // DIfferent types of file
 	
 enum DistPropType { BINNING, KDE };                              // Different ways to display probability distributions
 						 
@@ -113,7 +118,7 @@ const double fac_up_fast = 1.5, fac_down_fast = 0.7;
 const double sizemax = 2;                                        // The maximum size of parameter proposals
 const double sizemin = 0.2;                                      // The minimum size of parameter proposals
 
-const double VTINY = 0.00000000000000001;                        // Used to represent a very tiny number
+const double VTINY = 0.000000000000001;                          // Used to represent a very tiny number
 const double TINY = 0.00000001;                                  // Used to represent a tiny number
 const double SMALL = 0.00001;                                    // Used to represent a small number
 const double LARGE = 1000000000;                                 // Used to represent a big number
@@ -126,6 +131,8 @@ const unsigned int initial_sample_try = 10000;                   // The number o
 const unsigned int spline_sample_try = 100000;                   // The number of tries to generate parameters before fail
 const unsigned int sample_try = 10000;                           // The number of tries to generate spline before fail
 const unsigned int initialise_param_samp = 100;                  // Number of random parameter samples to initialise param_samp
+
+const double map_ratio = 1.22;                                   // The ratio of the map (used when plotting
 
 const unsigned int graph_step = 2;                               // The step size used when plotting the posterior
 #endif

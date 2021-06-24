@@ -57,16 +57,7 @@ State::State(const Details &details, const Data &data, const Model &model, const
 /// Sets up the initial popualtion
 void State::pop_init()
 {
-	for(auto c = 0u; c < data.narea; c++){
-		for(auto co = 0u; co < model.comp.size(); co++){
-			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-				if(co == model.start_compartment && dp < data.ndemocatpos_per_strain){
-					pop[0][c][co][dp] = data.area[c].pop[dp];
-				}
-				else pop[0][c][co][dp] = 0;
-			}
-		}
-	}
+	for(auto c = 0u; c < data.narea; c++) pop[0][c] = data.area[c].pop_init;
 }
 
 

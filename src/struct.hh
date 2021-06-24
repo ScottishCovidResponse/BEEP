@@ -24,6 +24,8 @@ class Mbp;
 struct SplineOutput{                       // Used for outputting splines
 	string name;                             // The name of the spline
 	string desc;                             // The description of the spline
+	string fulldesc;                         // A full description of the spline
+	string tab, tab2;                        // Classifiers for menu
 	vector <double> splineval;               // The values in the spline
 };
 
@@ -305,6 +307,8 @@ struct GraphPoint {                        // Details of a point on a graph
 
 struct Graph {                             // Details of a graph
 	string name;                             // The name of the graph
+	string fulldesc;                         // Full descrition
+	string tab, tab2, tab3;                  // Used for menu
 	string file;                             // The filename used for the graph     
 	string desc;                             // The description of the graph
 	string colname;                          // The column the graph relates to
@@ -319,6 +323,8 @@ struct Graph {                             // Details of a graph
 
 struct GraphMultiPlot {                    // Allows for multiple graphs to be placed into a single plot
 	string plot_name;                        // The name of the plot
+	string fulldesc;                         // Full descrition
+	string tab, tab2, tab3;                  // Used for menu
 	vector <string> name;                    // The name on the y label
 	GraphType type;                          // The type of graph
 	double min;                              // The minimum in the graph
@@ -326,9 +332,14 @@ struct GraphMultiPlot {                    // Allows for multiple graphs to be p
 	vector <LineColour> line_colour;         // Stores the colour of the line when plotted
 	vector <string> file;                    // The filenames used for the graph     
 	vector <string> file_data;               // The filenames for data used for the graph     
-	vector <string> file_data_thresh;        // The filenames for thresholds used for the graph     
+	vector <string> file_data_thresh;        // The filenames for thresholds used for the graph   
 };
-		
+	
+struct Coord {                             // Stores coordinates
+	double x;                                // x
+	double y;                                // y
+};
+
 struct DemographicCategory {               // Stores demographic categories
 	string name;                             // The name of the category
 	bool sus_vari;                           // Set to true if there is variation in susceptibility
@@ -369,7 +380,7 @@ struct Covariate {                         // Stores the  covariate for the area
 
 struct Area {                              // Provides information about an area
 	string code;                             // The code for the area
-  vector <unsigned int> pop;               // The population in different demographic categories  
+  vector < vector <double> > pop_init;     // The initial population in different comparments and demographic categories  
 	unsigned int total_pop;                  // The total population in the area
 };
 
@@ -467,6 +478,12 @@ struct Chain{                              // Stores information about an MCMC c
 	
 	unsigned int ntr;                        // The number of times a swap is tried
 	unsigned int nac;                        // The number of times a swap is accepted
+};
+
+struct AreaPlot {                          // Stores information about plotting areas
+	string boundfile;                        // A files which specifies boundaries
+	string xcol, ycol;                       // Defines columns which specify the location ofr an area
+	Project project;                         // Stores the type of projection
 };
 
 struct UsedTomlKey{                        // Used to detemine if a TOML key has been used

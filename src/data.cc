@@ -20,7 +20,7 @@ using namespace std;
 #endif
 
 /// Initialises data
-Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp) : datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details)
+Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp) : datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details), inputs(inputs)
 {
 	// The data directory
 	if(data_directory == "UNSET") emsgroot("'data_directory' must be set.");
@@ -75,6 +75,20 @@ void Data::calc_democatpos()
 	ndemocatpos_per_age = ndemocatpos/nage;
 	ndemocatpos_per_strain = ndemocatpos/nstrain;
 	
+	democatpos_name.resize(ndemocatpos);
+	for(auto dp = 0u; dp < ndemocatpos; dp++){
+		bool fl = false;
+		stringstream ss;
+		for(auto i = 0u; i < ndemocat; i++){
+			if(democat[i].value.size() > 1){
+				if(fl == true) ss << ",";
+				fl = true;
+				ss << democat[i].value[democatpos[dp][i]];
+			}
+		}
+		democatpos_name[dp] = ss.str();
+	}
+	
 	if(false){
 		for(auto dp = 0u; dp < ndemocatpos; dp++){
 			cout << dp << ": ";
@@ -102,7 +116,7 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 			
 		Table tab = load_table(file);
 
-		read_areas(tab,file);
+		read_initial_population(tab,file,inputs);
 	
 		read_covars();
 		
@@ -116,6 +130,7 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 		
 		generate_matrices();
 	}
+	
 	if(mpi.ncore > 1) mpi.copy_data(narea,area,nobs,obs,genQ,modification,covar,level_effect,democat_change);
 
 	if(details.siminf == INFERENCE) set_datatable_weights();
@@ -129,19 +144,20 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 		
 	popsize = 0;
 	for(auto c = 0u; c < narea; c++){ 
-		for(auto dp = 0u; dp < ndemocatpos_per_strain; dp++){
-			auto imax = area[c].pop[dp];
+		for(auto co = 0u; co < area[c].pop_init.size(); co++){
+			for(auto dp = 0u; dp < ndemocatpos; dp++){
+				auto pop = area[c].pop_init[co][dp];
 
-			democatpos_dist[dp] += imax;
+				democatpos_dist[dp%ndemocatpos_per_strain] += pop;
+		
+				agedist[democatpos[dp][0]] += pop;
 			
-			auto a = democatpos[dp][0];
-			agedist[a] += imax;
+				for(auto d = 0u; d < ndemocat-1; d++){
+					democat_dist[d][democatpos[dp][d]] += pop; 
+				}
 			
-			for(auto d = 0u; d < ndemocat-1; d++){
-				democat_dist[d][democatpos[dp][d]] += imax; 
+				popsize += pop;
 			}
-			
-			popsize += imax;
 		}
 	}
 	
@@ -256,75 +272,135 @@ void Data::check_or_create_column(Table &tab, string head, unsigned int d) const
 }
 
 
-/// Reads the file which gives information about areas
-void Data::read_areas(Table &tab, string file)
+/// Reads in the initial population
+void Data::read_initial_population(Table &tab, string file, Inputs &inputs)
 {
-	for(auto d = 0u; d < democat.size()-1; d++){                      // Creates new columns in the table if needed
+	auto comps = inputs.find_compartments();
+	auto co_sus = inputs.find_susceptible_compartment();
+	
+	auto codecol = find_column(tab,"area");          
+	for(auto row = 0u; row < tab.nrow; row++){                  // Sets up areas with zero population
+		Area are;
+		are.code = tab.ele[row][codecol];
+		are.pop_init.resize(comps.size());
+		for(auto co = 0u; co < comps.size(); co++){
+			are.pop_init[co].resize(ndemocatpos);
+			for(auto dp = 0u; dp < ndemocatpos; dp++) are.pop_init[co][dp] = 0;
+		}
+		area.push_back(are);			
+	}
+	narea = area.size();
+	
+	if(init_pop != "") read_init_pop_file(comps);              // Uses an 'init_pop' file to load initial population
+	else read_initial_population_areas(co_sus,tab,file);       // Uses columns in 'areas' to load initial population
+	
+	for(auto &are : area){                                     // Sets the area population total
+		auto total = 0.0; for(const auto &vec : are.pop_init){ for(auto val : vec) total += val;}
+		are.total_pop = total;
+	}
+	
+	if(false){
+		for(const auto &are : area){
+			cout << are.code << " " << are.total_pop << ": " << endl;
+			for(auto co = 0u; co < comps.size(); co++){
+				cout << " " << comps[co] << ": ";
+				for(const auto &pop : are.pop_init[co]) cout << pop << ", ";
+				cout << endl;	
+			}
+			cout << endl;	
+		}
+		emsg("Done");
+	}	
+}
+
+
+/// Reads in information about the initial population from the 'init_pop' file
+void Data::read_init_pop_file(const vector <string> comps)
+{		
+	Table tab = load_table(init_pop);
+	
+	auto area_col = find_column(tab,"area");
+	auto pop_col = find_column(tab,"population");
+	auto compartment_col = find_column(tab,"compartment");
+	
+	vector <unsigned int> demo_col(ndemocat);
+	for(auto d = 0u; d < ndemocat; d++){
+		if(democat[d].value.size() > 1) demo_col[d] = find_column(tab,democat[d].name);
+		else demo_col[d] = UNSET;
+	}
+	
+	for(auto row = 0u; row < tab.nrow; row++){
+		auto areacode = tab.ele[row][area_col];
+		auto c = 0u; while(c < narea && area[c].code != areacode) c++;
+		if(c == narea) emsg("In 'init_pop' file '"+init_pop+"' the area '"+areacode+"' is not recognised");
+		
+		vector <unsigned int> index(ndemocat);
+		for(auto d = 0u; d < ndemocat; d++){
+			if(democat[d].value.size() == 1) index[d] = 0;
+			else{
+				auto demo = tab.ele[row][demo_col[d]];	
+				auto imax = democat[d].value.size(); 
+				auto i = 0u; while(i < imax && demo != democat[d].value[i]) i++;
+				if(i == imax){
+					emsg("In 'init_pop' file '"+init_pop+"' the value '"+demo+"' is not recognised as a demographic category");
+				}
+				index[d] = i;
+			}
+		}
+		
+		auto pop = get_double_positive(tab.ele[row][pop_col],"In file '"+init_pop+"'");
+		
+		auto comp = tab.ele[row][compartment_col];
+		auto co = find_in(comps,comp);
+		if(co == UNSET) emsg("In 'init_pop' file '"+init_pop+"' the compartment '"+comp+"' is not recognised.");
+			
+		unsigned int dp;
+		for(dp = 0u; dp < ndemocatpos; dp++){
+			auto d = 0u; while(d < ndemocat && index[d] == democatpos[dp][d]) d++; 
+			if(d == ndemocat){ area[c].pop_init[co][dp] = pop; break;}
+		}
+		if(dp == ndemocatpos) emsgEC("Data",23);
+	}
+}
+
+
+/// Reads in information about the initial population from the 'areas' file
+void Data::read_initial_population_areas(const unsigned int co_sus, Table &tab, string file)
+{
+	for(auto d = 0u; d < democat.size()-1; d++){                    // Creates new columns in the table if needed
 		for(auto val : democat[d].value){
 			check_or_create_column(tab,val,d);
 		}
 	}
 
-	if(false){ // Multiplies all the populations by a factor
-		auto fac = 13u;
-		for(auto a = 0u; a < nage; a++){
-			auto col = find_column(tab,democat[0].value[a]);
-			for(auto row = 0u; row < tab.nrow; row++){
-				stringstream ss; ss << get_int(tab.ele[row][col],"Error")*fac;
-				tab.ele[row][col] = ss.str();
-			}
-		}
-	}
-	
-	auto codecol = find_column(tab,"area");                            // Works out columns for different quantities
-	
 	vector <unsigned int> age_col(nage); 
 	for(auto a = 0u; a < nage; a++) age_col[a] = find_column(tab,democat[0].value[a]);  
 	
-	vector <double> total_pop(tab.nrow);                               // Calculates the populations for different ages
-	vector < vector <double> > pop_age; pop_age.resize(tab.nrow);
-	for(auto row = 0u; row < tab.nrow; row++){
-		pop_age[row].resize(nage);
+	vector <double> total_pop(narea);                               // Calculates the populations for different ages
+	vector < vector <double> > pop_age; pop_age.resize(narea);
+	for(auto c = 0u; c < narea; c++){
+		pop_age[c].resize(nage);
 		auto sum = 0.0;
 		for(auto a = 0u; a < nage; a++){
-			pop_age[row][a] = get_double_positive(tab.ele[row][age_col[a]],"In file '"+file+"'");
-			sum += pop_age[row][a];
+			pop_age[c][a] = get_double_positive(tab.ele[c][age_col[a]],"In file '"+file+"'");
+			sum += pop_age[c][a];
 		}
-		total_pop[row] = sum;
+		total_pop[c] = sum;
 	}
 
 	vector < vector < vector <double> > > pop_demo_frac; pop_demo_frac.resize(ndemocat-1);
 	for(auto d = 1u; d < ndemocat-1; d++) pop_demo_frac[d] = get_demo_frac(d,tab,total_pop);
 	
-	for(auto row = 0u; row < tab.nrow; row++){
-		const auto &trow = tab.ele[row]; 
-	
-		Area are;
-		are.code = trow[codecol];
-		
-		are.pop.resize(ndemocatpos_per_strain);
-		auto total = 0u;
+	for(auto c = 0u; c < narea; c++){
 		for(auto dp = 0u; dp < ndemocatpos_per_strain; dp++){
 			auto v = 0.0;
 			for(auto j = 0u; j < democat.size()-1; j++){
-				if(j == 0) v = pop_age[row][democatpos[dp][j]];
-				else v *= pop_demo_frac[j][row][democatpos[dp][j]];
+				if(j == 0) v = pop_age[c][democatpos[dp][j]];
+				else v *= pop_demo_frac[j][c][democatpos[dp][j]];
 			}
-			are.pop[dp] = (unsigned int)(v+0.5);
-			total += are.pop[dp];
+			area[c].pop_init[co_sus][dp] = (unsigned int)(v+0.5);
 		}
-		are.total_pop = total;
-
-		area.push_back(are);			
 	}
-	narea = area.size();
-	
-	if(checkon == true){
-		for(const auto &are : area){
-			for(const auto &pop : are.pop) cout << pop << ", ";
-			cout << endl;	
-		}
-	}	
 }
 
 
@@ -356,14 +432,14 @@ void Data::read_covars()
 					auto col = find_column(tab,cov.name);
 					
 					for(auto r = 0u; r < tab.nrow-1; r++){
-						auto ti = details.gettime(tab.ele[r][date_col],"For 'tv_covar' in file '"+tab.file+"'") - details.start;
-						auto tf = details.gettime(tab.ele[r+1][date_col],"For 'tv_covar' in file '"+tab.file+"'") - details.start;
-					cout << ti << " " << details.start << "uu\n";
+						int ti = details.gettime(tab.ele[r][date_col],"For 'tv_covar' in file '"+tab.file+"'") - details.start;
+						int tf = details.gettime(tab.ele[r+1][date_col],"For 'tv_covar' in file '"+tab.file+"'") - details.start;
+				
 						if(r == 0 && ti > 0){
 							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
 						}
 						
-						if(r == tab.nrow-2 && tf < details.period){
+						if(r == tab.nrow-2 && tf < (int)details.period){
 							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
 						}
 						
@@ -376,7 +452,6 @@ void Data::read_covars()
 								for(auto c = 0u; c < narea; c++) cov.value[c][t] = v;
 							}
 						}						
-						cout << r << " " << ti << " " << tf << " t\n";
 					}
 				}
 				break;
@@ -475,15 +550,98 @@ void Data::read_level_effect()
 }
 
 
+/// Chops the root directory from a file, it is present
+void Data::chop_dir(string &file, const string dir) const
+{
+	if(file.size() > dir.size()){
+		if(file.substr(0,dir.size()) == dir) file = file.substr(dir.size()+1,file.size()-(dir.size()+1));
+	}
+}
+
+
 /// Gets a column from a table
-vector <string> Data::get_table_column(string col_name, string file, string dir)
+vector <string> Data::get_table_column_str(const unsigned int col, string file, const string dir) const
 {
 	vector <string> result;
-	auto tab = load_table(file,dir);
+	chop_dir(file,dir);
+	auto tab = load_table(file,dir,true,true);
+	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
+	
+	return result;
+}
+
+
+/// Gets a column from a table
+vector <string> Data::get_table_column(const string col_name, string file, const string dir) const
+{
+	vector <string> result;
+	chop_dir(file,dir);
+	auto tab = load_table(file,dir,true,true);
 	auto col = find_column(tab,col_name);
 	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
 	
 	return result;
+}
+
+
+/// Loads a column of numbers from a table
+vector <double> Data::get_table_column(const unsigned int col, string file, const string dir) const
+{
+	vector <double> result;	
+	chop_dir(file,dir);
+	auto tab = load_table(file,dir,true,true);
+	if(col >= tab.ncol) emsg("The file '"+file+"' does not have column "+to_string(col));
+	for(auto row = 0u; row < tab.nrow; row++) result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
+	return result;
+}
+
+
+/// Gets an array of data from a file and encodes using JSON (used to encode maps)
+string Data::get_array_JSON(const string file, const string dir) const
+{
+	stringstream ss; 
+	auto tab = load_table(file,dir,true,true); 
+	ss << "[";
+	for(auto row = 0u; row < tab.nrow; row++){
+		if(row > 0) ss << ",";
+		ss << "[";
+		for(auto col = 1u; col < tab.ncol; col++){
+			if(col > 1) ss << ",";
+			ss << tab.ele[row][col];
+		}		
+		ss << "]";
+	}
+	ss << "]";
+	return ss.str();
+}
+
+
+/// Gets a table from a file and encodes using JSON (used to encode maps)
+string Data::get_table_JSON(const string file, const string dir) const
+{
+	stringstream ss; 
+	auto tab = load_table(file,dir,true,true); 
+	ss << "{ \"heading\":[";
+	for(auto col = 0u; col < tab.ncol; col++){
+		if(col > 0) ss << ",";
+		ss << "\"" << tab.heading[col] << "\"";
+	}
+	ss << "]";
+	
+	
+	ss << ",\"ele\":[";
+	for(auto row = 0u; row < tab.nrow; row++){
+		if(row > 0) ss << ",";
+		ss << "[";
+		for(auto col = 0u; col < tab.ncol; col++){
+			if(col > 0) ss << ",";
+			ss << "\"" << replace(tab.ele[row][col],"|",",") << "\"";
+		}		
+		ss << "]";
+	}
+	ss << "]}";
+	
+	return ss.str();
 }
 
 
@@ -785,9 +943,32 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 		ob.area = df.area;
 		ob.graph = graph.size();
 		
-		Graph gr;
-		gr.type = GRAPH_TIMESERIES;
+		string fulldesc;
 		
+		Graph gr;
+		if(dt.file != ""){ 
+			gr.tab = "Data Tables"; gr.tab2 = dt.file; gr.tab3 = df.colname;
+			
+			
+			if(details.siminf == SIMULATE){
+				fulldesc = "Data table "+dt.file+": This shows the temporal variation corresponding to the observations "+dt.observation+". ";
+				fulldesc += " The red line shows this variation for the underlying state.";
+				fulldesc += " The black line shows data generated from this state (for example if data is measured weekly, this stepped curve will have a period of 7 days). This data is saved in the file "+dt.file+" in the simulated data directory.";
+			}
+			else{
+				fulldesc = "Data table "+dt.file+": This gives the temporal variation corresponding to the observations "+dt.observation+". ";
+				fulldesc += " The black line shows the raw data (from the input file "+dt.file+").";
+				fulldesc += " The red line (with dashed 95% credible intervals) shows the posterior distribution for the inferred underlying system state. Under a suitable model, and with accurate inferece, it would be expected that the black and red curves exhibit the same temporal behaviour (barring variation coming from a weak observation model).";	
+				fulldesc += " Large deviations between the two lines indicate that either the model is not able to properly account for the actual observed system dynamics, or that inference has not converged on the true posterior distribution.";
+			}
+		}
+		else{ 
+			gr.tab = "State Outputs"; gr.tab2 = dt.plot_name; gr.tab3 = df.colname;
+			fulldesc = "State Output: This shows the plot *"+dt.plot_name+"*, as specifed in the input TOML file.";
+		}
+		gr.fulldesc = fulldesc;
+		
+		gr.type = GRAPH_TIMESERIES;
 		gr.file = df.file;
 		gr.name = df.name;
 		gr.desc = df.desc;
@@ -803,7 +984,7 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 			if(dt.type == POPFRAC){
 				for(auto c :	gr.area){
 					for(auto dp : gr.dp_sel){
-						total_pop += area[c].pop[dp];
+						for(const auto &vec : area[c].pop_init) total_pop += vec[dp];
 					}
 				}
 			}
@@ -1318,7 +1499,7 @@ Table Data::load_table_from_datapipeline(const string file) const
 
 
 /// Loads a table from a file
-Table Data::load_table_from_file(const string file, const string dir, const bool heading, const char sep) const
+Table Data::load_table_from_file(const string file, const string dir, const bool heading, const bool supop, const char sep) const
 {
 	ifstream in;
 
@@ -1338,15 +1519,17 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 		}
 	}
 	
-	cout << "Loaded table '" << file << "'." << endl;
+	if(supop == false) cout << "Loaded table '" << file << "'." << endl;
 
 	Table tab;
 	tab.file = file;
 	
 	string line;
 	if(heading == true){
-		getline(in,line);
-
+		do{
+			getline(in,line);
+		}while(line.substr(0,1) == "#");
+		
 		stringstream ss(line);
 		do{
 			string st;
@@ -1384,11 +1567,11 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 
 
 /// Loads a table from a file (if dir is specified then this directory is used)
-Table Data::load_table(const string file, const string dir, const bool heading) const
+Table Data::load_table(const string file, const string dir, const bool heading, const bool supop) const
 {
-	if(stringhasending(file,".txt")){ return load_table_from_file(file,dir,heading,'\t');} 
+	if(stringhasending(file,".txt")){ return load_table_from_file(file,dir,heading,supop,'\t');} 
 	else {
-		if(stringhasending(file,".csv")){ return load_table_from_file(file,dir,heading,',');} 
+		if(stringhasending(file,".csv")){ return load_table_from_file(file,dir,heading,supop,',');} 
 		else return load_table_from_datapipeline(file);
 	}
 }

@@ -32,6 +32,8 @@ class Inputs
 		vector <Covariate> find_covariates();
 		void find_genQ(GenerateQ &genQ, const Details &details, const vector <string> &age_list);
 		void find_timeplot(vector <TimePlot> &timeplot);
+		vector <string> find_compartments();
+		unsigned int find_susceptible_compartment();
 		void find_compartments(vector <string> &name, vector < vector <ParamSpec> > &mean_spec, vector <string> &mean_dep, vector <unsigned int> &k, vector <ParamSpec> &infectivity, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat);
 		void find_transitions(vector <string> &from, vector <string> &to, vector <TransInf> &transinf, vector < vector <ParamSpec> > &prob_spec, vector <string> &prob_dep, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat);
 		void find_spline(const string name, vector <string> &name_vec, vector < vector <ParamSpec> > &ps_vec, vector <ParamSpec> &factor_param_vec, vector < vector <unsigned int> > &bp_vec, vector <Smooth> &smooth_type_vec, vector <string> &inft, vector <string> &area, vector < vector <double> > &efoi_agedist_vec, const vector <double> &agedist, const Details &details);
@@ -64,6 +66,7 @@ class Inputs
 		void find_outputprop(OutputProp &prop);
 		void find_modification(const Details &details, vector <Modification> &modification);
 		void find_mcmc_update(MCMCUpdate &mcmc_update);
+		void find_area_plot(AreaPlot &area_plot);
 		vector <vector <unsigned int > > find_demo_ref(const string dep_str, const vector <DemographicCategory> &democat, vector <unsigned int> &dep_order) const;
 		Mode mode();
 		SimInf get_siminf();
@@ -97,6 +100,7 @@ const vector<string> definedparams = {                                // A list 
 		"baseinputfile",
 		"area_covars",
 		"area_effect",
+		"area_plot",
 		"area_tv_covars",
 		"age_mixing_matrix",
 		"age_mixing_modify",

@@ -950,7 +950,7 @@ AreaEffect Inputs::find_area_effect(const vector <Area> &area)
 		ae.frac.resize(area.size());
 		auto tot_pop = 0.0;
 		for(auto c = 0u; c < area.size(); c++){
-			ae.frac[c] = 0; for(auto val : area[c].pop) ae.frac[c] += val;
+			ae.frac[c] = 0; for(const auto &vec : area[c].pop_init){ for(auto val : vec) ae.frac[c] += val;}
 			tot_pop += ae.frac[c];
 		}
 		for(auto c = 0u; c < area.size(); c++) ae.frac[c] /= tot_pop;
@@ -966,7 +966,8 @@ AreaEffect Inputs::find_area_effect(const vector <Area> &area)
 void Inputs::get_dep(const string root, string &st, string &dep) const 
 {
 	if(st != ""){
-		auto spl = split(st,':');
+		auto splbr = split(st,'[');
+		auto spl = split(splbr[0],':');
 		if(spl.size() > 2) emsg("In '"+root+"' there was a problem with '"+st+"'");
 		if(spl.size() == 2){
 			st = spl[1]; 
@@ -1059,6 +1060,50 @@ void Inputs::print_paramspec(const vector <ParamSpec> &ps) const
 		cout << i << " Name:" << ps[i].name << "  Value:" <<  ps[i].value;
 		cout << " Prior:" <<  ps[i].prior << " Smooth:" <<  ps[i].smooth << " ps" << endl;
 	}
+}
+
+
+/// Returns a list of compartment names along with the susceptible compartment (used for reading 'init_pop' file)
+vector <string> Inputs::find_compartments()
+{
+	vector <string> name;
+	if(basedata->contains("comps")) {
+		auto compsin = basedata->open("comps",used);
+		for(auto j = 0u; j < compsin.size(); j++){
+			auto comps = compsin[j];
+			auto na = comps.stringfield("name","In 'comps'");
+			name.push_back(na);	
+			
+			if(comps.stringfield("dist","") == "Erlang"){
+				auto k_str = comps.stringfield("k","");
+				auto k_temp = get_int(k_str,"In 'comps' compartment '"+na+"' the integer 'k'");
+				for(auto i = 1u; i < k_temp; i++) name.push_back(na+"_intermediary");	
+			}
+		}
+	}		
+	else{ emsgroot("The input file must contain compartment definitions through 'comps'");}
+	
+	return name;
+}
+
+
+/// Finds the susceptible compartment
+unsigned int Inputs::find_susceptible_compartment()
+{
+	if(basedata->contains("trans")){
+		const auto transin = basedata->open("trans",used);
+		for(auto j = 0u; j < transin.size(); j++){
+			auto trans = transin[j];
+			auto inf = trans.stringfield("infection","");
+			if(inf != ""){
+				auto comps = find_compartments();
+				return find_in(comps,trans.stringfield("from","In 'trans'"));
+			}
+		}
+	}
+	else emsgroot("The input file must contain transition definitions through 'trans'.");
+		
+	emsg("In 'trans' could not find 'infection' set");
 }
 
 
@@ -1157,7 +1202,7 @@ void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector
 			trans.check_used("trans");
 		}
 	}
-	else{ emsgroot("The input file must contain transition definitions through 'trans'.");}
+	else emsgroot("The input file must contain transition definitions through 'trans'.");
 }
 
 
@@ -1859,6 +1904,39 @@ void Inputs::find_mcmc_update(MCMCUpdate &mcmc_update)
 }
 
 
+void Inputs::find_area_plot(AreaPlot &area_plot)
+{
+	if(basedata->contains("area_plot")){
+		auto mup = basedata->open("area_plot",used); mup.set_used();
+	
+		area_plot.boundfile = mup.stringfield("boundary", "");
+		area_plot.xcol = mup.stringfield("x_column","");
+		area_plot.ycol = mup.stringfield("y_column","");
+		if(area_plot.boundfile != "" && (area_plot.xcol != "" || area_plot.ycol != "")){
+			emsgroot("When specifying 'area_plot' cannot set 'boundary' and 'x_column'/'y_column'");
+		}		
+		
+		if(area_plot.boundfile == ""){
+			if(area_plot.xcol == "" || area_plot.ycol == ""){
+				emsgroot("When specifying 'area_plot' either 'boundary' or 'x_column'/'y_column' must be set");
+			}
+		}
+		
+		area_plot.project = UNIFROM_PROJ;
+		
+		auto pro = mup.stringfield("projection", ""); 
+		if(pro != ""){
+			if(pro == "equirectangular") area_plot.project = EQUI_PROJ;
+			else{
+				if(pro == "uniform") area_plot.project = UNIFROM_PROJ;
+				else emsgroot("In 'area_plot' the value '"+pro+"' is not recognised");
+			}
+		}
+		mup.check_used("area_plot");
+	}
+}
+
+
 /// Updates which TOML keys have been used
 void Inputs::addused(const string key, vector <UsedTomlKey> &used)
 {
@@ -1873,7 +1951,7 @@ void Inputs::print_commands_not_used() const
 	for(const auto &us : used){ if(us.used == false) not_used.push_back(us.name);}
 	
 	if(not_used.size() > 0){
-		cout << "WARNING! The TOML ";
+		cout << "WARNING: The TOML ";
 		
 		switch(not_used.size()){
 			case 1: cout << "command '" << not_used[0] << "' is not used."; break;
