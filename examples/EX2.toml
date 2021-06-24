@@ -5,6 +5,8 @@ end = "2020-09-01"
 datadir = "examples/Data_EX2"
 outputdir = "Output_EX2"
 
+time_labels = [{name="Lockdown", time="2020-03-23"}]
+
 comps = [
 {name="S"},
 {name="E", dist="Erlang", k="2", mean_value="4"},
@@ -20,23 +22,20 @@ trans = [
 {from="I", to="D", prob_value="*", prob_prior="Dir(*)"} 
 ] 
 
-ages = {cats="age0-19 | age20-69 | age70+"}
+#ages = {cats="age0-19 | age20-69 | age70+"}
 
-democats = [{name="Sex", cats="Male | Female"}]
-
-age_mixing_matrix = "AMM.csv"
+#democats = [{name="Sex", cats="Male | Female"}]
 
 geo_mixing_matrix = "M.csv"
+
+area_effect = {value="[area effect:Scotland_LA.csv]", prior="Dir(*)"}
 
 R_spline = [{ value="2.0", prior="Uniform(0.4,4)"}]
 efoi_spline = [{ value="0.1"}]
 
 areas = "Scotland_LA.csv"
 
-#area_covars= [{name="density", param="b1", value="0.1", prior="Uniform(0,1)", func="log"}]
-
-tv_covars = [{name="temperature", file="tvcovar.csv", param="b2", value="0.1", prior="Uniform(0,1)", func="linear"}]        
-#area_tv_covars = [{name="covar", file="areatvcovar.csv", param="b2", value="0.1", prior="Uniform(0,1)", func="linear"}]       
+area_plot = { boundary="Scotland_areas.geojson", projection="equirectangular"}
 
 data_tables = [
 {type="transition", observation="E->I", geo_dep="area", timestep="7", file="EI.csv"},

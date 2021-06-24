@@ -57,10 +57,7 @@ void Data::geo_normalise(SparseMatrix &mat)
 	if(mat.N != area.size()) emsgEC("data_matrix",1);
 
 	vector <unsigned int> pop(area.size());
-	for(auto c = 0u; c < area.size(); c++){    
-		auto sum = 0u; for(auto dp = 0u; dp < area[c].pop.size(); dp++) sum += area[c].pop[dp];
-		pop[c] = sum;
-	}
+	for(auto c = 0u; c < area.size(); c++) pop[c] = area[c].total_pop;
 	
 	genQ.onlydiag.resize(area.size());         
 	for(auto c = 0u; c < area.size(); c++) genQ.onlydiag[c] = 1.0/pop[c];
@@ -107,12 +104,12 @@ void Data::agematrix_normalise(Matrix &mat)
 	vector <unsigned int> pop(nage);
 	for(auto a = 0u; a < nage; a++) pop[a] = 0;
 	
-	for(auto c = 0u; c < area.size(); c++){   
-		for(auto dp = 0u; dp < area[c].pop.size(); dp++){
-			pop[democatpos[dp][0]] += area[c].pop[dp];
+	for(auto c = 0u; c < area.size(); c++){
+		for(auto co = 0u; co < area[c].pop_init.size(); co++){
+			for(auto dp = 0u; dp < ndemocatpos; dp++) pop[democatpos[dp][0]] += area[c].pop_init[co][dp];
 		}
 	}
-
+	
 	auto sum = 0.0, sum2 = 0.0;
 	for(auto a = 0u; a < nage; a++){
 		for(auto aa = 0u; aa < nage; aa++){
@@ -144,10 +141,13 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 	for(auto a = 0u; a < N; a++) pop[a] = 0;
 	
 	auto poptot = 0.0;
-	for(auto c = 0u; c < area.size(); c++){   
-		for(auto dp = 0u; dp < area[c].pop.size(); dp++){
-			pop[democatpos[dp][0]] += area[c].pop[dp];
-			poptot += area[c].pop[dp];
+	for(auto c = 0u; c < area.size(); c++){
+		for(auto co = 0u; co < area[c].pop_init.size(); co++){
+			for(auto dp = 0u; dp < ndemocatpos; dp++){
+				auto po = area[c].pop_init[co][dp];
+				pop[democatpos[dp][0]] += po;
+				poptot += po;
+			}
 		}
 	}
 
@@ -299,10 +299,7 @@ vector <TreeNode> Data::area_split(SparseMatrix M) const
 	vector <TreeNode> treenode;   
 		
 	vector <unsigned int> area_pop(narea);
-	for(auto i = 0u; i < narea; i++){
-		auto sum = 0u; for(auto val: area[i].pop) sum += val;
-		area_pop[i] = sum;
-	}
+	for(auto c = 0u; c < narea; c++) area_pop[c] = area[c].total_pop;
 	
 	vector< vector <double> > G;
 	G.resize(narea);

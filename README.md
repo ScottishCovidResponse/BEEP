@@ -36,7 +36,8 @@ In BEEPmbp priors on model parameters can be specified from a large range of pos
 ## Software implementation features:
 *	Efficient parallel implementation (written in C++ with MPI).
 *	Choose from 7 different inference algorithms.
-*	Generates pdf report for easy visualisation of outputs.
+*	A web browser visualisation tool for viewing results on maps, graphs, histograms and tables.
+*	Additionally a pdf report for output of graphs.
 
 ## Downloading and running
 

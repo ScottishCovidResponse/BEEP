@@ -151,7 +151,7 @@ void Model::add_comps()
 	vector <string> mean_dep;
 	
 	inputs.find_compartments(name,mean_spec,mean_dep,shape,inf,data.democatpos,data.democat); 
-	
+
 	for(auto c = 0u; c < name.size(); c++){
 		auto k = shape[c]; 
 		if(k == UNSET){
@@ -314,7 +314,12 @@ void Model::trans_check() const
 	for(const auto &co : comp){                                      // Checks distributions are correctly identified
 		if(co.trans.size() > 0){
 			if(co.param_mean.size() == 0){
-				emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' must be set.");
+				if(details.siminf == SIMULATE){
+					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' must be set.");
+				}
+				else{
+					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' must be set.");
+				}
 			}
 		}
 		else{
@@ -528,9 +533,11 @@ void Model::update_spl_ref(string &name, string &desc, string area_str, const ve
 	si.democatpos_dist.resize(data.ndemocatpos_per_strain);
 	auto total = 0.0;
 	for(auto c : area){
-		for(auto dp = 0u; dp < data.ndemocatpos_per_strain; dp++){
-			si.democatpos_dist[dp] += data.area[c].pop[dp];
-			total += data.area[c].pop[dp];
+		for(auto co = 0u; co < comp.size(); co++){
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				si.democatpos_dist[dp%data.ndemocatpos_per_strain] += data.area[c].pop_init[co][dp];
+				total += data.area[c].pop_init[co][dp];
+			}
 		}
 	}
 
@@ -723,7 +730,10 @@ double Model::param_prior_sample(const unsigned int th, const vector <double> &p
 			
 			case DIRICHLET_PRIOR:
 				return gamma_sample(get_val1(th,paramv),get_val2(th,paramv));
-				
+			
+			case DIRICHLET_FLAT_PRIOR:
+				return exp_sample(1);
+						
 			default:			
 				emsgEC("model",6);
 				break;
@@ -918,13 +928,14 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 					}
 					else{
 						if(toLower(spl[0]) == "dir"){
-							pt = DIRICHLET_PRIOR;
 							if(vals.size() == 1){
+								pt = DIRICHLET_FLAT_PRIOR;
 								if(vals[0] != "*") emsgroot("For parameter '"+ps.name+"' the prior '"+ps.prior+"' is not recognised.");
 								dir_mean = TOBESET;
 								dir_sd = TOBESET;
 							}
 							else{
+								pt = DIRICHLET_PRIOR;
 								if(vals.size() != 2) emsgroot("For parameter '"+ps.name+"' the prior '"+ps.prior+"' is not recognised.");
 								dir_mean = get_double_with_tobeset(vals[0],"For parameter '"+ps.name+"' the prior '"+ps.prior+"'");
 								dir_sd = get_double_with_tobeset(vals[1],"For parameter '"+ps.name+"' the prior '"+ps.prior+"'");
@@ -1201,8 +1212,6 @@ double Model::calculate_area_av(const vector < vector <double> > &areafactor) co
 {
 	auto area_av = 0.0; 
 	for(auto c = 0u; c < data.narea; c++){
-		auto popsum = 0.0; for(auto pop : data.area[c].pop) popsum += pop;
-		
 		auto av = 0.0; for(auto t = 0u; t < details.period; t++) av += areafactor[t][c];
 		av /= details.period;		
 		area_av += av*data.area[c].total_pop;
@@ -1547,12 +1556,19 @@ double Model::prior(const vector<double> &paramv) const
 				}
 				break;
 				
-				case DIRICHLET_PRIOR:
+			case DIRICHLET_PRIOR:
 				{
 					auto val = paramv[th];
 					auto alpha = get_val1(th,paramv);
 					auto beta = get_val2(th,paramv);
 					Pr += gamma_probability(val,alpha,beta);
+				}
+				break;
+				
+			case DIRICHLET_FLAT_PRIOR:
+				{
+					auto val = paramv[th];
+					Pr += -val;
 				}
 				break;
 				
@@ -1656,6 +1672,11 @@ double Model::dPr_dth(const unsigned int th, const vector<double> &paramv) const
 			{
 				auto a = get_val1(th,paramv), b = get_val2(th,paramv);
 				dPr_dth += (a-1)/val - b;
+			}
+			break;
+			
+		case DIRICHLET_FLAT_PRIOR:
+			{
 			}
 			break;
 			
@@ -1816,9 +1837,10 @@ vector <double> Model::calculate_external_ninf(const vector<double> &paramv_dir)
 				auto sp_info = efoispline_info[efoi_spl_ref[st][c]];
 				auto val = spline_val[sp_info.spline_ref][sett];
 		
-				for(auto dp = 0u; dp < dpmax; dp++){	
+				for(auto dp = 0u; dp < dpmax; dp++){
+					auto popsum = 0u; for(auto co = 0u; co < comp.size(); co++) popsum += data.area[c].pop_init[co][dp];
 					auto a = data.democatpos[dp][0];
-					ninf[st] += susceptibility[st*dpmax + dp]*val*data.area[c].pop[dp]*sp_info.efoi_agedist[a]*dt;
+					ninf[st] += susceptibility[st*dpmax + dp]*val*popsum*sp_info.efoi_agedist[a]*dt;
 				}
 			}
 		}
@@ -1866,19 +1888,13 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 		for(auto i = 0u; i < Rspline_info.size(); i++){
 			auto sp = Rspline_info[i].spline_ref; flag[sp] = true;
 			
-			SplineOutput so;                                            // This outputs Rt
-			so.name = spline[sp].name+name_add;
-			so.desc = spline[sp].desc+name_add; 
-			
-			so.splineval = create_disc_spline(sp,paramv_dir);
-			auto fac = paramv_dir[data.strain[st].Rfactor_param];
-			for(auto &val : so.splineval) val *= fac;
-			splineout.push_back(so);
-			
 			if(transnum.size() > 0){                                    // This outputs effective Rt
 				SplineOutput so;
 				so.name = "Effective "+spline[sp].name+name_add;
 				so.desc = "The effective reproduction number"+name_add;
+				so.fulldesc = "Effective reproduction number: The effective reproduction number is the expected number of cases directly caused by an infected individual as a function of time t. This takes into account the fact that as the epidemic progresses the fraction of susceptible individuals reduces (causing effective transmission upon contact of individuals to become less and less common). The effective R_t is always less than R_t and if it reduces below 1 herd immunity in reached (i.e. the disease naturally dies out over time).";
+				so.tab = "Transmission"; so.tab2 = "Effective R_t"; 
+				
 				so.splineval = R_eff[i];
 				splineout.push_back(so);
 			}
@@ -1886,6 +1902,17 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 				SplineOutput so;
 				splineout.push_back(so);
 			}
+			
+			SplineOutput so;                                            // This outputs Rt
+			so.name = spline[sp].name+name_add;
+			so.desc = spline[sp].desc+name_add; 
+			so.fulldesc = "Reproduction number: R_t is defined as the value the basic reproduction number R_0 would have taken if the initial rate of mixing between individuals in the population is taken to be the same as that at time t. As such, R_t is interpreted as a quantity proportional to the rate at which individuals come into contact with each other (with each contact allowing for the possibility of disease transmission).";
+			so.tab = "Transmission"; so.tab2 = "R_t"; 
+			
+			so.splineval = create_disc_spline(sp,paramv_dir);
+			auto fac = paramv_dir[data.strain[st].Rfactor_param];
+			for(auto &val : so.splineval) val *= fac;
+			splineout.push_back(so);
 		}
 	}
 	
@@ -1908,6 +1935,9 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 		SplineOutput so;
 		so.name = spline[sp].name;
 		so.desc = spline[sp].desc;
+		so.fulldesc = "External force of infection: The external force of infection sets the average rate of infections (per "+to_string(details.efoi_factor)+" individuals) caused by contacts with infected individuals from outside of the population under investigation.";
+		so.tab = "Transmission"; so.tab2 = "EFOI_t"; 
+				
 		so.splineval = create_disc_spline(sp,paramv_dir);
 		for(auto &val : so.splineval) val *= details.efoi_factor;
 		so.desc += " (per "+to_string(details.efoi_factor)+")";
@@ -1919,6 +1949,9 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 			SplineOutput so;
 			so.name = spline[sp].name;
 			so.desc = spline[sp].desc;
+			so.fulldesc = "Spline: "+spline[sp].desc;
+			so.tab = "Transmission"; so.tab2 = spline[sp].name; 
+		
 			so.splineval = create_disc_spline(sp,paramv_dir);
 			splineout.push_back(so);
 		}
@@ -2068,7 +2101,7 @@ double Model::calculate_generation_time(const vector<double> &paramv_dir, const 
 }
 
 
-/// Works out effective R_t for each of the infection transitions
+/// Works out effective R_t
 vector < vector <double> > Model::calculate_R_eff(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &transnum, const unsigned int st) const
 {
 	vector < vector <double> > R_eff; 
@@ -2115,6 +2148,55 @@ vector < vector <double> > Model::calculate_R_eff(const vector <double> &paramv_
 	
 	return R_eff;
 }
+
+
+/*
+/// Works out effective R_t for each area
+vector < vector <double> > Model::calculate_R_eff_area(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &transnum, const unsigned int st) const
+{
+	vector < vector <double> > R_eff; 
+	if(transnum.size() == 0) return R_eff;
+	
+	auto transrate = create_transrate(paramv_dir);
+	auto susceptibility = create_susceptibility(paramv_dir);   
+	auto disc_spline = create_disc_spline(paramv_dir);
+	auto Ntime = create_Ntime(disc_spline);	
+	auto Vinv = calculate_Vinv(transrate,st);
+	auto fac = paramv_dir[data.strain[st].Rfactor_param];
+	vector <unsigned int> sus_return_trans;
+	
+	for(auto tr = 0u; tr < trans.size(); tr++){
+		if(trans[tr].to == start_compartment) sus_return_trans.push_back(tr);
+	}
+	
+	R_eff.resize(data.narea);
+	for(auto c = 0u; c < data.narea; c++){			
+		const auto &info = Rspline_info[R_spl_ref[c]];
+	
+		R_eff[c] = disc_spline[info.spline_ref];
+		for(auto &val : R_eff[i]) val *= fac;
+			
+		for(auto sett = 0u; sett < details.ndivision; sett++){
+			R_eff[c][sett] /= calculate_R_beta_ratio_using_NGM(paramv_dir,susceptibility,Ntime[sett],Vinv,st,info.democatpos_dist);
+		}
+
+		auto dist = info.democatpos_dist;
+		double total_pop = info.total_pop;
+
+		for(auto sett = 0u; sett < details.ndivision; sett++){
+			R_eff[c][sett] *= calculate_R_beta_ratio_using_NGM(paramv_dir,susceptibility,Ntime[sett],Vinv,st,dist);
+			
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				auto dpp = dp%data.ndemocatpos_per_strain;
+				dist[dpp] -= transnum[sett][c][infection_trans][dp]/total_pop;
+				for(auto tr : sus_return_trans) dist[dpp] += transnum[sett][c][tr][dp]/total_pop;
+			}
+		}
+	}
+	
+	return R_eff;
+}
+*/
 
 
 /// Works out R as a function of age for each of the infection transitions
@@ -2339,6 +2421,10 @@ bool Model::inbounds(const vector <double> &paramv) const
 				if(val < 0) return false;
 				break;
 				
+			case DIRICHLET_FLAT_PRIOR:
+				if(val < 0) return false;
+				break;
+				
 			default:
 				emsgEC("model",23);
 				break;
@@ -2521,102 +2607,105 @@ void Model::set_dirichlet()
 	
 	if(details.siminf == INFERENCE){
 		for(const auto &dir : dirichlet){                             // Sets the prior distributions used by the Dirichtlet
-			auto nfixed = 0u, ndir = 0u;
+			auto nfixed = 0u, ndir = 0u, ndirflat = 0u;
 			for(auto par : dir.param){
 				auto th = par.th;
 				if(param[th].priortype == FIXED_PRIOR) nfixed++;
 				if(param[th].priortype == DIRICHLET_PRIOR) ndir++;
+				if(param[th].priortype == DIRICHLET_FLAT_PRIOR) ndirflat++;
 			}
 			
 			if(nfixed != dir.param.size()){
-				if(ndir != dir.param.size()){
+				if(ndir != dir.param.size() && ndirflat != dir.param.size()){
 					stringstream ss; ss << "The parameters: ";
 					for(auto par : dir.param) ss << param[par.th].name << " ";
 					ss << "must either all be fixed (by setting a value and leaving the prior unspecified)";
-					ss << " or all set to a prior value of 'Dir', which implies a Dirichlet distribution.";
+					ss << " or all set to a prior value of 'Dir(*)', which implies a Dirichlet distribution.";
 					emsgroot(ss.str());
 				}
-	
-				vector <DirichletParam> tobeset;
-				auto sum = 0.0;
-				for(auto i = 0u; i < dir.param.size(); i++){
-					const auto &par = dir.param[i];
-					auto th = par.th;
-					if(param[th].dir_mean == UNSET){
-						emsgroot("The Dirichlet mean for the parameter '"+param[th].name+"' must be set");
-					}
+		
+				if(ndir == dir.param.size()){
+					vector <DirichletParam> tobeset;
+					auto sum = 0.0;
+					for(auto i = 0u; i < dir.param.size(); i++){
+						const auto &par = dir.param[i];
+						auto th = par.th;
+						if(param[th].dir_mean == UNSET){
+							emsgroot("The Dirichlet mean for the parameter '"+param[th].name+"' must be set");
+						}
 
-					if(param[th].dir_mean == TOBESET) tobeset.push_back(par);
-					else sum += param[th].dir_mean*par.frac; 
-				}
+						if(param[th].dir_mean == TOBESET) tobeset.push_back(par);
+						else sum += param[th].dir_mean*par.frac; 
+					}
+				
+					if(tobeset.size() == 0){
+						emsgroot("The mean of the Dirichlet prior for one of the parameters: "+list_dir_param(dir.param)+"must have a value set to '*'");
+					}
+				
+					if(tobeset.size() > 1){
+						emsgroot("For the means of the Dirichlet prior, all but one of the parameters: "+list_dir_param(tobeset)+"must have their value set");
+					}
+				
+					if(tobeset.size() == 1){
+						if(sum > 1){
+							emsgroot("The value for the Dirichlet prior mean of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+						}
+						
+						auto th = tobeset[0].th;
+						auto val = (1-sum)/tobeset[0].frac;
+					
+						param[th].dir_mean = val; if(param[th].priortype == FIXED_PRIOR) param[th].val1 = 1-sum;
 			
-				if(tobeset.size() == 0){
-					emsgroot("The mean of the Dirichlet prior for one of the parameters: "+list_dir_param(dir.param)+"must have a value set to '*'");
-				}
-			
-				if(tobeset.size() > 1){
-					emsgroot("For the means of the Dirichlet prior, all but one of the parameters: "+list_dir_param(tobeset)+"must have their value set");
-				}
-			
-				if(tobeset.size() == 1){
-					if(sum > 1){
-						emsgroot("The value for the Dirichlet prior mean of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+						if(details.siminf == SIMULATE && mpi.core == 0){
+							cout << "The Dirichlet mean for parameter '"+param[tobeset[0].th].name+"' has been set to "+to_string(val) << endl;
+						}
+					}
+		
+					vector <DirichletParam> sdset;
+					for(auto i = 0u; i < dir.param.size(); i++){
+						const auto &par = dir.param[i];
+						auto th = par.th;
+						if(param[th].dir_sd == UNSET) emsgroot("The Dirchlet standard deviation '"+param[th].name+"' must be set");
+						if(param[th].dir_sd != TOBESET) sdset.push_back(par);
 					}
 					
-					auto th = tobeset[0].th;
-					auto val = (1-sum)/tobeset[0].frac;
-				
-					param[th].dir_mean = val; if(param[th].priortype == FIXED_PRIOR) param[th].val1 = 1-sum;
-		
-					if(details.siminf == SIMULATE && mpi.core == 0){
-						cout << "The Dirichlet mean for parameter '"+param[tobeset[0].th].name+"' has been set to "+to_string(val) << endl;
+					if(sdset.size() == 0){
+						emsgroot("The standard deviation of the Dirichlet prior, for one of the parameters: "+list_dir_param(dir.param)+"must be set");
 					}
-				}
-	
-				vector <DirichletParam> sdset;
-				for(auto i = 0u; i < dir.param.size(); i++){
-					const auto &par = dir.param[i];
-					auto th = par.th;
-					if(param[th].dir_sd == UNSET) emsgroot("The Dirchlet standard deviation '"+param[th].name+"' must be set");
-					if(param[th].dir_sd != TOBESET) sdset.push_back(par);
-				}
-				
-				if(sdset.size() == 0){
-					emsgroot("The standard deviation of the Dirichlet prior, for one of the parameters: "+list_dir_param(dir.param)+"must be set");
-				}
-		
-				if(sdset.size() > 1){
-					emsgroot("The standard deviation of the Dirichlet prior, for only one of the parameters: "+list_dir_param(dir.param)+"must be set");
-				}
-				
-				auto th = sdset[0].th;
-				auto mu = param[th].dir_mean*sdset[0].frac;
-				auto var = param[th].dir_sd*param[th].dir_sd*sdset[0].frac*sdset[0].frac;
-				auto alpha0 = mu*(1-mu)/var - 1;
-				
-				sum = 0.0;
-				for(auto i = 0u; i < dir.param.size(); i++){
-					auto th = dir.param[i].th;
-					param[th].val1 = param[th].dir_mean*dir.param[i].frac;
-					param[th].val2 = 1; 
-					sum += param[th].val1;
-				}
-				
-				for(auto i = 0u; i < dir.param.size(); i++){
-					auto th = dir.param[i].th;
-					param[th].val1 *= alpha0/sum;
-				}
-				
-				double a0=0;
-				for(auto i = 0u; i < dir.param.size(); i++){
-					auto th = dir.param[i].th;
-					a0 += param[th].val1;
-				}
-				
-				for(auto i = 0u; i < dir.param.size(); i++){
-					auto th = dir.param[i].th;
-					if(param[th].dir_sd == TOBESET){
-						param[th].dir_sd = sqrt((param[th].val1/a0)*(1-(param[th].val1/a0))/(a0+1))/dir.param[i].frac;
+			
+					if(sdset.size() > 1){
+						emsgroot("The standard deviation of the Dirichlet prior, for only one of the parameters: "+list_dir_param(dir.param)+"must be set");
+					}
+					
+					auto th = sdset[0].th;
+					auto mu = param[th].dir_mean*sdset[0].frac;
+					auto var = param[th].dir_sd*param[th].dir_sd*sdset[0].frac*sdset[0].frac;
+					auto alpha0 = mu*(1-mu)/var - 1;
+					
+					sum = 0.0;
+					for(auto i = 0u; i < dir.param.size(); i++){
+						auto th = dir.param[i].th;
+						param[th].val1 = param[th].dir_mean*dir.param[i].frac;
+						param[th].val2 = 1; 
+						sum += param[th].val1;
+					}
+					
+					for(auto i = 0u; i < dir.param.size(); i++){
+						auto th = dir.param[i].th;
+						param[th].val1 *= alpha0/sum;
+					}
+					
+					double a0=0;
+					for(auto i = 0u; i < dir.param.size(); i++){
+						auto th = dir.param[i].th;
+						a0 += param[th].val1;
+					}
+					
+					for(auto i = 0u; i < dir.param.size(); i++){
+						auto th = dir.param[i].th;
+						if(param[th].dir_sd == TOBESET){
+							param[th].dir_sd = sqrt((param[th].val1/a0)*(1-(param[th].val1/a0))/(a0+1))/dir.param[i].frac;
+						}
 					}
 				}
 			}
@@ -2676,12 +2765,192 @@ string Model::print_prior(const unsigned int p) const
 			ss << ")";
 			break;
 			
+		case DIRICHLET_FLAT_PRIOR:
+			ss << "Dir(*)";
+			break;
+			
 		default:
 			emsgEC("model",24);
 			break;
 	}
 						
 	return ss.str();
+}
+
+
+/// Outputs a summary of the compartmental model in JSON format
+string Model::comparmtental_model_JSON() const 
+{
+	stringstream vis;
+	
+	vis << "{\"comp\":[";
+	
+	auto fl = false;
+	for(auto i = 0u; i < comp.size(); i++){
+		const auto &co = comp[i];
+	
+		if(co.num == UNSET || co.num == 0){
+			if(fl == true) vis << ",";
+			fl = true;
+			
+			vis << "{\"name\":\"" << co.name;
+			//if(co.num != UNSET && co.num > 0) vis << co.num;
+			vis << "\"";
+				
+			if(co.shape != UNSET){
+				vis << ",\"mean\":[";
+				
+				for(auto i = 0u; i < co.param_mean.size(); i++){
+					auto th = co.param_mean[i];
+					if(i != 0) vis << ",";
+					vis << "{\"param\":\"&m&^{" << co.name << "}_{" << data.democatpos_name[i] << "}\"";
+					vis << ",\"name\":\"";
+					vis  << param[th].name;
+					vis << "\"}";
+				}
+				vis << "]";
+				
+				vis << ",\"shape\":" << co.shape;
+			}
+			if(co.mean_dep != "") vis << ",\"mean_dep\":\"" << co.mean_dep << "\"";
+			auto th = co.infectivity_param;
+			if(param[th].name != "zero"){
+				vis << ",\"inf\":\"" << param[th].name << "\"";
+			}
+			vis << "}";
+		}
+	}
+	vis << "]";
+	
+	auto flag = false;
+	
+	vis << ",\"trans\":["; 
+	for(auto i = 0u; i < trans.size(); i++){
+		const auto &tr = trans[i];
+		if(comp[tr.from].name != comp[tr.to].name){
+			if(flag == true) vis << ",";
+			flag = true;
+			
+			vis << "{\"name\":\"" << tr.name << "\"";
+			if(tr.inf == TRANS_INFECTION) vis << ",\"infection\":\"yes\"";
+			
+			vis << ",\"from\":\"" << comp[tr.from].name << "\"";
+			vis << ",\"to\":\"" << comp[tr.to].name << "\"";
+			
+			if(tr.param_prob.size() > 0){
+				vis << ",\"prob\":[";
+				for(auto j = 0u; j < tr.param_prob.size(); j++){
+					if(j != 0) vis << ",";
+					vis << "{\"param\":\"&b&^{" << comp[tr.from].name << "→" << comp[tr.to].name << "}_{" << data.democatpos_name[j] << "}\"";
+					vis << ",\"name\":\"";
+					vis  << param[tr.param_prob[j]].name;
+					vis << "\"}";
+				}
+				vis << "]";
+			}
+			
+			if(tr.prob_dep != "") vis << ",\"prob_dep\":\"" << tr.prob_dep << "\"";
+			vis << "}";
+		}
+	}
+	vis << "]";
+		
+	vis << "}";
+
+	//cout << vis.str() << endl;
+	
+	return vis.str();
+}
+				
+
+/// This outputs an expression for the force of infection
+string Model::foi_model_JSON() const 
+{
+	stringstream vis;
+		
+	vis << "{";
+	vis << "\"name\":\"&λ_{";
+	
+	auto fl = false;
+	bool descfl= false;
+	
+	stringstream ss;
+	if(data.nstrain > 1){ 
+		if(fl == true) vis << ","; fl = true;
+		vis << "s";
+		
+		if(descfl == true) ss << ","; descfl = true;
+		ss << "\"&s& indexes the pathogen strain.\"";
+	}
+
+	if(data.narea > 1){ 
+		if(fl == true) vis << ","; fl = true;
+		vis << "a";
+		
+		if(descfl == true) ss << ","; descfl = true;
+		ss << "\"&a& indexes the area.\"";
+	}
+	
+	if(data.ndemocatpos_per_strain > 1){ 
+		if(fl == true) vis << ","; fl = true;
+		vis << "d";
+		
+		if(descfl == true) ss << ","; descfl = true;
+		ss << "\"&d& indexes the demographic group.\"";
+	}
+	
+	if(fl == true) vis << ","; fl = true;
+	vis << "t";
+	
+	if(descfl == true) ss << ","; descfl = true;
+	ss << "\"&t& indexes time.\"";
+
+	vis << "}&\"";
+	
+	vis << ",\"eq\":[";
+
+	bool eqfl = false;
+	
+	bool susvar = false;
+	for(auto c = 0u; c < data.ndemocat; c++){
+		if(data.democat[c].sus_vari == true) susvar = true;
+	}
+	
+	if(susvar == true){
+		if(eqfl == true) vis << ","; eqfl = true;
+		vis << "{\"text\":\"&σ_d&\"}";
+		
+		if(descfl == true) ss << ","; descfl = true;
+		ss << "\"&&σ_d& sets the relative susceptiblity of demographic group &d&.\"";
+	}
+	
+	if(susvar == true){
+		if(eqfl == true) vis << ","; eqfl = true;
+		vis << "{\"text\":\"[\"}";
+	}
+	
+	if(susvar == true){
+		if(eqfl == true) vis << ","; eqfl = true;
+		vis << "{\"text\":\"]\"}";
+	}
+	
+	vis << "]";
+	
+	vis << ",\"desc\":[" << ss.str() << "]";
+	
+	/*
+			auto nval = data.democat[c].value.size(); 
+		sus[c].resize(nval);
+		if(data.democat[c].sus_vari == true){		
+			for(auto j = 0u; j < nval; j++) sus[c][j] = paramv_dir[data.democat[c].sus_param[j]];
+		*/	
+	
+			
+	vis << "}";
+
+	//cout << vis.str() << "foi" << endl;
+	
+	return vis.str();
 }
 
 

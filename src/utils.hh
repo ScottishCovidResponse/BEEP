@@ -42,6 +42,7 @@ unsigned int binomial_sample(const double ratio, const unsigned int nn);
 double binomial_probability(const double ratio, const unsigned int nn, const unsigned int dn);
 void binomial_check();
 void strip(string &line);
+void rem_pagebreak(string &line);
 string toLower(string st);
 
 vector<string> split(const string &s, const char delimiter);

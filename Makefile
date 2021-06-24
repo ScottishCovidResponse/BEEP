@@ -53,6 +53,7 @@ srcs := \
  src/mbp.cc \
  src/mbp_check.cc \
  src/data.cc \
+ src/data_boundary.cc \
  src/data_matrix.cc \
  src/data_raw.cc \
  src/details.cc \
@@ -70,6 +71,7 @@ srcs := \
  src/simulate.cc \
  src/state_check.cc \
  src/timers.cc \
+ src/tinyxml2.cc \
  src/utils.cc
 
 	

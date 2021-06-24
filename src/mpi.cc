@@ -1041,7 +1041,7 @@ void Mpi::pack(const GenerateQ &genQ)
 void Mpi::pack_item(const Area &area)
 {
 	pack_item(area.code);
-	pack_item(area.pop);
+	pack_item(area.pop_init);
 	pack_item(area.total_pop);
 }
 
@@ -1266,7 +1266,7 @@ void Mpi::unpack(GenerateQ &genQ)
 void Mpi::unpack_item(Area &area)
 {
 	unpack_item(area.code);
-	unpack_item(area.pop);
+	unpack_item(area.pop_init);
 	unpack_item(area.total_pop);
 }
 

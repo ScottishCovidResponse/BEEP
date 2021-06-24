@@ -7,8 +7,10 @@
 #include <algorithm>
 #include <math.h> 
 #include <iomanip>
+#include "json.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
 #include "data.hh"	
 
@@ -38,6 +40,7 @@ void Data::raw()
 	//deaths_hospital_england(); emsg("done");
 	//generate_initpop(); emsg("done");
 	//generate_tvcovar(); emsg("done");
+	//reducesize_geojson("areas2.geojson"); emsg("done");
 }
 
 void Data::deaths_hospital_england()
@@ -1183,7 +1186,7 @@ void Data::generate_initpop()
 					fout << "," << democat[d].value[democatpos[dp][d]];
 				}
 			}
-			fout << ",S," << area[a].pop[dp] << endl;
+			fout << ",S," << area[a].pop_init[0][dp] << endl;
 		}
 	}
 }
@@ -1222,3 +1225,166 @@ void Data::generate_tvcovar()
 	}
 }
 
+/// Loads up a GEOJSON file and reduces its size (so it can be put on the GitHub repository)
+void Data::reducesize_geojson(const string file)
+{
+	auto filefull = data_directory+"/"+file;
+
+	ifstream boundfile(filefull);
+	if(!boundfile) emsg("Cannot open the file '"+file+"'.");
+	string s;
+	do{
+		string st;
+		getline( boundfile,st); s += st; 
+		if( boundfile.eof()) break;
+	}while(true);
+	
+	json jso = json::parse(s);
+	
+	auto &h = jso["features"];
+	
+	vector <unsigned int> rem(h.size());
+	
+	auto loop= 0u;
+	for(auto &it : h.items()){                          // Deletes unused areas
+		json val = it.value();
+		//cout << val << " val\n";
+		auto h2 = val["type"];
+		if(h2 == "Feature"){
+			auto c = UNSET; 
+			auto h3 = val["properties"];
+			for(auto &it3 : h3.items()){     // Checks if one of the properties contains the name of the area 
+				if(it3.value().is_string()){
+					string name = it3.value();
+					strip(name);		
+					c = 0; while(c < narea && name != area[c].code) c++;
+					if(c < narea) break;
+				}
+			}
+		
+			if(c == UNSET || c == narea) rem[loop] = 1;
+		}
+		loop++;
+	}
+
+	for(int loop = h.size()-1; loop >= 0; loop--){
+		if(rem[loop] == 1) h.erase(h.begin()+loop);
+	}
+
+	const double acc = 1000;
+	for(auto &it : h.items()){                                  // Removes significant figures
+		json &val = it.value();
+		auto h2 = val["type"];
+		if(h2 == "Feature"){
+			auto &h3 = val["geometry"];	
+			auto h4 = h3["type"];		
+			if(h4 == "Polygon"){
+				auto &h5 = h3["coordinates"];
+				for(auto &it2 : h5.items()){
+					json &val2 = it2.value();
+					for(auto &it3 : val2.items()){
+						json &val3 = it3.value();
+						double sx = val3[0]; val3[0] = int(sx*acc)/acc;
+						double sy = val3[1]; val3[1] = int(sy*acc)/acc;
+					}
+				}
+			}
+				
+			if(h4 == "MultiPolygon"){
+				auto &h5 = h3["coordinates"];
+				for(auto &it : h5.items()){
+					json &val = it.value();
+					for(auto &it2 : val.items()){
+						json &val2 = it2.value();
+						for(auto &it3 : val2.items()){
+							json &val3 = it3.value();
+							double sx = val3[0]; val3[0] = int(sx*acc)/acc;
+					  	double sy = val3[1]; val3[1] = int(sy*acc)/acc;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	double dif = 0.004;
+	auto nump = 0u;
+	for(auto &it : h.items()){                                  // Removes fine details
+		json &val = it.value();
+		auto &h2 = val["type"];
+		if(h2 == "Feature"){
+			auto &h3 = val["geometry"];	
+			auto &h4 = h3["type"];		
+			double xst=0, yst=0;
+			
+			if(h4 == "Polygon"){
+				auto &h5 = h3["coordinates"];
+				for(auto &it2 : h5.items()){
+					json &val2 = it2.value();
+					auto loop = 0u; 
+					vector <unsigned int> rem(val2.size());  for(auto i = 0u; i <val2.size(); i++) rem[i] = 0;
+					for(auto &it3 : val2.items()){
+						json &val3 = it3.value();
+						if(loop == 0){
+							xst = val3[0]; yst = val3[1]; 
+						}
+						else{
+							double x = val3[0];
+							double y = val3[1];
+							double dx = x-xst;
+							double dy = y-yst;
+							if(dx*dx+dy*dy < dif*dif) rem[loop] = 1;
+							else{ xst += dx; yst += dy;}
+						}
+						loop++;
+					}
+					
+					for(int loop = val2.size()-1; loop >= 0; loop--){
+						if(rem[loop] == 1) val2.erase(val2.begin()+loop);
+					}
+					nump += val2.size();
+				}
+			}
+				
+			if(h4 == "MultiPolygon"){
+				auto &h5 = h3["coordinates"];
+				for(auto &it : h5.items()){
+					json &val = it.value();
+					for(auto &it2 : val.items()){
+						json &val2 = it2.value();
+						auto loop = 0u; 
+						vector <unsigned int> rem(val2.size());  for(auto i = 0u; i <val2.size(); i++) rem[i] = 0;
+						for(auto &it3 : val2.items()){
+							json &val3 = it3.value();
+							if(loop == 0){
+								xst = val3[0]; yst = val3[1]; 
+							}
+							else{
+								double x = val3[0];
+								double y = val3[1];
+								double dx = x-xst;
+								double dy = y-yst;
+								if(dx*dx+dy*dy < dif*dif) rem[loop] = 1;
+								else{ xst += dx; yst += dy;}
+							}
+							loop++;
+						}
+						
+						for(int loop = val2.size()-1; loop >= 0; loop--){
+							if(rem[loop] == 1) val2.erase(val2.begin()+loop);
+						}
+						nump += val2.size();
+					}					
+				}
+			}
+		}
+	}
+	
+	cout << nump <<" nump\n";
+	
+	auto fi =  details.output_directory+"/Scotland_areas.geojson";
+	ofstream fiout(fi);
+	fiout << jso.dump() << endl;
+	
+	//cout << jso.dump() << "dum\n";    
+}

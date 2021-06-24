@@ -11,41 +11,51 @@ Simulation:
 	
 Multiple simulations:       
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="multisim" nsimulation=100
-OPTIONS nsimulation
+OPTIONS: nsimulation
 
 Prediction (uses posterior samples from inference to predict the future, with potential model modificiations):                 
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="prediction" 
-OPTIONS prediction_start, prediction_end, modification, nsim_per_sample
+OPTIONS: prediction_start, prediction_end, modification, nsim_per_sample
 
 ABC-MBP inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
-OPTIONS nparticle, ngeneration / cutoff_final, nupdate, GR_max, nrun
+OPTIONS: nparticle, ngeneration / cutoff_final, nupdate, GR_max, nrun
 
 PAIS inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="pais" nparticle=50 ngeneration=5 nrun=4
-OPTIONS nparticle, ngeneration / invT_final, nupdate, GR_max, nrun
+OPTIONS: nparticle, ngeneration / invT_final, nupdate, GR_max, nrun
 
 Simple ABC inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="abc" nsample=100 cutoff_frac=0.1 nrun=4
-OPTIONS nsample / GR_max, cutoff / cutoff_frac, nrun
+OPTIONS: nsample / GR_max, cutoff / cutoff_frac, nrun
 
 ABC-SMC inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="abcsmc" ngeneration=5 cutoff_frac=0.5 nsample=200 nrun=4
-OPTIONS nsample / GR_max, ngeneration / cutoff_final, cutoff_frac, nrun
+OPTIONS: nsample / GR_max, ngeneration / cutoff_final, cutoff_frac, nrun
 
 PMCMC inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="pmcmc" nparticle=20 nsample=200
-OPTIONS nparticle, nsample / GR_max, invT, nburnin, nthin, nrun
+OPTIONS: nparticle, nsample / GR_max, invT, nburnin, nthin, nrun
 
 MCMC-MBP inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="mcmcmbp" invT=303 nsample=200 nrun=4
-OPTIONS nsample / GR_max, invT, nburnin, nthin, nrun
+OPTIONS: nsample / GR_max, invT, nburnin, nthin, nrun
 
 MC3 inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
-OPTIONS nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
+OPTIONS: nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
 
 ./beepmbp inputfile="examples/EX2.toml" mode="sim" 
+mpirun -n 20 ./beepmbp inputfile="examples/EX2.toml" mode="abcmbp" nparticle=200 ngeneration=5 
+
+./beepmbp inputfile="examples/EX_covid.toml" mode="sim"
+mpirun -n 20 ./beepmbp inputfile="examples/EX_covid.toml" mode="abcmbp"  nparticle=20 ngeneration=3 
+
+mpirun -n 20 ./beepmbp inputfile="examples/EX_covid.toml" mode="abcmbp"  nparticle=20 ngeneration=80 
+
+./beepmbp inputfile="examples/EX1.toml" mode="sim" 
+
+mpirun -n 20 ./beepmbp inputfile="examples/EX2.toml" mode="abcmbp"  nparticle=20 ngeneration=3 
 */
 
 #include <iostream>
@@ -238,6 +248,13 @@ int main(int argc, char** argv)
 		inputs.print_commands_not_used();
 		 
 		cout <<  "Total time: " << prec(double(time_av)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
+		
+		/*
+		auto file = details.output_directory+"/Vis.js";
+		ifstream vis(file);
+		string line; getline(vis,line);
+		cout << line.substr(252220-100,+200) << endl;
+		*/
 	}
 	
 #ifdef USE_Data_PIPELINE

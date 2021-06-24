@@ -85,6 +85,8 @@ class Model                                             // Stores information ab
 		void set_strain();
 		string list_dir_param(const vector <DirichletParam> &list) const;
 		void set_dirichlet();
+		string comparmtental_model_JSON() const;
+		string foi_model_JSON() const;
 		string print() const;
 		string print_prior(const unsigned int p) const;
 		void print_parameter_types();

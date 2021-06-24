@@ -1,5 +1,0 @@
-name	code
-Region_0	r0
-Region_1	r1
-Region_2	r2
-Region_3	r3

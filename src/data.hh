@@ -2,8 +2,10 @@
 #define BEEPMBP__Data_HH
 
 #include <string>
+#include "tinyxml2.h"
 
 using namespace std;
+using namespace tinyxml2;
 
 #include "struct.hh"
 #include "details.hh"
@@ -53,7 +55,8 @@ class Data
 		unsigned int popsize;                    // The total population size 
 	 
 		unsigned int ndemocatpos;                // The number of demographic possibilities
-		vector < vector<unsigned int> > democatpos; // Stores all the posible combinations of demographic categories
+		vector < vector<unsigned int> > democatpos;// Stores all the posible combinations of demographic categories
+		vector <string> democatpos_name;         // Stores as a name  
 
 		vector <DataTable> datatable;            // Stores information about data tables
 		
@@ -72,20 +75,31 @@ class Data
 		
 		vector <Modification> modification;      // Used to implement modification to the model
 		
-		vector <string> get_table_column(string col, string file, string dir);
+		void chop_dir(string &file, const string dir) const;
+		vector <string> get_table_column(const string col_name, string file, const string dir) const;
+		vector <double> get_table_column(const unsigned int col, string file, const string dir) const;
+		vector <string> get_table_column_str(const unsigned int col, string file, const string dir) const;
+		string get_array_JSON(const string file, const string dir) const;
+		string get_table_JSON(const string file, const string dir) const;
+		void load_boundaries(const string file, vector < vector < vector <Coord> > > &bound) const;
+		void create_boundaries(string x, string y, vector < vector < vector <Coord> > > &bound) const;
+		void rescale_boundary(vector < vector < vector <Coord> > > &bound) const;
+		void make_circle_boundary(const string xcol, vector < vector < vector <Coord> > > &bound) const;
 		string print() const;
 	
 	private:
 		void calc_democatpos();
 		void read_data_files(Inputs &inputs, Mpi &mpi);
 		void copy_data(unsigned int core);
-		Table load_table(const string file, const string dir="", const bool heading=true) const;
+		Table load_table(const string file, const string dir="", const bool heading=true, const bool supop=false) const;
 		Table load_table_from_datapipeline(const string file) const;
-		Table load_table_from_file(const string file, const string dir, const bool heading, const char sep) const;
+		Table load_table_from_file(const string file, const string dir, const bool heading, const bool supop, const char sep) const;
 		void read_covars();
 		void read_level_effect();
 		void check_or_create_column(Table &tab, string head, unsigned int d) const;
-		void read_areas(Table &tab, string file);
+		void read_initial_population(Table &tab, string file, Inputs &inputs);
+		void read_init_pop_file(const vector <string> comps);
+		void read_initial_population_areas(const unsigned int co_sus, Table &tab, string file);
 		void load_modification(Inputs &inputs, const Table &tabarea);
 		
 		void filter_areas(Table &tab);
@@ -120,6 +134,15 @@ class Data
 		double get_split_fit(const vector <unsigned int> &area_list, const vector <bool> &gr, const vector <vector <double> > &G) const;
 		void print_obs() const;
 		
+		/* Used in data_boundary */
+		FileType filetype(const string file) const;
+		void load_KML(const string file, vector < vector < vector <Coord> > > &bound) const;
+		void placemark_KML(XMLNode* root, vector < vector < vector <Coord> > > &bound) const;
+		unsigned int get_area_name_KML(XMLNode* child) const;
+		void get_polygon_KML(XMLNode* child, const unsigned int c, vector < vector < vector <Coord> > > &bound) const;
+		void get_coordinate_KML(XMLNode* child, const unsigned int c, vector < vector < vector <Coord> > > &bound) const;
+		void load_geojson(const string file, vector < vector < vector <Coord> > > &bound) const;	
+			
 		/* Used for raw data analysis */
 		void raw();
 		void IFR();
@@ -141,8 +164,10 @@ class Data
 		void deaths_hospital_england();
 		void generate_initpop();
 		void generate_tvcovar();
+		void reducesize_geojson(const string file);
 	
 		const Details &details;
+		Inputs &inputs;
 };
 
 #endif

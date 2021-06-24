@@ -26,6 +26,8 @@ Output::Output(const Details &details, const Data &data, const Model &model, Inp
 		inputs.find_outputprop(prop);                                     // Load output properties
 		inputs.find_nrun(nrun);
 		
+		inputs.find_area_plot(area_plot);                                 // Finds information about plotting areas 
+		
 		readme(); 	                                                    	// Generates a readme file for outputs
 	}
 	mpi.barrier();
@@ -43,12 +45,24 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 		else cout << post_lab << " outputs in directory '" << details.output_directory << "':" << endl;
 	}
 	
-	vector <OutputPlot> op;                                           // Stores the plots for the final pdf
+	vector <OutputPlot> op;                                             // Stores the plots for the final pdf
 
-	spline_plots(opsamp,op);                                          // Generates all the different types of plot
-
-	graph_plots(opsamp,op);
-	 
+	compartmental_model(op);                                            // Generates all the different types of plot
+		
+	posterior_parameter_estimates(psamp,op);
+	
+	spatial_R_map(psamp,op);                                           
+	
+	spline_plots(opsamp,op);
+	
+	spatial_mixing_map(op);
+	
+	age_mixing_matrix(op);
+		
+	datatable_maps(opsamp,op);
+		
+	graph_plots(opsamp,op); 
+	
 	susceptibility_distributions(psamp,op);
 
 	mean_distributions(psamp,op);
@@ -75,9 +89,9 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 	if(details.siminf == INFERENCE){
 		vector <OutputPlot> op_diag;                                    // Stores the plots for the diagnostic pdf
 
-		add_generation_plots(op_diag);
-		
 		posterior_parameter_distributions(psamp,op_diag);
+		
+		add_generation_plots(op_diag);
 		
 		add_trace_plots(op_diag);
 		
@@ -92,10 +106,10 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 			generate_pdf_description(op_diag,grfile);                     // Generates a text descrition of the pdf file
 		}
 	
-		spatial_R_map(psamp);                                           // Outputs a file giving spatial variation in R
-	
-		posterior_parameter_estimates(psamp);                           // Outputs a file giving posterior estimates
+		for(auto opu : op_diag) op.push_back(opu);
 	}
+	
+	generate_visualisation(op,"vis_files/BEEPmbp_output.js");         // Generates a file used by the visualisation software
 }
 
 
@@ -123,7 +137,7 @@ void Output::generate_pdf(const string file, const string desc) const
 
 
 /// Generates a text description of the pdf file
-void Output::generate_pdf_description(const vector <OutputPlot> &op, const string grfile) const
+void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfile) const
 {
 	auto file = details.output_directory+"/"+grfile+"_description.txt";
 	ofstream desc(file);
@@ -132,45 +146,475 @@ void Output::generate_pdf_description(const vector <OutputPlot> &op, const strin
 	desc << "This file provides a description of the source files used to generate the graphs in '";
 	desc << details.output_directory << "/" << file << ".pdf'" << endl << endl;
 	
-	for(auto i = 0u; i < op.size(); i++){
+	for(auto i = 0u; i < op.size(); i++){   // Sets the source files
 		const auto &oppl = op[i];
-		desc << "PAGE " << i+1 << ": \"" << oppl.title << "\"" << endl;
-		
+	
+		stringstream ss;
 		for(auto j = 0u; j < oppl.line.size(); j++){
 			const auto &line = oppl.line[j];
-			if(line.name == "") desc << "  This ";
-			else desc << "  '" << line.name << "' ";
+			if(line.name == "") ss << "  This ";
+			else ss << "  '" << line.name << "' ";
 			
 			switch(oppl.type){
 			case OP_SPLINE: case OP_GRAPH: case OP_PARAMDIST: case OP_GENERATION: case OP_LOG_GENERATION:
 			case OP_CPU: case OP_TRACE: case OP_ME:
-				desc << "uses columns " << line.xcol << " and " << line.ycol << " in '";
+				ss << "uses columns " << line.xcol << " and " << line.ycol << " in '";
 				break;
 			case OP_GRAPH_MARGINAL:	
-				desc << "is generated from ";
+				ss << "is generated from ";
 				break;
 			case OP_MARGINAL:	
-				desc << "uses columns 1, 2 and " << line.ycol << " in '";
+				ss << "uses columns 1, 2 and " << line.ycol << " in '";
+				break;
+			case OP_ANIM_MAP: case OP_MIXING_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_COMP_MODEL: case OP_FOI_MODEL:
 				break;
 			}
-			desc << line.file << "'" << endl;
+			auto file = line.file;
+			data.chop_dir(file,details.output_directory);
+			ss << file << "'" << endl;
 		}
+	
+		switch(oppl.type){
+			case OP_ANIM_MAP: case OP_MIXING_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_COMP_MODEL: case OP_FOI_MODEL:
+				ss << oppl.title << endl; 
+				break;
+			default: break;
+		}
+
+		op[i].source = ss.str();
+	}
+	
+	auto page = 1u;
+	for(auto i = 0u; i < op.size(); i++){
+		const auto &oppl = op[i];
 		
-		if(oppl.legend_labelson){
-			desc << endl << "  ";
-			for(auto i =0u; i < oppl.label.size(); i++){
-				if(i != 0) desc << ", ";
-				desc << reference_label(i) << ": " << oppl.label[i];
+		if(oppl.type != OP_ANIM_MAP && oppl.type != OP_MIXING_MAP && oppl.type != OP_AGE_MATRIX && oppl.type != OP_COMP_MODEL && oppl.type != OP_FOI_MODEL){	
+			desc << "PAGE " << page << ": \"" << oppl.fulldesc << "\"" << endl;
+		
+			desc << op[i].source;
+			
+			if(oppl.legend_labelson){
+				desc << endl << "  ";
+				for(auto i =0u; i < oppl.label.size(); i++){
+					if(i != 0) desc << ", ";
+					desc << reference_label(i) << ": " << oppl.label[i];
+				}
+				desc << endl;
 			}
 			desc << endl;
+			page++;
 		}
-		desc << endl;
 	}
 	
 	cout << "The source files for these graphs are referenced in '" << file << "'" << endl << endl;
 }
 
 
+/// Generates a text description of the pdf file
+void Output::generate_visualisation(const vector <OutputPlot> &op, const string grfile) const
+{
+	auto opdir = details.output_directory;
+	ensure_directory(opdir+"/vis_files");              // Copies the output 
+	stringstream ss; ss << "cp ./vis_files/* " << opdir << "/vis_files/" << endl;
+	system(ss.str().c_str());
+	stringstream ss2; ss2 << "cp ./visBEEPmbp.html " << opdir << "/" << endl;
+	system(ss2.str().c_str());
+	
+	auto file = details.output_directory+"/"+grfile;
+
+	ofstream vis(file);
+	if(!vis) emsg("Cannot open the file '"+file+"'");
+	
+	vis << "var jsonstr = '";
+	
+	vis << "{";
+
+	vis << "\"time_labels\" : [";
+	for(auto i = 0u; i < details.timeplot.size(); i++){
+		auto &tp = details.timeplot[i];
+		if(i != 0) vis << ",";
+		vis << "{\"name\" : \"" << tp.name << "\",\"time\" : "  << tp.time-details.start << "}";
+	}
+	vis << "]";
+	
+	auto pred_timeplot = get_pred_timeplot();
+		
+	vis << ",\"pred_timeplot\" : [";
+	for(auto i = 0u; i < pred_timeplot.size(); i++){
+		auto &tp = pred_timeplot[i];
+		if(i != 0) vis << ",";
+		vis << "{\"name\" : \"" << tp.name << "\",\"time\" : " << tp.time-details.start << "}";
+	}
+	vis << "]";
+	
+	vis << ",\"plots\" : [";
+	for(auto i = 0u; i < op.size(); i++){
+		auto opi = op[i];
+		
+		/*
+		switch(opi.type){
+			case OP_GRAPH: cout << "OP_GRAPH"; break;
+			case OP_GRAPH_MARGINAL: cout << "OP_GRAPH_MARGINAL"; break;
+			case OP_MARGINAL: cout << "OP_MARGINAL"; break;
+			case OP_PARAMDIST: cout << "OP_PARAMDIST"; break;
+			case OP_SPLINE: cout << "OP_SPLINE"; break;
+			case OP_GENERATION: cout << "OP_GENERATION"; break;
+			case OP_LOG_GENERATION: cout << "OP_LOG_GENERATION"; break;
+			case OP_CPU: cout << "OP_CPU"; break;
+			case OP_TRACE: cout << "OP_TRACE"; break;
+			case OP_ME: cout << "OP_ME"; break;
+			case OP_ANIM_MAP: cout << "OP_ANIM_MAP"; break;
+			case OP_MIXING_MAP: cout << "OP_MIXING_MAP"; break;
+		}
+		cout << endl;
+		*/
+		
+		vis << "{";	
+		vis << "\"type\":\"";
+		switch(opi.type){
+			case OP_GRAPH: vis << "OP_GRAPH"; break;
+			case OP_GRAPH_MARGINAL: vis << "OP_GRAPH_MARGINAL"; break;
+			case OP_MARGINAL: vis << "OP_MARGINAL"; break;
+			case OP_PARAMDIST: vis << "OP_PARAMDIST"; break;
+			case OP_SPLINE: vis << "OP_SPLINE"; break;
+			case OP_GENERATION: vis << "OP_GENERATION"; break;
+			case OP_LOG_GENERATION: vis << "OP_LOG_GENERATION"; break;
+			case OP_CPU: vis << "OP_CPU"; break;
+			case OP_TRACE: vis << "OP_TRACE"; break;
+			case OP_ME: vis << "OP_ME"; break;
+			case OP_ANIM_MAP: vis << "OP_ANIM_MAP"; break;
+			case OP_MIXING_MAP: vis << "OP_MIXING_MAP"; break;
+			case OP_AGE_MATRIX: vis << "OP_AGE_MATRIX"; break;
+			case OP_PARAM_TABLE: vis << "OP_PARAM_TABLE"; break;
+			case OP_COMP_MODEL: vis << "OP_COMP_MODEL"; break;
+			case OP_FOI_MODEL: vis << "OP_FOI_MODEL"; break;
+		}
+		vis << "\"";
+		vis << ",\"fulldesc\":\"" << opi.fulldesc << "\"";
+		vis << ",\"tab\":\"" << opi.tab << "\"";
+		vis << ",\"tab2\":\"" << opi.tab2 << "\"";
+		vis << ",\"tab3\":\"" << opi.tab3 << "\"";
+		
+		auto title = opi.title; rem_pagebreak(title);
+		vis << ",\"title\":\"" << title << "\"";
+		vis << ",\"xaxis\":\"" << opi.xaxis << "\"";
+		vis << ",\"yaxis\":\"" << opi.yaxis << "\"";
+		vis << ",\"min\":" << opi.min;
+		vis << ",\"max\":" << opi.max;
+		string source = opi.source; rem_pagebreak(source);
+		vis << ",\"source\":\"" << source << "\"";	
+		
+		switch(opi.type){
+			case OP_ANIM_MAP:
+				{
+					vis << ",\"array\":" << data.get_array_JSON(opi.title,details.output_directory);
+					
+					vector <string> dates = data.get_table_column_str(0,opi.title,details.output_directory);
+					vis << ",\"dates\":[";
+					for(auto i = 0u; i < dates.size(); i++){
+						if(i > 0) vis << ",";
+						vis << "\"" << dates[i] << "\"";
+					}
+					vis << "]";
+					
+					vis << ",\"areas\":[";
+					for(auto c = 0u; c < data.narea; c++){
+						if(c > 0) vis << ",";
+						vis << "\"" << data.area[c].code << "\"";
+					}
+					vis << "]";				
+				}
+				break;
+			
+			case OP_MIXING_MAP:
+				{
+					vis << ",\"areas\":[";
+					for(auto c = 0u; c < data.narea; c++){
+						if(c > 0) vis << ",";
+						vis << "\"" << data.area[c].code << "\"";
+					}
+					vis << "]";
+					
+					const auto &M = data.genQ.M;
+					vis << ",\"N\":" << M.N;
+					
+					vis << ",\"diag\":[";
+					for(auto c = 0u; c < M.N; c++){
+						if(c > 0) vis << ",";
+						vis << M.diag[c];
+					}
+					vis << "]";
+					
+					vis << ",\"to\":[";
+					for(auto i = 0u; i < M.to.size(); i++){
+						if(i > 0) vis << ",";
+						vis << "[";
+						for(auto j = 0u; j < M.to[i].size(); j++){
+							if(j > 0) vis << ",";
+							vis << M.to[i][j];
+						}
+						vis << "]";
+					}
+					vis << "]";
+					
+					vis << ",\"val\":[";
+					for(auto i = 0u; i < M.val.size(); i++){
+						if(i > 0) vis << ",";
+						vis << "[";
+						for(auto j = 0u; j < M.val[i].size(); j++){
+							if(j > 0) vis << ",";
+							vis << M.val[i][j]*data.area[i].total_pop*data.area[M.to[i][j]].total_pop;
+						}
+						vis << "]";
+					}
+					vis << "]";
+				}
+				break;
+				
+			case OP_AGE_MATRIX:
+				{
+					vis << ",\"ages\":[";
+					for(auto a = 0u; a < data.democat[0].value.size(); a++){
+						if(a > 0) vis << ",";
+						vis << "\"" << data.democat[0].value[a] << "\"";
+					}
+					vis << "]";
+					
+					const auto &N = data.genQ.N[0];
+					vis << ",\"ele\":[";
+					for(auto i = 0u; i < N.ele.size(); i++){
+						if(i > 0) vis << ",";
+						vis << "[";
+						for(auto j = 0u; j < N.ele[i].size(); j++){
+							if(j > 0) vis << ",";
+							vis << N.ele[i][j];
+						}
+						vis << "]";
+					}
+					vis << "]";
+				}
+				break;
+			
+			case OP_PARAM_TABLE:
+				vis << ",\"param_table\":" << data.get_table_JSON(opi.title,details.output_directory);
+				break;
+				
+			case OP_COMP_MODEL:
+				vis << ",\"model\":" << model.comparmtental_model_JSON();
+				break;
+			
+			case OP_FOI_MODEL:
+				vis << ",\"foi\":" << model.foi_model_JSON();
+				break;
+				
+			default:
+				vis << ",\"line\":[";				
+				for(auto j = 0u; j < opi.line.size(); j++){						
+					vis << "{";
+					auto li = opi.line[j];
+					vis << "\"name\":\"" << li.name << "\"";
+				
+					if(opi.type == OP_MARGINAL){
+						auto lab = 3u;
+						auto vec = data.get_table_column_str(lab-1,li.file,details.output_directory);
+						vis << ",\"label\":[";
+						for(auto k = 0u; k < vec.size(); k++){
+							vis << "\"" << vec[k] << "\""; if(k < vec.size()-1) vis << ",";
+						}				
+						vis << "]";
+					}
+				
+					if(plot_sim_param == true && (opi.type == OP_GENERATION || opi.type == OP_PARAMDIST) && 
+					     j != 0 && j == opi.line.size()-1){
+						vis << ",\"true\":" << li.file;
+					}
+					else{
+						auto xcol = li.xcol;
+						if(xcol != UNSET){
+							auto vec = data.get_table_column(xcol-1,li.file,details.output_directory);
+							vis << ",\"xcol\":[";
+							for(auto k = 0u; k < vec.size(); k++){
+								vis << vec[k]; if(k < vec.size()-1) vis << ",";
+							}				
+							vis << "]";
+						}
+						
+						auto ycol = li.ycol;
+						if(ycol != UNSET){
+							auto vec = data.get_table_column(ycol-1,li.file,details.output_directory);
+						 
+							vis << ",\"ycol\":[";
+							for(auto k = 0u; k < vec.size(); k++){
+								vis << vec[k]; if(k < vec.size()-1) vis << ",";
+							}				
+							vis << "]";
+							
+							if(opi.type == OP_MARGINAL && j == 0){
+								if(details.mode != SIM){
+									auto vecmin = data.get_table_column(ycol,li.file,details.output_directory);
+									vis << ",\"errbarmin\":[";
+									for(auto k = 0u; k < vecmin.size(); k++){
+										vis << vecmin[k]; if(k < vecmin.size()-1) vis << ",";
+									}				
+									vis << "]";
+									
+									auto vecmax = data.get_table_column(ycol+1,li.file,details.output_directory);
+									vis << ",\"errbarmax\":[";
+									for(auto k = 0u; k < vecmax.size(); k++){
+										vis << vecmax[k]; if(k < vecmax.size()-1) vis << ",";
+									}				
+									vis << "]";
+								}
+							}
+						}
+					}
+					
+					vis << ",\"style\":\"";
+					switch(li.style){
+						case NOLINE: vis << "NOLINE"; break;
+						case RED_SOLID: vis << "RED_SOLID"; break;
+						case RED_DASHED: vis << "RED_DASHED"; break;
+						case GREEN_SOLID: vis << "GREEN_SOLID"; break;
+						case GREEN_DASHED: vis << "GREEN_DASHED"; break;
+						case BLUE_SOLID: vis << "BLUE_SOLID"; break;
+						case BLUE_DASHED: vis << "BLUE_DASHED"; break;
+						case BLACK_SOLID: vis << "BLACK_SOLID"; break;
+						case BLACK_DASHED: vis << "BLACK_DASHED"; break;
+						case RED_DOTTED: vis << "RED_DOTTED"; break;
+						case RED_DOTDASH: vis << "RED_DOTDASH"; break;
+						case GREEN_DOTTED: vis << "GREEN_DOTTED"; break;
+						case GREEN_DOTDASH: vis << "GREEN_DOTDASH"; break;
+						case BLUE_DOTTED: vis << "BLUE_DOTTED"; break;
+						case BLUE_DOTDASH: vis << "BLUE_DOTDASH"; break;
+						case BLACK_DOTTED: vis << "BLACK_DOTTED"; break;
+						case BLACK_DOTDASH: vis << "BLACK_DOTDASH"; break;
+						case YELLOW_SOLID: vis << "YELLOW_SOLID"; break;
+						case YELLOW_DASHED: vis << "YELLOW_DASHED"; break;
+						case CYAN_SOLID: vis << "CYAN_SOLID"; break;
+						case CYAN_DASHED: vis << "CYAN_DASHED"; break;
+						case MAGENTA_SOLID: vis << "MAGENTA_SOLID"; break;
+						case MAGENTA_DASHED: vis << "MAGENTA_DASHED"; break;
+					}
+					vis << "\"";
+					vis << "}";
+					if(j < opi.line.size()-1) vis << ",";
+				}
+				vis << "]";
+				break;
+		}
+		vis << "}";
+		
+		if(i < op.size()-1) vis << ",";
+	}
+	vis << "]";
+
+	auto boundaries = load_boundaries();	
+	vis << ",\"boundaries\" : " << boundaries;
+	
+	vis << "}";
+	
+	vis << "';";
+	vis << endl;
+	
+	cout << "Use the '" << opdir << "/visBEEPmbp.html' tool to visualise the results." << endl << endl;
+}
+
+
+/// Loads up the boundaries from the specified file and converts to a string for output
+string Output::load_boundaries() const
+{
+	vector < vector < vector <Coord> > > bound;
+	bound.resize(data.narea);
+	
+	if(area_plot.boundfile != "") data.load_boundaries(area_plot.boundfile,bound);
+	else data.create_boundaries(area_plot.xcol,area_plot.ycol,bound);
+	
+	vector <unsigned int> list;
+	for(auto c = 0u; c < data.narea; c++){ if(bound[c].size() == 0) list.push_back(c);}
+	
+	if(list.size() == data.narea){ warning("Could not find area boundary data so maps cannot be plotted."); return "";}
+  
+	if(list.size() > 0){
+		stringstream ss; ss << "Could not find boundaries for the following areas: ";
+		for(auto i = 0u; i < list.size(); i++){
+			if(i != 0) ss << ", ";
+			ss << data.area[list[i]].code;			
+		}
+		warning(ss.str()); 
+		return "";
+	}
+	
+	if(area_plot.project == EQUI_PROJ){                            // This performs an equirectangular projection
+		double latav = 0.0, num = 0.0;
+		for(auto c = 0u; c < data.narea; c++){
+			for(auto i = 0u; i < bound[c].size(); i++){
+				for(auto j = 0u; j < bound[c][i].size(); j++){
+					latav += bound[c][i][j].y; num++;
+				}
+			}
+		}
+		latav /= num;
+		
+		if(latav > 180 && latav < -180) emsgroot("The latitute in 'file' is out of range");
+		auto fac = cos(2*M_PI*latav/360.0);
+		for(auto c = 0u; c < data.narea; c++){
+			for(auto i = 0u; i < bound[c].size(); i++){
+				for(auto j = 0u; j < bound[c][i].size(); j++){
+					bound[c][i][j].x *= fac;
+				}
+			}
+		}
+	}
+	
+	data.rescale_boundary(bound);	
+	
+	if(area_plot.boundfile == "") data.make_circle_boundary(area_plot.xcol,bound);	
+	
+	auto d = 0.001;                                                     // Reduces the number of points
+	
+	auto npo = 0u;
+	for(auto c = 0u; c < data.narea; c++){                      
+		for(auto i = 0u; i < bound[c].size(); i++){
+			auto j = 1u;
+			vector <Coord> boundnew;
+			double x = LARGE, y = LARGE;
+			for(j = 0; j < bound[c][i].size(); j++){
+				auto dx = bound[c][i][j].x - x;
+				auto dy = bound[c][i][j].y - y;
+				if(dx*dx + dy*dy > d*d){
+					x += dx; y += dy;
+					boundnew.push_back(bound[c][i][j]);
+				}
+			}
+			bound[c][i] = boundnew;
+			
+			npo += bound[c][i].size();
+		}
+	}
+	
+	stringstream ss;
+	ss << "[";
+	for(auto c = 0u; c < data.narea; c++){
+		if(c != 0) ss << ",";
+		ss << "[";
+		for(auto i = 0u; i < bound[c].size(); i++){
+			if(i != 0) ss << ",";
+			ss << "[";
+			for(auto j = 0u; j < bound[c][i].size(); j++){
+				if(j != 0) ss << ",";
+				ss << "[" << bound[c][i][j].x << "," << bound[c][i][j].y << "]";
+			}
+			ss << "]";
+		}
+		ss << "]";
+	}
+	ss << "]";
+
+	return ss.str();
+}
+
+
+	
 /// Saves a file giving time variation in different model quantities
 void Output::spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op) const
 {
@@ -201,8 +645,10 @@ void Output::spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op
 		if(plot_sim_param == true && sim_spline_output[sp].splineval.size() > 0) plot_sim = true;
 	
 		tout << "# Gives the time variation in "+name+"." << endl;	
-		tout << "Time,mean,95% CI min,95% CI max,Simulated" << endl;
-
+		tout << "Time,mean,95% CI min,95% CI max";
+		if(plot_sim == true) tout << ",Simulated";
+		tout << endl;
+		
 		auto min = LARGE, max = -LARGE;
 		for(auto st = 0u; st < details.ndivision; st++){
 			vector <double> vec; 
@@ -220,7 +666,7 @@ void Output::spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op
 		}
 	
 		if(name != "UNSET"){                                                // Generates the final plot
-			OutputPlot oppl(OP_SPLINE,splout.desc,"Time",name,min,max);
+			OutputPlot oppl(OP_SPLINE,splout.desc,splout.fulldesc,splout.tab,splout.tab2,"","Time",name,min,max);
 			string lab;
 			if(post_lab != "Simulation"){
 				oppl.addline(post_lab,filefull,1,2,RED_SOLID);
@@ -230,6 +676,41 @@ void Output::spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op
 			}
 			
 			if(plot_sim == true) oppl.addline(lab,filefull,1,5,BLACK_DASHED);
+			op.push_back(oppl);
+		}
+	}
+}
+
+
+/// Genrates maps based on datatables
+void Output::datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &op) const
+{
+	if(data.narea == 1) return;
+	
+	for(auto &dt : data.datatable){
+		if(dt.geo_dep != ""){		
+			auto fulldesc = "Geographical Map: This shows a map giving the spatial and temporal variation corresponding to the observations "+dt.observation+" made in the file "+dt.file+" (this uses  a logarithmic greyscale). Clicking on the play button animates over time (note, the left and right arrow keys can be used to step day by day).";
+			
+			auto file = post_dir+"/state/map_"+dt.file;
+			auto filefull = details.output_directory+"/"+file;
+			ofstream resultout(filefull);
+			if(!resultout) emsg("Cannot open the file '"+file+"'");
+	
+			resultout << "Date";
+			for(auto c = 0u; c < data.narea; c++) resultout << "," << data.area[c].code;
+			resultout << endl;
+			
+			for(auto t = 0u; t < details.period; t++){ 
+				resultout << details.getdate(t);
+				for(auto gr_num : dt.graph_ref){
+					vector <double> vec; for(const auto &opsa : opsamp) vec.push_back(opsa.graph_state[gr_num][t]);		
+					auto stat = get_statistic(vec);
+					resultout << "," << stat.mean;
+				}			
+				resultout << endl;
+			}	
+		
+			OutputPlot oppl(OP_ANIM_MAP,file,fulldesc,"Data Tables",dt.file,"Map","","Greyscale",UNSET,UNSET);
 			op.push_back(oppl);
 		}
 	}
@@ -404,6 +885,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 		
 		if(new_plot == true){
 			GraphMultiPlot gp;
+			gp.fulldesc = gr.fulldesc; gp.tab = gr.tab; gp.tab2 = gr.tab2; gp.tab3 = gr.tab3;
 			gp.plot_name = plot_name;
 			gp.name.push_back(gr.name);
 			if(!(gr.type == GRAPH_MARGINAL && post_lab == "Simulation")) gp.file.push_back(file);
@@ -431,7 +913,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				{
 					auto ylabel = gp.name[0]; if(gp.file.size() > 1) ylabel = "Value";
 					
-					OutputPlot oppl(OP_GRAPH,gp.plot_name,"Time",ylabel,min,max);
+					OutputPlot oppl(OP_GRAPH,gp.plot_name,gp.fulldesc,gp.tab,gp.tab2,gp.tab3,"Time",ylabel,min,max);
+					//cout << gp.plot_name << " '" << gp.tab << "' '" << gp.tab2 <<  "' '" << gp.tab3 << "' tab\n";
 					
 					for(auto i = 0u; i < gp.file.size(); i++){
 						auto legend = post_lab; if(gp.file.size() > 1) legend = gp.name[i];
@@ -457,7 +940,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			case GRAPH_MARGINAL:
 				{
 					if(gp.file.size() != 1) emsgEC("Output",10);
-					OutputPlot oppl(OP_GRAPH_MARGINAL,gp.plot_name,"Category",gp.name[0],min,max);
+					OutputPlot oppl(OP_GRAPH_MARGINAL,gp.plot_name,gp.fulldesc,gp.tab,gp.tab2,gp.tab3,"Category",gp.name[0],min,max);
 					oppl.addline(post_lab,gp.file[0],1,3,lt[0]);
 					
 					for(auto file_data : gp.file_data) oppl.addline("Data",file_data,1,3,BLACK_SOLID);
@@ -499,6 +982,66 @@ void Output::get_line_colours(vector <LineColour> line_colour, vector <LineType>
 		}
 	}
 }
+
+
+/// Outputs a file containing posterior estimates for model parameters
+void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const
+{
+	auto file = "Parameter_estimates.csv";
+	auto filefull = details.output_directory+"/"+file;
+
+	ofstream paramout(filefull.c_str());
+	if(!paramout) emsg("Cannot open the file '"+filefull+"'");
+	
+	paramout << setprecision(3);
+	
+	if(suppress_output == false) cout << "'" << file << "' gives the model parameters." << endl;
+	
+	if(details.siminf == SIMULATE) paramout << "# Values for model parameters." << endl;
+	else paramout << "# Posterior distributions for model parameters." << endl;
+	paramout << "#" << endl;
+	
+	if(details.siminf == SIMULATE) paramout << "Name,Value" << endl;
+	else{
+		paramout << "Name,Mean,95% CI min,95% CI max,SD,Prior,";
+		paramout << "ESS,GRS" << endl;
+	}
+
+	auto GR = get_Gelman_Rubin_statistic(psamp);
+	
+	auto ESS = get_effective_sample_size(psamp);
+	
+	vector <double> paramav(model.param.size());
+	for(auto p = 0u; p < model.param.size(); p++){
+		vector <double> vec; for(const auto psa : psamp) vec.push_back(psa.paramval[p]);
+		auto stat = get_statistic(vec);
+		paramav[p] = stat.mean;
+		if(model.param[p].name != "zero" && model.param[p].name != "one"){
+			paramout << model.param[p].name  << "," << stat.mean;
+			if(details.siminf == INFERENCE){ 
+				paramout << "," << stat.CImin << ","<< stat.CImax << "," << stat.sd << ",";
+				paramout << replace(model.print_prior(p),",","|") << ",";
+				if(ESS[p] == UNSET) paramout << "---"; else paramout << ESS[p]; paramout << ",";
+				if(GR[p] == UNSET) paramout << "---"; else paramout << GR[p];
+			}
+			paramout << endl; 
+		}
+	}
+	
+	if(details.siminf == SIMULATE) cout << "Parameter values are given in '" << filefull << "'" << endl << endl;
+	else cout << post_lab+" parameter estimates are given in '" << filefull << "'" << endl << endl;
+	
+	string fulldesc;
+	if(details.siminf == SIMULATE){
+		fulldesc = "Simulation parameter values: This table provides the name and value for each model parameter.";
+	}
+	else{
+		fulldesc = "Posterior parameter estimates: This table provides posterior estimates for each of the model parameters. The first column gives the parameter name followed by the posterior mean, 95% credible interval and standard deviation. A column then shows the prior used (as defined in the TOML file). Finally the effective samples size (ESS) provides an estimate of the number of independent posterior samples generated (exceeding 200 implies convergence) and the Gelman-Rubin statistic (GRS) measures how well independent runs map out the same posterior distribution (less than around 1.05 usually implies convergence). Note, ESS and GRS are not available for all inference methods.";
+	}
+	
+	OutputPlot oppl(OP_PARAM_TABLE,file,fulldesc,"Model","Parameters","","","",UNSET,UNSET);
+	op.push_back(oppl);
+}
 	
 	
 /// Outputs a bar chart of relative susceptibility split into demographic groups   
@@ -534,7 +1077,9 @@ void Output::susceptibility_distributions(const vector <ParamSample> &psamp, vec
 				distout << endl;
 			}
 			
-			OutputPlot oppl(OP_MARGINAL,"Susceptibility with "+type,data.democat[c].name,"Relative susceptibility",0,0);
+			auto fulldesc = "Susceptibility: This shows the relative susceptibility variation across different '"+type+"'. Note the average susceptibility, weighted by population size, is fixed to 1.";
+			
+			OutputPlot oppl(OP_MARGINAL,"Susceptibility with "+type,data.democat[c].name,fulldesc,"Transmission","Susceptibility",type,"Relative susceptibility",0,0);
 			oppl.label = label;
 			if(post_lab != "Simulation") oppl.addline(post_lab,filefull,1,4,RED_SOLID);
 			if(plot_sim_param == true) oppl.addline("True",filefull,1,7,BLACK_SOLID);
@@ -621,7 +1166,9 @@ void Output::mean_distributions(const vector <ParamSample> &psamp, vector <Outpu
 			distout << endl;
 
 			if(min != max){
-				OutputPlot oppl(OP_MARGINAL,"Compartment "+co.name+" mean residency time","Demographic classification","Probability",0,0);
+				auto fulldesc = "Residency time: This shows mean residency time in the '"+co.name+"' for different '"+dep+"'.";
+				
+				OutputPlot oppl(OP_MARGINAL,"Compartment "+co.name+" mean residency time",fulldesc,"Transmission","Residency time",co.name+" "+dep,"Demographic classification","Probability",0,0);
 				oppl.label = label;
 				if(post_lab != "Simulate") oppl.addline(post_lab,filefull,1,4,RED_SOLID);
 				if(plot_sim_param == true) oppl.addline("True",filefull,1,7,BLACK_SOLID);
@@ -679,7 +1226,9 @@ void Output::branch_prob_distributions(const vector <ParamSample> &psamp, vector
 			distout << endl;
 
 			if(min != max){
-				OutputPlot oppl(OP_MARGINAL,"Branching probability for transition '"+tr.name+"'","Demographic classification","Probability",0,0);
+				auto fulldesc = "Branching probability: This shows branching probability for the transition '"+tr.name+"' transition for different '"+dep+"'.";
+					
+				OutputPlot oppl(OP_MARGINAL,"Branching probability for transition '"+tr.name+"'",fulldesc,"Transmission","Branching",tr.name+" "+dep,"Demographic classification","Probability",0,0);
 				oppl.label = label;
 				if(post_lab != "Simulation") oppl.addline(post_lab,filefull,1,4,RED_SOLID);
 				if(plot_sim_param == true) oppl.addline("True",filefull,1,7,BLACK_SOLID);
@@ -731,7 +1280,9 @@ void Output::level_effect_distributions(const vector <ParamSample> &psamp, vecto
 	}
 	
 	if(min != max){
-		OutputPlot oppl(OP_MARGINAL,"Relative transmission for different levels","Level Effect","Relative transmission rate",0,0);
+		auto fulldesc = "Levels: This shows the relative rates of disease transmission for different levels.";
+		
+		OutputPlot oppl(OP_MARGINAL,"Relative transmission for different levels",fulldesc,"Transmission","Levels","","Level Effect","Relative transmission rate",0,0);
 		oppl.label = label;
 		if(post_lab != "Simulation") oppl.addline(post_lab,filefull,1,4,RED_SOLID);
 		if(plot_sim_param == true) oppl.addline("True",filefull,1,7,BLACK_SOLID);
@@ -770,7 +1321,12 @@ void Output::area_effect_distributions(const vector <ParamSample> &psamp, vector
 		
 		label.push_back(model.param[th].name);
 		distout << i << "," << reference_label(i) << ",";
-		distout << model.param[th].name << "," << stat.mean << "," << stat.CImin << "," << stat.CImax;	
+		auto name = model.param[th].name;
+		if(name.length() > 12){
+			if(name.substr(0,12) == "Area effect ") name = name.substr(12);
+		}	
+		
+		distout << name << "," << stat.mean << "," << stat.CImin << "," << stat.CImax;	
 		if(plot_sim_param == true){
 			auto num = model.param[th].value; if(num > max) max = num; if(num < min) min = num;
 			distout << "," << num;
@@ -782,7 +1338,12 @@ void Output::area_effect_distributions(const vector <ParamSample> &psamp, vector
 	}
 	
 	if(min != max){
-		OutputPlot oppl(OP_MARGINAL,"Relative transmission for different areas","Area Effect","Relative transmission rate",0,0);
+		string fulldesc = "Area effects: This histogram gives the relative transmission rate within different areas (defined to have a poplation average of one).";
+		
+		if(post_lab != "Simulation") fulldesc += " The red bars (with associated error bars) give posterior estimates.";
+		if(plot_sim_param == true) fulldesc += " The horizonal black lines give the values used to simulated the data.";
+		
+		OutputPlot oppl(OP_MARGINAL,"Relative transmission for different areas",fulldesc,"Transmission","Area Effect","","Area Effect","Relative transmission rate",0,0);
 		oppl.label = label;
 		if(post_lab != "Simulation") oppl.addline(post_lab,filefull,1,4,RED_SOLID);
 		if(plot_sim_param == true) oppl.addline("True",filefull,1,7,BLACK_SOLID);
@@ -814,7 +1375,7 @@ void Output::derived_parameter_distributions(const vector <Sample> &opsamp, vect
 				cout << "'" << file << "' gives the probability distributions for the "+ derpar.desc+"." << endl;
 			}
 			
-			distout << "# " << post_lab << " probability distributions for the generation time." << endl;
+			distout << "# " << post_lab << " probability distributions for the "+ derpar.desc+"." << endl;
 
 			
 			distout << "Value,Probability" << endl;
@@ -823,7 +1384,9 @@ void Output::derived_parameter_distributions(const vector <Sample> &opsamp, vect
 				distout << paramdist.value[b] << "," << paramdist.prob[b] << endl;
 			}
 			
-			OutputPlot oppl(OP_PARAMDIST,derpar.desc,derpar.name,"Probability",0,0);
+			auto fulldesc = "Posterior distribution: The posertior probability distribution for the "+ derpar.desc+".";
+			
+			OutputPlot oppl(OP_PARAMDIST,derpar.desc,fulldesc,"Model Parameters","Derived Dist.",derpar.name,derpar.name,"Probability",0,0);
 			oppl.addline(post_lab,filefull,1,2,GREEN_SOLID);
 			op.push_back(oppl);
 		}
@@ -881,7 +1444,11 @@ void Output::posterior_parameter_distributions(const vector <ParamSample> &psamp
 	for(auto i = 0u; i < pvary.size(); i++){
 		auto p = pvary[i];
 	
-		OutputPlot oppl(OP_PARAMDIST,post_lab+" distribution for "+model.param[p].name,model.param[p].name,"Probability",0,0);
+		auto title = post_lab+" distribution for "+model.param[p].name;
+		auto fulldesc = "Posterior distribution: This shows the "+toLower(post_lab)+" distribution for the model parameter "+replace(model.param[p].name,":","=")+".";
+		fulldesc += "The vertical dashed line give the true value used to simulate the data.";
+	
+		OutputPlot oppl(OP_PARAMDIST,title,fulldesc,"Model Parameters","Distributions",model.param[p].name,model.param[p].name,"Probability",0,0);
 		oppl.addline(post_lab,filefull,2*i+1,2*i+2,GREEN_SOLID);
 		if(plot_sim_param == true) oppl.addline("True",to_string(model.param[p].value),1,2,BLACK_DASHED);
 		op.push_back(oppl);
@@ -897,22 +1464,28 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 	auto file = details.output_directory+"/Diagnostics/Generation.csv";
 
 	{
-		OutputPlot oppl(OP_LOG_GENERATION,"EF cut-off as a function of generation","Generation","EF cut-off",UNSET,UNSET);
-		oppl.addline("EF cut-off",file,1,3,BLACK_SOLID);
+		string title, label, fulldesc;
+		switch(details.mode){
+			case ABC_MBP: case ABC_SMC: label = "EF cut-off"; break;
+			case PAIS_INF: label = "invT"; break;
+			default: emsgEC("Output",2); break;
+		}
+
+		title = "Model evidence as a function of "+label;
+		fulldesc = "Model Evidence: This graph shows the model evidence (ME) as a function of "+label+". The ME is a measure for comparing how well the data y agrees with the model. When performing model comparison care must be taken to ensure it is done so at a consistent value of "+label+".";
+		fulldesc += "The ratio in ME gives the Bayes factors between models. A Bayes factor above 3.2 is considered substantial support for one model over another, and over 10 provides strong evidence.";
+		
+		OutputPlot oppl(OP_ME,title,fulldesc,"Diagnostics","Model Evidence","",label,"log(Model evidence)",UNSET,UNSET);
+		oppl.addline("",file,3,5,BLACK_SOLID);
+		oppl.addline("6",file,3,5,BLACK_SOLID);
 		op.push_back(oppl);
 	}
 	
 	{
-		string title, label;
-		switch(details.mode){
-			case ABC_MBP: case ABC_SMC: title = "Model evidence as a function of EF cut-off"; label = "EF cut-off"; break;
-			case PAIS_INF: title = "Model evidence as a function of invT"; label = "invT"; break;
-			default: emsgEC("Output",2); break;
-		}
-
-		OutputPlot oppl(OP_ME,title,label,"log(Model evidence)",UNSET,UNSET);
-		oppl.addline("",file,3,5,BLACK_SOLID);
-		oppl.addline("6",file,3,5,BLACK_SOLID);
+		auto fulldesc = "Error function reduction: This graph shows how the cut-off in the error function reduces as a function of generation.";
+		
+		OutputPlot oppl(OP_LOG_GENERATION,"EF cut-off as a function of generation",fulldesc,"Diagnostics","Generation","","Generation","EF cut-off",UNSET,UNSET);
+		oppl.addline("EF cut-off",file,1,3,BLACK_SOLID);
 		op.push_back(oppl);
 	}
 	
@@ -923,7 +1496,11 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 				min = model.param[p].val1; max = model.param[p].val2;
 			}
 			
-			OutputPlot oppl(OP_GENERATION,post_lab+" estimate for "+model.param[p].name+" as a function of generation","Generation",model.param[p].name,min,max);
+			auto name = replace(model.param[p].name,":","=");
+			auto title = post_lab+" estimate for "+name+" as a function of generation";
+			string fulldesc = "Parameter convergence: This shows the convergence of the posterior estimate for the model parameter "+name+" as a function of the number of generations.";
+			
+			OutputPlot oppl(OP_GENERATION,title,fulldesc,"Diagnostics","Convergence",model.param[p].name,"Generation",model.param[p].name,min,max);
 			oppl.addline(post_lab,file,1,3*p+7,BLUE_SOLID);
 			oppl.addline("95% CI min",file,1,3*p+8,BLUE_DASHED);
 			oppl.addline("95% CI max",file,1,3*p+9,BLUE_DASHED);
@@ -935,7 +1512,10 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 	auto num = 0u; for(auto i = 0u; i < data.datatable.size(); i++){ if(data.datatable[i].weight != 0) num++;}			
 	if(num > 1){
 		auto fileDT = details.output_directory+"/Diagnostics/EF_datatable.csv";
-		OutputPlot opplDT(OP_LOG_GENERATION,"Contribution to EF from different data sources","Generation","EF contribution",UNSET,UNSET);
+		
+		auto fulldesc = "Stratified error function: Contribution to EF from different data sources";
+		
+		OutputPlot opplDT(OP_LOG_GENERATION,"Contribution to EF from different data sources",fulldesc,"Diagnostics","Error function","","Generation","EF contribution",UNSET,UNSET);
 		for(auto i = 0u; i < data.datatable.size(); i++){
 			if(data.datatable[i].weight != 0) opplDT.addline(rus(data.datatable[i].file),fileDT,1,i+2,get_linestyle(i));
 		}
@@ -944,7 +1524,9 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 	}
 
 	{
-		OutputPlot oppl(OP_CPU,"CPU time as a function of EF","EF cut-off","CPU time (minutes)",UNSET,UNSET);
+		auto fulldesc = "CPU time: This graph show the CPU time required to achive a given cut-off in the error function";
+		
+		OutputPlot oppl(OP_CPU,"CPU time as a function of EF",fulldesc,"Diagnostics","CPU time","","EF cut-off","CPU time (minutes)",UNSET,UNSET);
 		oppl.addline("",file,3,2,BLACK_SOLID);
 		op.push_back(oppl);
 	}
@@ -983,7 +1565,9 @@ void Output::add_trace_plots(vector <OutputPlot> &op) const
 	
 	for(auto p = 0u; p < model.param.size(); p++){                           // These are graphs for the parameters
 		if(model.param[p].priortype != FIXED_PRIOR){
-			OutputPlot oppl(OP_TRACE,"","Sample",model.param[p].name,UNSET,UNSET);
+			auto fulldesc = "Trace plot: This shows a trace plot for the parameter '"+model.param[p].name+"'.";
+			
+			OutputPlot oppl(OP_TRACE,"",fulldesc,"Diagnostics","Trace",model.param[p].name,"Sample",model.param[p].name,UNSET,UNSET);
 			
 			for(auto ru = 0u; ru < nrun; ru++){
 				if(nrun == 1){
@@ -1029,12 +1613,104 @@ void Output::add_democat_change(vector <OutputPlot> &op) const
 			lout << endl;
 		}
 	
-		OutputPlot oppl(OP_GRAPH,desc,"Time","Percent",0,100);
+		auto fulldesc = "Democat change: "+desc;
+		
+		OutputPlot oppl(OP_GRAPH,desc,fulldesc,"Democat Change",data.democat[d].name,"","Time","Percent",0,100);
 		for(auto v = 0u; v < data.democat[d].value.size(); v++){
 			oppl.addline(data.democat[d].value[v],filefull,1,2+v,get_linestyle(v));
 		}
 		op.push_back(oppl);
 	}
+}
+
+
+/// Outputs a spatial distribution for R as a function of time 
+void Output::spatial_R_map(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const
+{
+	if(data.narea == 1) return; 
+		
+	for(auto st = 0u; st < data.nstrain; st++){
+		vector < vector <double> > Rmap;
+		
+		Rmap.resize(details.period);
+		for(auto t = 0u; t < details.period; t++){
+			Rmap[t].resize(data.narea); for(auto c = 0u; c < data.narea; c++) Rmap[t][c] = 0;
+		}			
+		
+		for(const auto &info : model.Rspline_info){
+			auto sp = info.spline_ref;
+			
+			for(const auto &psa : psamp){
+				const auto &paramv_dir = psa.paramval;
+				
+				auto Rt = model.create_disc_spline(sp,paramv_dir);
+		
+				auto Rfac = paramv_dir[data.strain[st].Rfactor_param];
+				
+				auto areafactor = model.create_areafactor(paramv_dir); 
+			
+				for(auto t = 0u; t < details.period; t++){
+					auto sett = t*details.division_per_time;
+					for(auto c : info.area){ 
+						Rmap[t][c] += Rfac*Rt[sett]*areafactor[t][c]/psamp.size();
+					}
+				}
+			}
+		}
+		
+		string file = post_dir+"/R_map"; if(data.nstrain > 1) file += "_"+data.strain[st].name; file += ".csv";			
+		auto filefull = details.output_directory+"/"+file;
+		ofstream Rmapout(filefull.c_str());
+		if(!Rmapout) emsg("Cannot open the file '"+filefull+"'");
+
+		Rmapout << details.time_format_str; for(auto c = 0u; c < data.narea; c++) Rmapout << "," << data.area[c].code; Rmapout << endl;
+		for(auto t = 0u; t < details.period; t++){
+			Rmapout << details.getdate(t); for(auto c = 0u; c < data.narea; c++) Rmapout << "," << Rmap[t][c]; Rmapout << endl;
+		}
+		
+		string str= ""; if(data.nstrain > 1) str = data.strain[st].name; 
+		auto fulldesc = "R map: This shows a map giving the spatial and temporal variation in the reproduction number (the logarithmic colour scale is set such that green / red indicates that R is less than / greater than one, respectivly. Clicking on the play button animates R over time (note, the left and right arrow keys can be used to step day by day).";
+		OutputPlot oppl(OP_ANIM_MAP,file,fulldesc,"Transmission","R map",str,"","Colour",UNSET,UNSET);
+		op.push_back(oppl);
+	}
+}
+
+
+/// Outputs the compartmental model
+void Output::compartmental_model(vector <OutputPlot> &op) const
+{
+	string fulldesc = "Compartmental model: This shows a pictorial representation of the compartmental model used to";
+	if(details.siminf == SIMULATE) fulldesc += " generate the data.";
+	else fulldesc += " perform inference on the data. ";
+	fulldesc += "The force of infection &λ& gives the probability per unit time of an individual becoming infected. The occupancy time within a compartment (assuming an onwards transition) can either be exponentially distributed (denoted Exp(&m&) where &m& is a mean time) or Erlang distributed (denoted Γ(&m&,&k&) where &m& is a mean and &k& is an integer shape parameter). The probability an individual goes down one branch or another is determined by &b&. These parameters may depend on the demographic classification &d& of an individual. Clicking on the distributions or braching probabilities shows how they are related to the underlying model parameters."; 
+	OutputPlot oppl(OP_COMP_MODEL,"The input TOML file",fulldesc,"Model","Compartments","","","",UNSET,UNSET);
+	op.push_back(oppl);
+	
+	fulldesc = "The force of infection: The force of infection gives the probability per unit time of a susceptible individual becoming infected. This quantity will vary with time as the epidemic evolves and may also depend on the area the individual resides in, their demographic group, or the strain of the virus."; 
+	OutputPlot oppl2(OP_FOI_MODEL,"The input TOML file",fulldesc,"Model","Force of infection","","","",UNSET,UNSET);
+	op.push_back(oppl2);
+}
+
+
+/// Outputs a map giving the spatial mixing between individuals
+void Output::spatial_mixing_map(vector <OutputPlot> &op) const
+{
+	if(data.narea == 1) return;
+	
+	auto fulldesc = "Spatial mixing map: This shows a map giving the relative rate of spatial mixing between different geographical regions (thicker dark blue lines indicate more mixing). This visualises the "+data.genQ.M_name+" input file. Hovering over an area shows only interactions to and from that area.";
+	OutputPlot oppl(OP_MIXING_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,"Transmission","Spatial Mixing","Map","","",UNSET,UNSET);
+	op.push_back(oppl);
+}
+	
+	
+/// Outputs a matrix giving the mixing between different age groups
+void Output::age_mixing_matrix(vector <OutputPlot> &op) const
+{
+	if(data.nage == 1) return;
+	
+	auto fulldesc = "Age Mixing matrix: This shows the rate at which different age groups mix within the population (darker red colours indicate greater mixing). This visualises the "+data.genQ.N_name[0]+" input file.";
+	OutputPlot oppl(OP_AGE_MATRIX,"This is a visualistation of the '"+data.genQ.N_name[0]+"' input file",fulldesc,"Transmission","Age Mixing","Matrix","","",UNSET,UNSET);
+	op.push_back(oppl);
 }
 
 
@@ -1135,328 +1811,241 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 	for(auto i = 0u; i < op.size(); i++){
 		const auto &oppl = op[i];
 			
-		if(oppl.title == "") gnuplot << "set title" << endl;
-		else gnuplot << "set title '" << label(oppl.title) << "'" << endl;
-		gnuplot << "set autoscale" << endl;
-		
-		auto keyfontsize = 22u, labelfontsize = 22u, ticfontsize = 20u; 
-		if(oppl.type == OP_TRACE){ keyfontsize = 16u; labelfontsize = 18; ticfontsize = 16u;}
-		gnuplot << "set tics font ', " << ticfontsize << "'" << endl;
-		gnuplot << "set key font ', " << keyfontsize << "'" << endl;
-		gnuplot << "set xlabel '" << label(oppl.xaxis) << "' font '," << labelfontsize << "'" << endl;
-		gnuplot << "set ylabel '" << label(oppl.yaxis) << "' font '," << labelfontsize << "'" << endl;
-	
-		if(oppl.type == OP_PARAMDIST)	gnuplot << "unset ytics" << endl;
-		else gnuplot << "set ytics" << endl;
+		if(oppl.type != OP_ANIM_MAP && oppl.type != OP_MIXING_MAP && oppl.type != OP_AGE_MATRIX && oppl.type != OP_PARAM_TABLE && oppl.type != OP_COMP_MODEL && oppl.type != OP_FOI_MODEL){
+			if(oppl.title == "") gnuplot << "set title" << endl;
+			else gnuplot << "set title '" << label(oppl.title) << "'" << endl;
+			gnuplot << "set autoscale" << endl;
 			
-		if(multiplot == 2 || oppl.type != OP_TRACE){ multiplot = UNSET; gnuplot << "unset multiplot" << endl;}
-				
-		switch(oppl.type){
-			case OP_SPLINE: case OP_GRAPH:
-				{
-					auto ymax = 1.2*oppl.max;
-					gnuplot << "set yrange [0:" << ymax << "]" << endl;
+			auto keyfontsize = 22u, labelfontsize = 22u, ticfontsize = 20u; 
+			if(oppl.type == OP_TRACE){ keyfontsize = 16u; labelfontsize = 18; ticfontsize = 16u;}
+			gnuplot << "set tics font ', " << ticfontsize << "'" << endl;
+			gnuplot << "set key font ', " << keyfontsize << "'" << endl;
+			gnuplot << "set xlabel '" << label(oppl.xaxis) << "' font '," << labelfontsize << "'" << endl;
+			gnuplot << "set ylabel '" << label(oppl.yaxis) << "' font '," << labelfontsize << "'" << endl;
 		
-					auto shift = details.start; if(details.time_format == TIME_FORMAT_NUM) shift = 0;
-					
-					for(const auto &tp : details.timeplot){
-						gnuplot << "set arrow from " << tp.time - shift << ",0 to " << tp.time - shift << ","
-										<< ymax << " lw 3 lc rgb '#000066' lt 1 nohead" << endl;
+			if(oppl.type == OP_PARAMDIST)	gnuplot << "unset ytics" << endl;
+			else gnuplot << "set ytics" << endl;
 				
-						gnuplot << "set label '" << label(tp.name) << "' at " << tp.time - shift << "," << ymax << " left rotate by 270 offset 1,-1" << endl;
-					}
+			if(multiplot == 2 || oppl.type != OP_TRACE){ multiplot = UNSET; gnuplot << "unset multiplot" << endl;}
 					
-					for(const auto &tp : pred_timeplot){
-						gnuplot << "set arrow from " << tp.time << ",0 to " << tp.time << ","
-										<< ymax << " lw 3 lc rgb '#0000aa' ";
+			switch(oppl.type){
+				case OP_SPLINE: case OP_GRAPH:
+					{
+						auto ymax = 1.2*oppl.max;
+						gnuplot << "set yrange [0:" << ymax << "]" << endl;
+			
+						auto shift = details.start; if(details.time_format == TIME_FORMAT_NUM) shift = 0;
+						
+						for(const auto &tp : details.timeplot){
+							gnuplot << "set arrow from " << tp.time - shift << ",0 to " << tp.time - shift << ","
+											<< ymax << " lw 3 lc rgb '#000066' lt 1 nohead" << endl;
+					
+							gnuplot << "set label '" << label(tp.name) << "' at " << tp.time - shift << "," << ymax << " left rotate by 270 offset 1,-1" << endl;
+						}
+						
+						for(const auto &tp : pred_timeplot){
+							gnuplot << "set arrow from " << tp.time << ",0 to " << tp.time << ","
+											<< ymax << " lw 3 lc rgb '#0000aa' ";
 
-						if(tp.name != "") gnuplot << "lt 1"; else gnuplot << "lt 4"; 
-						gnuplot << " nohead" << endl;
-				
-						if(tp.name != ""){
-							gnuplot << "set label '" << label(tp.name) << "' at " << tp.time << "," << ymax << " tc rgb '#0000aa'  left rotate by 270 offset 1,-1" << endl;
+							if(tp.name != "") gnuplot << "lt 1"; else gnuplot << "lt 4"; 
+							gnuplot << " nohead" << endl;
+					
+							if(tp.name != ""){
+								gnuplot << "set label '" << label(tp.name) << "' at " << tp.time << "," << ymax << " tc rgb '#0000aa'  left rotate by 270 offset 1,-1" << endl;
+							}
+						}
+						
+						gnuplot << "plot ";
+						for(auto j = 0u; j < oppl.line.size(); j++){
+							const auto &line = oppl.line[j];
+							if(j != 0) gnuplot << ", ";
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << " with lines ls " << line.style << " ";
+							if(line.name == "" || line.name == "95% CI min" || line.name == "95% CI max") gnuplot << "notitle"; 
+							else gnuplot << "title '" << label(line.name) << "'";
+						}
+						
+						gnuplot << endl;
+						gnuplot << "unset label"<< endl;
+						gnuplot << "unset arrow"<< endl;
+								
+						if(false){
+							for(auto j = 0u; j < details.timeplot.size(); j++){
+								const auto &tp = details.timeplot[j];
+								gnuplot << ", '" << opdir << "/line.csv' using ($1*" 
+											<< tp.time - details.start << "):($2*"
+											<< ymax << ") with lines ls " << 80+j%4 << " title '" << label(tp.name) << "'";
+							}	
 						}
 					}
+					break;
 					
+				case OP_GRAPH_MARGINAL:	
+					gnuplot << "set autoscale" << endl;
+					gnuplot << "set yrange [0:]" << endl;
+					gnuplot << "set boxwidth 0.5" << endl;
+					gnuplot << "set style fill solid" << endl;
+					{
+						auto col = oppl.line[0].ycol;
+						gnuplot << "plot '" << oppl.line[0].file << "' using ($1+0.5):" << col << ":xtic(2) with boxes  notitle, ";
+						if(details.mode != SIM){
+							gnuplot << "'" << oppl.line[0].file << "' using ($1+0.5):" << col << ":" << col+1 << ":" << col+2;
+							gnuplot << " with errorbars lt 1  lc rgb '#000000' lw 3 ps 2 title '" << label(oppl.line[0].name) << "'";
+						}
+						if(oppl.line.size() > 1){
+							gnuplot << ",'" << oppl.line[1].file << "' using ($1+0.5):" << oppl.line[1].ycol 
+												<< " with point lt 1 lc rgb '#0000ff' lw 5 pt 2 ps 2 title '" <<  label(oppl.line[1].name) << "'";
+						}
+					}
+					break;
+					
+				case OP_MARGINAL:	
+					gnuplot << "set autoscale" << endl;
+					gnuplot << "set yrange [0:]" << endl;
+					gnuplot << "set boxwidth 0.5" << endl;
+					gnuplot << "set style fill solid" << endl;
+					{
+						auto lab = 3u; if(oppl.legend_labelson == true) lab = 2;
+						auto col = oppl.line[0].ycol;
+						gnuplot << "plot '" << oppl.line[0].file << "' using ($1+0.5):" << col << ":xtic(" << lab <<") with boxes notitle, ";
+						if(details.mode != SIM){
+							gnuplot << "'" << oppl.line[0].file << "' using ($1+0.5):" << col << ":" << col+1 << ":" << col+2;
+							gnuplot << " with errorbars lt 1  lc rgb '#000000' lw 3 ps 2 title '" << label(oppl.line[0].name) << "', ";
+						}
+						if(oppl.line.size() > 1){
+							gnuplot << "'" << oppl.line[1].file << "' using ($1+0.5):" << oppl.line[1].ycol 
+												<< " with point lt 1 lc rgb '#0000ff' lw 5 pt 2 ps 2 title '" <<  label(oppl.line[1].name) << "'";
+						}
+					}
+					break;
+					
+				case OP_PARAMDIST:
+					gnuplot << "set yrange [0:1]" << endl;
+
 					gnuplot << "plot ";
 					for(auto j = 0u; j < oppl.line.size(); j++){
 						const auto &line = oppl.line[j];
 						if(j != 0) gnuplot << ", ";
-						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << " with lines ls " << line.style << " ";
+						
+						if(line.name == "True"){
+							gnuplot << "'" << linefile  << "' using " << "($1*" << line.file << "):2";
+						}
+						else{
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
+						}
+						gnuplot << " with lines ls " << line.style;
+						
+						if(line.name == "") gnuplot << " notitle"; else gnuplot << " title '" << label(line.name) << "'";
+					}
+					break;
+					
+				case OP_GENERATION:
+					if(oppl.min != UNSET) gnuplot << "set yrange [" << oppl.min << ":" << oppl.max << "]" << endl;
+		
+					gnuplot << "plot ";
+					for(auto j = 0u; j < oppl.line.size(); j++){
+						const auto &line = oppl.line[j];
+						if(j != 0) gnuplot << ", ";
+						
+						if(line.name == "True"){
+							gnuplot << line.file;
+						}
+						else{
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
+						}
+						
+						gnuplot << " with lines ls " << line.style << " ";
 						if(line.name == "" || line.name == "95% CI min" || line.name == "95% CI max") gnuplot << "notitle"; 
 						else gnuplot << "title '" << label(line.name) << "'";
 					}
+					break;
 					
-					gnuplot << endl;
-					gnuplot << "unset label"<< endl;
-					gnuplot << "unset arrow"<< endl;
-							
-					if(false){
-						for(auto j = 0u; j < details.timeplot.size(); j++){
-							const auto &tp = details.timeplot[j];
-							gnuplot << ", '" << opdir << "/line.csv' using ($1*" 
-										<< tp.time - details.start << "):($2*"
-										<< ymax << ") with lines ls " << 80+j%4 << " title '" << label(tp.name) << "'";
-						}	
-					}
-				}
-				break;
-				
-			case OP_GRAPH_MARGINAL:	
-				gnuplot << "set autoscale" << endl;
-				gnuplot << "set yrange [0:]" << endl;
-				gnuplot << "set boxwidth 0.5" << endl;
-				gnuplot << "set style fill solid" << endl;
-				{
-					auto col = oppl.line[0].ycol;
-					gnuplot << "plot '" << oppl.line[0].file << "' using ($1+0.5):" << col << ":xtic(2) with boxes  notitle, ";
-					if(details.mode != SIM){
-						gnuplot << "'" << oppl.line[0].file << "' using ($1+0.5):" << col << ":" << col+1 << ":" << col+2;
-						gnuplot << " with errorbars lt 1  lc rgb '#000000' lw 3 ps 2 title '" << label(oppl.line[0].name) << "'";
-					}
-					if(oppl.line.size() > 1){
-						gnuplot << ",'" << oppl.line[1].file << "' using ($1+0.5):" << oppl.line[1].ycol 
-											<< " with point lt 1 lc rgb '#0000ff' lw 5 pt 2 ps 2 title '" <<  label(oppl.line[1].name) << "'";
-					}
-				}
-				break;
-				
-			case OP_MARGINAL:	
-				gnuplot << "set autoscale" << endl;
-				gnuplot << "set yrange [0:]" << endl;
-				gnuplot << "set boxwidth 0.5" << endl;
-				gnuplot << "set style fill solid" << endl;
-				{
-					auto lab = 3u; if(oppl.legend_labelson == true) lab = 2;
-					auto col = oppl.line[0].ycol;
-					gnuplot << "plot '" << oppl.line[0].file << "' using ($1+0.5):" << col << ":xtic(" << lab <<") with boxes notitle, ";
-					if(details.mode != SIM){
-						gnuplot << "'" << oppl.line[0].file << "' using ($1+0.5):" << col << ":" << col+1 << ":" << col+2;
-						gnuplot << " with errorbars lt 1  lc rgb '#000000' lw 3 ps 2 title '" << label(oppl.line[0].name) << "', ";
-					}
-					if(oppl.line.size() > 1){
-						gnuplot << "'" << oppl.line[1].file << "' using ($1+0.5):" << oppl.line[1].ycol 
-											<< " with point lt 1 lc rgb '#0000ff' lw 5 pt 2 ps 2 title '" <<  label(oppl.line[1].name) << "'";
-					}
-				}
-				break;
-				
-			case OP_PARAMDIST:
-				gnuplot << "set yrange [0:1]" << endl;
-
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					
-					if(line.name == "True"){
-						gnuplot << "'" << linefile  << "' using " << "($1*" << line.file << "):2";
-					}
-					else{
-						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-					}
-					gnuplot << " with lines ls " << line.style;
-					
-					if(line.name == "") gnuplot << " notitle"; else gnuplot << " title '" << label(line.name) << "'";
-				}
-				break;
-				
-			case OP_GENERATION:
-				if(oppl.min != UNSET) gnuplot << "set yrange [" << oppl.min << ":" << oppl.max << "]" << endl;
-	
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					
-					if(line.name == "True"){
-						gnuplot << line.file;
-					}
-					else{
-						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-					}
-					
-					gnuplot << " with lines ls " << line.style << " ";
-					if(line.name == "" || line.name == "95% CI min" || line.name == "95% CI max") gnuplot << "notitle"; 
-					else gnuplot << "title '" << label(line.name) << "'";
-				}
-				break;
-				
-			case OP_LOG_GENERATION:
-				gnuplot << "set logscale y" << endl;
-					
-				if(oppl.min != UNSET) gnuplot << "set yrange [" << oppl.min << ":" << oppl.max << "]" << endl;
-	
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-					gnuplot << " with lines ls " << line.style << " ";
-					if(line.name == "EF cut-off") gnuplot << "notitle"; 
-					else gnuplot << "title '" << label(line.name) << "'";
-				}
-				gnuplot << endl;
-				
-				gnuplot << "unset logscale y" << endl;
-				break;
-				
-			case OP_CPU:
-				gnuplot << "set logscale y" << endl;
-				gnuplot << "set logscale x" << endl;
-					
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-					gnuplot << " with lines ls " << line.style << " ";
-					if(line.name == "EF cut-off") gnuplot << "notitle"; 
-					else gnuplot << "title '" << label(line.name) << "'";
-				}
-				gnuplot << endl;
-				
-				gnuplot << "unset logscale y" << endl;
-				gnuplot << "unset logscale x" << endl;
-				break;
-				
-			case OP_TRACE:
-				if(multiplot == UNSET){ multiplot = 0; gnuplot << "set multiplot layout 2,1 rowsfirst" << endl;}
-				multiplot++;
-				
-			  gnuplot << "set size ratio 0.4" << endl;
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					if(line.name == "True"){
-						gnuplot << line.file;
-					}
-					else{
-						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-					}
-					gnuplot << " with lines ls " << line.style << " ";
-					gnuplot << "title '" << label(line.name) << "'";
-				}
-				gnuplot << endl;
-			  gnuplot << "set size noratio" << endl;
-				break;
-				
-			case OP_ME:
-				gnuplot << "set logscale x" << endl;
-					
-				gnuplot << "plot ";
-				for(auto j = 0u; j < oppl.line.size(); j++){
-					const auto &line = oppl.line[j];
-					if(j != 0) gnuplot << ", ";
-					if(line.name == ""){  // Ordinary line
+				case OP_LOG_GENERATION:
+					gnuplot << "set logscale y" << endl;
+						
+					if(oppl.min != UNSET) gnuplot << "set yrange [" << oppl.min << ":" << oppl.max << "]" << endl;
+		
+					gnuplot << "plot ";
+					for(auto j = 0u; j < oppl.line.size(); j++){
+						const auto &line = oppl.line[j];
+						if(j != 0) gnuplot << ", ";
 						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
 						gnuplot << " with lines ls " << line.style << " ";
+						if(line.name == "EF cut-off") gnuplot << "notitle"; 
+						else gnuplot << "title '" << label(line.name) << "'";
+					}
+					gnuplot << endl;
 					
+					gnuplot << "unset logscale y" << endl;
+					break;
+					
+				case OP_CPU:
+					gnuplot << "set logscale y" << endl;
+					gnuplot << "set logscale x" << endl;
+						
+					gnuplot << "plot ";
+					for(auto j = 0u; j < oppl.line.size(); j++){
+						const auto &line = oppl.line[j];
+						if(j != 0) gnuplot << ", ";
+						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
+						gnuplot << " with lines ls " << line.style << " ";
+						if(line.name == "EF cut-off") gnuplot << "notitle"; 
+						else gnuplot << "title '" << label(line.name) << "'";
 					}
-					else{                 // Error bar
-						gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << ":" << line.name;
-						gnuplot << " with yerrorbars ls " << line.style << " ";
+					gnuplot << endl;
+					
+					gnuplot << "unset logscale y" << endl;
+					gnuplot << "unset logscale x" << endl;
+					break;
+					
+				case OP_TRACE:
+					if(multiplot == UNSET){ multiplot = 0; gnuplot << "set multiplot layout 2,1 rowsfirst" << endl;}
+					multiplot++;
+					
+					gnuplot << "set size ratio 0.4" << endl;
+					gnuplot << "plot ";
+					for(auto j = 0u; j < oppl.line.size(); j++){
+						const auto &line = oppl.line[j];
+						if(j != 0) gnuplot << ", ";
+						if(line.name == "True"){
+							gnuplot << line.file;
+						}
+						else{
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
+						}
+						gnuplot << " with lines ls " << line.style << " ";
+						gnuplot << "title '" << label(line.name) << "'";
 					}
-					gnuplot << "notitle";
-				}
-				gnuplot << endl;
-				
-				gnuplot << "unset logscale x" << endl;
-				break;
-		}
-		gnuplot << endl << endl;
-	}
-}
-
-
-/// Outputs a file containing posterior estimates for model parameters
-void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp) const
-{
-	auto file = "Parameter_estimates.csv";
-	auto filefull = details.output_directory+"/"+file;
-
-	ofstream paramout(filefull.c_str());
-	if(!paramout) emsg("Cannot open the file '"+filefull+"'");
-	
-	if(suppress_output == false) cout << "'" << file << "' gives the model parameters." << endl;
-	
-	if(details.siminf == SIMULATE) paramout << "# Values for model parameters." << endl;
-	else paramout << "# Posterior distributions for model parameters." << endl;
-	paramout << endl;
-	
-	if(details.siminf == SIMULATE) paramout << "Name,Value" << endl;
-	else{
-		paramout << "Name,Mean,95% CI min,95% CI max,Standard deviation,Prior,";
-		paramout << "Effective sample size,Gelman-Rubin statistic" << endl;
-	}
-
-	auto GR = get_Gelman_Rubin_statistic(psamp);
-	
-	auto ESS = get_effective_sample_size(psamp);
-	
-	vector <double> paramav(model.param.size());
-	for(auto p = 0u; p < model.param.size(); p++){
-		vector <double> vec; for(const auto psa : psamp) vec.push_back(psa.paramval[p]);
-		auto stat = get_statistic(vec);
-		paramav[p] = stat.mean;
-		if(model.param[p].name != "zero" && model.param[p].name != "one"){
-			paramout << model.param[p].name  << "," << stat.mean;
-			if(details.siminf == INFERENCE){ 
-				paramout << "," << stat.CImin << ","<< stat.CImax << "," << stat.sd << ",";
-				paramout << replace(model.print_prior(p),",","|") << ",";
-				if(ESS[p] == UNSET) paramout << "---"; else paramout << ESS[p]; paramout << ",";
-				if(GR[p] == UNSET) paramout << "---"; else paramout << GR[p];
+					gnuplot << endl;
+					gnuplot << "set size noratio" << endl;
+					break;
+					
+				case OP_ME:
+					gnuplot << "set logscale x" << endl;
+						
+					gnuplot << "plot ";
+					for(auto j = 0u; j < oppl.line.size(); j++){
+						const auto &line = oppl.line[j];
+						if(j != 0) gnuplot << ", ";
+						if(line.name == ""){  // Ordinary line
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
+							gnuplot << " with lines ls " << line.style << " ";
+						
+						}
+						else{                 // Error bar
+							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << ":" << line.name;
+							gnuplot << " with yerrorbars ls " << line.style << " ";
+						}
+						gnuplot << "notitle";
+					}
+					gnuplot << endl;
+					
+					gnuplot << "unset logscale x" << endl;
+					break;
+					
+				case OP_ANIM_MAP: case OP_MIXING_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_COMP_MODEL: case OP_FOI_MODEL:
+					break;
 			}
-			paramout << endl; 
-		}
-	}
-	
-	if(details.siminf == SIMULATE) cout << "Parameter values are given in '" << filefull << "'" << endl << endl;
-	else cout << post_lab+" parameter estimates are given in '" << filefull << "'" << endl << endl;
-}
-
-
-/// Outputs a spatial distribution for R as a function of time 
-void	Output::spatial_R_map(const vector <ParamSample> &psamp) const
-{
-	for(auto st = 0u; st < data.nstrain; st++){
-		vector < vector <double> > Rmap;
-		
-		Rmap.resize(details.period);
-		for(auto t = 0u; t < details.period; t++){
-			Rmap[t].resize(data.narea); for(auto c = 0u; c < data.narea; c++) Rmap[t][c] = 0;
-		}			
-		
-		for(const auto &info : model.Rspline_info){
-			auto sp = info.spline_ref;
-			
-			for(const auto &psa : psamp){
-				const auto &paramv_dir = psa.paramval;
-				
-				auto Rt = model.create_disc_spline(sp,paramv_dir);
-		
-				auto Rfac = paramv_dir[data.strain[st].Rfactor_param];
-				
-				auto areafactor = model.create_areafactor(paramv_dir); 
-			
-				for(auto t = 0u; t < details.period; t++){
-					auto sett = t*details.division_per_time;
-					for(auto c = 0u; c < data.narea; c++){
-						Rmap[t][c] += Rfac*Rt[sett]*areafactor[t][c]/psamp.size();
-					}
-				}
-			}
-		}
-		
-		string file = "R_map"; if(data.nstrain > 1) file += "_"+data.strain[st].name; file += ".csv";			
-		auto filefull = details.output_directory+"/"+post_dir+"/"+file;
-		ofstream Rmapout(filefull.c_str());
-		if(!Rmapout) emsg("Cannot open the file '"+filefull+"'");
-	
-		Rmapout << details.time_format_str; for(auto c = 0u; c < data.narea; c++) Rmapout << "," << data.area[c].code; Rmapout << endl;
-		for(auto t = 0u; t < details.period; t++){
-			Rmapout << details.getdate(t); for(auto c = 0u; c < data.narea; c++) Rmapout << "," << Rmap[t][c]; Rmapout << endl;
+			gnuplot << endl << endl;
 		}
 	}
 }
@@ -1638,7 +2227,7 @@ Statistics Output::get_statistic(const vector <double> &vec) const
 	for(auto v : vec){ sum += v; sum2 += v*v;}
 	
 	stat.mean = sum/n; 	
-	auto var = sum2/n - (sum/n)*(sum/n); if(var < 0) var = 0;
+	auto var = sum2/n - (sum/n)*(sum/n); if(var < VTINY) var = 0;
 	stat.sd = sqrt(var);
 	
 	if(n == 0){
@@ -2155,9 +2744,10 @@ void Output::print_percentage(const double s, const unsigned int nsamp, unsigned
 
 
 /// Generates a new output plot
-OutputPlot::OutputPlot(OutputPlotType type_, string title_, string xaxis_, string yaxis_, double min_, double max_)
+OutputPlot::OutputPlot(OutputPlotType type_, string title_, string fulldesc_, string tab_, string tab2_, string tab3_, string xaxis_, string yaxis_, double min_, double max_)
 {
-	type = type_; title = title_; xaxis = xaxis_; yaxis = yaxis_; min = min_; max = max_; legend_labelson = false;
+	type = type_; title = title_; fulldesc = fulldesc_; tab = tab_; tab2 = tab2_; tab3 = tab3_;
+	xaxis = xaxis_; yaxis = yaxis_; min = min_; max = max_; legend_labelson = false;
 }
 
 
