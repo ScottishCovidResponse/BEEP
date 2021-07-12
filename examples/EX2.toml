@@ -26,7 +26,7 @@ trans = [
 
 #democats = [{name="Sex", cats="Male | Female"}]
 
-geo_mixing_matrix = "M.csv"
+geo_mixing_matrix = "M_Scotland_LA.csv"
 
 area_effect = {value="[area effect:Scotland_LA.csv]", prior="Dir(*)"}
 
@@ -46,7 +46,8 @@ state_outputs = [
 {plot_name="Dynamics", type="population", observation="S", line_colour="green"},
 {plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
 {plot_name="Dynamics", type="population", observation="I", line_colour="red"},
-{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
 ]
 
 modification = [{start="2020-04-01",type="beta_fac",factor="0.3"}]
