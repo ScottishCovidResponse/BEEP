@@ -15,6 +15,10 @@ struct Details                                                     // Provides d
 	SimInf siminf;                                                   // Stores if doing simulation/inference
 	string output_directory;                                         // The output directory
 	
+	string analysis_type;                                            // Labels "Posterior", "Simulation", "Multisim"
+	
+	string description;                                              // Stores a description of the analysis
+	
 	string toml_file;                                                // The name of the TOML file
 	
 	unsigned int efoi_factor;                                        // Denominator when expressing external force of infection.

@@ -29,15 +29,19 @@ function finalaction(i)
 	
 	switch(ac){
 	case TABBUT:		
-		changepage(val,-1,-1);
+		changepage(val,-1,-1,-1);
 		break;
     
 	case PAGESUBBUT:
-		changepage(-1,val,-1);
+		changepage(-1,val,-1,-1);
 		break;
 	
 	case PAGESUBSUBBUT:
-		changepage(-1,-1,val);
+		changepage(-1,-1,val,-1);
+		break;
+	
+	case PAGESUBSUBSUBBUT:
+		changepage(-1,-1,-1,val);
 		break;
 	
 	case SOURCEBUT:
@@ -46,7 +50,28 @@ function finalaction(i)
 		break;
 		
 	case CANVASBUT:
-		if(canover != -1 && canbutac[canover] != -1) canfinalaction(canover);
+		if(canover != -1){
+			if(canbutac[canover] != -1) canfinalaction(canover);
+		}
+		else{
+			selparam_table = null; selparam_name = "";
+			seleq = null; seleq_name = ""; 
+		}
+		break;
+		
+	case CHECKBUT:
+		check = 1-check;
+		break;
+		
+	case MENULINKBUT:
+		follow_param_link(val);
+		break;
+		
+	case RADIOBUT:
+		switch(val2){
+			case RADIORATE: rateradio = val; break;
+			case RADIOHIGH: lowerhighlight = val; break;
+		}
 		break;
 		
 	case MENUSLIDEBUT: case SLIDEBUT: case TABXSLIDEBUT: case TABYSLIDEBUT: break;

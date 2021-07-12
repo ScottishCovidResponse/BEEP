@@ -9,6 +9,7 @@ function canbuttonplot()
 		ov = 0; if(i == canover) ov = 1;
 		canbutplot(i,ov);
 	}
+
 	cv = maincv;
 }
 
@@ -44,8 +45,28 @@ function canfinalaction(i)
 		break;
 		
 	case VARIABLEBUT:
-		selparam_table = val2;
-		selparam_name = text;
+		if(text == foi.name) changepage(-1,1,-1,-1);
+		else{
+			selparam_table = val2;
+			selparam_name = text;
+			taby_slide = 0;
+		}
+		paramsel = "";
+		break;
+		
+	case EQBUT:
+		seleq = val2;
+		seleq_name = text;
+		paramsel = "";
+		taby_slide = 0;
+		break;
+		
+	case LINKBUT:
+		follow_param_link(text);
+		break;
+		
+	case PARAMLINEBUT:
+		follow_param_link(text);
 		break;
 		
 	default: alertp("Error code EC2 "+canbutac[i]); break;
@@ -145,7 +166,7 @@ function canbutplot(i,ov)
 		break;
 	
 	case CATBUT:
-		plottext(text,x+5,y+18,CATFONT,col);
+		centertext(text,x+dx/2,y+18,CATFONT,col);
 		break;
 		
 	case CATVERTBUT:
@@ -216,6 +237,11 @@ function canbutplot(i,ov)
 		plottext(text,x+7,y+20,TABLEFONT,BLACK);
 		break;
 		
+	case LINKBUT:
+		col = BLUE; if(ov == 1){ col = LBLUE;}
+		plottext(text,x+7,y+20,TABLEFONT,col);
+		break;
+		
 	case VARIABLEBUT:
 		var col = BLACK; if(ov == 1){ col = GREY;}
 		if(text == selparam_name) col = RED;
@@ -224,12 +250,26 @@ function canbutplot(i,ov)
 		break;
 		
 	case EQBUT:
-		var col = BLACK; if(ov == 1){ col = GREY;}
-		//if(text == selparam_name) col = RED;
+		var col = BLUE; if(ov == 1){ col = LBLUE;}
+		if(text == seleq_name) col = RED;
 		
 		plottext(text,x+5,y+0.8*dy,val,col);
 		break;
 		
+	case EQBUT2:
+		plottext(text,x+5,y+0.8*dy,val,DDGREEN);
+		break;
+		
+	case EQBUT3:
+		plottext(text,x+5,y+0.8*dy,val,BLACK);
+		break;	
+		
+	case PARAMLINEBUT:
+		col = BLUE; if(ov == 1) col = LBLUE;
+		drawline(x,y,x,y+dy,col,NORMLINE,2);
+		
+		plotverticaltext(text,x+5,y+5,VERTFONT,col);  
+		break;
 		
 	default: alertp(ty+"Error code EC3"); break;
 	}

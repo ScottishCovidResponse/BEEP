@@ -44,9 +44,11 @@ endif
  #
  
 srcs := \
+ src/output.cc \
  src/state.cc \
  src/inputs.cc \
  src/model.cc \
+ src/model_JSON.cc \
  src/abc.cc \
  src/abcmbp.cc \
  src/abcsmc.cc \
@@ -63,7 +65,6 @@ srcs := \
  src/mpi.cc \
  src/mvn.cc \
  src/obsmodel.cc \
- src/output.cc \
  src/pais.cc \
  src/param_prop.cc \
  src/pmcmc.cc \

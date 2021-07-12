@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <cstring>
 #include <signal.h>
+#include "mpi.hh"
 
 using namespace std;
 
@@ -263,12 +264,13 @@ bool emsg_throws = false;
 /// Displays an error message
 void emsg(const string& msg)
 {
-	if(emsg_throws) throw(std::runtime_error(msg));
+	//if(emsg_throws) throw(std::runtime_error(msg));
 	cout << msg;
 	if(msg.length() > 0 && msg.substr(msg.length()-1,1) != ".") cout << ".";
 	cout << endl;
 	
 	if(debug == true) raise(SIGABRT);
+
 	exit (EXIT_FAILURE);
 }
 
@@ -419,7 +421,7 @@ double largest_eigenvalue(const vector < vector <double> > &M, vector <double> &
 		if(ev_new-ev > -TINY && ev_new-ev < TINY) break;
 		ev = ev_new;
 		loop++;
-		if(loop > 10000) emsg("Eigen-vector convergence problem"); 
+		if(loop > 10000) emsg("Eigen-vector convergence problem");
 	}while(1 == 1);
 
 	eigenvector = vec;
@@ -450,6 +452,12 @@ unsigned int find_in(const vector <string> &vec, const string &val)
 }
 
 
+/// Adds an element to a vector it it doesn't exist
+void add_vec(vector <unsigned int> &vec, const unsigned int val)
+{
+	if(find_in(vec,val) == UNSET) vec.push_back(val);
+}
+
 /// Finds if a given character exists in a string
 unsigned int find_char(const string st, const string char_in)
 {
@@ -474,7 +482,11 @@ double vec_max(const vector <double> &vec)
 /// Outputs a number to a given precision
 string prec(const double num, const unsigned int pre)
 {
-	stringstream ss; ss << std::fixed; ss.precision(pre); 
+	auto numpos = num; if(numpos < 0) numpos = -numpos;
+	auto v = -10u; while(numpos > pow(10,v)) v++;
+	
+	int precor = pre-v; if(precor < 0) precor = 0;
+	stringstream ss; ss << std::fixed; ss.precision(precor); 
 	ss << num;
 	return ss.str();
 }

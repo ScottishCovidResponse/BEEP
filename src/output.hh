@@ -16,11 +16,11 @@ struct OutputLine{                                            // Specifies a lin
 
 
 struct OutputPlot{                                            // Specifies a plot to appear in the final pdf
-	OutputPlot(OutputPlotType type_, string title_, string fulldesc_, string tab_, string tab2_, string tab3_, string xaxis_, string yaxis_, double min_, double max_);
+	OutputPlot(OutputPlotType type_, string title_, string fulldesc_, string tab_, string tab2_, string tab3_, string tab4_, string xaxis_, string yaxis_, double min_, double max_);
 
 	OutputPlotType type;                                        // The type of the output
 	string fulldesc;                                            // A full description of the output
-	string tab, tab2, tab3;                                     // Used for the menu
+	string tab, tab2, tab3, tab4;                               // Used for the menu
 	string title;                                               // The title of the plot
 	string xaxis;                                               // The name of the x axis
 	string yaxis;                                               // The name of the y axis
@@ -29,6 +29,8 @@ struct OutputPlot{                                            // Specifies a plo
 	
 	vector <string> label;                                      // Stores label (in the case of marginals)
 	bool legend_labelson;                                       // Determines if labels are put into description
+	
+	string spline_param_JSON;                                   // Describes parameters on splines
 	
 	string source;                                              // Stores information about the source files.
 	
@@ -68,7 +70,6 @@ class Output
 		vector <double>	get_Gelman_Rubin_statistic(const vector <ParamSample> &psamp) const;
 		vector <double> get_Gelman_Rubin_statistic(const vector < vector < vector <double> > > &param_GR) const;
 		Statistics get_statistic(const vector <double> &vec) const;
-		void simulate_level_file() const;
 		void print_percentage(const double s, const unsigned int nsamp, unsigned int &percentage) const;
 		
 	private:
@@ -91,8 +92,10 @@ class Output
 		void branch_prob_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void derived_parameter_distributions(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void posterior_parameter_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
-		void spatial_R_map(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
+		void spatial_R_map(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void age_mixing_matrix(vector <OutputPlot> &op) const;
+		void covar_data(vector <OutputPlot> &op) const;
+		void level_data(vector <OutputPlot> &op) const;
 		void spatial_mixing_map(vector <OutputPlot> &op) const;
 		void compartmental_model(vector <OutputPlot> &op) const;
 		void add_generation_plots(vector <OutputPlot> &op) const;
@@ -119,7 +122,6 @@ class Output
 		OutputProp prop;                                        // Defines properties of the output
 		unsigned int nrun;                                      // Stores the number of runs (used for trace plots)
 		
-		string post_lab;                                        // Labels "Posterior" or "Distribution" depending on mode
 		string post_dir;                                        // The output directory depending on mode
 		
 		AreaPlot area_plot;                                     // Stores information about plotting areas

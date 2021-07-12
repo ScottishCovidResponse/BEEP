@@ -240,15 +240,18 @@ void State::initialise_from_particle(const Particle &part)
 	set_param(paramval);
 	
 	pop_init();	
-	for(auto sett = 0u; sett < details.ndivision-1; sett++) update_pop(sett);
-
+	for(auto sett = 0u; sett < details.ndivision; sett++){
+		democat_change_pop_adjust(sett);
+		if(sett < details.ndivision-1) update_pop(sett);
+	}
+	
 	set_Imap(0);
 		
 	for(auto sett = 0u; sett < details.ndivision; sett++){
 		for(auto c = 0u; c < data.narea; c++) set_transmean(sett,c);
 	}			
 	
-	if(checkon == true) check();
+	if(checkon == true) check(0);
 	
 	timer[TIME_INITFROMPART].stop();
 }
@@ -264,6 +267,47 @@ Particle State::create_particle(const unsigned int run) const
 	part.transnum = transnum;
 	
 	return part;
+}
+
+
+/// Adjusts populations so to enforce democat_change 
+void State::democat_change_pop_adjust(const unsigned int sett)
+{
+	for(const auto &dcc : data.democat_change){
+		auto ncat = dcc.frac[sett].size();
+	
+		vector <double> pop_cat(ncat);
+		for(auto f = 0u; f < ncat; f++) pop_cat[f] = 0;
+			
+		for(auto c : dcc.area){
+			for(auto g = 0u; g < dcc.dp_group.size(); g++){
+				for(auto co = 0u; co < model.comp.size(); co++){
+					for(auto f = 0u; f < ncat; f++){
+						pop_cat[f] += pop[sett][c][co][dcc.dp_group[g][f]];		
+					}							
+				}				
+			}
+		}
+		auto pop_tot = 0.0;	for(auto f = 0u; f < ncat; f++)	pop_tot += pop_cat[f];
+	
+		vector <double> frac_dif(ncat);
+		for(auto f = 0u; f < ncat; f++) frac_dif[f] = dcc.frac[sett][f] - pop_cat[f]/pop_tot;
+		
+		for(auto c : dcc.area){
+			for(auto g = 0u; g < dcc.dp_group.size(); g++){
+				for(auto co = 0u; co < model.comp.size(); co++){
+					auto sum = 0.0;
+					for(auto f = 0u; f < ncat; f++){
+						sum += pop[sett][c][co][dcc.dp_group[g][f]];
+					}
+					
+					for(auto f = 0u; f < ncat; f++){
+						pop[sett][c][co][dcc.dp_group[g][f]] += frac_dif[f]*sum;
+					}							
+				}				
+			}
+		}
+	}
 }
 
 
@@ -291,14 +335,6 @@ void State::set_transmean(const unsigned int sett, const unsigned int c)
 				sum += sus_pop[dpp]; sus_pop[dpp] = 0;
 			}
 			sus_pop[dp] += sum;
-		}
-	}
-	
-	for(const auto &dcm : model.democat_change_map[c]){                                // Accounts for demographic changes
-		auto imax = dcm.dp_group.size();
-		auto sum = 0.0; for(auto i = 0u; i < imax; i++) sum += sus_pop[dcm.dp_group[i]];
-		if(sum >= 0){
-			for(auto i = 0u; i < imax; i++) sus_pop[dcm.dp_group[i]] = sum*dcm.frac[sett][i];
 		}
 	}
 	
@@ -429,7 +465,7 @@ void State::simulate(const vector <double> &paramval)
 	
 	set_Pr();                                           // Calculates the prior
 	
-	if(checkon == true) check();
+	if(checkon == true) check(1);
 }
 
 
@@ -437,7 +473,7 @@ void State::simulate(const vector <double> &paramval)
 void State::simulate(const unsigned int ti, const unsigned int tf)
 {
 	timer[TIME_SIMULATE].start();
-	
+
 	if(ti == 0) pop_init();
 	
 	auto step = (unsigned int)(details.ndivision/10.0); if(step == 0) step = 1;
@@ -446,6 +482,8 @@ void State::simulate(const unsigned int ti, const unsigned int tf)
 			cout << print_populations(sett);   // Prints the compartmental populations to the terminal
 		}
 	
+		democat_change_pop_adjust(sett);
+		
 		set_Imap_sett(sett);
 
 		timer[TIME_TRANSNUM].start();
@@ -459,6 +497,7 @@ void State::simulate(const unsigned int ti, const unsigned int tf)
 			for(auto tr = 0u; tr < model.trans.size(); tr++){
 				for(auto dp = 0u; dp < data.ndemocatpos; dp++){	 
 					mean = tmean[tr][dp];
+			
 					if(mean == 0) prop_tnum[tr][dp] = 0;
 					else{
 						if(details.stochastic == true) prop_tnum[tr][dp] = poisson_sample(mean);		
@@ -499,7 +538,7 @@ string State::print_populations(const unsigned int sett) const
 	auto len = ss.str().length();
 	if(len < 15){ for(auto j = 0u; j < 15-len; j++) ss << " ";}
 	
-	for(auto c = 0u; c < model.comp.size(); c++) ss << "  " << model.comp[c].name << ":"	<< N[c];
+	for(auto c = 0u; c < model.comp.size(); c++) ss << "  " << model.comp[c].name << ":"	<< prec(N[c],0);
 	ss << endl;	
 
 	return ss.str();
@@ -515,10 +554,12 @@ Sample State::create_sample() const
 
 	auto paramv_dir = model.dirichlet_correct(paramval);
 	
-	sample.spline_output = model.get_spline_output(paramv_dir,transnum);
+	sample.spline_output = model.get_spline_output(paramv_dir,pop);
 	
 	sample.derived_param = model.get_derived_param(paramv_dir,susceptibility,Ntime[0],transrate);
 	
+	sample.Rmap = model.get_Rmap(paramv_dir,disc_spline,areafactor,susceptibility,Ntime,transrate,pop);
+
 	return sample;
 }
 

@@ -29,8 +29,6 @@ class Model                                             // Stores information ab
 	
 		unsigned int start_compartment;                     // This defines the compartment individuals start in
 	
-		vector < vector <DemocatChangeMap> > democat_change_map;// Refers to changes in demography with time
-	
 		vector <vector <unsigned int> > parameter_type;     // Different type of pararmeters
 		
 		vector <Spline> spline;                             // Stores the splines used in the model  
@@ -61,8 +59,11 @@ class Model                                             // Stores information ab
 		double calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &Vinv, const unsigned int sp, const vector <double> &democatpos_dist) const;
 		vector <double> calculate_probreach(const vector<double> &paramv_dir, const unsigned int st) const;
 		vector <double> calculate_external_ninf(const vector<double> &paramv_dir) const;
-		vector <SplineOutput> get_spline_output(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &transnum) const;
+		vector <SplineOutput> get_spline_output(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &pop) const;
 		vector <DerivedParam> get_derived_param(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &transrate) const;
+		vector <double> get_sus_dist_init(const vector <unsigned int> &area) const;
+		vector <double> get_sus_dist(const unsigned int sett, const vector <unsigned int> &area, const vector < vector < vector < vector <double> > > > &pop) const;
+		vector <RMap> get_Rmap(const vector<double> &paramv_dir, const vector < vector <double> > &disc_spline, const vector < vector <double> > &areafactor, const vector <double> &susceptibility, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate, const vector < vector < vector < vector <double> > > > &pop) const;
 		double calculate_generation_time(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &transrate, const vector <double> &democatpos_dist, const unsigned int st) const;
 		bool do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const;
 		double prior(const vector<double> &paramv) const;
@@ -75,22 +76,26 @@ class Model                                             // Stores information ab
 		vector < vector < vector <double> > > create_Ntime(const vector < vector<double> > &disc_spline) const;
 		bool equal(const vector < vector <double> > &Ntime_1, const vector < vector <double> > &Ntime_2) const;
 		vector < vector < vector <double> > > calculate_beta_from_R(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate, const vector < vector <double> > &disc_spline) const;
-		vector < vector <double> > calculate_R_eff(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &transnum, const unsigned int st) const;
+		vector < vector <double> > calculate_R_eff(const vector <double> &paramv_dir, const vector < vector < vector < vector <double> > > > &pop, const unsigned int st) const;
 		vector < vector <double> > calculate_R_age(const vector <double> &paramv_dir) const;
-		void setup_democat_change_map();
 		bool inbounds(const vector <double> &paramv) const;
 		double dPr_dth(const unsigned int th, const vector<double> &paramv) const;
 		vector <double> dirichlet_correct(const vector <double> &paramval) const;
-		void add_dirichlet(unsigned int th_min, const vector <unsigned int> &th_list, const vector <double> &frac);
+		void add_dirichlet(unsigned int th_min, const vector <unsigned int> &th_list, const vector <double> &frac, const DirType dirtype);
 		void set_strain();
 		string list_dir_param(const vector <DirichletParam> &list) const;
 		void set_dirichlet();
 		string comparmtental_model_JSON() const;
-		string foi_model_JSON() const;
+		void check_prior() const;
 		string print() const;
 		string print_prior(const unsigned int p) const;
 		void print_parameter_types();
 		void print_param(const string name, const vector <double> &paramv) const;
+		
+		string param_JSON(const vector <unsigned int> &vec) const;
+		bool areaeffect_timevary() const;
+		string foi_model_JSON() const;
+		string spline_param_JSON(const unsigned int sp) const;
 		
 	private:
 		vector <unsigned int> inf_state;                    // Makes a list of all the infectious states (used to calculate NGM)
@@ -118,7 +123,7 @@ class Model                                             // Stores information ab
 		void spline_sample(vector <double> &paramv) const;
 		void complete_datatables();
 		void setup_modification();
-		void create_spline(const string name, const string desc, const vector <ParamSpec> &ps, const vector<unsigned int> &bp, const ParamSpec param_fac, const Smooth smooth_type, const ParamType type);
+		void create_spline(const string name, const string desc, const vector <ParamSpec> &ps, const vector<unsigned int> &bp, const ParamSpec param_fac, const SmoothType smooth_type, const ParamType type);
 		void set_infected_uninfected();
 		unsigned int get_compartment(const string compname, const ErlangPos pos) const;
 		unsigned int get_transition(const string transname);
@@ -126,7 +131,8 @@ class Model                                             // Stores information ab
 		bool prior_order_correct(const vector <double> &paramv) const;
 		void prior_order();
 		void set_parameter_type();
-		void update_spl_ref(string &name, string &desc, string area_str, const vector <double> efoi_ad, vector <unsigned int>& spl_ref, vector <SplineInfo> &spline_info) const;
+		void update_R_ref(string &name, string &desc, string area_str, vector <unsigned int>& spl_ref, vector <SplineInfo> &spline_info) const;
+		void update_efoi_ref(string &name, string &desc, string area_str, string strain_str, const vector <double> efoi_ad, vector < vector <unsigned int> > &spl_ref, vector <SplineInfo> &spline_info) const;
 		void counterfactual_modification();
 			
 		const Details &details;

@@ -22,7 +22,7 @@ Simulate::Simulate(const Details &details, Data &data, const Model &model, Input
 		case SIM: break;
 		case MULTISIM:                                                            // Sets the number of simulations
 			nsim = inputs.find_positive_integer("nsimulation",UNSET); 
-			if(nsim == UNSET) emsg("A value for 'nsimulation' must be set.");
+			if(nsim == UNSET) emsgroot("A value for 'nsimulation' must be set.");
 			break; 
 		case PREDICTION:                                                          // Sets the simulation per posterior sample
 			nsim_per_sample = inputs.find_positive_integer("nsim_per_sample",4); 
@@ -40,7 +40,7 @@ void Simulate::run()
 	auto paramval = model.sample_from_prior();                                   // Sets up the parameters
 
 	state.simulate(paramval);                                                    // Simulates the state
-	
+
 	auto obs_value = obsmodel.get_obs_value(&state);                             // Copies the observations into the data
 	for(auto ob = 0u; ob < data.obs.size(); ob++) data.obs[ob].value = obs_value[ob];
 
@@ -48,8 +48,6 @@ void Simulate::run()
 
 	particle_store.push_back(state.create_particle(0));                          // Generate the pdf output file
 	output.generate_graphs(particle_store); 
-
-	if(false) output.simulate_level_file();
 }
 
 

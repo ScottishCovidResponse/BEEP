@@ -63,7 +63,7 @@ function butplot(i,ov)
 	case PAGESUBBUT:
 		arrowdown = 0;
 		if(butval[i] == pagesub[page]){
-			if(tree[page].child[pagesub[page]].child2[0].name != "") arrowdown = 1; 
+			if(tree[page].child[pagesub[page]].child[0].name != "") arrowdown = 1; 
 			
 			if(arrowdown != 1) fillrect(x+dx-8,y+dy/2-6,8,12,WHITE); 
 			col = "#cc2222"; 
@@ -105,13 +105,32 @@ function butplot(i,ov)
 			col = "#222222";
 			if(over==i) col = "#888888";
 		} 
-		off += 2;
 		
 		plottext(text,x+1,y+16+off-2,font,col,dx);
 		break;
 		
+	case PAGESUBSUBSUBBUT:
+		fillrect(x, y, dx, dy, "#ddddff");
+		if(butval[i] == pagesubsubsub[page][ps][pss]){
+			//fillrect(x+dx-8,y+dy/2-6,8,12,WHITE); 
+			col = DDBLUE; 
+			font = MENUFONTSMALL;
+			off = 0;
+			fillcircle(x-4,y+10,2,DDBLUE,DDBLUE,1);     
+		}
+		else{
+			font = MENUFONTSMALL2;
+			off = -1;
+			col = DDBLUE;
+			if(over==i) col = "#888888";
+		} 
+		
+		plottext(text,x+1,y+16+off-2,font,col,dx);
+		
+		break;
+		
 	case MENUSLIDEBUT:
-		var ob = tree[page].child[pagesub[page]];
+		var ob = tree[page].child[ps].child[pss];
 		
 		fillrect(x-1,y-1,dx+2,dy+2,WHITE);
 		sliy1 = y + ob.y*dy;
@@ -160,6 +179,13 @@ function butplot(i,ov)
 		plottext(text,x+4,y+18,"bold 15px arial",BLACK);	
 		break; 
 	
+	case LEVELKEYBUT:
+		var ddx = dy;
+		fillrect(x,y,ddx,dy,val);
+		drawrect(x,y,ddx,dy,BLACK,1);
+		plottext(text,x+ddx+7,y+15,KEYFONT,BLACK);	
+		break;
+		
 	case KEYBUT:
 		setstyle(visjson.plots[val].line[val2].style);
 		cv.lineWidth = 2;
@@ -180,7 +206,8 @@ function butplot(i,ov)
 		drawrect(x,y,dx,dy,DGREY,1);  
 		
 		for(i = 0; i < nticky; i++){
-			xx = Math.floor(x + dx*(Math.log(ticky[i]+col_map.shift)-col_map.min)/(col_map.max-col_map.min));
+			if(val == "log") xx = Math.floor(x + dx*(Math.log(ticky[i]+col_map.shift)-col_map.min)/(col_map.max-col_map.min));
+			else xx = Math.floor(x + dx*(ticky[i]-col_map.min)/(col_map.max-col_map.min));
 			drawline(xx, y+dy, xx, y+dy+5,BLACK,2,0); 
 			centertext(ticky[i],xx,y+dy+14,"11px arial",BLACK); 
 		}
@@ -189,7 +216,7 @@ function butplot(i,ov)
 	case SOURCEBUT:
 		fillrect(x,y,dx,dy,WHITE);
 		col = BLACK; if(over == i) col = GREY;
-		
+		x += 4;
 		if(sourceon == 0){
 			ddx = 2; ddx2 = 3; ddy = 3;
 			drawline(x+ddx,y+dy/2-ddy,x+ddx+ddx2,y+dy/2+1,col,THICKLINE);
@@ -226,7 +253,14 @@ function butplot(i,ov)
 		
 	case MENUBACKBUT:
 		fillrect(x,y,dx,dy,"#ddddff");
-		drawcorners(menux,0,canw-menux,dy,30,"#ddddff","#9999ff")
+		break;
+	
+	case CORNERSBUT:
+		drawcorners(x,y,dx,dy,25,"#ddddff");
+		break;
+		
+	case LOWERBARBUT:
+		drawlowerbar(x,y,dx,dy,25,"#ddddff");
 		break;
 		
 	case LOGOBUT:
@@ -238,7 +272,7 @@ function butplot(i,ov)
 		fillrect(x,y,dx,dy,WHITE); 
 	
 		cv.drawImage(graphcan,0,0,dx,dy,x,y,dx,dy);
-		if(dy == height) drawcorners(menux,0,canw-menux,dy,30,"#ddddff","#9999ff");
+		if(dy == height) drawcorners(menux,0,canw-menux,dy,25,"#ddddff");
 		canvasdx = dx; canvasdy = dy;
 		break;
 	
@@ -247,7 +281,58 @@ function butplot(i,ov)
 		break;
 		
 	case NORMTABLEBUT:
-		plottext(text,x+4,y+17,NORMTABLEFONT,BLACK,dx);
+		var col = BLACK; if(text == paramsel) col =	RED;	
+		plottext(text,x+4,y+17,NORMTABLEFONT,col,dx);
+		break;
+		
+	case CHECKBUT:
+		fillrect(x,y,dx+150,dy,WHITE);
+		drawrect(x+2,y+2,dy-4,dy-4,BLACK,NORMLINE);
+
+		if(check == 1){
+			if(over == i) fillrect(x+4,y+4,dy-8,dy-8,GREY);
+			else fillrect(x+4,y+4,dy-8,dy-8,BLACK);
+		}
+		else{
+			if(over == i) fillrect(x+4,y+4,dy-8,dy-8,LLGREY);
+		}
+		
+		plottext(text,x+dy+4,y+13,"12px arial",BLACK);
+		break;
+		
+	case MENULINKBUT:
+		fillrect(x,y,dx,dy,WHITE);
+		col = BLUE; if(over == i){ col = LBLUE;}
+		plottext(text,x+7,y+20,"12px arial",col);
+		break;
+		
+	case RADIOBUT:
+		fillrect(x,y,dx,dy+4,WHITE);
+	
+		col=DGREY;
+		switch(val2){
+			case RADIORATE: selval = rateradio; break;
+			case RADIOHIGH: selval = lowerhighlight; break;
+		}
+		
+		if(val == selval) col2 = BLACK;
+		else{
+			if(over == i) col2 = DGREY;
+			else col2 = WHITE
+		}
+
+		r = 7;
+		drawroundrect(x+1,y+2,2*r,2*r,r,WHITE,col);
+
+		if(val == selval) col3 = BLACK; 
+		else{ col3 = GREY;  if(over == i) col3 = DGREY;}
+    
+		plottext(buttext[i],x+20,y+13,"12px arial",col3,dx-20);
+		
+		if(col2 != WHITE){
+			x += 3; y += 5; r -= 3;
+			drawroundrect(x+1,y,2*r,2*r,r,col2,col2);
+		}
 		break;
 		
 	default: alertp("Error code EC1: "+buttype[i]); break;

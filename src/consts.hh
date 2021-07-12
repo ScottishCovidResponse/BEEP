@@ -50,12 +50,12 @@ enum TimeFormat { TIME_FORMAT_NUM, TIME_FORMAT_YMD,             // Different typ
 
 enum Simu_or_mbp {SIMU, MBP};                                    // Whether simulating or doing a MBP
 
-enum MatModType { ROW_COLUMN};
+enum MatModType { ROW_COLUMN, PERTURB};
 		
 enum IndSus { BOTH_SUSCEPTIBLE, ONLY_PROPOSE_SUSCEPTIBLE         // Classifies if individual is susceptible in initial/propose
 						, NOT_SUSCEPTIBLE }; 
 
-enum Smooth { NOSMOOTH, LOGSMOOTH, SMOOTH };
+enum SmoothType { NOSMOOTH, LOGSMOOTH, SMOOTH };                 // The type of smoothing used for a spline
 						
 enum PropType { MVN_PROP, FIXEDTREE_PROP, SLICETIME_PROP,        // Different types of proposal
 MEAN_TIME_PROP, NEIGHBOUR_PROP, JOINT_PROP, SELF_PROP};
@@ -82,13 +82,17 @@ enum MbpSimType { ALL_MBP, FIXEDTREE, SLICETIME};                // Different MB
 enum InfUpdate { INF_UPDATE, INF_DIF_UPDATE};                    // Different ways to update infectivity map								
 
 enum PriorType { FIXED_PRIOR, UNIFORM_PRIOR, EXP_PRIOR,          // Different types of prior
-								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_FLAT_PRIOR}; 
+								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_FLAT_PRIOR,
+								 MDIRICHLET_PRIOR}; 
 				
+enum DirType { DIR_NORM, DIR_MODIFIED};                          // The type of Dirichlet distribution
+
 enum JointType { UP_DOWN, SINE};                                 // Different type of joint proposal
 	
 enum OutputPlotType { OP_GRAPH, OP_GRAPH_MARGINAL, OP_MARGINAL,  // The type of output plot
               OP_PARAMDIST, OP_SPLINE, OP_GENERATION, OP_LOG_GENERATION, OP_CPU, OP_TRACE, OP_ME, 
-							OP_ANIM_MAP, OP_MIXING_MAP, OP_AGE_MATRIX, OP_PARAM_TABLE, OP_COMP_MODEL, OP_FOI_MODEL};
+							OP_ANIM_MAP, OP_AGE_MATRIX, OP_PARAM_TABLE, OP_PRIOR_TABLE, OP_COMP_MODEL, OP_FOI_MODEL,OP_MIXING_WITHIN_ANIM_MAP, OP_MIXING_WITHIN_MAP, OP_MIXING_BETWEEN_ANIM_MAP, OP_MIXING_BETWEEN_MAP, OP_MIXING_POP_ANIM_MAP, OP_MIXING_POP_MAP, OP_DESC,
+							OP_AREA_COVAR, OP_TV_COVAR, OP_AREA_TV_COVAR, OP_LEVEL_EFFECT};
 
 enum LineType { NOLINE, RED_SOLID, RED_DASHED, GREEN_SOLID,      // Different styles of line
                 GREEN_DASHED, BLUE_SOLID, BLUE_DASHED, BLACK_SOLID, BLACK_DASHED, 

@@ -14,23 +14,27 @@ var XLABELBUT = 4, YLABELBUT = 5;
 var XTICKBUT = 6, YTICKTRBUT = 7, CATBUT = 8, CATVERTBUT = 9;
 var LOGXTICKBUT = 10, LOGYTICKTRBUT = 11, MATRIXXBUT = 12, MATRIXYBUT = 13;
 var PLAYBUT = 14, PLAYLINEBUT = 15, ZOOMINBUT = 16, ZOOMOUTBUT = 17;
-var TABLEHEADBUT = 18, TABLEBUT = 19, VARIABLEBUT = 20, EQBUT = 21;
+var TABLEHEADBUT = 18, TABLEBUT = 19, VARIABLEBUT = 20, EQBUT = 21, EQBUT2 = 22, EQBUT3 = 23, LINKBUT = 24;
+var PARAMLINEBUT = 25;
 	
 // Ordinary buttons
 var TABBUT = 0, PAGESUBBUT = 1, PAGESUBSUBBUT = 2, PAGESUBBACKBUT = 3, MENUBACKBUT = 4;
 var TITLEBUT = 5, LOGOBUT = 6, SOURCEBUT = 7, SOURCEFILEBUT = 8;
 var KEYBUT = 9, MENUSLIDEBUT = 10, COLOURSCALEBUT = 11, SLIDEBUT = 12, SLIDEPARAGRAPHBUT = 13;
-var CANVASBUT = 14, TABXSLIDEBUT = 15, TABYSLIDEBUT = 16, NORMTABLEHEADBUT = 17, NORMTABLEBUT = 18;
+var CANVASBUT = 14, TABXSLIDEBUT = 15, TABYSLIDEBUT = 16, NORMTABLEHEADBUT = 17, NORMTABLEBUT = 18, CHECKBUT = 19;
+var MENULINKBUT = 20, CORNERSBUT = 21,LOWERBARBUT = 22, PAGESUBSUBSUBBUT = 23, RADIOBUT = 24;
+var LEVELKEYBUT = 25;
 
 // Fonts
 var TITLEFONT = "bold 16px arial", KEYFONT = "14px arial";
 var MAPFONT = "12px arial", MAPBOLDFONT = "bold 12px arial", MAPDATEFONT = "bold 16px arial";
-var VERTFONT = "16px arial", CATFONT = "14px arial", HELPFONT = "12px arial";
+var VERTFONT = "16px arial", CATFONT = "14px arial", HELPFONT = "14px arial";
 var SOURCEFONT = "11px arial";
-var MENUFONT = "bold 15px arial", MENUFONTSMALL = "bold 14px arial", MENUFONTSMALL2 = "12px arial";
+var MENUFONT = "bold 15px arial", MENUFONTSMALL = "bold 12px arial", MENUFONTSMALL2 = "12px arial";
 var MENUFONT2 = "15px arial", TICKFONT = "16px times", LABELFONT = "20px times";
 var TABLEHEADFONT = "bold 16px arial", TABLEFONT = "14px arial"; 
-var NORMTABLEHEADFONT = "bold 14px arial", NORMTABLEFONT = "12px arial"; 
+var NORMTABLEHEADFONT = "bold 14px arial", NORMTABLEFONT = "14px arial"; 
+var VERTFONT = "14px arial", MAPFONT = "12px arial";
 
 // Colours
 var BLACK = "#000000", GREEN = "#22FF22", RED = "#FF2222", BLUE = "#4444FF", PURPLE = "#FF44FF";
@@ -47,8 +51,11 @@ var BROWN = "#cb6a00", LBROWN = "#edbb99", DBROWN = "#974500", DDBROWN = "#43120
 
 var collist = [GREEN,RED,BLUE,PURPLE,ORANGE,BROWN,DGREEN,DRED,DBLUE,DPURPLE,DORANGE,DBROWN];
 
+// Different types of ratio buttons
+var RADIORATE = 0, RADIOHIGH = 1;
+
 // Miscellaneous
-var menux = 170;
+var menux = 180;
 var tab = 20;
 
 var datacol=[0,110,220,320,390,460,540,655];              // The positions of columns
