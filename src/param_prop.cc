@@ -423,15 +423,29 @@ void ParamProp::update_splicetime()
 		auto flag = 0u;
 		if(st.sim_frac < 0.5){
 			auto ti = st.sett_i, tf = st.sett_f;
-			if(tf - ti > 20){
+				
+			if(tf-ti > details.ndivision*0.05){
 				flag = 1;
 				unsigned int tmid = (ti+tf)/2;
+				unsigned int tleft = ti*0.75 + 0.25*tf;
+				unsigned int tright = ti*0.25 + 0.75*tf;
 			
-				SliceTime st; st.sett_i = ti; st.sett_f = tmid; st.sim_frac = 0.8; st.ac_rate = 0;
-				slicetime.push_back(st);
-					
-				st.sett_i = tmid; st.sett_f = tf; 
-				slicetime.push_back(st);
+				SliceTime st; st.sim_frac = 0.6; st.ac_rate = 0;
+				
+				if(tmid > ti){
+					st.sett_i = ti; st.sett_f = tmid; 
+					slicetime.push_back(st);
+				}
+				
+				if(tf > tmid){
+					st.sett_i = tmid; st.sett_f = tf; 
+					slicetime.push_back(st);
+				}
+				
+				if(tright > tleft){
+					st.sett_i = tleft; st.sett_f = tright; 
+					slicetime.push_back(st);
+				}
 			}
 		}
 		
@@ -502,8 +516,8 @@ vector <Proposal> ParamProp::get_proposal_list(const vector <ParamSample> &param
 		auto num = 1u;
 		if(details.mcmc_update.mvn_multiple == true){
 			auto numf = (details.mcmc_update.multiple_factor/(mvn[i].size*mvn[i].size));
-			auto num = (unsigned int)(numf+0.5);
-			if(num < 1) num = 1; 
+			num = (unsigned int)(numf+0.5);
+			if(num < 2) num = 2; 
 			
 			switch(mvn[i].mvntype){
 				case MULTIPLE: if(num > 50) num = 50; break;
@@ -808,7 +822,7 @@ Status Joint::propose(vector <double> &param_prop, const vector <double> &paramv
 	
 	switch(type){
 	case UP_DOWN:
-		for(auto th :  var_list) param_prop[th] += d;
+		for(auto th : var_list) param_prop[th] += d;
 		break;
 		
 	case SINE:

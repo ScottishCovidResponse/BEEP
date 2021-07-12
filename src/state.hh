@@ -36,6 +36,7 @@ class State                                              // Store information ab
 		vector < vector < vector <double> > > beta;          // The transmission rate
 	
 		void set_param(const vector <double> &paramv);
+		void democat_change_pop_adjust(const unsigned int sett);
 		void set_transmean(const unsigned int sett, const unsigned int c);
 		void set_EF();
 		void set_Pr();
@@ -47,7 +48,7 @@ class State                                              // Store information ab
 		ParamSample create_param_sample(const unsigned int run) const;
 		void save(const string file) const;
 		void load(const string file, const unsigned int ntimesteps);
-		void check();
+		void check(const unsigned int checknum);
 		
 		// START These functions are used for MBPs //
 		void set_Imap_sett(const unsigned int sett);

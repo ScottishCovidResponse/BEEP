@@ -1,8 +1,11 @@
 // Lists all the variables used in the graphical interface
 
-var	width, height, widthold, heightold;                   // Define the size of the window
+var	width, height, heightpage, widthold, heightold;       // Define the size of the window
 
 var initdone = 0;                                         // This is set to one when the initialisation is done
+
+var rateradio = "rate";                                   // Radio button for if rate is displayed
+var lowerhighlight = "off";                               // Dertermines if a high is added
 
 var visjson;                                              // This object stores information about graphs
 
@@ -19,6 +22,15 @@ var col_map=[];                                           // Creates a colour ma
 var selparam_table;                                       // The table for a selected parameter
 var selparam_name;     
 
+var seleq;                                                // The list of parameters for a selected equation
+var seleq_name;                                           // The name of the selected equation
+
+var paramsel;                                             // The name of a selected parameter
+
+var check;                                                // Stores the status of the check button                                        
+
+var param_link=[];                                        // Provides link to the model 
+
 var playtime = 0;                                         // When performing animations this is the plot time
 var playing = 0, playtimemax, playstartt, playtimeinit;   // Used for playing animations
 
@@ -34,7 +46,8 @@ var sourceon = 0;                                         // Determines if sourc
 
 var maincv, graphcv, cv, resultcv;                        // Used for drawing on canvases in HTML5
 
-var page = 0, pagesub=[], pagesubsub=[];                  // Stores the page/subpage being viewed
+var pagesub=[], pagesubsub=[], pagesubsubsub=[];          // Stores the page/subpage being viewed
+var page=0, ps=0, pss=0, psss=0;                          // Stores the current page position
 
 var over = -1;                                            // The button the mouse is over
 

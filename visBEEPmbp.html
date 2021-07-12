@@ -7,17 +7,6 @@
 		<meta name="keywords" content="BioSS,The Roslin Institute,BEEPmbp,Bayesian Estimation of Epidemic Parameters using Model-Based Proposals">
 		<meta name="description" content="BEEPmbp (Bayesian Estimation of Epidemic Parameters using Model-Based Proposals) is a general-purpose software tool for simulating and performing inference on epidemiological compartmental models.">
 		<meta name="author" content="C M Pooley">
-		 
-		 <!--
-		  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script id="MathJax-script" async
-          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-  </script>
-	<p>
-  When \(a \ne 0\), there are two solutions to \(ax^2 + bx + c = 0\) and they are
-  \[x = {-b \pm \sqrt{b^2-4ac} \over 2a}.\]
-</p>
--->
 	
 		<title>BEEPmbp</title>
 		
@@ -51,7 +40,7 @@
 		<script src="vis_files/BEEPmbp_output.js"></script>
 	</head>
 
-	<body id="bod" onresize="setsize();" onload="init()">	
+	<body id="bod" onresize="buttoninit();" onload="init()" style="margin:0px; padding:0px;">	
 		<div class="container" id ="container">
 			<div class="center" style="font-size:20px" >
 				<img style="width:400px" src="vis_files/logo.png"><br/>
@@ -59,28 +48,9 @@
 			</div>
 		</div>
 	
-		<div id="main" style="visibility:hidden; background:#ddddff; height:0px;">
+		<div id="main" style="visibility:hidden; background:#ddddff; height:0px; margin:0px; padding:0px;">
 				<canvas id="myCanvas" style="background:#ffffff; margin:0px; border:0px; padding:0px; margin-top:5px">
 				</canvas> 
-
-				<div id="pagefooter" style="height:30px; overflow:hidden; margin: 0px; padding: 0px; border: 0px none;  background:#00ffff;">
-					<div style="height:5px; background:#ddddff;"></div>
-					<div style="background:#a4a3e6;">
-						<div style="float:left; width:14px; height:25px; margin:0px; padding:0px; border:0px;">
-							<img style="margin: 0px; padding: 0px; border: 0px none;" src="vis_files/endlblue.png" height="25" width="14"> 
-						</div>
-						<div style="float:right; width:14px; height:25px; margin:0px; padding:0px; border:0px;">
-							<img style="margin: 0px; padding: 0px; border: 0px none;" src="vis_files/endrblue.png" height="25" width="14">
-						</div>
-						<div style="height:25px; background-color:#a4a3e6; margin:0px; padding:0px; border:0px;">
-							<center>
-							<div style="font-size:15px; color:#ffffff; padding-top:2px;">
-								<font face="trebuchet ms, helvetica, georgia, courier, arial"><b>© BEEPmbp 2021</b></font>
-							</div>
-							</center>
-						</div>
-					</div>
-			</div>
 		</div>
 	</body>
 </html>

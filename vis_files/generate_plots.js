@@ -1,19 +1,32 @@
 /// Generates the actual plots 
 function generate_plots()
 {
-	plot = tree[page].child[pagesub[page]].child2[pagesubsub[page][pagesub[page]]].plot;	
+	plot = get_plot();
 	var vis = visjson.plots[plot];
 	
 	switch(vis.type){
 	case "OP_ANIM_MAP": get_colourbar(vis); break;
-	case "OP_MIXING_MAP": case "OP_AGE_MATRIX": case "OP_PARAM_TABLE": break;
-	case "OP_COMP_MODEL": case "OP_FOI_MODEL": break;
+	case "OP_MIXING_WITHIN_MAP": case "OP_MIXING_WITHIN_ANIM_MAP": get_colourbar_linear(vis); break;
+	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP": break;
+	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP": break;
+	case "OP_AREA_COVAR": case "OP_AREA_TV_COVAR":
+		if(vis.xaxis == "Log transformed") get_colourbar(vis);
+		else get_colourbar_linear(vis);
+		break;
+	case "OP_LEVEL_EFFECT": break;
+	case "OP_AGE_MATRIX": case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
+	case "OP_COMP_MODEL": case "OP_FOI_MODEL": break; case "OP_DESC": break;
 	case "OP_CPU": get_logaxrange(vis); break;
 	default: get_axrange(vis); break;
 	}
 
 	switch(vis.type){
-	case "OP_ANIM_MAP": case "OP_MIXING_MAP":
+	case "OP_ANIM_MAP": 
+	case "OP_MIXING_WITHIN_ANIM_MAP": case "OP_MIXING_WITHIN_MAP":
+	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP": 
+	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP":
+	case "OP_AREA_COVAR": case "OP_AREA_TV_COVAR": 
+	case "OP_LEVEL_EFFECT":
 		mapframe(vis);
 		break;
 	
@@ -29,19 +42,16 @@ function generate_plots()
 		matrixframe(menux+10,10,vis);
 		break;
 	
-	case "OP_SPLINE": case "OP_GRAPH": case "OP_GENERATION": case "OP_ME": case "OP_LOG_GENERATION":
-		graphframe(menux+10,10,40+w,60,20,40,w,vis.xaxis,vis.yaxis);
+	case "OP_SPLINE": case "OP_GRAPH": case "OP_GENERATION": case "OP_ME":
+	case "OP_LOG_GENERATION": case "OP_TRACE": case "OP_TV_COVAR":
+		graphframe(menux+10,10,40+w,60,20,40,w,vis.xaxis,vis.yaxis,vis);
 		break;
 		
 	case "OP_CPU":
 		loggraphframe(menux+10,10,40+w,60,20,40,w,vis.xaxis,vis.yaxis);
 		break;
 		
-	case "OP_GRAPH_MARGINAL":	
-		alertp("to do");
-		break;
-		
-	case "OP_MARGINAL":	
+	case "OP_MARGINAL":	case "OP_GRAPH_MARGINAL":	
 		histogram_frame(menux+10,10,40+w,60,20,40,w,vis.xaxis,vis.yaxis,vis.line[0].label);
 		break;
 		
@@ -49,20 +59,20 @@ function generate_plots()
 		paramdist_frame(menux+10,10,40,60,20,40,vis.xaxis,vis.yaxis);
 		break;
 		
-	case "OP_PARAM_TABLE":
+	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE":
 		table(menux+30,30,vis.param_table);
 		break;
-		
-	case "OP_TRACE":
-		alertp("To do");
+	
+	case "OP_DESC":
 		break;
 		
-	default: alertp("To do");
+	default: alertp("This is not currently supported");
 	}
 	
 	plot_results();
 		 
-	x = menux+resdx+30; if(vis.type == "OP_PARAM_TABLE") x += Math.floor(0.15*resdx);
+	x = menux+resdx+30; 
+	if(vis.type == "OP_DESC") x = menux+30;
 	wid = width-x-30;
 	
 	sourcey = height-30;
@@ -88,14 +98,23 @@ function generate_plots()
 
 	var topline;                                            // Adds the key
 	switch(vis.type){
-	case "OP_ANIM_MAP":
+	case "OP_ANIM_MAP": case "OP_MIXING_WITHIN_MAP": case "OP_MIXING_WITHIN_ANIM_MAP":
+	case "OP_AREA_COVAR": case "OP_AREA_TV_COVAR": 
 		topline = sourcey - 40;
-		addbutton("",x,topline,wid-10,20,-1,COLOURSCALEBUT,-1,-1);
+		addbutton("",x,topline,wid-10,20,-1,COLOURSCALEBUT,col_map.type,-1);
+		break;
+		
+	case "OP_LEVEL_EFFECT": 
+		topline = sourcey - vis.level_param.length*30-40;
+		for(var i = 0; i < vis.level_param.length; i++){
+			addbutton(vis.level_param[i],x+20,topline+30*i+20,wid-30,20,-1,LEVELKEYBUT,collist[i],-1);
+		}
 		break;
 		
 	case "OP_COMP_MODEL":
-		topline = sourcey - 40;
+		topline = sourcey - 20;
 		if(selparam_table != null){ 
+			topline -= 20;
 			var num = selparam_table.length; if(num > sellinemax) num = sellinemax;
 			topline -= num*seltabledy;
 			selparam_info(x,topline,wid);
@@ -103,48 +122,104 @@ function generate_plots()
 		break;
 		
 	case "OP_FOI_MODEL":
-		topline = sourcey - 40;
+		topline = sourcey - 20;
+		if(seleq != null){ 
+			topline -= 20;
+			var num = seleq.length; if(num > sellinemax) num = sellinemax;
+			topline -= num*seltabledy;
+			seleq_info(x,topline,wid);
+		}
 		break;
 		
-	case "OP_MIXING_MAP":	case "OP_ME": case "OP_AGE_MATRIX":	case "OP_MARGINAL":	case "OP_PARAM_TABLE":
-		topline = sourcey - 40;
+	case "OP_ME": case "OP_AGE_MATRIX":	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": case "OP_MARGINAL": 
+	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP":
+	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP":
+	case "OP_TV_COVAR":
+	case "OP_GRAPH_MARGINAL":
+	case "OP_LOG_GENERATION":
+		topline = sourcey - 20;
+		break;
+		
+	case "OP_DESC": 
+		topline = sourcey - 20;
 		break;
 		
 	default:
-		var list=[];
-		for(li = 0; li < vis.line.length; li++){
-			if(vis.line[li].name && vis.line[li].name != "" &&
-   			 vis.line[li].name != "95% CI min"& vis.line[li].name != "95% CI max"){
-				list.push(li);
-			}
+		if(vis.tab == "Dataa"){
+			topline = sourcey - 20;
 		}
-		topline = sourcey - list.length*20-50;
-	
-		var y = topline; 
-		if(list.length > 0){
-			for(i = 0; i < list.length; i++){
-				li = list[i];
-				if(vis.line[li].name){
-					addbutton(vis.line[li].name,x+20,y,wid,0,-1,KEYBUT,plot,li); y += 20;
+		else{
+			var list=[];
+			for(li = 0; li < vis.line.length; li++){
+				if(vis.line[li].name && vis.line[li].name != "" &&
+					 vis.line[li].name != "95% CI min"& vis.line[li].name != "95% CI max"){
+					list.push(li);
 				}
-			}		
+			}
+			topline = sourcey - list.length*20-40;
+		
+			var y = topline; 
+			if(list.length > 0){
+				for(i = 0; i < list.length; i++){
+					li = list[i];
+					if(vis.line[li].name){
+						addbutton(vis.line[li].name,x+20,y,wid,0,-1,KEYBUT,plot,li); y += 20;
+					}
+				}		
+			}
+			topline -= 10;
 		}
 		break;
 	}
 	
+	if(vis.popscale != null){
+		topline -= 50;
+		var ww = Math.floor(wid/2)-5;
+		addbutton("Per 100K individuals",x+5,topline,ww,15,RADIOBUT,RADIOBUT,"rate",RADIORATE); 
+		addbutton("Absolute",x+5,topline+20,ww,15,RADIOBUT,RADIOBUT,"absolute",RADIORATE);
+		
+		addbutton("No highlight",x+10+ww,topline,ww,15,RADIOBUT,RADIOBUT,"off",RADIOHIGH); 
+		addbutton("Lower highlight",x+10+ww,topline+20,ww,15,RADIOBUT,RADIOBUT,"on",RADIOHIGH);
+	}
+	
+	if(vis.spline_param != null){
+		topline -= 20;
+		addbutton("Show parameters",x+15,topline,17,17,CHECKBUT,CHECKBUT,-1,-1);
+		topline -= 10;
+	}
+
+	var menuname = tree[page].child[ps].child[pss].child[psss].name;
+	if(menuname != ""){
+		var i = 0; while(i < param_link.length && param_link[i].name != menuname) i++;
+		if(i < param_link.length){
+			topline -= 20;
+			addbutton("Model link: '"+menuname+"'",x+5,topline,wid,30,MENULINKBUT,MENULINKBUT,menuname,-1);	
+			topline -= 10;
+		}
+	}
+
 	y = 30;
 	
 	var sp = vis.fulldesc.split(":");                          // Draws the title and description
 	addbutton(sp[0],x,y,wid,0,-1,TITLEBUT,-1,-1); y += 24;
+
+	var desc = sp[1];
+	if(vis.popscale != null){
+		if(rateradio == "rate") desc += "  Note, this shows results per 100,000 individuals."; 
+		if(lowerhighlight == "on"){
+			desc += " Lower highlighting is turned on (values near to the smallest are coloured blue, ";
+			desc += "which can be an effective way to visualise when cases first appear).";
+		}
+	}
 	
-	topline -= 20;
+	topline -= 5;
 	dy = topline-y;
 	dy = Math.floor(dy/lineheight)*lineheight;
 
-	var content = res = sp[1].substr(1).replace(/\*/g, "'");
+	var content = desc.substr(1).replace(/\*/g, "'");
 	addbutton(content,x,y,wid,dy,-1,SLIDEPARAGRAPHBUT,-1,-1);
 
-	alignparagraph(sp[1].substr(1),wid);
+	alignparagraph(desc.substr(1),wid);
 		
 	nlines_disp = Math.floor(dy/lineheight);
 	slidefrac = nlines_disp/nlines; 
@@ -154,25 +229,39 @@ function generate_plots()
 }
 
 
+/// Returns the plot from the menu 
+function get_plot()
+{
+	return tree[page].child[ps].child[pss].child[psss].plot;	
+}
+
+
 /// Plots the results on the "resultcan" canvas
 function plot_results()
 {
-	plot = tree[page].child[pagesub[page]].child2[pagesubsub[page][pagesub[page]]].plot;	
+	plot = get_plot();
 	var vis = visjson.plots[plot];
 	
 	switch(vis.type){
 	case "OP_ANIM_MAP": drawmap(vis);	break;
+	case "OP_MIXING_WITHIN_MAP": case "OP_MIXING_WITHIN_ANIM_MAP": drawmap(vis);	break;
+	case "OP_AREA_COVAR": case "OP_AREA_TV_COVAR": drawmap(vis); break;
+	case "OP_LEVEL_EFFECT": drawmap(vis); break;
 	case "OP_COMP_MODEL": drawcompmodel(vis); break;
-	case "OP_FOI_MODEL": break;
-	case "OP_MIXING_MAP": drawmixingmap(vis); break;
+	case "OP_FOI_MODEL": case "OP_DESC": break;
+	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP": drawmixingmap(vis); break;
+	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP": drawmixingmap(vis); break;
 	case "OP_AGE_MATRIX": drawmatrix(vis); break;
-	case "OP_PARAM_TABLE": break;
+	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
 	case "OP_SPLINE": case "OP_GRAPH": drawlines(vis); draw_timelabels(); break;
-	case "OP_GENERATION": case "OP_LOG_GENERATION": drawlines(vis); break;
+	case "OP_GENERATION": case "OP_LOG_GENERATION": case "OP_TRACE": drawlines(vis); break;
+	case "OP_TV_COVAR": drawlines(vis); break;
 	case "OP_CPU": drawloglines(vis); break;
 	case "OP_ME":	drawME(vis); break;
 	case "OP_MARGINAL": drawmarginal(vis); break;
+	case "OP_GRAPH_MARGINAL": drawmarginal(vis); break;
 	case "OP_PARAMDIST": drawparamdist(vis); break;
+	default: alertp("plot not supported"); break;
 	}
 }
 
@@ -217,6 +306,13 @@ function get_axrange(vis)
 {
 	get_ax_bound(vis)
 	
+	//pr(vis.type);
+	switch(vis.type){
+		case "OP_MARGINAL":	case "OP_GRAPH_MARGINAL": case "OP_SPLINE": case "OP_GRAPH":
+			if(axymin > 0) axymin = 0; 
+			break;
+	}
+	
 	d = 0.1*(axymax - axymin);
 	
 	if(axymax > -d && axymax <= 0) axymax = 0; else axymax += d;
@@ -232,7 +328,6 @@ function get_axrange(vis)
 	if(axxmax > -d && axxmax <= 0) axxmax = 0; else axxmax += d;
 	
 	if(axxmin < d && axxmin >= 0) axxmin = 0; else axxmin -= d;
-	
 	
 	if(axxmin >= 0 && axxmax >= 0){
 		if(axxmin < 0.3*axxmax) axxmin = 0;
@@ -254,13 +349,29 @@ function get_logaxrange(vis)
 }
 
 
+/// Generate array trans based on scale per 100k individuals
+function generate_arraytrans(vis)
+{
+	vis.arraytrans=[];
+	for(t = 0; t < vis.array.length; t++){
+		vis.arraytrans[t] = [];
+		for(c = 0; c < vis.array[t].length; c++){
+			if(vis.popscale == null || rateradio != "rate") vis.arraytrans[t][c] = vis.array[t][c];
+			else vis.arraytrans[t][c] = vis.array[t][c]*100000/vis.popscale[c];
+		}
+	}
+}
+
+
 /// Sets up a colour bar (used for maps)
 function get_colourbar(vis)
-{
+{	
+	generate_arraytrans(vis);
+
 	axymin = large; axymax = -large;
-	for(t = 0; t < vis.array.length; t++){
-		for(c = 0; c < vis.array[t].length; c++){
-			val = vis.array[t][c];
+	for(t = 0; t < vis.arraytrans.length; t++){
+		for(c = 0; c < vis.arraytrans[t].length; c++){
+			val = vis.arraytrans[t][c];
 			if(val < axymin) axymin = val;
 			if(val > axymax) axymax = val;
 		}
@@ -272,7 +383,7 @@ function get_colourbar(vis)
 	}
 	
 	var shift = 0;
-	if(axymin == 0) shift = 1;
+	if(axymin <= 0.05*axymax) shift = 0.05*axymax - axymin;
 	
 	var light = 220;
 	
@@ -294,10 +405,10 @@ function get_colourbar(vis)
 		collist.push({R:255, G:255, B:255, val:Math.log(axymin+shift)});
 		collist.push({R:0, G:0, B:0, val:Math.log(axymax+shift)});
 	}
-	
+			
 	var ncoldiv = 100;
 
-	col_map = {div:ncoldiv, min:Math.log(axymin+shift), max:Math.log(axymax+shift), shift:shift, map:[]};
+	col_map = {type:"log", div:ncoldiv, min:Math.log(axymin+shift), max:Math.log(axymax+shift), shift:shift, map:[]};
 	
 	var i=0;
 	for(div = 0; div <= ncoldiv; div++){
@@ -305,10 +416,16 @@ function get_colourbar(vis)
 		while(i < collist.length-2 && val > collist[i+1].val) i++; 
 
 		frac = (val - collist[i].val)/(collist[i+1].val - collist[i].val);
-		col_map.map.push({ R:Math.floor(collist[i].R*(1-frac)) + Math.floor(collist[i+1].R*frac), 
+		
+		if(vis.yaxis != "Colour" && lowerhighlight == "on" && div < 1){
+			col_map.map.push({ R:0, G:0, B:255, val:val});
+		}
+		else{
+			col_map.map.push({ R:Math.floor(collist[i].R*(1-frac)) + Math.floor(collist[i+1].R*frac), 
 									 G:Math.floor(collist[i].G*(1-frac)) + Math.floor(collist[i+1].G*frac),
 									 B:Math.floor(collist[i].B*(1-frac)) + Math.floor(collist[i+1].B*frac),
 									 val:val});
+		}
 	}
 	
 	nticky = 0;
@@ -319,6 +436,13 @@ function get_colourbar(vis)
 		add_tick((10 ** range)*2,min,max,shift);
 		add_tick((10 ** range)*5,min,max,shift);
 	}
+
+	if(nticky <= 2){
+		var nearmin = min*0.99+max*0.01;
+		add_tick(nearmin.toPrecision(2),min,max,shift);
+		var nearmax = min*0.01+max*0.99;
+		add_tick(nearmax.toPrecision(2),min,max,shift);
+	}
 	if(min < 0.00000001){ ticky.push(0); nticky++;}
 }
 
@@ -326,7 +450,47 @@ function get_colourbar(vis)
 /// Adds ticks to the colour bar
 function add_tick(val,min,max,shift)
 {
-	if(val > min && val < max && ((nticky < 10 && val > shift) || nticky < 6)){ ticky.push(val); nticky++;} 
+	if(val >= min && val <= max && ((nticky < 10 && val > shift) || nticky < 6)){ ticky.push(val); nticky++;} 
+}
+
+
+function get_colourbar_linear(vis)
+{
+	generate_arraytrans(vis)
+	
+	axymin = large; axymax = -large;
+	for(t = 0; t < vis.arraytrans.length; t++){
+		for(c = 0; c < vis.arraytrans[t].length; c++){
+			val = vis.arraytrans[t][c];
+			if(val < axymin) axymin = val;
+			if(val > axymax) axymax = val;
+		}
+	}
+	
+	var light = 220;
+	
+	var collist=[];
+
+	collist.push({R:255, G:255, B:255, val:axymin});
+	collist.push({R:0, G:0, B:0, val:axymax});
+			
+	var ncoldiv = 100;
+
+	col_map = {type:"linear", div:ncoldiv, min:axymin, max:axymax, shift:0, map:[]};
+	
+	var i=0;
+	for(div = 0; div <= ncoldiv; div++){
+		val = axymin + ((axymax - axymin)*div)/ncoldiv;
+		while(i < collist.length-2 && val > collist[i+1].val) i++; 
+
+		frac = (val - collist[i].val)/(collist[i+1].val - collist[i].val);
+		col_map.map.push({ R:Math.floor(collist[i].R*(1-frac)) + Math.floor(collist[i+1].R*frac), 
+									 G:Math.floor(collist[i].G*(1-frac)) + Math.floor(collist[i+1].G*frac),
+									 B:Math.floor(collist[i].B*(1-frac)) + Math.floor(collist[i+1].B*frac),
+									 val:val});
+	}
+	
+	setytics();
 }
 
 
@@ -425,14 +589,15 @@ function mapframe(vis)
 	addbutton("",menux,0,mapdx,mapdy,CANVASBUT,CANVASBUT,-1,-1);
 	addcanbutton("",0,0,graphdx,graphdy,-1,RESULTBUT2,-1,-1);	
 	
-	if(vis.type == "OP_ANIM_MAP"){
+	if(vis.type == "OP_ANIM_MAP" || vis.type == "OP_MIXING_WITHIN_ANIM_MAP" ||
+	   vis.type == "OP_MIXING_BETWEEN_ANIM_MAP" || vis.type == "OP_AREA_TV_COVAR" || vis.type == "OP_LEVEL_EFFECT"){
 		addcanbutton("",15,graphdy-45,30,30,PLAYBUT,PLAYBUT,-1,-1);		
-		addcanbutton("",60,graphdy-37,graphdx-60-10,15,PLAYLINEBUT,PLAYLINEBUT,-1,-1);		
+		addcanbutton("",60,graphdy-37,graphdx-60-10-60,15,PLAYLINEBUT,PLAYLINEBUT,-1,-1);		
 	}
 	
 	var dx = 22, dy = 26;
-	addcanbutton("",mapdx-dx-dx-15,10,dx,dy,ZOOMINBUT,ZOOMINBUT,-1,-1);
-	addcanbutton("",mapdx-dx-10,10,dx,dy,ZOOMOUTBUT,ZOOMOUTBUT,-1,-1); 
+	addcanbutton("",mapdx-dx-dx-15,graphdy-dy-10,dx,dy,ZOOMINBUT,ZOOMINBUT,-1,-1);
+	addcanbutton("",mapdx-dx-10,graphdy-dy-10,dx,dy,ZOOMOUTBUT,ZOOMOUTBUT,-1,-1); 
 }
 
 
@@ -495,27 +660,70 @@ function compmodel_frame(vis)
 /// Displays the equation for the force of infection
 function display_foi()
 {
-	x = 100; y = 100;
+	y = 50;
 	addbutton("",menux,0,mapdx,mapdy,CANVASBUT,CANVASBUT,-1,-1);
 	
-	var font = "20px times";
+	var si = 30;
+	var w;
+	
+	do{
+		var fl = false;
+		
+		var font = si+"px times";
+	
+		w = textwidth(foi.name,font)+3; 
+		w += textwidth("=",font)+3; 
+		for(i = 0; i < foi.eq.length; i++) w += textwidth(foi.eq[i].text,font)+3; 
+		
+		if(w < mapdx-100) x = Math.floor(mapdx/2-w/2);
+		else{ si--; fl = true;}
+	}while(fl == true);
 	
 	var text = foi.name;
-	w = textwidth(text,font)+6; 
+	w = textwidth(text,font)+3; 
 	h = 25;
 			
-	addcanbutton(text,x,y,w,h,-1,EQBUT,font,-1);
+	addcanbutton(text,x,y,w,h,-1,EQBUT3,font,-1);
 	x += w;
 	
 	text = "=";
-	w = textwidth(text,font)+6; 
-	addcanbutton(text,x,y,w,h,-1,EQBUT,font,-1);
+	w = textwidth(text,font)+3; 
+	addcanbutton(text,x,y,w,h,-1,EQBUT3,font,-1);
 	x += w;
 	
-	var font = "17px times";
-	x = 130; y = 170;
+	for(i = 0; i < foi.eq.length; i++){
+		text = foi.eq[i].text;
+		w = textwidth(text,font)+3; 
+		if(foi.eq[i].param != null){
+			addcanbutton(text,x,y,w,h,EQBUT,EQBUT,font,foi.eq[i].param);
+		}
+		else{
+			addcanbutton(text,x,y,w,h,-1,EQBUT3,font,-1);
+		}
+		x += w;
+	}
+		
+	si = 15;
+	
+	do{
+		var fl = false;
+		
+		var font = si+"px arial";
+		var wmax = 0;
+		for(i = 0; i < foi.desc.length; i++){
+			w = textwidth(foi.desc[i],font);
+			if(w > wmax) wmax = w;
+		}
+		
+		if(wmax < mapdx-100) x = Math.floor(mapdx/2-wmax/2);
+		else{ si--; fl = true;}
+	}while(fl == true);
+	
+	y = 110; 
+	var dy = (mapdy - y-30)/foi.desc.length; if(dy > 30) dy = 30; if(dy < 17) dy = 17;
+	
 	for(i = 0; i < foi.desc.length; i++){
-		addcanbutton(foi.desc[i],x,y+30*i,w,h,-1,EQBUT,font,-1);
+		addcanbutton(foi.desc[i],x,y+dy*i,w,h,-1,EQBUT2,font,-1);
 	}
 }
 
@@ -555,7 +763,7 @@ function table(x,y,tab)
 	 
 	var linemax = Math.floor((resdy-60)/tabledy);
 
-	graphdx = resdx+Math.floor(0.15*resdx)-40; 
+	graphdx = resdx-40; 
 	graphdy = (1+linemax)*tabledy;
 	
 	var head = tab.heading;
@@ -590,7 +798,11 @@ function table(x,y,tab)
 		
 		var jjmin = Math.floor(taby_slide*ele.length*1.001);
 		var jjmax = jjmin + linemax; if(jjmax > ele.length) jjmax = ele.length;
-		for(j = jjmin; j < jjmax; j++) addcanbutton(ele[j][c],xx,tabledy*(j-jjmin+1),0,tabledy,-1,TABLEBUT,-1,-1);
+		for(j = jjmin; j < jjmax; j++){
+			if(c == 0) addcanbutton(ele[j][c],xx,tabledy*(j-jjmin+1),xxst[c+1]-xxst[c],tabledy,LINKBUT,LINKBUT,j,-1);
+			if(c == 0) addcanbutton(ele[j][c],xx,tabledy*(j-jjmin+1),xxst[c+1]-xxst[c],tabledy,LINKBUT,LINKBUT,j,-1);
+			else addcanbutton(ele[j][c],xx,tabledy*(j-jjmin+1),0,tabledy,-1,TABLEBUT,-1,-1);
+		}
 	}
 
 	addbutton("",x,y,graphdx,graphdy,CANVASBUT,CANVASBUT,-1,-1);
@@ -616,10 +828,9 @@ function selparam_info(x,y,wid)
 	addbutton("Symbol",x,y,0,seltabledy,-1,NORMTABLEHEADBUT,-1,-1);
 	addbutton("Parameter name",x+wmax,y,0,seltabledy,-1,NORMTABLEHEADBUT,-1,-1);
 	
-	gap = 10;
 	taby_slidefrac = sellinemax/selparam_table.length; 
 	if(taby_slidefrac < 1){	
-		addbutton("",x+wid+gap,y+seltabledy,10,sellinemax*seltabledy,TABYSLIDEBUT,TABYSLIDEBUT,-1,-1);
+		addbutton("",x+wid,y+seltabledy,10,sellinemax*seltabledy,TABYSLIDEBUT,TABYSLIDEBUT,-1,-1);
 	}
 	
 	var rowmin = Math.floor(taby_slide*selparam_table.length*1.001);
@@ -633,8 +844,28 @@ function selparam_info(x,y,wid)
 }
 
 
+/// Plots information about a selected equation
+function seleq_info(x,y,wid)
+{	
+	addbutton("Parameter name",x,y,0,seltabledy,-1,NORMTABLEHEADBUT,-1,-1);
+	
+	taby_slidefrac = sellinemax/seleq.length; 
+	if(taby_slidefrac < 1){	
+		addbutton("",x+wid,y+seltabledy,10,sellinemax*seltabledy,TABYSLIDEBUT,TABYSLIDEBUT,-1,-1);
+	}
+	
+	var rowmin = Math.floor(taby_slide*seleq.length*1.001);
+	var rowmax = rowmin + sellinemax; 
+	if(rowmax > seleq.length) rowmax = seleq.length;
+	for(row = rowmin; row < rowmax; row++){
+		var yy = y+seltabledy*(row-rowmin+1);
+		addbutton(seleq[row],x,yy,wid,seltabledy,-1,NORMTABLEBUT,-1,-1);
+	}
+}
+
+
 /// Generates a frame for drawing a graph
-function graphframe(x,y,x1,y1,x2,y2,w,labx,laby)
+function graphframe(x,y,x1,y1,x2,y2,w,labx,laby,vis)
 {	
 	graphdx = resdx - (x1+x2); graphdy = resdy - (y1+y2);
 
@@ -646,6 +877,14 @@ function graphframe(x,y,x1,y1,x2,y2,w,labx,laby)
 	
 	if(ntickx > 0) addcanbutton("X ticks",x1,y2+graphdy,graphdx,30,-1,XTICKBUT,-1,-1);
 	if(nticky > 0) addcanbutton("Y ticks",x1-w,y2,w,graphdy,-1,YTICKTRBUT,-1,-1);
+	
+	if(check == 1 && vis.spline_param != null){
+		for(i = 0; i < vis.spline_param.length; i++){
+			var x = x1+Math.floor(graphdx*(vis.spline_param[i].time-axxmin)/(axxmax-axxmin));
+			
+			addcanbutton(vis.spline_param[i].param,x,y2,15,graphdy,PARAMLINEBUT,PARAMLINEBUT,-1,-1);
+		}
+	}
 }
 
 
@@ -701,10 +940,10 @@ function histogram_frame(x,y,x1,y1,x2,y2,w,labx,laby,cats)
 			addcanbutton(cats[i],xx,y2+graphdy+10,dx,10,-1,CATVERTBUT,-1,-1);
 		}
 	}
-	else{
+	else{             // Labels 
 		for(i = 0; i < cats.length; i++){
-			xx = Math.floor(graphdx*i/cats.length);		
-			addcanbutton(cats[i],xx,y2+graphdy+10,dx,10,-1,CATBUT,-1,-1);
+			xx = Math.floor(x1+graphdx*i/cats.length);		
+			addcanbutton(cats[i],xx,y2+graphdy+5,dx,10,-1,CATBUT,-1,-1);
 		}
 	}
 
@@ -743,6 +982,19 @@ function playanim()
 }
 
 
+/// Sets the outline for an area
+function set_outline(v)
+{
+	cv.beginPath();
+	for(i = 0; i <= v.length; i++){
+		var ii = i%v.length;
+		var x = mapdy*zoomfac*(v[ii][0]-zoomx), y = mapdy - mapdy*zoomfac*(v[ii][1]-zoomy);
+		if(i == 0) cv.moveTo(x,y);
+		else cv.lineTo(x,y);
+	}	
+}
+
+
 /// Draws a map onto "resultscan"
 function drawmap(vis)
 {
@@ -750,36 +1002,47 @@ function drawmap(vis)
 			
 	cv = resultcv; 
 	cv.clearRect(0,0,graphdx,graphdy);
-	cv.lineWidth = 0.5;
 	
 	playtimemax = vis.array.length;
 	
 	var b = visjson.boundaries;
-	for(c = 0; c < b.length; c++){
+	
+	for(c = 0; c < b.length; c++){                                  // Fills the areas
 		for(p = 0; p < b[c].length; p++){
-			cv.beginPath();
-			for(i = 0; i <= b[c][p].length; i++){
-				var ii = i%b[c][p].length;
-				var x = mapdy*zoomfac*(b[c][p][ii][0]-zoomx), y = mapdy - mapdy*zoomfac*(b[c][p][ii][1]-zoomy);
-				if(i == 0) cv.moveTo(x,y);
-				else cv.lineTo(x,y);
+			set_outline(b[c][p]);
+	
+			if(vis.type == "OP_LEVEL_EFFECT"){
+				cv.fillStyle = collist[vis.array[playtime][c]];
 			}
-		
-			cv.strokeStyle = BLACK;
-			cv.stroke();
-			
-			var val = Math.log(vis.array[playtime][c] + col_map.shift);
-			
-			var div = Math.floor(0.999999*col_map.div*(val-col_map.min)/(col_map.max-col_map.min));
-
-			cv.fillStyle = "rgb("+col_map.map[div].R+","+col_map.map[div].G+","+col_map.map[div].B+")";
+			else{
+				var val;
+				if(col_map.type == "log") val = Math.log(vis.arraytrans[playtime][c] + col_map.shift);		
+				else val = vis.arraytrans[playtime][c];		
+				
+				var div = Math.floor(0.999999*col_map.div*(val-col_map.min)/(col_map.max-col_map.min));
+				cv.fillStyle = "rgb("+col_map.map[div].R+","+col_map.map[div].G+","+col_map.map[div].B+")";
+			}
 			cv.fill();
 		}
 	}
 	
-	if(areaover != -1) highlight_area(vis,areaover,vis.array[playtime][areaover],vis.areas[areaover])
+	cv.lineWidth = 0.4;
+	for(c = 0; c < b.length; c++){                                  // Draws the boundaries
+		for(p = 0; p < b[c].length; p++){
+			set_outline(b[c][p]);
+			cv.strokeStyle = BLACK;
+			cv.stroke();
+		}
+	}
 	
-	centertext(vis.dates[playtime],mapdx/2,30,MAPDATEFONT,BLACK);
+	if(areaover != -1){
+		var val;
+		if(vis.type == "OP_LEVEL_EFFECT") val = vis.level_param[vis.array[playtime][areaover]];
+		else val = vis.arraytrans[playtime][areaover];
+		highlight_area(vis,areaover,val,vis.areas[areaover]);
+	}
+	
+	if(vis.dates != null) centertext(vis.dates[playtime],mapdx/2,30,MAPDATEFONT,BLACK);
 }
 
 
@@ -842,7 +1105,7 @@ function highlight_area(vis,c,val,name)
 	var x = mapdy*zoomfac*(ra.xav-zoomx);
 
 	if(val != ""){
-		val = val.toPrecision(3);
+		if(vis.type != "OP_LEVEL_EFFECT") val = val.toPrecision(3);
 		
 		ww = textwidth(val,MAPBOLDFONT)+5;
 		y = mapdy - mapdy*zoomfac*(ra.yav-zoomy);
@@ -866,6 +1129,10 @@ function drawmixingmap(vis)
 {
 	plottype = "map";
 			
+	playtimemax = vis.mat_list.length;
+	
+	var mat = vis.mat_list[playtime];
+	
 	cv = resultcv; 
 	cv.clearRect(0,0,graphdx,graphdy);
 	cv.lineWidth = 0.5;
@@ -886,41 +1153,73 @@ function drawmixingmap(vis)
 		}
 	}
 	
-	var max = 0;
-	for(i = 0; i < vis.to.length; i++){
-		if(areaover == -1 || i == areaover){
-			for(j = 0; j < vis.to[i].length; j++){
-				if(vis.val[i][j] > max) max = vis.val[i][j];
-			}
-		}
+	for(c = 0; c < visjson.click_bound_range.length; c++){
+		var ra = visjson.click_bound_range[c];
+		var x = mapdy*zoomfac*(ra.xav-zoomx);
+		var y = mapdy - mapdy*zoomfac*(ra.yav-zoomy);
+		fillcircle(x,y,3,BLACK,BLACK,1);   	
 	}
-	
-	for(i = 0; i < vis.to.length; i++){
+
+	for(i = 0; i < vis.areas.length; i++){
 		if(areaover == -1 || i == areaover){
 			var rai = visjson.click_bound_range[i];
 			var x1 = mapdy*zoomfac*(rai.xav-zoomx);
 			var y1 = mapdy - mapdy*zoomfac*(rai.yav-zoomy);
-			for(j = 0; j < vis.to[i].length; j++){
-				var raj = visjson.click_bound_range[vis.to[i][j]];
-				var x2 = mapdy*zoomfac*(raj.xav-zoomx);
-				var y2 = mapdy - mapdy*zoomfac*(raj.yav-zoomy);
 			
-				cv.strokeStyle = BLUE;
-				cv.beginPath();
-				frac = vis.val[i][j]/max;
-				cv.lineWidth = 5*frac;
-				cv.globalAlpha = frac;
-				
-				var dx = x2-x1, dy = y2-y1;
-				var end = 0.2;
-				cv.moveTo(x1+end*dx,y1+end*dy);
-				cv.lineTo(x2-end*dx,y2-end*dy);
-				cv.stroke();
+			var max;
+			if(i == areaover){
+				max = 0; for(j = 0; j < vis.areas.length; j++){ if(mat[i][j] > max) max = mat[i][j];}
+			}
+			else max = vis.max;
+			
+			var j;
+			for(j = 0; j < vis.areas.length; j++){
+				if(mat[i][j] != null){
+					var raj = visjson.click_bound_range[j];
+					var x2 = mapdy*zoomfac*(raj.xav-zoomx);
+					var y2 = mapdy - mapdy*zoomfac*(raj.yav-zoomy);
+			
+					var w = 7*mat[i][j]/max;
+					
+					var dx = x2-x1, dy = y2-y1;
+					var nx = dy, ny = -dx;
+					var r = Math.sqrt(dx*dx+dy*dy);
+					nx /= r; ny /= r;
+					var end = 3/r; if(end > 0.3) end = 0.3;
+					var neck = end + 2*w/r; if(neck > 0.5) neck = 0.5;
+					var fac = 2.5;
+					var mid = 0;
+					
+					if(areaover == -1){
+						var wtot = 7*(mat[i][j]+ mat[j][i])/max;
+						mid = wtot/2;
+						if(mid < 3) mid = 3;
+					}
+					
+					cv.fillStyle = BLUE;
+					cv.beginPath();	
+					cv.moveTo(x1+end*dx+(mid+w/2)*nx,y1+(mid+w/2)*ny+end*dy);
+					cv.lineTo(x2-neck*dx+(mid+w/2)*nx,y2+(mid+w/2)*ny-neck*dy);
+					cv.lineTo(x2-neck*dx+(mid+fac*w/2)*nx,y2+(mid+fac*w/2)*ny-neck*dy);
+					cv.lineTo(x2-end*dx+(mid)*nx,y2+(mid)*ny-end*dy);
+					cv.lineTo(x2-neck*dx+(mid-fac*w/2)*nx,y2+(mid-fac*w/2)*ny-neck*dy);
+					cv.lineTo(x2-neck*dx+(mid-w/2)*nx,y2+(mid-w/2)*ny-neck*dy);
+					cv.lineTo(x1+end*dx+(mid-w/2)*nx,y1+(mid-w/2)*ny+end*dy);
+					cv.fill();
+					
+					if(i == areaover && mat[i][j] > 0.5*max){
+						cv.save();
+						cv.translate(0.5*(x1+x2) + 0*(2+0.7*w)*nx,0.5*(y1+y2) + 0*(2+0.7*w)*ny);
+						cv.rotate(Math.atan(dy/dx));
+						cv.textAlign = 'center';
+						cv.fillStyle = RED;
+						cv.fillText(mat[i][j].toPrecision(2), 0, -(2+0.7*w));
+						cv.restore();
+					}
+				}
 			}
 		}
 	}
-	
-	cv.globalAlpha = 1;
 	
 	if(areaover != -1) highlight_area(vis,areaover,"",vis.areas[areaover])
 }
@@ -995,7 +1294,7 @@ function drawlines(vis)
 }
 
 
-/// Draws the tile labels onto the graphs
+/// Draws the time labels onto the graphs
 function draw_timelabels()
 {
 	for(i = 0; i < visjson.time_labels.length; i++){
@@ -1049,52 +1348,30 @@ function drawME(vis)
 	cv.clearRect(0,0,graphdx,graphdy);
 	cv.lineWidth = 2;
 	
-	for(li = 0; li < vis.line.length; li++){
-		var visli = vis.line[li];
-		var xcol = visli.xcol;
-		var ycol = visli.ycol;
-		var sd = visli.name;
+	var visli = vis.line[0];
+	var xcol = visli.xcol;
+	var ycol = visli.ycol;
+	var sd = visli.name;
+
+	cv.beginPath(); 
+	for(i = 0; i < xcol.length; i++){
+		x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
+		y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
+		
+		if(i == 0) cv.moveTo(x,y);
+		else cv.lineTo(x,y);
+	}	
+	setstyle(visli.style);
+	cv.stroke();
 	
-		cv.beginPath(); 
+	if(visli.errbarmin != null){
 		for(i = 0; i < xcol.length; i++){
 			x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
-			y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
-			
-			if(i == 0) cv.moveTo(x,y);
-			else cv.lineTo(x,y);
-		}	
-			
-		if(sd){  // Adds an error bar
-			//pr(sd);
-			//alertp("to do");
+			draw_errorbar(x,ycol[i],visli.errbarmin[i],visli.errbarmax[i],6);
 		}
-		
-		setstyle(visli.style);
-		cv.stroke();
-	} 	
+	}
 	
 	setdash(0);
-		
-/*		
-		gnuplot << "plot ";
-		for(auto j = 0u; j < oppl.line.size(); j++){
-			const auto &line = oppl.line[j];
-			if(j != 0) gnuplot << ", ";
-			if(line.name == ""){  // Ordinary line
-				gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol;
-				gnuplot << " with lines ls " << line.style << " ";
-			
-			}
-			else{                 // Error bar
-				gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << ":" << line.name;
-				gnuplot << " with yerrorbars ls " << line.style << " ";
-			}
-			gnuplot << "notitle";
-		}
-		gnuplot << endl;
-		
-		gnuplot << "unset logscale x" << endl;
-		*/
 }
 
 
@@ -1161,6 +1438,27 @@ function add_verticle_line(text,x,col)
 }
 
 
+/// Links from a parameter name to where it appears in the model
+function follow_param_link(param_name)
+{
+	var i = 0; while(i < param_link.length && param_link[i].name != param_name) i++;
+	if(i == param_link.length){ alertp("Cannot find parameter"); return;}
+	
+	if(param_link[i].selparam_table != null){
+		changepage(0,0,-1,-1);
+		paramsel = param_link[i].name; 
+		selparam_table = param_link[i].selparam_table;
+		selparam_name = param_link[i].selparam_name;
+	}
+	else{
+		changepage(0,1,-1,-1);
+		paramsel = param_link[i].name;
+		seleq = param_link[i].seleq;
+		seleq_name = param_link[i].seleq_name;
+	}
+}
+
+
 /// Draws a histogram representing a marginal distribution
 function drawmarginal(vis)
 {
@@ -1180,9 +1478,13 @@ function drawmarginal(vis)
 		fillrect(x1,y,x2-x1,graphdy-y,RED);  
 	}
 	
-	if(li.errbarmin){
+	if(li.errbarmin){	
+		var dx = graphdx/imax;
+		var tic = 4;
+		if(tic > dx/4) tic = dx/4;
+
 		for(i = 0; i < imax; i++){
-			draw_errorbar(i,imax,ycol[i],li.errbarmin[i],li.errbarmax[i]);
+			draw_errorbar(Math.floor((i+0.5)*graphdx/imax),ycol[i],li.errbarmin[i],li.errbarmax[i],tic);
 		}
 	}
 	
@@ -1200,21 +1502,18 @@ function drawmarginal(vis)
 
 
 /// Draws an error bar
-function draw_errorbar(i,imax,y,min,max)
+function draw_errorbar(xx,y,min,max,tic)
 {
-	var x = Math.floor((i+0.5)*graphdx/imax);
 	var yy = Math.floor(graphdy-graphdy*(y-axymin)/(axymax-axymin));
 	var yymin = Math.floor(graphdy-graphdy*(min-axymin)/(axymax-axymin));
 	var yymax = Math.floor(graphdy-graphdy*(max-axymin)/(axymax-axymin));
-	
-	var dx = graphdx/imax;
-	var tic = 4;
-	if(tic > dx/4) tic= dx/4;
-	
-	drawline(x,yymin,x,yymax,BLACK,1,0);
-	drawline(x-tic,yymin,x+tic,yymin,BLACK,1,0);
-	drawline(x-tic,yymax,x+tic,yymax,BLACK,1,0);
-	drawline(x-tic/2,yy,x+tic/2,yy,BLACK,1,0);
+
+	var si = 0.7*tic;
+	drawline(xx,yymin,xx,yymax,BLACK,1,0);
+	drawline(xx-tic,yymin,xx+tic,yymin,BLACK,1,0);
+	drawline(xx-tic,yymax,xx+tic,yymax,BLACK,1,0);
+	drawline(xx-si,yy-si,xx+si,yy+si,BLACK,1,0);
+	drawline(xx-si,yy+si,xx+si,yy-si,BLACK,1,0);
 }
 
 

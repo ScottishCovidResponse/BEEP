@@ -626,7 +626,7 @@ void Mpi::gather_samples(vector <ParamSample> &psamp, vector <Sample> &opsamp, c
 			psamp.push_back(state.create_param_sample(pa.run));
 			opsamp.push_back(state.create_sample());
 		}
-		
+
 		for(auto co = 1u; co < ncore; co++){
 			unsigned int N;
 			pack_recv(co);
@@ -641,7 +641,7 @@ void Mpi::gather_samples(vector <ParamSample> &psamp, vector <Sample> &opsamp, c
 			}
 			unpack_check();
 		}
-		
+
 		if(details.siminf == INFERENCE){
 			auto file = dir+"sample_information.txt";
 			ofstream fout(file);

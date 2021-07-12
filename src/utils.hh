@@ -53,6 +53,7 @@ vector <vector <double> > invert_matrix(const vector <vector <double> > &mat);
 double largest_eigenvalue(const vector < vector <double> > &M, vector <double> &eigenvector);
 unsigned int find_in(const vector <unsigned int> &vec, const unsigned int val);
 unsigned int find_in(const vector <string> &vec, const string &val);
+void add_vec(vector <unsigned int> &vec, const unsigned int val);
 unsigned int find_char(const string st, const string char_in);
 double vec_max(const vector <double> &vec);
 string prec(const double num, const unsigned int pre);

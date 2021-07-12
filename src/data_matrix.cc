@@ -44,14 +44,14 @@ void Data::generate_matrices()
 		Table tab = load_table(genQ.M_name,data_directory,false);   
 		genQ.M = load_geo_mixing_matrix(tab);
 	}
-	
+
 	geo_normalise(genQ.M);
-	
+
 	genQ.treenode = area_split(genQ.M);
 }
 
 
-/// Normalises the geographical matrix
+/// Normalises the geographical matrix (this ensures that individuals in each area 
 void Data::geo_normalise(SparseMatrix &mat)
 {
 	if(mat.N != area.size()) emsgEC("data_matrix",1);
@@ -162,6 +162,8 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 		}
 	}
 				 
+	//for(auto j = 0u; j < N; j++) cout << j << " " << double(pop[j])/poptot << "prop\n";
+	
 	for(auto j = 0u; j < N; j++){
 		for(auto i = 0u; i < N; i++){
 			mat.ele[j][i] /= double(pop[j])/poptot;
@@ -175,7 +177,7 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 			}
 		}
 	}
-		
+	
 	auto mat_st = mat;  // Makes the matrix symetric
 	for(auto j = 0u; j < N; j++){
 		for(auto i = 0u; i < N; i++){
@@ -188,7 +190,7 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 			for(auto i = 0u; i < N; i++){
 				cout << int(mat.ele[j][i]*10) << ", ";
 			}
-			cout << endl;
+			cout  << endl;
 		}
 		emsg("Done");
 	}
@@ -310,6 +312,7 @@ vector <TreeNode> Data::area_split(SparseMatrix M) const
 		G[j][j] = M.diag[j]*area_pop[j];
 		for(auto k = 0u; k < M.to[j].size(); k++){
 			auto i = M.to[j][k]; if(i == j) emsgEC("Data",3);
+		
 			G[j][i] = M.val[j][k]*sqrt(area_pop[j]*area_pop[i]);
 		}
 	}	
@@ -377,16 +380,19 @@ void Data::split_in_two(const vector <unsigned int> &arearef, vector <unsigned i
 		unsigned int i, j;                                                  // Randomly swaps two allocations
 		do{
 			i = (unsigned int)(ran()*si); j = (unsigned int)(ran()*si); 
-		}while(gr[i] == gr[j]);
+		}while(i == j || gr[i] == gr[j]);
 
-		bool temp = gr[i]; gr[i] = gr[j]; gr[j] = temp;
-	
-		auto fit_new = get_split_fit(arearef,gr,G);
-	
+		auto fit_new = fit;
+		fit_new += get_split_fit_dif(arearef,gr,G,i);	
+		fit_new += get_split_fit_dif(arearef,gr,G,j);
+		
 		if(fit_new > fit){ fail = 0; fit = fit_new;}
 		else{	fail++; bool temp = gr[i]; gr[i] = gr[j]; gr[j] = temp;}
-	}while(fail < 1000);
+	}while(fail < 50);
 	
+	auto d = fit - get_split_fit(arearef,gr,G);
+	if(d*d > TINY) emsg("prob");
+		
 	for(auto i = 0u; i < si; i++){
 		if(gr[i] == true) ch1.push_back(arearef[i]);  
 		else ch2.push_back(arearef[i]);  
@@ -402,10 +408,27 @@ double Data::get_split_fit(const vector <unsigned int> &area_list, const vector 
 	for(auto i = 0u; i < N; i++){
 		for(auto j = 0u; j < N; j++){
 			auto val = G[area_list[j]][area_list[i]];
-			if( val != 0 && i != j){
+			if(val != 0 && i != j){
 				if(gr[i] == gr[j]) sum += val; else sum -= val;
 			}
 		}
 	}
+	return sum;
+}
+
+/// Calculates the change by swithing one gr 
+double Data::get_split_fit_dif(const vector <unsigned int> &area_list, vector <bool> &gr, const vector <vector <double> > &G, unsigned int isel) const
+{
+	auto N = area_list.size();
+	auto sum = 0.0;
+	for(auto i = 0u; i < N; i++){
+		if(i != isel){
+			auto val = G[area_list[isel]][area_list[i]] + G[area_list[i]][area_list[isel]];
+			if(val != 0){
+				if(gr[isel] == gr[i]) sum -= 2*val; else sum += 2*val; 
+			}
+		}
+	}
+	if(gr[isel] == false) gr[isel] = true; else gr[isel] = false;
 	return sum;
 }

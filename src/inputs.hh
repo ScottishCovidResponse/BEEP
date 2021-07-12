@@ -23,21 +23,23 @@ class Inputs
 		unsigned find_positive_integer(const string &key, const int def);
 		int find_integer(const string &key, const int def);
 		double find_double(const string &key, const double def);
-		string find_string(const string &key, const string &def);	
+		string find_string(const string &key, const string &def, bool allowcomma=false);	
 		vector <DataTable> find_datatable(const Details &details);
 		LineColour get_line_colour(const string col) const;
 		vector <DemocatChange> find_democat_change();
 		vector <DemographicCategory> find_demographic_category(vector <Strain> &strain_list);
 		LevelEffect find_level_effect();
 		vector <Covariate> find_covariates();
+		vector <unsigned int> find_agecats(const string ages_str, const vector <string> &age_list, const string name) const;
 		void find_genQ(GenerateQ &genQ, const Details &details, const vector <string> &age_list);
 		void find_timeplot(vector <TimePlot> &timeplot);
 		vector <string> find_compartments();
 		unsigned int find_susceptible_compartment();
 		void find_compartments(vector <string> &name, vector < vector <ParamSpec> > &mean_spec, vector <string> &mean_dep, vector <unsigned int> &k, vector <ParamSpec> &infectivity, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat);
 		void find_transitions(vector <string> &from, vector <string> &to, vector <TransInf> &transinf, vector < vector <ParamSpec> > &prob_spec, vector <string> &prob_dep, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat);
-		void find_spline(const string name, vector <string> &name_vec, vector < vector <ParamSpec> > &ps_vec, vector <ParamSpec> &factor_param_vec, vector < vector <unsigned int> > &bp_vec, vector <Smooth> &smooth_type_vec, vector <string> &inft, vector <string> &area, vector < vector <double> > &efoi_agedist_vec, const vector <double> &agedist, const Details &details);
-		void find_spline(const string name, vector <ParamSpec> &ps, vector <ParamSpec> &factor_param_vec, vector <unsigned int> &bp, Smooth &smooth_type, const Details &details);
+		SmoothType find_smoothtype(const string st, const string name) const;
+		void find_spline(const string name, vector <string> &name_vec, vector < vector <ParamSpec> > &ps_vec, vector <ParamSpec> &factor_param_vec, vector < vector <unsigned int> > &bp_vec, vector <SmoothType> &smooth_type_vec, vector <string> &inft, vector <string> &area, vector < vector <double> > &efoi_agedist_vec, const vector <double> &agedist, const Details &details);
+		void find_spline(const string name, vector <ParamSpec> &ps, vector <ParamSpec> &factor_param_vec, vector <unsigned int> &bp, SmoothType &smooth_type, const Details &details);
 		void find_probreach(vector <string> &name, vector <string> &comp);
 		void find_region_effect(vector <ParamSpec> &ps_vec, ParamSpec &sigma, const vector <Area> &area);
 		bool param_not_set(const vector <ParamSpec> &ps_vec) const;
@@ -98,12 +100,13 @@ class Inputs
 
 const vector<string> definedparams = {                                // A list of all supported commands
 		"baseinputfile",
-		"area_covars",
-		"area_effect",
+		"area_covars",//
+		"area_effect",//
 		"area_plot",
-		"area_tv_covars",
+		"area_tv_covars",//
 		"age_mixing_matrix",
 		"age_mixing_modify",
+		"age_mixing_perturb",
 		"ages", 
 		"areas", 
 		"comps",
@@ -114,6 +117,7 @@ const vector<string> definedparams = {                                // A list 
 		"data_tables",
 		"democats",
 		"democat_change",
+		"description",
 		"dynamics",
 		"efoi_factor",
 		"efoi_spline",
@@ -127,7 +131,7 @@ const vector<string> definedparams = {                                // A list 
 		"invT_final",
 		"invT_power",
 		"inputfile",
-		"level_effect",
+		"level_effect",//
 		"mcmc_update",
 		"mode",
 		"modification",
@@ -164,8 +168,8 @@ const vector<string> definedparams = {                                // A list 
 		"trans_combine",
 		"time_format",
 		"time_labels",
-		"trans",
-		"tv_covars"
+		"trans",//
+		"tv_covars"//
 	};
 	
 #endif

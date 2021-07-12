@@ -6,14 +6,18 @@ function init()
 		return;
 	}
 	visjson = JSON.parse(jsonstr);
-	
+
 	menu_structure();     // Initialises the menu structure on the left
 	
 	init_page();          // Initialises HTML elements on the page
 
 	init_canvas();        // Initialises canvases for plotting results
+
+	init_spatial_map();   // Initialises the spatial maps
 	
 	init_compmodel();     // Initialises the compartmental model
+	
+	init_paramlink();     // Initialises links gor 
 	
 	init_mouse_key();     // Initialises input operations using the mouse and keys
 	
@@ -23,7 +27,7 @@ function init()
 	
 	initdone = 1;
 	
-	setsize();
+	buttoninit();
 }
 
 
@@ -58,15 +62,6 @@ function permutator(inputArr) {
   return permute(inputArr);
 }
 
-/*
-function get_permute(vec,vec2)
-{
-	for(i = 0; i < vec.length; i++){
-		var vecnew = [];
-		for(j = 0; j < 
-	}
-}
-*/
 
 /// Initialises how the comparmental model is displayed on a page
 function init_compmodel()
@@ -143,7 +138,7 @@ function init_compmodel()
 		if(jmax == 0) break;
 		if(jmax == 1) colcompy[col][0] = 0;
 		else{
-			for(j = 0; j < jmax; j++) colcompy[col][j] = ((j/(jmax-1))-0.5)*2*h*(jmax-1);
+			for(j = 0; j < jmax; j++) colcompy[col][j] = ((j/(jmax-1))-0.5)*3*h*(jmax-1);
 		}
 		col++;
 	}
@@ -248,8 +243,8 @@ function init_compmodel()
 	for(k = 0; k < comp.length; k++){   // Adds labels to compartments
 		if(comp[k].mean != null){
 			if(comp[k].shape == 1){
-				if(comp[k].mean.length > 1) comp[k].label = "Exp(&m^{"+comp[k].name+"}_d&)";
-				else comp[k].label = "Exp(&m^{"+comp[k].name+"}&)";	
+				if(comp[k].mean.length > 1) comp[k].label = "Exp(&m&^{"+comp[k].name+"}_d)";
+				else comp[k].label = "Exp(&m&^{"+comp[k].name+"})";	
 			}
 			else{
 				if(comp[k].mean.length > 1) comp[k].label = "Γ(&m&^{"+comp[k].name+"}_d,"+comp[k].shape+")";
@@ -315,6 +310,182 @@ function init_compmodel()
 }
 
 
+/// Initialises information used to plot spatial mixing
+function init_spatial_map()
+{	
+	var mod=[];
+	var mod_line;
+	var i = 0;
+	while(i < visjson.plots.length && !(visjson.plots[i].tab3 == "Spatial Mixing" && visjson.plots[i].tab4 == "&m_{t}&")) i++;
+	if(i < visjson.plots.length){
+		var vis = visjson.plots[i];
+		mod_line = vis.line[0]; 
+	}
+
+	for(i = 0; i < visjson.plots.length; i++){
+		var vis = visjson.plots[i];
+		switch(vis.type){
+		case "OP_MIXING_WITHIN_ANIM_MAP":
+			if(mod_line == null) alertp("Problem with geo line");
+			
+			vis.array=[];
+			
+			var linei = 0;
+			for(ti = 0; ti < vis.dates.length; ti++){
+				while(linei < mod_line.xcol.length-1 && mod_line.xcol[linei] < ti) linei++;
+				var d = mod_line.ycol[linei];
+				var omd = 1-d;
+				
+				var vec = [];
+				for(c = 0; c < vis.areas.length; c++){
+					var within = vis.pop[c]*(vis.diag[c]*d + (1.0/vis.pop[c])*omd);
+					var outside = 0;
+					for(j = 0; j < vis.to[c].length; j++){
+						var cc = vis.to[c][j];
+						outside += vis.pop[cc]*vis.val[c][j]*d; 
+					}
+					vec[c] = 100*within/(within+outside);
+				}
+				
+				vis.array[ti] = vec;
+			}
+			break;
+			
+		case "OP_MIXING_WITHIN_MAP":	
+			var vec = [];
+			for(c = 0; c < vis.areas.length; c++){
+				var within = vis.pop[c]*vis.diag[c];
+				var outside = 0;
+				for(j = 0; j < vis.to[c].length; j++){
+					var cc = vis.to[c][j];
+					outside += vis.pop[cc]*vis.val[c][j]; 
+				}
+				vec[c] = 100*within/(within+outside);
+			}
+				
+			vis.array=[];
+			vis.array[0] = vec;
+			break;
+			
+		case "OP_MIXING_BETWEEN_ANIM_MAP":
+			if(mod_line == null) alertp("Problem with geo line");
+					
+			vis.mat_list=[];
+				
+			var max = 0;
+			var linei = 0;
+			for(ti = 0; ti < vis.dates.length; ti++){
+				while(linei < mod_line.xcol.length-1 && mod_line.xcol[linei] < ti) linei++;
+				var d = mod_line.ycol[linei];
+				var omd = 1-d;
+			
+				var mat = [];
+				for(c = 0; c < vis.areas.length; c++){
+					var within = vis.pop[c]*(vis.diag[c]*d + (1.0/vis.pop[c])*omd);
+					var outside = 0;
+					for(j = 0; j < vis.to[c].length; j++){
+						var cc = vis.to[c][j];
+						outside += vis.pop[cc]*vis.val[c][j]*d; 
+					}
+					
+					mat[c]=[];
+					for(j = 0; j < vis.to[c].length; j++){
+						var cc = vis.to[c][j];
+						mat[c][cc] = 100*vis.pop[cc]*vis.val[c][j]*d/(within+outside);
+						if(mat[c][cc] > max) max = mat[c][cc];
+					}
+				}
+					
+				vis.mat_list[ti] = mat;
+			}
+			vis.max = max;
+			break;
+			
+		case "OP_MIXING_BETWEEN_MAP":	
+			var mat = [];
+			var max = 0;
+			for(c = 0; c < vis.areas.length; c++){
+				var within = vis.pop[c]*vis.diag[c];
+				var outside = 0;
+				for(j = 0; j < vis.to[c].length; j++){
+					var cc = vis.to[c][j];
+					outside += vis.pop[cc]*vis.val[c][j]; 
+				}
+				
+				mat[c]=[];
+				for(j = 0; j < vis.to[c].length; j++){
+					var cc = vis.to[c][j];
+					mat[c][cc] = 100*vis.pop[cc]*vis.val[c][j]/(within+outside);
+					if(mat[c][cc] > max) max = mat[c][cc];
+				}
+			}
+				
+			vis.mat_list=[];
+			vis.mat_list[0] = mat;
+			vis.max = max;
+			break;
+		}
+	}
+}
+
+
+/// Intialises links to model parameters
+function init_paramlink()
+{ 
+	var i = 0; while(i < visjson.plots.length && visjson.plots[i].type != "OP_PARAM_TABLE") i++;
+	if(i == visjson.plots.length) alertp("Cannot find parameter table");
+	
+	var tab = visjson.plots[i].param_table;
+	
+	var j, jmax = tab.ele.length;
+	for(j = 0; j < jmax; j++){
+		var name = tab.ele[j][0];
+		var link_selparam_table=null;
+		var link_selparam_name=null;     
+		var link_seleq=null;
+		var link_seleq_name=null; 
+
+		var comp = model.comp;	
+		for(k = 0; k < comp.length; k++){ 
+			if(comp[k].mean != null){
+				for(m = 0; m < comp[k].mean.length; m++){
+					if(comp[k].mean[m].name == name){ 
+						link_selparam_table = comp[k].mean; link_selparam_name = comp[k].label;
+						break;
+					}
+				}
+			}
+		}
+		
+		var trans = model.trans;	
+		for(k = 0; k < trans.length; k++){
+			if(trans[k].prob != null){
+				for(m = 0; m < trans[k].prob.length; m++){
+					if(trans[k].prob[m].name == name){ 
+						link_selparam_table = trans[k].prob; link_selparam_name = trans[k].label;
+						break;
+					}
+				}
+			}
+		}
+		
+		for(i = 0; i < foi.eq.length; i++){
+			if(foi.eq[i].param != null){
+				for(m = 0; m < foi.eq[i].param.length; m++){
+					if(foi.eq[i].param[m] == name){
+						link_seleq = foi.eq[i].param; link_seleq_name = foi.eq[i].text;
+						break;
+					}
+				}
+			}
+		}
+		
+		if(link_selparam_table == null && link_seleq == null) alertp("Cannot find link for "+name);
+		param_link[j] = {name:name, selparam_table:link_selparam_table, selparam_name:link_selparam_name, seleq:link_seleq, seleq_name:link_seleq_name};
+	}		
+}
+
+
 /// Intialises the HTML elements on the page
 function init_page()
 {
@@ -361,12 +532,25 @@ function init_variables()
 }
 
 
+/// Determines if the tabs contain a particular value 
+function addtab(tab,tab2)
+{
+	for(i = 0; i < visjson.plots.length; i++){
+		if(visjson.plots[i].tab == tab && (tab2 == "" || visjson.plots[i].tab2 == tab2)){
+			if(tab2 == "") tree.push({ name:tab, child:[]});
+			return;
+		}
+	}
+}
+	
 /// Based on the plots on visjson, this constructs the menus on the left hand edge
 function menu_structure()
 {
+	addtab("Model",""); addtab("Data",""); addtab("Parameters",""); addtab("Prior","");
+
 	for(i = 0; i < visjson.plots.length; i++){
 		var vis = visjson.plots[i];
-		tab = vis.tab; tab2 = vis.tab2; tab3 = vis.tab3;
+		tab = vis.tab; tab2 = vis.tab2; tab3 = vis.tab3; tab4 = vis.tab4;
 	
 		var j = 0; while(j < tree.length && tab != tree[j].name) j++;
 		if(j == tree.length){
@@ -374,22 +558,34 @@ function menu_structure()
 		}
 		
 		var j2 = 0; while(j2 < tree[j].child.length && tab2 != tree[j].child[j2].name) j2++;
-		if(j2 == tree[j].child.length ){
-			tree[j].child.push({ name:tab2, child2:[], frac:0, y:0});
+		if(j2 == tree[j].child.length){
+			tree[j].child.push({ name:tab2, child:[]});
 		}
 
-		var j3 = 0; while(j3 < tree[j].child[j2].child2.length && tab3 != tree[j].child[j2].child2[j3].name) j3++;
-		if(j3 == tree[j].child[j2].child2.length){
-			tree[j].child[j2].child2.push({ name:tab3, plot:i});
+		var j3 = 0; while(j3 < tree[j].child[j2].child.length && tab3 != tree[j].child[j2].child[j3].name) j3++;
+		if(j3 == tree[j].child[j2].child.length){
+			tree[j].child[j2].child.push({ name:tab3, child:[], frac:0, y:0});
 		}
-		else emsg("Problem");
+
+		var j4 = 0; while(j4 < tree[j].child[j2].child[j3].child.length && tab4 != tree[j].child[j2].child[j3].child[j4].name) j4++;
+		
+		if(j4 == tree[j].child[j2].child[j3].child.length){
+			tree[j].child[j2].child[j3].child.push({ name:tab4, plot:i});
+		}
+		else{
+			pr(tab+" "+tab2+" "+tab3+" "+tab4+" tab");
+			alertp("Menu Problem");
+		}
 	}
 	
 	for(i = 0; i < tree.length; i++){ 
-		pagesub[i] = 0; pagesubsub[i]=[]; 
+		pagesub[i] = 0; pagesubsub[i]=[]; pagesubsubsub[i]=[]; 
 		for(j = 0; j < tree[i].child.length; j++){
-			pagesubsub[i][j] = 0;
-			tree[i].child[j].frac = submax/tree[i].child[j].child2.length;
+			pagesubsub[i][j] = 0; pagesubsubsub[i][j]=[]; 
+			for(j2 = 0; j2 < tree[i].child[j].child.length; j2++){
+				pagesubsubsub[i][j][j2] = 0;
+				tree[i].child[j].child[j2].frac = submax/tree[i].child[j].child[j2].child.length;
+			}
 		}
 	}
 }
@@ -421,7 +617,7 @@ function init_mouse_key()
 		if(evt.altKey) location.reload(true);
 		mup(mousePos.x,mousePos.y);
 	}, false);
-
+	
 	document.onkeydown = checkKey;
 }
 
@@ -438,14 +634,16 @@ function checkKey(e)
 		playtime++; if(playtime > playtimemax-1) playtime = playtimemax-1;
 	}	
 	
-	var num = tree[page].child[pagesub[page]].child2.length;
-	var val = pagesubsub[page][pagesub[page]];
-	
+	var num = tree[page].child[ps].child[pss].child.length;
+	var val = pagesubsubsub[page][ps][pss];
+
 	if (e.keyCode == '38'){  // Up arrow
-		if(val > 0) changepage(-1,-1,val-1);
+		if(val > 0) changepage(-1,-1,-1,val-1);
+		 e.preventDefault();
 	}
 	if (e.keyCode == '40'){  // Down arrow
-		if(val < num-1) changepage(-1,-1,val+1);
+		if(val < num-1) changepage(-1,-1,-1,val+1);
+		 e.preventDefault();
 	}
 	
 	plot_results();
@@ -454,34 +652,40 @@ function checkKey(e)
 
 
 /// Dynamically sets the size of page objects (activates when the window is resized)
-function setsize()                                         
+function setsize(menubut)                                         
 {
 	if(initdone == 0) return;
 	
 	var w = window.innerWidth;
 	var h = window.innerHeight;
-
-	height = h-50; if(height < 400) height = 400;
+		
+	height = h-35; if(height < 400) height = 400;
 	width = Math.floor(menux+(height*aspect_ratio));
 	
-	if(width > w){
+	if(width > w-40){
 		height = Math.floor(height*(w-40)/width); if(height < 400) height = 400;
 		width = Math.floor(menux+(height*aspect_ratio));
 	}
 	
-	mar = Math.floor((w-width)/2); if(mar < 0) mar = 0;
+	var last = menubut.length-1;
+	var hmin = menubut[last].y + menubut[last].dy+10;
+
+	heightpage = height+25;
+	if(heightpage < hmin) heightpage = hmin;
+	
+	mar = Math.floor((w-width)/2); if(heightpage == hmin) mar -= 10; if(mar < 0) mar = 0;
 	
 	ById("main").style.marginLeft = mar+"px";
 	ById("main").style.width = width+"px";
 	
 	graphcan.width = width;
-  graphcan.height = height;
+  graphcan.height = heightpage;
  
   resultcan.width = width;
   resultcan.height = height;
 	
 	myc.width = width;
-  myc.height = height;
+  myc.height = heightpage;
 
   canw = width; canh = height;
 
@@ -491,7 +695,6 @@ function setsize()
 	mapdx = Math.floor(height*map_ratio);
 	mapdy = height;
 	
-	buttoninit();
 	widthold = width; heightold = height;
 }
 
@@ -526,7 +729,7 @@ function mdown(xx,yy)
 	
 	switch(buttype[over]){
 	case MENUSLIDEBUT:
-		var ob = tree[page].child[pagesub[page]];
+		var ob = tree[page].child[ps].child[pss];
 
 		if(my >= sliy1 && my <= sliy2){ mxst = mx; myst = my; menuslidest = ob.y; menuslidesize = butdy[over]; drag = 2;}
 		else{

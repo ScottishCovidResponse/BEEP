@@ -27,6 +27,8 @@ ABCMBP::ABCMBP(const Details &details, const Data &data, const Model &model, Inp
 /// Runs the inference algorithm
 void ABCMBP::run()
 {				
+	//model.check_prior();
+	
 	for(auto g = 0u; g < G; g++){
 		timer[TIME_ALG].start();
 		

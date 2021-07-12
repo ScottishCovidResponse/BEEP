@@ -4,50 +4,80 @@ function buttoninit()
 	over = -1; canover = -1;
 	nbut = 0; ncanbut = 0;
 	
+	var menubut = set_menubut();
+	
+	setsize(menubut);
+	
 	generate_plots();
 
-	addbutton("",0,0,menux,canh,-1,MENUBACKBUT,-1,-1);
+	addbutton("",0,0,menux,heightpage,-1,MENUBACKBUT,-1,-1);
+	addbutton("",menux,canh,width-menux,heightpage-canh,-1,MENUBACKBUT,-1,-1);
 
-  addbutton("",10,20,0,0,-1,LOGOBUT,-1,-1);
-	 
-	y = 80; 
-  var xx = 15, xx2 = 38;
+	addbutton("",menux,0,width-menux,canh,-1,CORNERSBUT,-1,-1);
+	
+	addbutton("",menux,canh,width-menux,25,-1,LOWERBARBUT,-1,-1);
+	
+  addbutton("",15,20,0,0,-1,LOGOBUT,-1,-1);
+	
+	add_menubut(menubut);
+	
+	buttonplot();
+	
+	if(drag == 0) mousemove(mx,my);
+}
+
+
+/// Sets the menu buttons
+function set_menubut()
+{
+	var menubut=[];
+	var y = 80; 
+  var xx = 15, xx2 = 28; xx3 = 47;
 	var ddy = 34, dby = 8;
-	var dysub = 23, dysubsub = 19;
-	for(i = 0; i < tree.length; i++){
-		addbutton(tree[i].name,0,y,menux,ddy,TABBUT,TABBUT,i,-1); y += ddy; 
+	var dysub = 23, dysubsub = 19, dysubsubsub = 19;
+	for(var i = 0; i < tree.length; i++){
+		menubut.push({type:"tab", name:tree[i].name, x:0, y:y, dx:menux, dy: ddy, i:i}); y+= ddy;
 		if(page == i){
 			for(j = 0; j < tree[i].child.length; j++){
 				var name = tree[i].child[j].name;
 				if(name != ""){
 					ii = i; 
-					addbutton("",xx,y,menux-xx,dysub,-1,PAGESUBBACKBUT,-1,-1);
-					addbutton(name,xx,y,menux-xx,dysub,PAGESUBBUT,PAGESUBBUT,j,-1);
+					menubut.push({type:"sub", name:name, x:xx, y:y, dx:menux-xx, dy: dysub, j:j});
 					y += dysub;
 			
 					if(pagesub[page] == j){
-						var len = tree[i].child[j].child2.length;
-						if(len > submax){
-							var yst = y;
-							var ob = tree[page].child[pagesub[page]];
-							var j2min = Math.floor(len*ob.y*1.001);
-							if(j2min > len-submax) j2min = len-submax;
-					
-							for(j2 = j2min; j2 < j2min+submax; j2++){
-								name2 = tree[i].child[j].child2[j2].name;
-								if(name2 != ""){
-									addbutton(name2,xx2,y,menux-xx2,dysubsub,PAGESUBSUBBUT,PAGESUBSUBBUT,j2,-1);
-									y += dysubsub;
-								}
-							}
-							addbutton("",xx+4,yst+4,10,submax*dysubsub-8,MENUSLIDEBUT,MENUSLIDEBUT,-1,-1);
-						}
-						else{
-							for(j2 = 0; j2 < tree[i].child[j].child2.length; j2++){
-								name2 = tree[i].child[j].child2[j2].name;
-								if(name2 != ""){
-									addbutton(name2,xx2,y,menux-xx2,dysubsub,PAGESUBSUBBUT,PAGESUBSUBBUT,j2,-1);
-									y += dysubsub;
+						for(jj = 0; jj < tree[i].child[j].child.length; jj++){
+							var name = tree[i].child[j].child[jj].name;
+							if(name != ""){
+								menubut.push({type:"subsub", name:name, x:xx2, y:y, dx:menux-xx2, dy: dysubsub, j:jj});
+								y += dysubsub;
+							
+								if(pagesubsub[page][ps] == jj){
+									var len = tree[i].child[j].child[jj].child.length;
+									if(len > submax){
+										var yst = y;
+										var ob = tree[page].child[ps].child[pss];
+										var j2min = Math.floor(len*ob.y*1.001);
+										if(j2min > len-submax) j2min = len-submax;
+								
+										for(j2 = j2min; j2 < j2min+submax; j2++){
+											name2 = tree[i].child[j].child[jj].child[j2].name;
+											if(name2 != ""){
+												menubut.push({type:"subsubsub", name:name2, x:xx3, y:y, dx:menux-xx3, dy: dysubsubsub, j:j2});
+												y += dysubsubsub;
+											}
+										}
+										menubut.push({type:"menuslide", name:"", x:xx+4+5, y:yst+4, dx:10, dy: submax*dysubsubsub-8});	
+									}
+									else{
+										for(j2 = 0; j2 < tree[i].child[j].child[jj].child.length; j2++){
+											name2 = tree[i].child[j].child[jj].child[j2].name;
+											if(name2 != ""){
+												menubut.push({type:"subsubsub", name:name2, x:xx3, y:y, dx:menux-xx3, dy: dysubsubsub, j:j2});
+												y += dysubsubsub;
+											}
+										}
+									}
 								}
 							}
 						}
@@ -57,35 +87,66 @@ function buttoninit()
 		}
 		y += dby;
 	}
-
-	buttonplot();
 	
-	if(drag == 0) mousemove(mx,my);
+	return menubut;
 }
 
 
+/// Adds the menu buttons to the page
+function add_menubut(menubut)
+{
+	for(var i = 0; i < menubut.length; i++){
+		var mb = menubut[i];
+		switch(mb.type){
+			case "tab":
+				addbutton(mb.name,mb.x,mb.y,mb.dx,mb.dy,TABBUT,TABBUT,mb.i,-1);
+				break;
+				
+			case "sub":
+				addbutton("",mb.x,mb.y,mb.dx,mb.dy,-1,PAGESUBBACKBUT,-1,-1);
+				addbutton(mb.name,mb.x,mb.y,mb.dx,mb.dy,PAGESUBBUT,PAGESUBBUT,mb.j,-1);
+				break;
+				
+			case "subsub":
+				addbutton(mb.name,mb.x,mb.y,mb.dx,mb.dy,PAGESUBSUBBUT,PAGESUBSUBBUT,mb.j,-1);
+				break;
+				
+			case "subsubsub":
+				addbutton(mb.name,mb.x,mb.y,mb.dx,mb.dy,PAGESUBSUBSUBBUT,PAGESUBSUBSUBBUT,mb.j,-1);
+				break;
+				
+			case "menuslide":
+				addbutton(mb.name,mb.x,mb.y,mb.dx,mb.dy,MENUSLIDEBUT,MENUSLIDEBUT,-1,-1);
+				break;
+		}
+	}
+}
+
+	
 /// Fires when a page is changed
-function changepage(pagenew, s, ss)
+function changepage(pagenew, s, ss, sss)
 {
 	var pagest=page;
 	
 	playtime = 0; playing = 0;
 	sourceon = 0; slidey = 0;
 	tabx_slide = 0; taby_slide = 0;
-	selparam_table = null;
+	selparam_table = null; selparam_name = "";
+	seleq = null; seleq_name = ""; 
+	paramsel = ""; check = 0;
 	
 	if(pagenew != -1) page = pagenew;
-	if(s != -1) pagesub[page] = s;
-	if(ss != -1) pagesubsub[page][pagesub[page]] = ss;
-
-	var ob = tree[page].child[pagesub[page]];
-	var len = ob.child2.length;
+	var p = page;
+	ps = pagesub[p]; if(s != -1){ ps = s; pagesub[page] = ps;}
+	pss = pagesubsub[p][ps]; if(ss != -1){ pss = ss; pagesubsub[p][ps] = pss;}
+	psss = pagesubsubsub[p][ps][pss]; if(sss != -1){ psss = sss; pagesubsubsub[p][ps][pss] = psss;}
+	
+	var ob = tree[p].child[ps].child[pss];
+	var len = ob.child.length;
 	if(len > submax){
-		var val = pagesubsub[page][pagesub[page]];
-		var j2min = Math.floor(len*ob.y/(1-ob.frac));
-		if(val < j2min) ob.y = val*(1-ob.frac)/len;
-		
-		if(val >= j2min+submax-1) ob.y = (val-submax+1+0.1)*(1-ob.frac)/len;
+		var j2min = Math.floor(len*ob.y*1.001);
+		if(psss < j2min) ob.y = psss/len;
+		if(psss >= j2min+submax-1) ob.y = (psss-submax+1+0.1)/len;
 	}
 	
 	buttoninit();
@@ -109,28 +170,50 @@ function addbutton(text,x,y,dx,dy,ac,type,val,val2)
 }
 
 
+/// Returns the font size
+function get_fontsize(font)
+{
+	var pos2 = font.search("px");
+	return parseInt(font.substr(pos2-2,2));
+}
+
+
+/// Resizes the font
+function resize_font(font,sinew)
+{
+	var pos2 = font.search("px");
+	var si = parseInt(font.substr(pos2-2,2));
+	return font.substr(0,pos2-2)+sinew+font.substring(pos2);
+}
+
+
 /// Splits a string into substrings to accout for subscripts
 function splitintosub(st,font)                             
 {
 	var lab=[];
 
-	var pos2 = font.search("px");
-	var si = parseInt(font.substr(pos2-2,2));
+	var si = get_fontsize(font);
 	var fsi = Math.floor(0.7*si);
-	var font2 = font.substr(0,pos2-2)+fsi+font.substring(pos2);
-		
+	
+	var font2 = resize_font(font,fsi);
+	
 	var italicfont = "italic "+si+"px Times";
 	var italicfont2 = "italic "+fsi+"px Times";
 	
+	if(font.includes("bold") == true){ italicfont = "bold "+italicfont; italicfont2 = "bold "+italicfont2;}
+	 
 	var j = 0, w = 0, italic = 0;
 	do{
 		if(st.substr(j,1) != "_" && st.substr(j,1) != "^" && st.substr(j,1) != "&"){
 			jst = j;
 			while(j < st.length && st.substr(j,1) != "_" && st.substr(j,1) != "^" && st.substr(j,1) != "&") j++;
 			frag = st.substr(jst,j-jst);
-			dw = textwidth_simp(frag,font)+1;
+
 			if(italic == 0) fo = font; else fo = italicfont;
-			lab.push({frag:frag, size:"big", w:w, dw:dw, font:fo, dy:0});
+			if(frag == "Σ") fo = resize_font(font,Math.floor(1.2*si));
+			dw = textwidth_simp(frag,fo)+1;
+		
+			lab.push({frag:frag, type:"norm", size:"big", w:w, dw:dw, font:fo, dy:0, italic:italic});
 			w += dw;
 		}
 		else{
@@ -154,7 +237,7 @@ function splitintosub(st,font)
 				}
 				else{
 					jst = j;
-					while(j < st.length && st.substr(j,1) != " " &&  st.substr(j,1) != "=" && st.substr(j,1) != "]" && st.substr(j,1) != ")" && st.substr(j,1) != "}" && st.substr(j,1) != "," && st.substr(j,1) != "_" && st.substr(j,1) != "^" && st.substr(j,1) != "&") j++;
+					while(j < st.length && st.substr(j,1) != " " &&  st.substr(j,1) != "=" && st.substr(j,1) != "]" && st.substr(j,1) != ")" && st.substr(j,1) != "}" && st.substr(j,1) != "," && st.substr(j,1) != "." && st.substr(j,1) != "_" && st.substr(j,1) != "^" && st.substr(j,1) != "&") j++;
 					frag = st.substr(jst,j-jst);
 				}
 			
@@ -162,7 +245,7 @@ function splitintosub(st,font)
 					dw = textwidth_simp(frag,font2);
 					
 					if(italic == 0) fo = font2; else fo = italicfont2;
-					lab.push({frag:frag, type:type, w:w, dw:dw, font:fo, dy:dy});
+					lab.push({frag:frag, type:type, w:w, dw:dw, font:fo, dy:dy, italic:italic});
 					w += dw;
 				}
 			}
@@ -184,6 +267,15 @@ function splitintosub(st,font)
 		}
 	}
 	
+	for(i = 1; i < lab.length; i++){
+		if(lab[i].type == "sub"){
+			if(lab[i-1].type == "norm" && lab[i-1].italic == 1){		
+				dw = 2;
+				for(j = i; j < lab.length; j++) lab[j].w -= dw;
+			}
+		}
+	}
+	
 	return lab;
 }
 
@@ -196,7 +288,6 @@ function plottext(text,x,y,font,col,width)
 	if(!width) width = large;
 	
 	text = text.toString();
-	
 	if(text.search("_") == -1 && text.search("^") == -1 && text.search("&") == -1){   // looks for subscripts
 		cv.font = font;
 		if(width){
@@ -212,26 +303,64 @@ function plottext(text,x,y,font,col,width)
 		cv.fillText(text, x, y);
 	}
 	else{	
-		var lab = splitintosub(text,font);
+		if(text == "[" || text == "]" || text == "(" || text == ")"){
+			var fac;
+			if(text == "[" || text == "]"){ fac = 1.6; y += 3;} else{ fac = 1.3; y+=2;}
+			var si = get_fontsize(font);
+			cv.font = resize_font(font,Math.floor(si*fac));
+			cv.textAlign = 'left';
+			cv.fillStyle = col;
+			cv.fillText(text, x, y);
+		}
+		else{
+			var lab = splitintosub(text,font);
 
-		cv.textAlign = 'left';
-		cv.fillStyle = col;
-		var j;
-		for(j = 0; j < lab.length; j++){
-			cv.font = lab[j].font;
-			if(lab[j].w+lab[j].dw > width-5){
-				te = lab[j].frag;
-		
-				while(x+lab[j].w+cv.measureText(te+"...").width > width-5 && te.length > 0){
-					te = te.substr(0,te.length-1);
+			cv.textAlign = 'left';
+			cv.fillStyle = col;
+			var j;
+			for(j = 0; j < lab.length; j++){
+				cv.font = lab[j].font;
+				if(lab[j].w+lab[j].dw > width-5){
+					te = lab[j].frag;
+
+					while(lab[j].w+cv.measureText(te+"...").width > width-5 && te.length > 0){
+						te = te.substr(0,te.length-1);
+					}
+					te += "...";
+
+					cv.fillText(te,x+lab[j].w,y+lab[j].dy);
+					break;
 				}
-				te += "...";
-				cv.fillText(te,x+lab[j].w,y+lab[j].dy);
-				break;
+				cv.fillText(lab[j].frag,x+lab[j].w,y+lab[j].dy);
 			}
-			cv.fillText(lab[j].frag,x+lab[j].w,y+lab[j].dy);
 		}
 	}
+}
+
+
+/// Plots left-aligned vertical text
+function plotverticaltext(text,x,y,font,col,width)               
+{	
+	if(text == undefined){ text = "undefined"; pr("undefined text");}
+	if(text.length == 0) return;
+	if(!width) width = large;
+	
+	text = text.toString();
+	
+	var lab = splitintosub(text,font);
+	
+	cv.save();
+	cv.translate(x, y);
+	cv.rotate(Math.PI/2);
+	cv.textAlign = 'left';
+	cv.fillStyle = col;
+	
+	var j;
+	for(j = 0; j < lab.length; j++){
+		cv.font = lab[j].font;
+		cv.fillText(lab[j].frag,lab[j].w,lab[j].dy);
+	}
+	cv.restore();
 }
 
 
@@ -598,7 +727,7 @@ function fillcircle(x,y,r,col,col2,style)
 
 
 /// Draws the corners of the main page
-function drawcorners(x,y,dx,dy,r,col,col2) 
+function drawcorners(x,y,dx,dy,r,col) 
 {
 	var th, i, nth = Math.floor(r/3);
 	if(nth < 1) nth = 1;
@@ -615,6 +744,49 @@ function drawcorners(x,y,dx,dy,r,col,col2)
 	cv.closePath();
 	cv.fill();
 
+	/*
+	cv.moveTo(x+dx,y+dy);
+	for(i = 0; i <= nth; i++){
+		th = i*Math.PI/(2*nth);
+		cv.lineTo(x+dx-r+r*Math.cos(th),y+dy-r+r*Math.sin(th));
+	}
+	cv.closePath();
+	cv.fill();
+
+	/*
+	cv.moveTo(x,y+dy);
+	for(i = 0; i <= nth; i++){
+		th = i*Math.PI/(2*nth);
+		cv.lineTo(x+r-r*Math.sin(th),y+dy-r+r*Math.cos(th));
+	}
+	cv.closePath();
+	cv.fill();
+*/
+
+	cv.moveTo(x,y);
+	for(i = 0; i <= nth; i++){
+		th = i*Math.PI/(2*nth);
+		cv.lineTo(x+r-r*Math.cos(th),y+r-r*Math.sin(th));
+	}
+	cv.closePath();
+	cv.fill();
+	
+}
+
+/// Draws the corners of the main page
+function drawlowerbar(x,y,dx,dy,r,col) 
+{
+	fillrect(x,y,dx,dy,"#a4a3e6");
+	centertext("© BEEPmbp 2021",x+dx/2,y+18,"bold 16px arial",WHITE);   
+	
+	var th, i, nth = Math.floor(r/3);
+	if(nth < 1) nth = 1;
+
+	cv.lineWidth = 2;
+	cv.beginPath();
+	cv.fillStyle = col; 
+
+	
 	cv.moveTo(x+dx,y+dy);
 	for(i = 0; i <= nth; i++){
 		th = i*Math.PI/(2*nth);
@@ -629,15 +801,7 @@ function drawcorners(x,y,dx,dy,r,col,col2)
 		cv.lineTo(x+r-r*Math.sin(th),y+dy-r+r*Math.cos(th));
 	}
 	cv.closePath();
-	cv.fill();
-
-	cv.moveTo(x,y);
-	for(i = 0; i <= nth; i++){
-		th = i*Math.PI/(2*nth);
-		cv.lineTo(x+r-r*Math.cos(th),y+r-r*Math.sin(th));
-	}
-	cv.closePath();
-	cv.fill();
+	cv.fill();	
 }
 
 
@@ -651,35 +815,46 @@ function alignparagraph(text,dx,fontset)
 	else font = HELPFONT;
 
 	text = ""+text;
+
+	var textsplit = text.split("  ");
+	
 	nlines = 0;
-	i = 0; len = text.length;
-	di = Math.floor(len*dx/textwidth_simp(text,font));
-
-	yy = 0;
-	while(i < len){
-		ist = i;
-		i += di; if(i > len) i = len; //while(i < len && text.substr(i,1) != " ") i++;
-		while(i < len && textwidth_simp(text.substr(ist,i-ist),font) < dx) i++;
-		 
-		if(textwidth_simp(text.substr(ist,i-ist),font) >= dx){
-			do{
-				i--; while(text.substr(i,1) != " " && i > ist) i--;
-			}while(textwidth_simp(text.substr(ist,i-ist),font) > dx);
-
-			if(i == ist){
-				i = ist + di;
-				while(textwidth_simp(text.substr(ist,i-ist),font) < dx) i++;
-				while(textwidth_simp(text.substr(ist,i-ist),font) > dx) i--;
-			}
-			else i++;
-		}
+	for(var spl = 0; spl < textsplit.length; spl++){
+		var te = textsplit[spl];
 		
-		lines[nlines] = text.substr(ist,i-ist);
-		while(i < len && text.substr(i,1) == " ") i++;
-		linesy[nlines] = yy;
-		yy += lineheight;
-		nlines++;
+		i = 0; len = te.length;
+		di = Math.floor(len*dx/textwidth_simp(te,font));
+
+		yy = 0;
+		while(i < len){
+			ist = i;
+			i += di; if(i > len) i = len; //while(i < len && text.substr(i,1) != " ") i++;
+			while(i < len && textwidth_simp(te.substr(ist,i-ist),font) < dx) i++;
+			 
+			if(textwidth_simp(te.substr(ist,i-ist),font) >= dx){
+				do{
+					i--; while(te.substr(i,1) != " " && i > ist) i--;
+				}while(textwidth_simp(te.substr(ist,i-ist),font) > dx);
+
+				if(i == ist){
+					i = ist + di;
+					while(textwidth_simp(te.substr(ist,i-ist),font) < dx) i++;
+					while(textwidth_simp(te.substr(ist,i-ist),font) > dx) i--;
+				}
+				else i++;
+			}
+			
+			lines[nlines] = te.substr(ist,i-ist);
+			while(i < len && te.substr(i,1) == " ") i++;
+			linesy[nlines] = yy;
+			yy += lineheight;
+			nlines++;
+		}
+		if(spl < textsplit.length-1){
+			lines[nlines] = ""; yy += lineheight; nlines++;
+		}
 	}
+	
 	hsto = yy;
 }
 

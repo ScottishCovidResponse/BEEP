@@ -15,6 +15,12 @@ Details::Details(Inputs &inputs)
 	
 	mode = inputs.mode();
 	
+	analysis_type = "Posterior";
+	if(mode == SIM) analysis_type = "Simulation";
+	if(mode == MULTISIM) analysis_type = "Multisim";
+	
+	description = inputs.find_string("description","UNSET",true); 
+		
 	stochastic = true;
 	auto dynamics = inputs.find_string("dynamics","stochastic");  
 	if(dynamics != "stochastic"){

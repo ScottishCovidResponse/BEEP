@@ -74,7 +74,7 @@ void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, Para
 	for(auto i = 0u; i < prop_list.size(); i++){
 		auto &prop = prop_list[i];
 		auto num = prop.num;
-
+		
 		switch(prop.type){
 			case MVN_PROP:
 				{
@@ -111,7 +111,7 @@ void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, Para
 				break;
 		}				
 		
-		if(checkon == true) initial->check();
+		if(checkon == true) initial->check(2);
 	}
 	timer[TIME_MCMCPROP].stop();
 	pa = initial->create_particle(pa.run);                       // Places final state back into particle
@@ -141,6 +141,8 @@ Status Mbp::mbp(const vector<double> &paramv, const InfUpdate inf_update)
 	timer[TIME_MBPINIT].stop();
 
 	for(auto sett = 0u; sett < details.ndivision; sett++){      // Performs a pure MBPs or a combination of MBP and simulation
+		propose->democat_change_pop_adjust(sett);
+	
 		switch(inf_update){                                       // Sets Imap  
 			case INF_UPDATE: propose->set_Imap_sett(sett); break;
 			case INF_DIF_UPDATE: propose->set_Imap_using_dI(sett,initial,dImap,dIdiag); break;
@@ -151,13 +153,13 @@ Status Mbp::mbp(const vector<double> &paramv, const InfUpdate inf_update)
 		int num_i, num_p=0;
 	
 		for(auto c = 0u; c < data.narea; c++){                    // Performs simulation / MBPs on the transitions
+			propose->set_transmean(sett,c);
+			
 			auto &init_tnum = initial->transnum[sett][c];
 			auto &prop_tnum = propose->transnum[sett][c];
 			auto &init_tmean = initial->transmean[sett][c];
 			auto &prop_tmean = propose->transmean[sett][c];
 			
-			initial->set_transmean(sett,c);
-			propose->set_transmean(sett,c);
 			auto sorm = simu_or_mbp[sett][c];
 			
 			for(auto tr = 0u; tr < model.trans.size(); tr++){
@@ -200,6 +202,7 @@ Status Mbp::mbp(const vector<double> &paramv, const InfUpdate inf_update)
 			timer[TIME_UPDATEIMAP].stop();
 		}
 	}
+	
 	timer[TIME_MBP].stop();
 
 	return SUCCESS;
@@ -304,7 +307,7 @@ void Mbp::mbp_initialise()
 void Mbp::mvn_proposal(MVN &mvn)  
 {
 	timer[TIME_MVN].start();
-	
+
 	InfUpdate inf_update = INF_DIF_UPDATE;
 	if(mvn.type == INF_PARAM) inf_update = INF_UPDATE;
 	
@@ -312,7 +315,7 @@ void Mbp::mvn_proposal(MVN &mvn)
 	vector <double> param_prop;
 	double probif;
 	if(mvn.propose_langevin(param_prop,initial->paramval,probif,model) == SUCCESS){
-		if(mbp(param_prop,inf_update) == SUCCESS){		
+		if(mbp(param_prop,inf_update) == SUCCESS){	
 			al = get_al()*exp(mvn.get_probfi(initial->paramval,param_prop,model) - probif);
 		}
 	}

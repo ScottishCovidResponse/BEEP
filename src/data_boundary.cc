@@ -66,6 +66,8 @@ FileType Data::filetype(const string file) const
 void Data::load_boundaries(const string file, vector < vector < vector <Coord> > > &bound) const
 {
 	auto type = filetype(file);
+	
+	cout << "Loading boundary file '" << file << "'" << endl;
 
 	switch(type){
 		case KML: load_KML(file,bound); break;
@@ -86,7 +88,7 @@ void Data::load_KML(const string file, vector < vector < vector <Coord> > > &bou
   stringstream strStream;
   strStream << inFile.rdbuf();
   string str = strStream.str();
-  if(str.size() == 0) emsg("COuld not open '"+file+"'.");
+  if(str.size() == 0) emsg("Could not open '"+file+"'.");
 	
 	char *xml=new char[long(str.size())+1];
  

@@ -40,6 +40,7 @@ void Data::raw()
 	//deaths_hospital_england(); emsg("done");
 	//generate_initpop(); emsg("done");
 	//generate_tvcovar(); emsg("done");
+	//generate_level_effect(); emsg("done");
 	//reducesize_geojson("areas2.geojson"); emsg("done");
 }
 
@@ -1192,7 +1193,7 @@ void Data::generate_initpop()
 }
 
 
-// Simulates files for time varying covariates
+// Simulates files for time-varying covariates
 void Data::generate_tvcovar()
 {
 	ofstream fout(details.output_directory+"/tvcovar.csv");
@@ -1224,6 +1225,44 @@ void Data::generate_tvcovar()
 		fout2 << endl;
 	}
 }
+
+
+/// Simulates a file that can be used to test algorithm
+void Data::generate_level_effect()
+{
+	auto file = details.output_directory+"/level.csv";
+
+	string levels = "level1,level2";
+	
+	auto levs = split(levels,',');  
+	
+	ofstream lout(file.c_str());
+	lout << "Date";
+	for(auto c = 0u; c < narea; c++) lout << "," << area[c].code; 
+	lout << endl;
+	
+	auto T =  details.end- details.start;
+	vector< vector <string> > map;
+	map.resize(T);
+	for(auto t = 0u; t < T; t++) map[t].resize(narea);
+
+	for(auto c = 0u; c < narea; c++){
+		auto t = 0u;
+		do{
+			auto val = (unsigned int)(levs.size()*ran());
+			auto tnext = t + (unsigned int)(30*ran());
+			if(tnext > T) tnext = T;
+			while(t < tnext){ map[t][c] = levs[val]; t++;}
+		}while(t < T);
+	}
+	
+	for(auto t = 0u; t < T; t++){
+		lout << details.getdate(t); 
+		for(auto c = 0u; c < narea; c++) lout << "," << map[t][c];
+		lout << endl;
+	}
+}
+
 
 /// Loads up a GEOJSON file and reduces its size (so it can be put on the GitHub repository)
 void Data::reducesize_geojson(const string file)

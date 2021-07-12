@@ -25,8 +25,9 @@ struct SplineOutput{                       // Used for outputting splines
 	string name;                             // The name of the spline
 	string desc;                             // The description of the spline
 	string fulldesc;                         // A full description of the spline
-	string tab, tab2;                        // Classifiers for menu
+	string tab, tab2, tab3, tab4;            // Classifiers for menu
 	vector <double> splineval;               // The values in the spline
+	string spline_param_JSON;                // Stores information about parameters used to inform spline
 };
 
 struct DerivedParam{                       // Parameters derived from the model parameters
@@ -36,10 +37,18 @@ struct DerivedParam{                       // Parameters derived from the model 
 	double value;                            // The value
 };
 
+struct RMap{                               // Spatial maps for the reproduction number
+	string file;                             // The file of the Rmap
+	string fulldesc;                         // The description of the RMap
+	string tab, tab2, tab3, tab4;            // Classifiers for menu
+	vector < vector <double> > map;
+};
+
 struct Sample{                             // Stores information about a state posterior sample
 	vector < vector <double> > graph_state;  // Stores the underlying graph state
 	vector <SplineOutput> spline_output;     // The splines that need to be output
 	vector <DerivedParam> derived_param;     // Derived parameters
+	vector <RMap> Rmap;                      // The maps in the reproduction number
 };
 
 struct ParamSample{                      	 // Stores information about a parameter sample from the posterior
@@ -77,6 +86,7 @@ struct Param{                              // Store information about a model pa
 	vector <unsigned int> greaterthan;       // List of parameters which this one needs to be greater than
 	vector <unsigned int> lessthan;          // List of parameters which this one needs to be greater than
 	vector <ParamSplineRef> paramsplineref;  // References any splines the parameter is in
+	double fixed;                            // This is used to store the fixed value of a parameter (if fixed prior is used)
 };
 
 struct Compartment{                        // Stores information about a compartment in the model
@@ -115,7 +125,7 @@ struct SplinePoint{                        // Stores information about a spline 
 struct Spline{                             // Stores all the information about a spline
 	string name;                             // The names of the spline
 	string desc;                             // The description of the spline
-	Smooth smooth;                           // Determines the type of smoothing
+	SmoothType smoothtype;                   // Determines the type of smoothing
 	vector <SplinePoint> p;                  // The points on the spline
 	unsigned int param_factor;               // A parameter whihc can multiply the spline
 };
@@ -192,6 +202,7 @@ struct MatrixModification {                // Used to modify the mixing matrix
 	vector <ParamSpec> ps;                   // The parameter specifications
 	vector <unsigned int> bp;                // Finds the break points for the spline
 	vector <unsigned int> ages;              // The group of ages on which the modification acts
+	SmoothType smoothtype;                   // The type of smoothing used for the spline
 	unsigned int spline_ref;                 // The spline used to generate the modification 
 };
 
@@ -246,11 +257,6 @@ struct DemocatChange{                      // Determines how a demographic categ
 	vector < vector <unsigned int> > dp_group;// The dp groups for the particular demographic category
 };
 
-struct DemocatChangeMap{                   // Used to create a map to easily perform demographic alteration  
-	vector < vector <double> > frac;         // The fraction in the different dempgraphic groups
-	vector <unsigned int> dp_group;          // The dp groups for the particular demographic category
-};
-
 struct DataTable {                         // Stores tables of data provided by the user
 	OpType optype;                           // Whether it is a true data table of just an output
 	DataType type;                           // The type of the data 
@@ -269,7 +275,7 @@ struct DataTable {                         // Stores tables of data provided by 
 	double factor;                           // The factor which multiplies it
 	LineColour line_colour;                  // Stores the colour of the line when plotted
 	string plot_name;                        // Stores the name of the plot
-	
+	string label;                            // Stores the label for the plot (OutputState only)
 	vector <string> demolist;                // For marginal distributions stores demographic categories
 	
 	vector <unsigned int> translist;         // The transitions relating to the data
@@ -308,7 +314,8 @@ struct GraphPoint {                        // Details of a point on a graph
 struct Graph {                             // Details of a graph
 	string name;                             // The name of the graph
 	string fulldesc;                         // Full descrition
-	string tab, tab2, tab3;                  // Used for menu
+	string fulldesc_data;                    // Full descrition of the data
+	string tab, tab2, tab3, tab4;            // Used for menu
 	string file;                             // The filename used for the graph     
 	string desc;                             // The description of the graph
 	string colname;                          // The column the graph relates to
@@ -324,7 +331,8 @@ struct Graph {                             // Details of a graph
 struct GraphMultiPlot {                    // Allows for multiple graphs to be placed into a single plot
 	string plot_name;                        // The name of the plot
 	string fulldesc;                         // Full descrition
-	string tab, tab2, tab3;                  // Used for menu
+	string fulldesc_data;                    // Full descrition of the data
+	string tab, tab2, tab3, tab4;            // Used for menu
 	vector <string> name;                    // The name on the y label
 	GraphType type;                          // The type of graph
 	double min;                              // The minimum in the graph
@@ -375,6 +383,7 @@ struct Covariate {                         // Stores the  covariate for the area
 	string name;                             // The name of the covariate (i.e. the column in the area data file)
 	ParamSpec ps;                            // Gives a parameter specification
 	Transform func;                          // The functional transformation
+	bool timevary;                           // Set to true is covariate is time-varying
 	vector < vector <double> > value;        // The values for the covariates
 };
 
@@ -456,6 +465,7 @@ struct DirichletParam                      // A dirichlet parameter
 };
 
 struct Dirichlet{                          // Stores information about a Dirichlet distribution
+	DirType dirtype;                         // The type of dirichlet
 	vector <DirichletParam> param;           // The parameters which are incorporated into distribution
 	unsigned int th_min;                     // Used to check that Dirichlet parameters are unique
 };

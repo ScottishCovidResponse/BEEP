@@ -11,7 +11,7 @@ function mousemove(x,y)
 		break;
 	
 	case 2: // menu slider
-		var ob = tree[page].child[pagesub[page]];
+		var ob = tree[page].child[ps].child[pss];
 		ob.y = menuslidest + (my-myst)/menuslidesize;
 		if(ob.y > 1-ob.frac) ob.y = 1-ob.frac; if(ob.y < 0) ob.y = 0;
 		buttoninit();
@@ -95,6 +95,14 @@ function mousemove(x,y)
 		overold = over; over = overnew;
 		if(overold >= 0) butplot(overold,-1);
 		if(overnew >= 0) butplot(overnew,-1);
+	}
+	else{
+		if(over >= 0){
+			if(buttype[over] == MENUSLIDEBUT || buttype[over] == SLIDEBUT || buttype[over] == SLIDEPARAGRAPHBUT ||
+				 buttype[over] == TABXSLIDEBUT || buttype[over] == TABYSLIDEBUT){
+				butplot(over,-1);
+			}
+		}
 	}
 
 	arrownew = 0;                                           // Sets the cursor (i.e. a hand is used for grabbing)

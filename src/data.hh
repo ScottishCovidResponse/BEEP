@@ -2,6 +2,7 @@
 #define BEEPMBP__Data_HH
 
 #include <string>
+#include <vector>
 #include "tinyxml2.h"
 
 using namespace std;
@@ -23,6 +24,8 @@ class Data
 		
 		string data_directory; 						    	 // The data directory
 
+		string areas_file;                       // The files which gives information about areas
+		
 		string threshold_str;                    // The string used for threshold
 	
 		string nodata_str;                       // The string used to represent no data
@@ -79,12 +82,16 @@ class Data
 		vector <string> get_table_column(const string col_name, string file, const string dir) const;
 		vector <double> get_table_column(const unsigned int col, string file, const string dir) const;
 		vector <string> get_table_column_str(const unsigned int col, string file, const string dir) const;
+		void generate_file_from_table(const string file_data, const string file, const vector <string> &cols) const;
 		string get_array_JSON(const string file, const string dir) const;
+		string get_table_cols_JSON(const string file, const string dir, const vector <unsigned int> cols) const;
 		string get_table_JSON(const string file, const string dir) const;
+		void make_table_with_time(const string file_in, const string file_out, const string col) const;
 		void load_boundaries(const string file, vector < vector < vector <Coord> > > &bound) const;
 		void create_boundaries(string x, string y, vector < vector < vector <Coord> > > &bound) const;
 		void rescale_boundary(vector < vector < vector <Coord> > > &bound) const;
 		void make_circle_boundary(const string xcol, vector < vector < vector <Coord> > > &bound) const;
+		string observation_description(const DataType type, const string obs, const unsigned int timestep = 1) const;
 		string print() const;
 	
 	private:
@@ -97,9 +104,9 @@ class Data
 		void read_covars();
 		void read_level_effect();
 		void check_or_create_column(Table &tab, string head, unsigned int d) const;
-		void read_initial_population(Table &tab, string file, Inputs &inputs);
+		void read_initial_population(Table &tab, Inputs &inputs);
 		void read_init_pop_file(const vector <string> comps);
-		void read_initial_population_areas(const unsigned int co_sus, Table &tab, string file);
+		void read_initial_population_areas(const unsigned int co_sus, Table &tab);
 		void load_modification(Inputs &inputs, const Table &tabarea);
 		
 		void filter_areas(Table &tab);
@@ -132,6 +139,7 @@ class Data
 		vector <TreeNode> area_split(SparseMatrix M) const;
 		void split_in_two(const vector <unsigned int> &arearef, vector <unsigned int> &ch1,  vector <unsigned int> &ch2, const vector <vector <double> > &G) const;
 		double get_split_fit(const vector <unsigned int> &area_list, const vector <bool> &gr, const vector <vector <double> > &G) const;
+		double get_split_fit_dif(const vector <unsigned int> &area_list, vector <bool> &gr, const vector <vector <double> > &G, unsigned int isel) const;
 		void print_obs() const;
 		
 		/* Used in data_boundary */
@@ -164,6 +172,7 @@ class Data
 		void deaths_hospital_england();
 		void generate_initpop();
 		void generate_tvcovar();
+		void generate_level_effect();
 		void reducesize_geojson(const string file);
 	
 		const Details &details;

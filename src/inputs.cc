@@ -28,6 +28,9 @@ Inputs::Inputs(int argc, char** argv)
 		inputfilename = cmdlineparams["inputfile"];
 	}
 
+	ifstream ip(inputfilename);
+	if(!ip) emsgroot("The file '"+inputfilename+"' could not be opened");
+	
 	try {
 		basedata = new InputData{inputfilename};
 	} catch (const std::exception& e) {
@@ -86,7 +89,7 @@ void Inputs::set_command_line_params(int argc, char *argv[])
 
 
 /// Finds a string from the TOML file (or uses the default 'def' value)
-string Inputs::find_string(const string &key, const string &def)
+string Inputs::find_string(const string &key, const string &def, bool allowcomma)
 {
 	string val;
 	auto val_it = cmdlineparams.find(key);
@@ -96,7 +99,8 @@ string Inputs::find_string(const string &key, const string &def)
 	}
 	else{
 		if(basedata->contains(key)){
-			val = basedata->data.stringfield_unchecked(key);
+			if(allowcomma == false) val = basedata->data.stringfield_unchecked(key);
+			else val = basedata->data.stringfield_allowcomma(key,"");
 			addused(key,used);
 		}
 		else val = def;
@@ -104,7 +108,6 @@ string Inputs::find_string(const string &key, const string &def)
 
 	return val;
 }
-
 
 /// Returns a positive integer
 unsigned int Inputs::find_positive_integer(const string &key, const int def)
@@ -282,7 +285,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			auto factor = td.stringfield("factor","");
 			if(factor != "") datatab.factor = get_double_positive(factor,"In 'data_tables' and for 'factor'");
 			
-			datatab.observation = td.stringfield("observation","In 'data_tables'");
+			datatab.observation = td.stringfield_allowcomma("observation","In 'data_tables'");
 			
 			datatab.shift = 0;
 			switch(datatab.type){
@@ -327,7 +330,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 				if(details.mode == SIM || datatab.type != TRANS) datatab.timestep = 1;	
 			}
 			else{
-				if(datatab.type != TRANS) emsg("In 'data_tables' the property 'timestep' can only be set for 'type=\"transition\"'");
+				if(datatab.type == MARGINAL) emsg("In 'data_tables' the property 'timestep' cannot be set for 'type=\"marginal\"'");
 				datatab.timestep = get_int(timestep,"In 'data_tables'");
 			}
 			
@@ -363,11 +366,11 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 		
 			datatab.factor_spline = td.stringfield("factor_spline","");
 			
-			datatab.democats_filt = td.stringfield("democats_filt",""); 
+			datatab.democats_filt = td.stringfield_allowcomma("democats_filt",""); 
 			
 			datatab.democats_dep = td.stringfield("democats_dep",""); 
 			
-			datatab.geo_filt = td.stringfield("geo_filt","");
+			datatab.geo_filt = td.stringfield_allowcomma("geo_filt","");
 						
 			datatab.geo_dep = td.stringfield("geo_dep","");
 						
@@ -434,7 +437,9 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 				}
 			}
 			
-			datatab.observation = td.stringfield("observation","In 'state_outputs'");
+			datatab.observation = td.stringfield_allowcomma("observation","In 'state_outputs'");
+			
+			datatab.label = td.stringfield("label","");
 			
 			if(td.contains("start")) emsgroot("In 'state_outputs' the value 'start' should not be set.");
 			datatab.start = 0;
@@ -443,11 +448,11 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			if(td.contains("fraction")) emsgroot("In 'state_outputs' the value 'fraction' should not be set.");
 			datatab.factor_spline = "";
 			
-			datatab.democats_filt = td.stringfield("democats_filt",""); 
+			datatab.democats_filt = td.stringfield_allowcomma("democats_filt",""); 
 			
 			datatab.democats_dep = ""; 
 			
-			datatab.geo_filt = td.stringfield("geo_filt","");
+			datatab.geo_filt = td.stringfield_allowcomma("geo_filt","");
 					
 			datatab.geo_dep = "";
 			
@@ -529,8 +534,8 @@ vector <DemocatChange> Inputs::find_democat_change()
 			DemocatChange dcc;
 			dcc.name = td.stringfield("name","In 'data_tables'");
 			dcc.file = td.stringfield("file","In 'data_tables'");
-			dcc.democats_filt = td.stringfield("democats_filt",""); 
-			dcc.geo_filt = td.stringfield("geo_filt","");
+			dcc.democats_filt = td.stringfield_allowcomma("democats_filt",""); 
+			dcc.geo_filt = td.stringfield_allowcomma("geo_filt","");
 			dcc.shift = 0;
 			auto shift = td.stringfield("shift","");
 			if(shift != "") dcc.shift = get_int(shift,"In 'democat_change' and 'shift'");
@@ -606,7 +611,7 @@ vector <DemographicCategory> Inputs::find_demographic_category(vector <Strain> &
 			
 		if(strains.contains("sus_param") || strains.contains("sus_value") || strains.contains("sus_prior")){
 			strain.sus_vari = true;
-			strain.ps = get_paramspec(strains,"strains","sus_param","sus_value","sus_prior","","",democat.value.size(),false);
+			strain.ps = get_paramspec(strains,"strains","sus_param","sus_value","sus_prior","","",strain.value.size(),false);
 		}
 		
 		for(auto i = 0u; i < strain_name.size(); i++){
@@ -712,7 +717,8 @@ vector <Covariate> Inputs::find_covariates()
 			auto covar = covars[j]; covar.set_used();
 			
 			cov.name = covar.stringfield("name","In 'area_covars'");
-			
+			cov.timevary = false;
+			 
 			auto vec = get_paramspec(covar,"area_covars","param","value","prior","","",1,false);
 			 
 			if(param_not_set(vec)) vec[0].name = "Covariate: "+cov.name;   // Sets parameter name (if uninitialised)
@@ -725,7 +731,7 @@ vector <Covariate> Inputs::find_covariates()
 				cov.func = LINEAR_TRANS; 
 				if(funct != "linear") emsg("In 'area_covars' the value 'func="+funct+"' is not recognised."); 
 			}
-		
+			
 			covar.check_used("area_covars");
 			covarvec.push_back(cov);
 		}
@@ -741,6 +747,7 @@ vector <Covariate> Inputs::find_covariates()
 			cov.file = covar.stringfield("file","In 'tv_covars'");
 			
 			cov.name = covar.stringfield("name","In 'tv_covars'");
+			cov.timevary = true;
 			
 			auto vec = get_paramspec(covar,"tv_covars","param","value","prior","","",1,false);
 			 
@@ -814,6 +821,25 @@ vector <unsigned int> Inputs::get_breakpoints(string st, const Details &details)
 }
 
 
+/// Finds the age catergories from a string
+vector <unsigned int> Inputs::find_agecats(const string ages_str, const vector <string> &age_list, const string name) const
+{
+	vector <unsigned int> vec;
+	
+	auto nage = age_list.size();
+	auto ages = split(ages_str,'|');
+	for(auto st : ages){
+		auto a = 0u; while(a < nage && age_list[a] != st) a++;
+		if(a == nage){
+			emsgroot("In '"+name+"' the value '"+st+"' in 'agecat' does not specifiy a valid age classification");
+		}
+		vec.push_back(a);
+	}
+	
+	return vec;
+}
+
+
 /// Finds properties of 'genQ'
 void Inputs::find_genQ(GenerateQ &genQ, const Details &details, const vector <string> &age_list)
 {
@@ -831,46 +857,69 @@ void Inputs::find_genQ(GenerateQ &genQ, const Details &details, const vector <st
 	if(basedata->contains("age_mixing_modify")) {
 		const auto matrix_mod = basedata->open("age_mixing_modify",used);
 
-		MatrixModification matmod;
 		for(auto j = 0u; j < matrix_mod.size(); j++){
 			auto mm = matrix_mod[j]; mm.set_used();
 		
 			string type = mm.stringfield("type","In 'age_mixing_modify'");
 			if(type == "row_column"){
+				MatrixModification matmod;
 				matmod.type = ROW_COLUMN;
 				
 				auto ages_str = mm.stringfield("agecat","In 'age_mixing_modify'");
+				matmod.ages = find_agecats(ages_str,age_list,"age_mixing_modify");
 				
-				auto nage = age_list.size();
-				auto ages = split(ages_str,'|');
-				for(auto st : ages){
-					auto a = 0u; while(a < nage && age_list[a] != st) a++;
-					if(a == nage) emsgroot("In 'age_mixing_modify' the value '"+st+"' in 'agecat' does not specifiy a valid age classification");
-					matmod.ages.push_back(a);
-				}
-				
-				matmod.desc = "Factor multipling the '"+ages_str+"' rows and columns of the contact matrix";
-				matmod.name = "MatMod '"+ages_str+"' factor";
+				matmod.desc = "Factor multipling the "+ages_str+" rows and columns of the contact matrix";
+				matmod.name = "MatMod "+ages_str+" factor";
 				
 				matmod.bp = get_breakpoints(mm.stringfield("bp","In 'age_mixing_modify'"),details);
 			
 				matmod.ps = get_paramspec(mm,"age_mixing_modify","param","value","prior","smooth","factor",matmod.bp.size(),false);
 				
 				if(param_not_set(matmod.ps)){                                  // Sets parameter name (if uninitialised)
-					for(auto i = 0u; i < matmod.bp.size(); i++) matmod.ps[i].name = matmod.name+" "+to_string(matmod.bp[i]);
+					for(auto i = 0u; i < matmod.bp.size(); i++) matmod.ps[i].name = matmod.name+" t="+to_string(matmod.bp[i]);
 				}
 	
 				genQ.nspline++;
+				
+				genQ.matmod.push_back(matmod);
 			}
 			else{
 				emsgroot("In 'age_mixing_modify' the value of 'type="+type+"' is not recognised");
 			}
 			
 			mm.check_used("age_mixing_modify");
-			genQ.matmod.push_back(matmod);
 		}
 	}
 
+	if(basedata->contains("age_mixing_perturb")) {
+		const auto matrix_mod = basedata->open("age_mixing_perturb",used);
+		
+		for(auto j = 0u; j < matrix_mod.size(); j++){
+			auto mm = matrix_mod[j]; mm.set_used();
+
+			MatrixModification matmod;
+			matmod.type = PERTURB;
+			
+			auto ages_str = mm.stringfield("agecat","In 'age_mixing_modify'");
+			matmod.ages = find_agecats(ages_str,age_list,"age_mixing_perturb");
+		
+			matmod.smoothtype = find_smoothtype(mm.stringfield("smooth_type",""),"age_mixing_perturb");
+			matmod.desc = "Factor multipling the "+ages_str+" rows and columns of the contact matrix";
+			matmod.name = "MatMod "+ages_str+" factor";
+			matmod.bp = get_breakpoints(mm.stringfield("bp","In 'age_mixing_perturb'"),details);
+
+			matmod.ps = get_paramspec(mm,"age_mixing_perturb","param","value","prior","smooth","factor",matmod.bp.size(),false);
+	
+			if(param_not_set(matmod.ps)){                                  // Sets parameter name (if uninitialised)
+				for(auto i = 0u; i < matmod.bp.size(); i++) matmod.ps[i].name = matmod.name+" t="+to_string(matmod.bp[i]);
+			}
+			genQ.nspline++;
+			genQ.matmod.push_back(matmod);
+			
+			mm.check_used("age_mixing_perturb");
+		}
+	}
+	
 	if(basedata->contains("geo_mixing_matrix")) {
 		genQ.M_name = find_string("geo_mixing_matrix","");
 	}
@@ -1141,7 +1190,7 @@ void Inputs::find_compartments(vector <string> &name, vector < vector <ParamSpec
 				}
 			}
 			
-			auto meansp = find_ct_param_spec(comps,root,"mean_param","mean_value","mean_prior",dep,democatpos,democat,nam+" mean occupancy time");
+			auto meansp = find_ct_param_spec(comps,root,"mean_param","mean_value","mean_prior",dep,democatpos,democat,nam+" mean occupancy");
 			
 			auto inf = ps_zero();
 			string inf_tr = "";
@@ -1178,11 +1227,11 @@ void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector
 			                  
 			auto fr_temp = trans.stringfield("from","In 'trans'");
 			auto to_temp = trans.stringfield("to","In 'trans'");
-			auto name = fr_temp+"->"+to_temp;
+			auto name = fr_temp+"→"+to_temp;
 			
 			vector <ParamSpec> probsp;
 			if(trans.contains("prob_param") || trans.contains("prob_value") || trans.contains("prob_prior")){
-				probsp = find_ct_param_spec(trans,"trans","prob_param","prob_value","prob_prior",dep,democatpos,democat,name+" branching probability");
+				probsp = find_ct_param_spec(trans,"trans","prob_param","prob_value","prob_prior",dep,democatpos,democat,name+" branch prob.");
 			}
 				
 			TransInf tinf = TRANS_NOTINFECTION; 
@@ -1227,10 +1276,12 @@ vector <vector <unsigned int > > Inputs::find_demo_ref(const string dep_str, con
 		dep.resize(ndep);
 		for(auto i = 0u; i < ndep; i++){
 			auto k = 0u; while(k < ndemocat && democat[k].name != spl[i]) k++;
-			if(k == ndemocat) emsgroot("In 'trans' the dependency 'dep="+spl[i]+"' cannot be found");
+			if(k == ndemocat){
+				emsgroot("The dependency '"+spl[i]+"' cannot be found");
+			}
 			dep[i] = k; 
 			for(auto jj = 0u; jj < i; jj++){
-				if(dep[jj] == k) emsg("In 'trans' the value 'dep' contains multiple dependencies");
+				if(dep[jj] == k) emsg("Ihe value '"+dep_str+"' contains multiple dependencies");
 			}
 		}
 		
@@ -1323,10 +1374,30 @@ void Inputs::find_probreach(vector <string> &name, vector <string> &comp)
 		}
 	}
 }
- 
+
+
+// Converts from a string to a smooth type 
+SmoothType Inputs::find_smoothtype(const string st, const string name) const
+{
+	if(st != ""){
+		if(st == "log_smooth") return LOGSMOOTH;
+		else{
+			if(st == "smooth") return SMOOTH;
+			else{
+				if(st == "no_smooth") return NOSMOOTH;
+				else{
+					emsgroot("In '"+name+"' the value of 'smooth_type="+st+"' is not recognised.");
+				}
+			}
+		}
+	}
+	
+	return NOSMOOTH;
+}
+
  
 /// Finds spline information
-void Inputs::find_spline(const string name, vector <string> &name_vec, vector < vector <ParamSpec> > &ps_vec, vector <ParamSpec> &factor_param_vec, vector < vector <unsigned int> > &bp_vec, vector <Smooth> &smooth_type_vec, vector <string> &strain, vector <string> &area, vector < vector <double> > &efoi_agedist_vec, const vector <double> &agedist, const Details &details)
+void Inputs::find_spline(const string name, vector <string> &name_vec, vector < vector <ParamSpec> > &ps_vec, vector <ParamSpec> &factor_param_vec, vector < vector <unsigned int> > &bp_vec, vector <SmoothType> &smooth_type_vec, vector <string> &strain, vector <string> &area, vector < vector <double> > &efoi_agedist_vec, const vector <double> &agedist, const Details &details)
 {
 	name_vec.clear(); ps_vec.clear(); factor_param_vec.clear(); 
 	bp_vec.clear(); smooth_type_vec.clear(); strain.clear(); area.clear(); efoi_agedist_vec.clear();
@@ -1342,7 +1413,7 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			auto strain_name = besp.stringfield("strain","");
 			strain.push_back(strain_name);
 		
-			auto geo_filt = besp.stringfield("geo_filt","");
+			auto geo_filt = besp.stringfield_allowcomma("geo_filt","");
 			area.push_back(geo_filt);
 	
 			auto bp_str = besp.stringfield("bp",""); if(bp_str == "") bp_str = "start|end";
@@ -1355,10 +1426,12 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			
 			if(param_not_set(ps_list)){                                  // Sets the parameter name (if not intialised)
 				for(auto i = 0u; i < bp.size(); i++){
-					auto par_name = name;
+					auto par_name = replace(name,"_","-");
+					
 					if(geo_filt != "") par_name += " "+geo_filt;
 					if(strain_name != "") par_name += " "+strain_name;
-					ps_list[i].name = par_name+" t:"+to_string(bp[i]);
+					
+					ps_list[i].name = par_name+" t="+to_string(bp[i]);
 				}
 			}
 	
@@ -1375,25 +1448,7 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 				factor_param_vec.push_back(ps_one());
 			}
 		
-			Smooth st = NOSMOOTH;
-			if(besp.contains("smooth")) st = LOGSMOOTH;
-		
-			string val = besp.stringfield("smooth_type","");
-			
-			if(val == "") val = "no_smooth";
-			
-			if(val != ""){
-				if(val == "log_smooth") st = LOGSMOOTH;
-				else{
-					if(val == "smooth") st = SMOOTH;
-					else{
-						if(val == "no_smooth") st = NOSMOOTH;
-						else{
-							emsgroot("In '"+name+"' the value of 'smooth_type="+val+"' is not recognised.");
-						}
-					}
-				}
-			}
+			auto st = find_smoothtype(besp.stringfield("smooth_type",""),name);
 			smooth_type_vec.push_back(st);
 			
 			unsigned int nage = agedist.size();
@@ -1804,9 +1859,9 @@ void Inputs::find_modification(const Details &details, vector <Modification> &mo
 		
 			cofa.strain_str = cf.stringfield("strain","");
 		
-			cofa.geo_filt = cf.stringfield("geo_filt",""); 
+			cofa.geo_filt = cf.stringfield_allowcomma("geo_filt",""); 
 			
-			cofa.democats_filt = cf.stringfield("democats_filt",""); 
+			cofa.democats_filt = cf.stringfield_allowcomma("democats_filt",""); 
 		
 			auto type = cf.stringfield("type","");
 			if(type != ""){
@@ -1883,7 +1938,7 @@ void Inputs::find_mcmc_update(MCMCUpdate &mcmc_update)
 	mcmc_update.neighbour = true;
 	mcmc_update.joint = true;
 	mcmc_update.mvn_multiple = true;
-	mcmc_update.multiple_factor = 1;
+	mcmc_update.multiple_factor = 2;
 	
 	if(basedata->contains("mcmc_update")) {
 		auto mup = basedata->open("mcmc_update",used); mup.set_used();

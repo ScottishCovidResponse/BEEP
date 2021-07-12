@@ -1,7 +1,6 @@
 //  The data inputs
 
 #include <iostream>
-#include <vector>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -48,7 +47,7 @@ Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp) :
 	inputs.find_genQ(genQ,details,democat[0].value);                 // Finds information about geographical and age mixing
 
 	read_data_files(inputs,mpi);                                     // Reads the data files
-	
+
 	area_effect = inputs.find_area_effect(area);                     // Finds information about area effect
 }
 
@@ -109,25 +108,25 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 	if(datatable.size() == 0) emsgroot("'data_tables' must be set.");	
 
 	if(mpi.core == 0){
+		areas_file = inputs.find_string("areas","UNSET");
+		if(areas_file == "UNSET") emsgroot("'areas' must be set");
+			
+		Table tab = load_table(areas_file);
+
+		read_initial_population(tab,inputs);
+	
 		check_datatable();
 
-		string file = inputs.find_string("areas","UNSET");
-		if(file == "UNSET") emsgroot("'areas' must be set");
-			
-		Table tab = load_table(file);
-
-		read_initial_population(tab,file,inputs);
-	
 		read_covars();
 		
 		read_level_effect();
 		
 		load_datatable(tab);	
-	
+
 		load_democat_change(tab);	
 	
 		load_modification(inputs,tab);
-		
+
 		generate_matrices();
 	}
 	
@@ -200,14 +199,20 @@ void Data::check_datatable()
 			}
 		}
 	}		
+	
+	for(const auto &dt : datatable){
+		if(narea == 1 && dt.geo_dep != ""){
+			emsg("The data table with file '"+dt.file+"' cannot have 'geo_dep' set because there is only one area.");
+		}
+	}
 }		
 
 
 /// If a heading doesn't exist in the table then this attempts to create one based on number ranges in head
 void Data::check_or_create_column(Table &tab, string head, unsigned int d) const 
 {
-	auto col = 0u; while(col < tab.ncol && tab.heading[col] != head) col++;
-	if(col < tab.ncol) return;
+	auto col = find_column_noerror(tab,head);  
+	if(col != UNSET) return;
 		
 	vector <unsigned int> cols;
 	
@@ -265,7 +270,7 @@ void Data::check_or_create_column(Table &tab, string head, unsigned int d) const
 	}
 	
 	cout << "  Generating '"+head+"' from columns: ";
-	for(auto c = 0u; c < cols.size(); c++){ if(c != 0) cout << ", "; cout << "'" << tab.heading[cols[c]] << "'";}
+	for(auto c = 0u; c < cols.size(); c++){ if(c != 0) cout << ","; cout << "'" << tab.heading[cols[c]] << "'";}
 	cout << endl;
 	
 	table_create_column(head,cols,tab);
@@ -273,7 +278,7 @@ void Data::check_or_create_column(Table &tab, string head, unsigned int d) const
 
 
 /// Reads in the initial population
-void Data::read_initial_population(Table &tab, string file, Inputs &inputs)
+void Data::read_initial_population(Table &tab, Inputs &inputs)
 {
 	auto comps = inputs.find_compartments();
 	auto co_sus = inputs.find_susceptible_compartment();
@@ -292,7 +297,7 @@ void Data::read_initial_population(Table &tab, string file, Inputs &inputs)
 	narea = area.size();
 	
 	if(init_pop != "") read_init_pop_file(comps);              // Uses an 'init_pop' file to load initial population
-	else read_initial_population_areas(co_sus,tab,file);       // Uses columns in 'areas' to load initial population
+	else read_initial_population_areas(co_sus,tab);       // Uses columns in 'areas' to load initial population
 	
 	for(auto &are : area){                                     // Sets the area population total
 		auto total = 0.0; for(const auto &vec : are.pop_init){ for(auto val : vec) total += val;}
@@ -365,7 +370,7 @@ void Data::read_init_pop_file(const vector <string> comps)
 
 
 /// Reads in information about the initial population from the 'areas' file
-void Data::read_initial_population_areas(const unsigned int co_sus, Table &tab, string file)
+void Data::read_initial_population_areas(const unsigned int co_sus, Table &tab)
 {
 	for(auto d = 0u; d < democat.size()-1; d++){                    // Creates new columns in the table if needed
 		for(auto val : democat[d].value){
@@ -382,7 +387,7 @@ void Data::read_initial_population_areas(const unsigned int co_sus, Table &tab, 
 		pop_age[c].resize(nage);
 		auto sum = 0.0;
 		for(auto a = 0u; a < nage; a++){
-			pop_age[c][a] = get_double_positive(tab.ele[c][age_col[a]],"In file '"+file+"'");
+			pop_age[c][a] = get_double_positive(tab.ele[c][age_col[a]],"In file '"+areas_file+"'");
 			sum += pop_age[c][a];
 		}
 		total_pop[c] = sum;
@@ -439,7 +444,7 @@ void Data::read_covars()
 							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
 						}
 						
-						if(r == tab.nrow-2 && tf < (int)details.period){
+						if(r == tab.nrow-2 && tf < (int)details.period-1){
 							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
 						}
 						
@@ -457,6 +462,37 @@ void Data::read_covars()
 				break;
 				
 			case AREA_TV_COVAR:
+				{
+					auto date_col = find_column(tab,"Date");
+					vector <unsigned int> cols(narea);
+					for(auto c = 0u; c < narea; c++) cols[c] = find_column(tab,area[c].code);
+			
+					for(auto r = 0u; r < tab.nrow-1; r++){
+						int ti = details.gettime(tab.ele[r][date_col],"For 'area_tv_covar' in file '"+tab.file+"'");
+						int tf = details.gettime(tab.ele[r+1][date_col],"For 'area_tv_covar' in file '"+tab.file+"'");
+						ti -= details.start; tf -= details.start;
+				
+						if(r == 0 && ti > 0){
+							emsg("For 'area_tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
+						}
+						
+						if(r == tab.nrow-2 && tf < (int)details.period-1){
+							emsg("For 'area_tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
+						}
+						
+						if(tf < ti) emsg("For 'area_tv_covar' in file '"+tab.file+"' the ordering of times is not right");
+						if(ti == tf) emsg("For 'area_tv_covar' in file '"+tab.file+"' two rows have equal time");
+						
+						for(auto t = ti; t <= tf; t++){
+							if(t >= 0 && t < (int)details.period){
+								for(auto c = 0u; c < narea; c++){
+									auto v = get_double(tab.ele[r][cols[c]],"In file '"+cov.file+"'");
+									cov.value[c][t] = v;
+								}
+							}
+						}			
+					}
+				}
 				break;
 		}
 		
@@ -635,6 +671,38 @@ string Data::get_table_JSON(const string file, const string dir) const
 		ss << "[";
 		for(auto col = 0u; col < tab.ncol; col++){
 			if(col > 0) ss << ",";
+			//ss << "\"" << replace(tab.ele[row][col],"|",",") << "\"";
+			ss << "\"" << tab.ele[row][col] << "\"";
+		}		
+		ss << "]";
+	}
+	ss << "]}";
+	
+	return ss.str();
+}
+
+
+/// Gets table colums from a file and encodes using JSON (used to encode maps)
+string Data::get_table_cols_JSON(const string file, const string dir, const vector <unsigned int> cols) const
+{
+	stringstream ss; 
+	auto tab = load_table(file,dir,true,true); 
+	ss << "{ \"heading\":[";
+	bool fl = false;
+	for(auto col : cols){
+		if(fl == true) ss << ","; fl = true;
+		ss << "\"" << tab.heading[col] << "\"";
+	}
+	ss << "]";
+	
+	
+	ss << ",\"ele\":[";
+	for(auto row = 0u; row < tab.nrow; row++){
+		if(row > 0) ss << ",";
+		ss << "[";
+		bool fl = false;
+		for(auto col : cols){
+			if(fl == true) ss << ","; fl = true;
 			ss << "\"" << replace(tab.ele[row][col],"|",",") << "\"";
 		}		
 		ss << "]";
@@ -642,6 +710,25 @@ string Data::get_table_JSON(const string file, const string dir) const
 	ss << "]}";
 	
 	return ss.str();
+}
+
+
+/// Converts data file to have a column for time instead of data (to allow it to be plotted)
+void Data::make_table_with_time(const string file_in, const string file_out, const string col) const
+{
+	auto filefull = details.output_directory+"/"+file_out;
+	Table tab = load_table(file_in,data_directory,true,true);
+	
+	auto date_col = find_column(tab,details.time_format_str);
+	auto c = find_column(tab,col);	
+
+	ofstream fout(filefull.c_str());
+	if(!fout) emsg("Cannot open the file '"+filefull+"'");
+	fout << "Time," << tab.heading[c] << endl;
+	for(auto r = 0u; r < tab.nrow; r++){
+		fout << details.gettime(tab.ele[r][date_col],"In file '"+tab.file+"'")-details.start;
+		fout << "," << tab.ele[r][c] << endl;
+	}
 }
 
 
@@ -943,34 +1030,60 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 		ob.area = df.area;
 		ob.graph = graph.size();
 		
-		string fulldesc;
+		string fulldesc, fulldesc_data;
 		
 		Graph gr;
 		if(dt.file != ""){ 
-			gr.tab = "Data Tables"; gr.tab2 = dt.file; gr.tab3 = df.colname;
-			
+			gr.tab = details.analysis_type; 
+			gr.tab2 = "Data Table";
+			gr.tab3 = dt.file; 
+			if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
 			
 			if(details.siminf == SIMULATE){
-				fulldesc = "Data table "+dt.file+": This shows the temporal variation corresponding to the observations "+dt.observation+". ";
-				fulldesc += " The red line shows this variation for the underlying state.";
-				fulldesc += " The black line shows data generated from this state (for example if data is measured weekly, this stepped curve will have a period of 7 days). This data is saved in the file "+dt.file+" in the simulated data directory.";
+				fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
+				if(datafilter.size() > 1) fulldesc += " for "+df.colname;
+				fulldesc += ".";
+				fulldesc += "  The red line shows the underlying state";
+				if(details.mode != SIM) fulldesc += " (with the dashed lines giving 95% of the stochastic variation across simulations)";
+				fulldesc += ".";
+				
+				if(details.mode == SIM)	fulldesc += "  The black line shows data generated from this state (for example if data is measured weekly, this stepped curve would have a periodicity of 7 days). This data is saved in the file "+dt.file+" in the simulated data directory.";
+				else fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
 			}
 			else{
-				fulldesc = "Data table "+dt.file+": This gives the temporal variation corresponding to the observations "+dt.observation+". ";
-				fulldesc += " The black line shows the raw data (from the input file "+dt.file+").";
-				fulldesc += " The red line (with dashed 95% credible intervals) shows the posterior distribution for the inferred underlying system state. Under a suitable model, and with accurate inferece, it would be expected that the black and red curves exhibit the same temporal behaviour (barring variation coming from a weak observation model).";	
+				fulldesc_data = "Data table "+dt.file+": This visualises the file "+dt.file+" which gives the temporal variation in "+observation_description(dt.type,dt.observation);
+				if(datafilter.size() > 1) fulldesc_data += " for "+df.colname;
+				fulldesc_data += ".";
+				
+				fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
+				if(datafilter.size() > 1) fulldesc += " for "+df.colname;
+				fulldesc += ".";
+				fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
+				fulldesc += "  The red line (with dashed 95% credible intervals) shows the posterior distribution for the inferred underlying system state.";
+				fulldesc += "  Under a suitable model, and with accurate inferece, it would be expected that the black and red curves exhibit the same temporal behaviour (barring variation coming from the observation model).";	
 				fulldesc += " Large deviations between the two lines indicate that either the model is not able to properly account for the actual observed system dynamics, or that inference has not converged on the true posterior distribution.";
 			}
 		}
 		else{ 
-			gr.tab = "State Outputs"; gr.tab2 = dt.plot_name; gr.tab3 = df.colname;
-			fulldesc = "State Output: This shows the plot *"+dt.plot_name+"*, as specifed in the input TOML file.";
+			gr.tab = details.analysis_type;
+			gr.tab2 = "State Output";
+			gr.tab3 = dt.plot_name; 
+			if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
+			
+			fulldesc = "State Output: This shows the plot *"+dt.plot_name+"*, as specifed in the input TOML file. ";
+			if(details.siminf == SIMULATE){
+				if(details.mode != SIM) fulldesc += "The dashed lines giving 95% of the stochastic variation across simulations.";
+			}
+			else{
+				fulldesc += "The dashed lines give 95% credible intervals.";
+			}
 		}
 		gr.fulldesc = fulldesc;
+		gr.fulldesc_data = fulldesc_data;
 		
 		gr.type = GRAPH_TIMESERIES;
 		gr.file = df.file;
-		gr.name = df.name;
+		gr.name = df.name; if(dt.label != "" && datafilter.size() == 1) gr.name = dt.label;
 		gr.desc = df.desc;
 		gr.colname = df.colname;
 		gr.factor_spline = UNSET;
@@ -1109,6 +1222,28 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 	
 	auto df = datafilter[0];
 	Graph gr;
+	gr.tab = details.analysis_type;
+	gr.tab2 = "Data Table";
+	gr.tab3 = dt.file; 
+	gr.tab4 = "";
+			
+	string fulldesc = "Data table "+dt.file+": ";
+	string fulldesc_data = "Data table "+dt.file+": ";
+	if(details.siminf == SIMULATE){
+		fulldesc += "This histogram shows the marginal distribution for "+observation_description(dt.type,dt.observation)+" between "+details.getdate(dt.start)+" and "+ details.getdate(dt.end)+". This is output in the data file *"+dt.file+"*.";
+	}
+	else{
+		fulldesc_data += "This visualises the file "+dt.file+" which gives the marginal distribution for "+observation_description(dt.type,dt.observation)+" between "+details.getdate(dt.start)+" and "+ details.getdate(dt.end)+".";
+		
+		fulldesc += "This histogram shows the marginal distribution for "+observation_description(dt.type,dt.observation)+" between "+details.getdate(dt.start)+" and "+ details.getdate(dt.end)+".";
+
+		fulldesc += "  The red bars represent the posterior mean with the error bars giving 95% credible intervals.";
+		fulldesc += "  The horizontal black lines show the data from *"+dt.file+"*.";
+	}
+		
+	gr.fulldesc = fulldesc;
+	gr.fulldesc_data = fulldesc_data;
+		
 	gr.type = GRAPH_MARGINAL;
 	gr.file = df.file;
 	gr.name = df.name;
@@ -1169,7 +1304,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 		case MARGINAL: desc = "Marginal"; break;
 	}
 	
-	file = desc+"_"+replace(observation,"->","-");
+	file = desc+"_"+replace(observation,"→","-");
 	name += observation;
 	desc += " in "+observation;
 	
@@ -1699,6 +1834,33 @@ unsigned int Data::find_column_noerror(const Table &tab, const string name) cons
 }
 			
 			
+/// Generates a file by selected a certain set of colums from a file
+void Data::generate_file_from_table(const string file_data, const string file, const vector <string> &cols) const
+{
+	Table tab = load_table(file,"",true,true); 
+	
+	auto ncol = cols.size();
+	
+	string sep;
+	if(stringhasending(file,".txt")) sep = "\t"; else sep = ",";
+		
+	vector <unsigned int> co;
+	for(auto c = 0u; c < ncol; c++) co.push_back(find_column(tab,cols[c])); 
+	
+	auto filefull = details.output_directory+"/"+file_data;
+	ofstream fout(filefull);
+	if(!fout) emsg("Cannot open the file '"+file+"'");
+	
+	for(auto c = 0u; c < ncol; c++){ fout << tab.heading[co[c]]; if(c < ncol-1) fout << sep;}
+	fout << endl;
+	
+	for(auto r = 0u; r < tab.nrow; r++){
+		for(auto c = 0u; c < ncol; c++){ fout << tab.ele[r][co[c]]; if(c < ncol-1) fout << sep;}
+		fout << endl;
+	}
+}
+
+
 /// Determines if a vector contains a given element
 bool Data::vector_contains(const vector <unsigned int> &vec, const unsigned int num) const
 {
@@ -1735,6 +1897,75 @@ void Data::load_modification(Inputs &inputs, const Table &tabarea)
 			cf.area = create_area_sel(tabarea,cf.geo_filt);  
 		}
 	}
+}
+
+
+/// Converst from an obervation to a description
+string Data::observation_description(const DataType type, const string obs, const unsigned int timestep) const
+{
+	stringstream ss;
+	auto spl = split(obs,',');
+	
+	switch(type){
+		case TRANS:
+			ss << "the number of individual transitions ";
+			if(timestep == 1) ss << "per unit time";
+			else ss << "per " << timestep << " time units";
+			ss <<	" moving from the ";
+			for(auto i = 0u; i < spl.size(); i++){
+				auto st = spl[i];
+				if(i > 0) ss << " plus from the ";
+				
+				auto j = 0u; 
+				bool fl = false;
+				if(st.length() < 2) fl = true;
+				else{				
+					while(j < st.length()-2 && st.substr(j,2) != "->") j++;
+					if(j == st.length()-2) fl = true;
+				}
+				
+				if(fl == true){
+					emsgroot("In 'data_tables' the transition observation '"+st+"' does not contain '->'");
+				}
+				
+				ss << st.substr(0,j) << " to the " <<  st.substr(j+2,st.length()-(j+2)) << " compartment";
+			}			
+			break;
+		
+		case POP:	case POPFRAC:
+			if(spl.size() == 1){
+				ss << "the population";
+				if(type == POPFRAC) ss << " fraction";
+				ss <<" in the " << spl[0] << " compartment";
+			}
+			else{
+				ss << "the sum of the population";
+				if(type == POPFRAC) ss << " fraction";
+				ss << "s in the ";
+				for(auto i = 0u; i < spl.size(); i++){
+					if(i > 0){
+						if(i < spl.size()-1) ss << ", "; else ss << " and ";
+					}
+					ss << spl[i];
+				}
+				ss << " compartments";
+			}
+			break;
+			
+		case MARGINAL:
+			ss << "the number of individual transitions from the ";
+			for(auto i = 0u; i < spl.size(); i++){
+				auto st = spl[i];
+				if(i > 0) ss << " plus from the ";
+				auto j = 0u; while(j < st.length()-2 && st.substr(j,2) != "->") j++;
+			
+				ss << st.substr(0,j) << " to the " <<  st.substr(j+2,st.length()-(j+2)) << " compartment";
+			}			
+			break;
+		
+	}
+	
+	return ss.str();
 }
 
 
