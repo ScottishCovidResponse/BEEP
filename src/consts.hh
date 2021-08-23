@@ -19,22 +19,25 @@ const bool checkon = false;                            // Checks algorithm is pe
 
 const bool all_diagnostics = false;                    // Set to true to show all disgnostic information (for testing) 
 
-const bool plot_sim_param = true;                      // Determines if simulated parameter values are put on plots
+const bool plot_sim_param_global = true;               // Determines if simulated parameter values are put on plots
+
+const double power_obsmodel = 0.7;                     // The power used in the power observation model
 
 enum Mode { SIM, MULTISIM, PREDICTION,                 // Different modes of operation 
-            ABC_SIMPLE, ABC_SMC, ABC_MBP, MC3_INF, MCMC_MBP, PAIS_INF, PMCMC_INF};       
+            ABC_SIMPLE, ABC_SMC, ABC_MBP, MC3_INF, MCMC_MBP, PAIS_INF, PMCMC_INF,
+						DATAONLY};       
 
-enum SimInf { SIMULATE, INFERENCE};                    // Determines if simulation or inference is being performed
+enum SimInf { SIMULATE, INFERENCE, DATAVIEW};          // Determines if simulation or inference is being performed
 
 enum TransInf { TRANS_INFECTION, TRANS_NOTINFECTION};  // Determines if the transition is an infection or not
 
-enum ErlangPos { FIRST,LAST};                          // Position in Erland distribution
+enum ErlangPos { FIRST, LAST};                          // Position in Erland distribution
 
-enum ObsModelFunc { NORMAL_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL, SCALE_OBSMODEL}; 
+enum ObsModelFunc { NORMAL_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL, SCALE_OBSMODEL, LOADSD_OBSMODEL, POWER_OBSMODEL}; 
 	
 enum Dir { X,Y};                                       // Different directions areas sorted by
 
-enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIMERMAX};
+enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIMERMAX};
 
 enum GraphType { GRAPH_TIMESERIES, GRAPH_MARGINAL };
 	
@@ -82,7 +85,7 @@ enum MbpSimType { ALL_MBP, FIXEDTREE, SLICETIME};                // Different MB
 enum InfUpdate { INF_UPDATE, INF_DIF_UPDATE};                    // Different ways to update infectivity map								
 
 enum PriorType { FIXED_PRIOR, UNIFORM_PRIOR, EXP_PRIOR,          // Different types of prior
-								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_FLAT_PRIOR,
+								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_ALPHA_PRIOR, DIRICHLET_FLAT_PRIOR,
 								 MDIRICHLET_PRIOR}; 
 				
 enum DirType { DIR_NORM, DIR_MODIFIED};                          // The type of Dirichlet distribution

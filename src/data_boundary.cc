@@ -66,14 +66,14 @@ FileType Data::filetype(const string file) const
 void Data::load_boundaries(const string file, vector < vector < vector <Coord> > > &bound) const
 {
 	auto type = filetype(file);
-	
-	cout << "Loading boundary file '" << file << "'" << endl;
 
 	switch(type){
 		case KML: load_KML(file,bound); break;
 		case GEOJSON: load_geojson(file,bound); break;
 		default: emsg("File '"+file+"' should either be '.kml' or '.geojson'"); break;
 	}
+		
+	cout << "Loaded boundary file '" << file << "'" << endl;
 }
 
 
@@ -82,13 +82,16 @@ void Data::load_KML(const string file, vector < vector < vector <Coord> > > &bou
 { 
 	XMLDocument doc;
 		
-	auto filefull = data_directory+"/"+file;
+	string filefull;
+	if(file.substr(0,1) != "/")  filefull = data_directory+"/"+file;
+	else filefull = file;
+		
   ifstream inFile(filefull);
 
   stringstream strStream;
   strStream << inFile.rdbuf();
   string str = strStream.str();
-  if(str.size() == 0) emsg("Could not open '"+file+"'.");
+  if(str.size() == 0) emsg("Could not open '"+filefull+"'.");
 	
 	char *xml=new char[long(str.size())+1];
  

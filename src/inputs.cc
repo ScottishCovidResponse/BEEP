@@ -113,7 +113,7 @@ string Inputs::find_string(const string &key, const string &def, bool allowcomma
 unsigned int Inputs::find_positive_integer(const string &key, const int def)
 {
 	auto val = find_integer(key,def);
-	if(val <= 0) emsg("The value of '"+key+"' should be positive.");
+	if(val <= 0) emsgroot("The value of '"+key+"' should be positive.");
 	return val;
 }
 
@@ -229,7 +229,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -242,6 +242,7 @@ SimInf Inputs::get_siminf()
 {
 	switch(mode()){
 	case SIM: case MULTISIM: case PREDICTION: return SIMULATE;
+	case DATAONLY: return DATAVIEW;
 	default: return INFERENCE;
 	}
 	return INFERENCE;
@@ -292,14 +293,14 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 				case POP: case POPFRAC: case TRANS:
 					{
 						auto shift = td.stringfield("shift","");
-						if(shift != "") datatab.shift = get_int(shift,"In 'data_tables' and 'shift'");
+						if(shift != "") datatab.shift = get_pos_neg_int(shift,"In 'data_tables' and 'shift'");
 					}
 					break;
 					
 				case MARGINAL:	
 					{				
 						auto shift = td.stringfield("shift","");
-						if(shift != "") emsg("In 'data_tables' for 'marginal' data the property 'shift' cannot be used.");
+						if(shift != "") emsgroot("In 'data_tables' for 'marginal' data the property 'shift' cannot be used.");
 					}
 					break;
 			}
@@ -330,7 +331,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 				if(details.mode == SIM || datatab.type != TRANS) datatab.timestep = 1;	
 			}
 			else{
-				if(datatab.type == MARGINAL) emsg("In 'data_tables' the property 'timestep' cannot be set for 'type=\"marginal\"'");
+				if(datatab.type == MARGINAL) emsgroot("In 'data_tables' the property 'timestep' cannot be set for 'type=\"marginal\"'");
 				datatab.timestep = get_int(timestep,"In 'data_tables'");
 			}
 			
@@ -342,7 +343,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 					if(datatab.timestep != UNSET){
 						datatab.end -= (datatab.end - datatab.start)%datatab.timestep;
 						datatab.end -= datatab.timestep;
-						if(datatab.end == datatab.start) emsg("In 'data_table' the value for 'timestep' is too large");
+						if(datatab.end == datatab.start) emsgroot("In 'data_table' the value for 'timestep' is too large");
 					}
 				}
 				else{
@@ -375,17 +376,18 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			datatab.geo_dep = td.stringfield("geo_dep","");
 						
 			if(datatab.democats_dep != "" && datatab.geo_dep != ""){
-				emsg("In 'data_tables' values for 'democats_dep' and 'geo_dep' cannot both be set");
+				emsgroot("In 'data_tables' values for 'democats_dep' and 'geo_dep' cannot both be set");
 			}
 
 			datatab.plot_name = td.stringfield("plot_name","");
 					
 			datatab.line_colour = get_line_colour(td.stringfield("line_colour",""));
 			
-			datatab.weight = 1;
+			auto wei = 1.0;
 			auto weight = td.stringfield("weight","");
-			if(weight != "") get_int(weight,"In 'data_tables'");
-		
+			if(weight != "") wei = get_double_positive(weight,"In 'data_tables'");
+			datatab.weight = wei;
+
 			datatab.invT = 1;	
 			auto invT_str = td.stringfield("invT","");
 			if(invT_str != "") datatab.invT = get_double_positive(invT_str,"In 'data_tables' for 'invT'");
@@ -393,21 +395,27 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			datatab.obsmodel = SCALE_OBSMODEL;
 			auto obsmodel = td.stringfield("obsmodel","");
 			if(obsmodel != ""){
-				if(obsmodel == "normal") datatab.obsmodel = NORMAL_OBSMODEL;
+				if(obsmodel == "loadSD") datatab.obsmodel = LOADSD_OBSMODEL;
 				else{
-					if(obsmodel == "poisson") datatab.obsmodel = POISSON_OBSMODEL;
+					if(obsmodel == "power") datatab.obsmodel = POWER_OBSMODEL;
 					else{
-						if(obsmodel == "negbin"){ 
-							datatab.obsmodel = NEGBINO_OBSMODEL; 
-							auto shape = td.stringfield("shape","In 'data_tables'");
-							datatab.shape = get_double_positive(shape,"In 'data_tables' for 'shape'");
-						}
+						if(obsmodel == "normal") datatab.obsmodel = NORMAL_OBSMODEL;
 						else{
-							if(obsmodel == "scale") datatab.obsmodel = SCALE_OBSMODEL;
-							else emsgroot("In 'data_tables' the value 'obsmodel="+obsmodel+"' is not recognised (it should be 'normal', 'poisson', 'negbin' or 'scale').");
-						}
+							if(obsmodel == "poisson") datatab.obsmodel = POISSON_OBSMODEL;
+							else{
+								if(obsmodel == "negbin"){ 
+									datatab.obsmodel = NEGBINO_OBSMODEL; 
+									auto shape = td.stringfield("shape","In 'data_tables'");
+									datatab.shape = get_double_positive(shape,"In 'data_tables' for 'shape'");
+								}
+								else{
+									if(obsmodel == "scale") datatab.obsmodel = SCALE_OBSMODEL;
+									else emsgroot("In 'data_tables' the value 'obsmodel="+obsmodel+"' is not recognised (it should be 'normal', 'poisson', 'negbin' or 'scale').");
+								}
+							}
+						}			
 					}
-				}			
+				}
 			}
 		
 			td.check_used("datatable");
@@ -657,7 +665,7 @@ vector <DemographicCategory> Inputs::find_demographic_category(vector <Strain> &
 							}
 						}
 						
-						emsg("For "+type+" in 'cats' the expression '"+democatvec[d].value[i]+"' cannot be used more than once.");
+						emsgroot("For "+type+" in 'cats' the expression '"+democatvec[d].value[i]+"' cannot be used more than once.");
 					}
 				}
 			}
@@ -729,7 +737,7 @@ vector <Covariate> Inputs::find_covariates()
 			if(funct == "log") cov.func = LOG_TRANS; 
 			else{ 
 				cov.func = LINEAR_TRANS; 
-				if(funct != "linear") emsg("In 'area_covars' the value 'func="+funct+"' is not recognised."); 
+				if(funct != "linear") emsgroot("In 'area_covars' the value 'func="+funct+"' is not recognised."); 
 			}
 			
 			covar.check_used("area_covars");
@@ -759,7 +767,7 @@ vector <Covariate> Inputs::find_covariates()
 			if(funct == "log") cov.func = LOG_TRANS; 
 			else{ 
 				cov.func = LINEAR_TRANS; 
-				if(funct != "linear") emsg("In 'tv_covars' the value 'func="+funct+"' is not recognised."); 
+				if(funct != "linear") emsgroot("In 'tv_covars' the value 'func="+funct+"' is not recognised."); 
 			}
 			
 			covar.check_used("tv_covars");
@@ -788,7 +796,7 @@ vector <Covariate> Inputs::find_covariates()
 			if(funct == "log") cov.func = LOG_TRANS; 
 			else{ 
 				cov.func = LINEAR_TRANS; 
-				if(funct != "linear") emsg("In 'area_tv_covars' the value 'func="+funct+"' is not recognised."); 
+				if(funct != "linear") emsgroot("In 'area_tv_covars' the value 'func="+funct+"' is not recognised."); 
 			}
 			
 			covar.check_used("area_tv_covars");
@@ -801,7 +809,7 @@ vector <Covariate> Inputs::find_covariates()
 
 
 /// Finds the break points from a string 
-vector <unsigned int> Inputs::get_breakpoints(string st, const Details &details)
+vector <unsigned int> Inputs::get_breakpoints(string st, const Details &details, const string em)
 {
 	check_from_table(st);
 
@@ -809,10 +817,16 @@ vector <unsigned int> Inputs::get_breakpoints(string st, const Details &details)
 	
 	vector <unsigned int> vec;
 	for(auto j = 0u; j < bp.size(); j++){
-		auto t = details.gettime(bp[j],"For bp=\""+st+"\"");
-		if(t > details.end) emsgroot("'"+bp[j]+"' in 'bp' is outside of the analysis time period.");
+	
+		auto t = details.gettime(bp[j],em+" for bp=\""+st+"\"");
+		
+		if(j == 0 && t != details.start) emsgroot(em+" 'bp' must start at 'start' and end at 'end'.");
+		
+		if(j == bp.size()-1 && t-details.start != details.period) emsgroot(em+" 'bp' must start at 'start' and end at 'end'.");
+		
+		if(t > details.end) emsgroot(em+" '"+bp[j]+"' in 'bp' is outside of the analysis time period.");
 		if(j > 0){
-			if(t-details.start < vec[j-1]) emsg("Times in 'bp' are not in the right order.");
+			if(t-details.start < vec[j-1]) emsgroot(em+" times in 'bp' are not in the right order.");
 		}
 		vec.push_back(t-details.start);
 	}		
@@ -857,21 +871,23 @@ void Inputs::find_genQ(GenerateQ &genQ, const Details &details, const vector <st
 	if(basedata->contains("age_mixing_modify")) {
 		const auto matrix_mod = basedata->open("age_mixing_modify",used);
 
+		string em = "In 'age_mixing_modify'";
+		
 		for(auto j = 0u; j < matrix_mod.size(); j++){
 			auto mm = matrix_mod[j]; mm.set_used();
 		
-			string type = mm.stringfield("type","In 'age_mixing_modify'");
+			string type = mm.stringfield("type",em);
 			if(type == "row_column"){
 				MatrixModification matmod;
 				matmod.type = ROW_COLUMN;
 				
-				auto ages_str = mm.stringfield("agecat","In 'age_mixing_modify'");
+				auto ages_str = mm.stringfield("agecat",em);
 				matmod.ages = find_agecats(ages_str,age_list,"age_mixing_modify");
 				
 				matmod.desc = "Factor multipling the "+ages_str+" rows and columns of the contact matrix";
 				matmod.name = "MatMod "+ages_str+" factor";
 				
-				matmod.bp = get_breakpoints(mm.stringfield("bp","In 'age_mixing_modify'"),details);
+				matmod.bp = get_breakpoints(mm.stringfield("bp",em),details,em);
 			
 				matmod.ps = get_paramspec(mm,"age_mixing_modify","param","value","prior","smooth","factor",matmod.bp.size(),false);
 				
@@ -894,19 +910,21 @@ void Inputs::find_genQ(GenerateQ &genQ, const Details &details, const vector <st
 	if(basedata->contains("age_mixing_perturb")) {
 		const auto matrix_mod = basedata->open("age_mixing_perturb",used);
 		
+		string em = "In 'age_mixing_perturb";
+		
 		for(auto j = 0u; j < matrix_mod.size(); j++){
 			auto mm = matrix_mod[j]; mm.set_used();
 
 			MatrixModification matmod;
 			matmod.type = PERTURB;
 			
-			auto ages_str = mm.stringfield("agecat","In 'age_mixing_modify'");
+			auto ages_str = mm.stringfield("agecat",em);
 			matmod.ages = find_agecats(ages_str,age_list,"age_mixing_perturb");
 		
 			matmod.smoothtype = find_smoothtype(mm.stringfield("smooth_type",""),"age_mixing_perturb");
 			matmod.desc = "Factor multipling the "+ages_str+" rows and columns of the contact matrix";
 			matmod.name = "MatMod "+ages_str+" factor";
-			matmod.bp = get_breakpoints(mm.stringfield("bp","In 'age_mixing_perturb'"),details);
+			matmod.bp = get_breakpoints(mm.stringfield("bp",em),details,em);
 
 			matmod.ps = get_paramspec(mm,"age_mixing_perturb","param","value","prior","smooth","factor",matmod.bp.size(),false);
 	
@@ -974,7 +992,7 @@ bool Inputs::param_not_set(const vector <ParamSpec> &ps_vec) const
 	auto nnot_set = 0u;
 	for(const auto &ps : ps_vec){ if(ps.name == "") nnot_set++;}
 	if(nnot_set == ps_vec.size()) return true;
-	if(nnot_set != 0) emsg("Not all parameter values are set");
+	if(nnot_set != 0) emsgroot("Not all parameter values are set");
 	return false;
 }
 
@@ -1017,11 +1035,11 @@ void Inputs::get_dep(const string root, string &st, string &dep) const
 	if(st != ""){
 		auto splbr = split(st,'[');
 		auto spl = split(splbr[0],':');
-		if(spl.size() > 2) emsg("In '"+root+"' there was a problem with '"+st+"'");
+		if(spl.size() > 2) emsgroot("In '"+root+"' there was a problem with '"+st+"'");
 		if(spl.size() == 2){
 			st = spl[1]; 
 			if(dep == "") dep = spl[0];
-			else{ if(dep != spl[0]) emsg("In '"+root+"' cannot have conflicting dependencies");}
+			else{ if(dep != spl[0]) emsgroot("In '"+root+"' cannot have conflicting dependencies");}
 		}
 	}
 }
@@ -1058,7 +1076,7 @@ vector <ParamSpec> Inputs::get_paramspec(InputNode &it, const string root, const
 	auto prior_string = it.stringfield_allowcomma(prior,"");
 	
 	auto dep = get_dep(root,name_string,value_string,prior_string);
-	if(dep != "" && dep_expect == false) emsg("In '"+root+"' the dependency '"+dep+"' cannot be used");
+	if(dep != "" && dep_expect == false) emsgroot("In '"+root+"' the dependency '"+dep+"' cannot be used");
 	
 	auto smooth_string = it.stringfield(smooth,"");
 	auto factor_string = it.stringfield(factor,""); if(factor_string == "") factor_string = "1";
@@ -1073,7 +1091,7 @@ vector <ParamSpec> Inputs::get_paramspec(InputNode &it, const string root, const
 			if(value_string == "") emsgroot("In '"+root+"' a value for '"+value+"' must be set.");
 			break;
 		
-		case INFERENCE:
+		case INFERENCE: case DATAVIEW:
 			if(prior_string == "" && value_string == "") emsgroot("In '"+root+"' either '"+prior+"' or '"+value+"' must be set");
 			break;
 	}
@@ -1081,7 +1099,8 @@ vector <ParamSpec> Inputs::get_paramspec(InputNode &it, const string root, const
 	auto na = split_string(name_string,'|',si);
 	auto val = split_string(value_string,'|',si);
 	
-	if(get_siminf() == INFERENCE && prior_string == "" && value_string != ""){  // Creates fixed  prior if value is set
+	// Creates fixed  prior if value is set
+	if((get_siminf() == INFERENCE || get_siminf() == DATAVIEW) && prior_string == "" && value_string != ""){ 
 		for(auto i = 0u; i < si; i++){
 			if(i != 0) prior_string += "|";
 			prior_string += "Fixed("+val[i]+")";
@@ -1152,7 +1171,7 @@ unsigned int Inputs::find_susceptible_compartment()
 	}
 	else emsgroot("The input file must contain transition definitions through 'trans'.");
 		
-	emsg("In 'trans' could not find 'infection' set");
+	emsgroot("In 'trans' could not find 'infection' set");
 }
 
 
@@ -1181,7 +1200,7 @@ void Inputs::find_compartments(vector <string> &name, vector < vector <ParamSpec
 					if(dist == "Erlang"){
 						auto k_str = comps.stringfield("k","");
 						
-						if(k_str == "") emsg("In 'comps' compartment '"+nam+"' an integer shape parameter 'k' must be set.");
+						if(k_str == "") emsgroot("In 'comps' compartment '"+nam+"' an integer shape parameter 'k' must be set.");
 						k_temp = get_int(k_str,"In 'comps' compartment '"+nam+"' the integer 'k'");
 					}
 					else{
@@ -1227,7 +1246,8 @@ void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector
 			                  
 			auto fr_temp = trans.stringfield("from","In 'trans'");
 			auto to_temp = trans.stringfield("to","In 'trans'");
-			auto name = fr_temp+"→"+to_temp;
+			//auto name = fr_temp+"→"+to_temp;
+			auto name = fr_temp+"->"+to_temp;
 			
 			vector <ParamSpec> probsp;
 			if(trans.contains("prob_param") || trans.contains("prob_value") || trans.contains("prob_prior")){
@@ -1239,7 +1259,7 @@ void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector
 			if(inf != ""){
 				if(inf=="yes") tinf = TRANS_INFECTION;
 				else{
-					if(inf != "no") emsg("In 'comps' the value of 'infection' can either be 'yes' or 'no' or omitted.");
+					if(inf != "no") emsgroot("In 'comps' the value of 'infection' can either be 'yes' or 'no' or omitted.");
 				}
 			}
 			
@@ -1279,9 +1299,14 @@ vector <vector <unsigned int > > Inputs::find_demo_ref(const string dep_str, con
 			if(k == ndemocat){
 				emsgroot("The dependency '"+spl[i]+"' cannot be found");
 			}
+			
+			if(democat[k].value.size() == 1){
+				emsgroot("The dependency '"+dep_str+":' cannot be used because '"+democat[k].name+"' only contains one value.");
+			}
+			
 			dep[i] = k; 
 			for(auto jj = 0u; jj < i; jj++){
-				if(dep[jj] == k) emsg("Ihe value '"+dep_str+"' contains multiple dependencies");
+				if(dep[jj] == k) emsgroot("Ihe value '"+dep_str+"' contains multiple dependencies");
 			}
 		}
 		
@@ -1417,7 +1442,7 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			area.push_back(geo_filt);
 	
 			auto bp_str = besp.stringfield("bp",""); if(bp_str == "") bp_str = "start|end";
-			auto bp = get_breakpoints(bp_str,details);
+			auto bp = get_breakpoints(bp_str,details,"In '"+name+"'");
 			bp_vec.push_back(bp);
 		
 			auto ps_list = get_paramspec(besp,name,"param","value","prior","smooth","factor",bp.size(),false);
@@ -1464,7 +1489,7 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 
 				if(false){
 					for(auto a = 0u; a < nage; a++) cout << ad[a] << "  age dist" << endl; 
-					emsg("Age distribution");
+					emsgroot("Age distribution");
 				}
 	
 				efoi_agedist_vec.push_back(ad);    
@@ -1838,6 +1863,16 @@ void Inputs::find_outputprop(OutputProp &prop)
 	}
 }
 
+/// Finds if parameter values are plotted onto graphs
+void Inputs::find_plot_param_values(bool &plot_param_values)
+{
+	plot_param_values = false; 
+	auto plot_param_values_str = find_string("plot_param_values","false");
+	if(plot_param_values_str == "true") plot_param_values = true;
+	else{
+		if(plot_param_values_str != "false") emsgroot("'plot_param_values' must be 'true' or 'false'");
+	}
+}
 
 /// Finds any modifications made to the model
 void Inputs::find_modification(const Details &details, vector <Modification> &modification)

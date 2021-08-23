@@ -81,7 +81,7 @@ void State::set_param(const vector <double> &paramv)
 	Ntime = model.create_Ntime(disc_spline);
  
 	beta = model.calculate_beta_from_R(susceptibility,paramv_dir,Ntime,transrate,disc_spline);
-	
+		
 	timer[TIME_SETPARAM].stop();
 }
 

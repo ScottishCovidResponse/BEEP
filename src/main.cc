@@ -67,6 +67,7 @@ mpirun -n 20 ./beepmbp inputfile="examples/EX2temp.toml" mode="pais" nparticle=2
 
 ./beepmbp inputfile="examples/temp.toml" mode="sim" 
 
+./beepmbp inputfile="examples/EX1.toml" mode="sim" 
 ./beepmbp inputfile="examples/EX2.toml" mode="sim" 
 
 mpirun -n 20 ./beepmbp inputfile="examples/EX3.toml" mode="abcmbp" nparticle=20 ngeneration=10
@@ -77,7 +78,56 @@ mpirun -n 20 ./beepmbp inputfile="examples/EX_IZ.toml" mode="abcmbp" nparticle=2
 
 ./beepmbp inputfile="examples/Covid.toml" mode="sim" 
 
-mpirun -n 20 ./beepmbp inputfile="examples/Covid.toml" mode="abcmbp" nparticle=20 ngeneration=3
+mpirun -n 20 ./beepmbp inputfile="examples/Covid_age.toml" mode="abcmbp" nparticle=20 ngeneration=3
+
+./beepmbp inputfile="examples/Covid.toml" mode="sim" 
+
+nohup mpirun -n 20 ./beepmbp inputfile="examples/Covid_spatial.toml" mode="abcmbp" nparticle=100 ngeneration=100 > oppp.txt&
+
+
+mpirun -n 10 ./beepmbp inputfile="examples/Covid_spatial_IZ.toml" mode="abcmbp" nparticle=10 ngeneration=3
+
+ ./beepmbp inputfile="examples/Covid_spatial_IZ.toml" mode="data"
+ 
+ mpirun -n 20 ./beepmbp inputfile="examples/England.toml" mode="abcmbp" nparticle=20 ngeneration=3
+ 
+ 
+ mpirun -n 20 ./beepmbp inputfile="examples/England_with_H.toml" mode="abcmbp" nparticle=20 ngeneration=3
+ 
+  mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age.toml" mode="abcmbp" nparticle=20 ngeneration=3
+	
+	  mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age.toml" mode="pais" nparticle=20 ngeneration=3
+		
+	 nohup mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age.toml" mode="abcmbp" nparticle=100 ngeneration=120 > opq.txt &
+	 
+	  ./beepmbp inputfile="examples/England_with_H_age_sim.toml" mode="sim"
+		
+		 mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age_sim.toml" mode="abcmbp" nparticle=20 ngeneration=3
+		 
+		 mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age_2020.toml" mode="abcmbp" nparticle=20 ngeneration=3 
+			
+		 nohup mpirun -n 20 ./beepmbp inputfile="examples/England_with_H_age_2020.toml" mode="abcmbp" nparticle=40 ngeneration=120 > opq2.txt &
+		 
+			nohup  mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH.toml" mode="abcmbp" nparticle=20 ngeneration=250 > g8.txt &
+			
+		
+		mpirun -n 20 ./beepmbp inputfile="examples/England_Simple.toml" mode="abcmbp" nparticle=20 ngeneration=3
+		
+		nohup mpirun -n 20 ./beepmbp inputfile="examples/England_Simple.toml" mode="abcmbp" nparticle=200 ngeneration=100 > g13.txt &
+
+nohup mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH.toml" mode="abcmbp" nparticle=20 ngeneration=200 > g30.txt &
+		
+		
+nohup mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH_perturb.toml" mode="abcmbp" nparticle=20 ngeneration=200 > g31.txt &
+
+nohup mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH_perturb_simp.toml" mode="abcmbp" nparticle=20 ngeneration=200 > g32.txt &
+		
+		
+	nohup 	mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH.toml" mode="abcmbp" nparticle=100 ngeneration=300 > g43.txt &
+
+		
+	nohup 	mpirun -n 20 ./beepmbp inputfile="examples/England_with_CH_reduceGT.toml" mode="abcmbp" nparticle=20 ngeneration=250 > g44.txt &
+	
 */
 
 #include <iostream>
@@ -256,6 +306,17 @@ int main(int argc, char** argv)
 		}
 		break;
 
+	case DATAONLY:
+		{
+			vector <Particle> particle_store;
+			auto param = model.sample_from_prior();   
+			State state(details,data,model,obsmodel);
+			state.simulate(param);
+			particle_store.push_back(state.create_particle(0));
+			output.generate_graphs(particle_store); 
+		}
+		break;
+		
 	default: emsgroot("Mode not recognised"); break;
  	}
 	

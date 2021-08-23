@@ -178,12 +178,24 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 		}
 	}
 	
+	if(false){
+		for(auto j = 0u; j < N; j++){
+			for(auto i = 0u; i < N; i++){
+				cout << int(mat.ele[j][i]*10) << ", ";
+			}
+			cout  << endl;
+		}
+		cout << "before\n";
+	}
+	
+	/*
 	auto mat_st = mat;  // Makes the matrix symetric
 	for(auto j = 0u; j < N; j++){
 		for(auto i = 0u; i < N; i++){
 			mat.ele[j][i] = 0.5*(mat_st.ele[j][i]+mat_st.ele[i][j]);
 		}
 	}
+	*/
 	
 	if(false){
 		for(auto j = 0u; j < N; j++){
@@ -192,6 +204,7 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 			}
 			cout  << endl;
 		}
+			cout << "after\n";
 		emsg("Done");
 	}
 	

@@ -5,6 +5,9 @@ function init()
 		ById("loading").innerHTML = "visBEEPmbp must be loaded from the output directory of an analysis";
 		return;
 	}
+	
+	//pr(jsonstr.substr(399175-4000,4000));
+	
 	visjson = JSON.parse(jsonstr);
 
 	menu_structure();     // Initialises the menu structure on the left
@@ -480,7 +483,7 @@ function init_paramlink()
 			}
 		}
 		
-		if(link_selparam_table == null && link_seleq == null) alertp("Cannot find link for "+name);
+		//if(link_selparam_table == null && link_seleq == null) alertp("Cannot find link for "+name);
 		param_link[j] = {name:name, selparam_table:link_selparam_table, selparam_name:link_selparam_name, seleq:link_seleq, seleq_name:link_seleq_name};
 	}		
 }

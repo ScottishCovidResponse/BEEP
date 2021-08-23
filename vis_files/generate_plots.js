@@ -136,7 +136,6 @@ function generate_plots()
 	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP":
 	case "OP_TV_COVAR":
 	case "OP_GRAPH_MARGINAL":
-	case "OP_LOG_GENERATION":
 		topline = sourcey - 20;
 		break;
 		
@@ -298,15 +297,18 @@ function get_ax_bound(vis)
 			}
 		}
 	}
+	
+	if(vis.xmin != null){
+		axxmin = vis.xmin; axxmax = vis.xmax; 
+	}
 }
 
 
 /// Sets up the x and y axes
 function get_axrange(vis)
 {
-	get_ax_bound(vis)
-	
-	//pr(vis.type);
+	get_ax_bound(vis);
+
 	switch(vis.type){
 		case "OP_MARGINAL":	case "OP_GRAPH_MARGINAL": case "OP_SPLINE": case "OP_GRAPH":
 			if(axymin > 0) axymin = 0; 
@@ -1273,8 +1275,13 @@ function drawlines(vis)
 				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
 				y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
 				
-				if(i == 0) cv.moveTo(x,y);
-				else cv.lineTo(x,y);
+				if(xcol.length == 1){
+					 cv.moveTo(x-4,y); cv.lineTo(x+4,y);
+				}
+				else{
+					if(i == 0) cv.moveTo(x,y);
+					else cv.lineTo(x,y);
+				}
 			}	
 		}
 		else{
@@ -1288,6 +1295,13 @@ function drawlines(vis)
 		}
 		setstyle(visli.style);
 		cv.stroke();
+		
+		if(visli.errbarmin != null && xcol != null){
+			for(i = 0; i < xcol.length; i++){
+				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
+				draw_errorbar(x,ycol[i],visli.errbarmin[i],visli.errbarmax[i],6);
+			}
+		}
 	} 	
 	
 	setdash(0);
@@ -1299,7 +1313,7 @@ function draw_timelabels()
 {
 	for(i = 0; i < visjson.time_labels.length; i++){
 		var x = Math.floor(graphdx*(visjson.time_labels[i].time-axxmin)/(axxmax-axxmin));
-		add_verticle_line(visjson.time_labels[i].name,x,BLACK);
+		add_verticle_line(visjson.time_labels[i].name,x,DPURPLE);
 	}
 
 	for(i = 0; i < visjson.pred_timeplot.length; i++){
@@ -1428,7 +1442,7 @@ function drawparamdist(vis)
 /// Draws a vertical line with a label
 function add_verticle_line(text,x,col)
 {
-	cv.strokeStyle = "#000000"; setdash(0);
+	cv.strokeStyle = col; setdash(2);
 	cv.lineWidth = 1;
 	cv.beginPath(); 
 	cv.moveTo(x,0);

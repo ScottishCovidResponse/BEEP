@@ -207,7 +207,6 @@ void ABCMBP::model_evidence(vector <Generation> &generation)
 				}
 				ME += log(num_below/num);
 			}
-		
 			gen.model_evidence.push_back(ME);
 		}
 		ME_final.push_back(ME);

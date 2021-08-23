@@ -66,6 +66,7 @@ class Inputs
 		void find_quench_factor(double &quench_factor);
 		void find_propsize(double &propsize);
 		void find_outputprop(OutputProp &prop);
+		void find_plot_param_values(bool &plot_param_values);
 		void find_modification(const Details &details, vector <Modification> &modification);
 		void find_mcmc_update(MCMCUpdate &mcmc_update);
 		void find_area_plot(AreaPlot &area_plot);
@@ -85,7 +86,7 @@ class Inputs
 		string get_dep(InputNode &it, const string root, const string name, const string value, const string prior) const;
 		vector <ParamSpec> get_paramspec(InputNode &it, const string root, const string name, const string value, const string prior, const string smooth, const string factor, const unsigned int si, const bool dep_expect);		
 		void print_paramspec(const vector <ParamSpec> &ps) const;
-		vector <unsigned int> get_breakpoints(string st, const Details &details);
+		vector <unsigned int> get_breakpoints(string st, const Details &details, const string em);
 		void check_from_table(string &s);
 		vector <string> split_string(string &s, const char delimiter, const unsigned int len);
 		vector <double> split_number(string &s, const char delimiter, const unsigned int len);
@@ -151,6 +152,7 @@ const vector<string> definedparams = {                                // A list 
 		"outputdir",
 		"output_prop",
 		"quench_factor",
+		"plot_param_values",
 		"propsize",
 		"prediction_end",
 		"prediction_start",

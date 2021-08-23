@@ -40,7 +40,7 @@ ParamProp::ParamProp(const Details &details, const Data &data, const Model &mode
 		
 		if(details.mcmc_update.single == true) add_single();
 		
-		if(details.mcmc_update.demo_spec == true) add_demographic_specific();
+		//if(details.mcmc_update.demo_spec == true) add_demographic_specific();
 		
 		if(details.mcmc_update.mean_time == true) mean_time_init();
 		
@@ -170,7 +170,7 @@ void ParamProp::mean_time_init()
 		}
 	}	
 	
-	if(true &&  mean_time.size() > 0){
+	if(false &&  mean_time.size() > 0){
 		for(auto &mt : mean_time){
 			for(auto th : mt.param_mean) cout << model.param[th].name << ", ";
 			cout << ": ";
@@ -517,13 +517,15 @@ vector <Proposal> ParamProp::get_proposal_list(const vector <ParamSample> &param
 		if(details.mcmc_update.mvn_multiple == true){
 			auto numf = (details.mcmc_update.multiple_factor/(mvn[i].size*mvn[i].size));
 			num = (unsigned int)(numf+0.5);
-			if(num < 2) num = 2; 
 			
 			switch(mvn[i].mvntype){
 				case MULTIPLE: if(num > 50) num = 50; break;
 				case SINGLE: if(num > 10) num = 10; break;
 			}
 		}
+		//if(num < 3) num = 3; 
+		if(num < 1) num = 1; 
+		//if(num < 6) num = 6; 
 		
 		Proposal prop; prop.type = MVN_PROP; prop.num = i;
 		for(auto j = 0u; j < num; j++) prop_list.push_back(prop);
@@ -645,7 +647,7 @@ string ParamProp::print_proposal_information(const bool brief) const
 	
 	for(auto &mt : mean_time){
 		ss << "Mean Time: ";
-		for(auto th : mt.param_mean) ss << model.param[mt.param_mean[th]].name << " "; 
+		for(auto th : mt.param_mean) ss << model.param[th].name << " "; 
 		ss << " <> ";
 		for(auto th : mt.param_mean_rev) ss << model.param[th].name << " ";
 		ss << " -   Acceptance: " <<  per(mt.ac_rate) << "    Size: " << mt.size << endl;

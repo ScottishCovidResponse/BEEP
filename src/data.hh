@@ -117,9 +117,9 @@ class Data
 		void check_datatable();
 		void load_timeseries_datatable(const Table &tabarea, const unsigned int i, const bool sim);
 		void load_marginal_datatable(const Table &tabarea, const unsigned int i, const bool sim);
-		vector <DataFilter> get_datafilter(const Table &tabarea, const string geo_dep, const string democats_dep, const string geo_filt, const string democats_filt, const DataType type, const string observation) const;
+		vector <DataFilter> get_datafilter(const Table &tabarea, const string geo_dep, const string democats_dep, const string geo_filt, const string democats_filt, const DataType type, const string observation, const string datafile) const;
 		void table_create_column(const string head, const vector <unsigned int> &cols, Table &tab) const;
-		void table_select_dates(int &start, int &end, unsigned int &timestep, Table &tab, const string type, const unsigned int shift, vector <int> &times) const;
+		void table_select_dates(int &start, int &end, unsigned int &timestep, Table &tab, const DataType type, const unsigned int shift, vector <int> &times) const;
 		unsigned int find_column(const Table &tab, const string name) const;
 		unsigned int find_column_noerror(const Table &tab, const string name) const;
 		void generate_matrices();
@@ -130,8 +130,8 @@ class Data
 		SparseMatrix load_geo_mixing_matrix(const Table &tab) const;
 		SparseMatrix load_geo_mixing_matrix_sparse() const;
 		vector <GeographicMap> create_geomap(const Table &tab, const string geo) const;
-		vector <unsigned int> create_dp_sel(const string dp_str) const;
-		vector <unsigned int> create_area_sel(const Table &tabarea, const string str) const;
+		vector <unsigned int> create_dp_sel(const string dp_str, const string em) const;
+		vector <unsigned int> create_area_sel(const Table &tabarea, const string str, const string em) const;
 		void set_datatable_weights();
 		bool vector_contains(const vector <unsigned int> &vec, const unsigned int num) const;
 		bool vector_contains(const vector <string> &vec, const string num) const;

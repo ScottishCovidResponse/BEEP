@@ -96,7 +96,7 @@ void Data::calc_democatpos()
 			}
 			cout << endl;
 		}
-		emsg("Done");
+		emsgroot("Done");
 	}
 }
 
@@ -161,7 +161,7 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 	}
 	
 	if(false){
-		for(auto &aged : agedist) cout << aged << endl; cout << "agedist" << endl; emsg("Done");
+		for(auto &aged : agedist) cout << aged << endl; cout << "agedist" << endl; emsgroot("Done");
 	}
 	
 	for(auto &aged : agedist) aged /= popsize;
@@ -177,7 +177,7 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 		}
 		
 		for(auto a = 0u; a < agedist.size(); a++) cout << agedist[a] << ","; cout << "h" << endl;
-		emsg("Done");	
+		emsgroot("Done");	
 	}
 	
 	narage = narea*nage;
@@ -194,7 +194,7 @@ void Data::check_datatable()
 			for(auto dt2 = 0u; dt2 < dt; dt2++){
 				if(datatable[dt].file != "" && datatable[dt].file == datatable[dt2].file){
 					stringstream ss; ss << "The file name '" << datatable[dt].file << "' is used more than once.";
-					emsg(ss.str());
+					emsgroot(ss.str());
 				}				
 			}
 		}
@@ -202,7 +202,7 @@ void Data::check_datatable()
 	
 	for(const auto &dt : datatable){
 		if(narea == 1 && dt.geo_dep != ""){
-			emsg("The data table with file '"+dt.file+"' cannot have 'geo_dep' set because there is only one area.");
+			emsgroot("The data table with file '"+dt.file+"' cannot have 'geo_dep' set because there is only one area.");
 		}
 	}
 }		
@@ -219,7 +219,7 @@ void Data::check_or_create_column(Table &tab, string head, unsigned int d) const
 	auto spl = split(head,'*');
 	if(spl.size() > 1){
 		if(spl.size() > 2){
-			emsg("The expression '"+head+"' from '"+democat[d].name+ "' can contain no more than one wildcard character '*'");
+			emsgroot("The expression '"+head+"' from '"+democat[d].name+ "' can contain no more than one wildcard character '*'");
 		}
 		
 		for(auto col = 0u; col < tab.ncol; col++){
@@ -314,7 +314,7 @@ void Data::read_initial_population(Table &tab, Inputs &inputs)
 			}
 			cout << endl;	
 		}
-		emsg("Done");
+		emsgroot("Done");
 	}	
 }
 
@@ -337,7 +337,7 @@ void Data::read_init_pop_file(const vector <string> comps)
 	for(auto row = 0u; row < tab.nrow; row++){
 		auto areacode = tab.ele[row][area_col];
 		auto c = 0u; while(c < narea && area[c].code != areacode) c++;
-		if(c == narea) emsg("In 'init_pop' file '"+init_pop+"' the area '"+areacode+"' is not recognised");
+		if(c == narea) emsgroot("In 'init_pop' file '"+init_pop+"' the area '"+areacode+"' is not recognised");
 		
 		vector <unsigned int> index(ndemocat);
 		for(auto d = 0u; d < ndemocat; d++){
@@ -347,7 +347,7 @@ void Data::read_init_pop_file(const vector <string> comps)
 				auto imax = democat[d].value.size(); 
 				auto i = 0u; while(i < imax && demo != democat[d].value[i]) i++;
 				if(i == imax){
-					emsg("In 'init_pop' file '"+init_pop+"' the value '"+demo+"' is not recognised as a demographic category");
+					emsgroot("In 'init_pop' file '"+init_pop+"' the value '"+demo+"' is not recognised as a demographic category");
 				}
 				index[d] = i;
 			}
@@ -357,7 +357,7 @@ void Data::read_init_pop_file(const vector <string> comps)
 		
 		auto comp = tab.ele[row][compartment_col];
 		auto co = find_in(comps,comp);
-		if(co == UNSET) emsg("In 'init_pop' file '"+init_pop+"' the compartment '"+comp+"' is not recognised.");
+		if(co == UNSET) emsgroot("In 'init_pop' file '"+init_pop+"' the compartment '"+comp+"' is not recognised.");
 			
 		unsigned int dp;
 		for(dp = 0u; dp < ndemocatpos; dp++){
@@ -441,15 +441,15 @@ void Data::read_covars()
 						int tf = details.gettime(tab.ele[r+1][date_col],"For 'tv_covar' in file '"+tab.file+"'") - details.start;
 				
 						if(r == 0 && ti > 0){
-							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
+							emsgroot("For 'tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
 						}
 						
 						if(r == tab.nrow-2 && tf < (int)details.period-1){
-							emsg("For 'tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
+							emsgroot("For 'tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
 						}
 						
-						if(tf < ti) emsg("For 'tv_covar' in file '"+tab.file+"' the ordering of times is not right");
-						if(ti == tf) emsg("For 'tv_covar' in file '"+tab.file+"' two rows have equal time");
+						if(tf < ti) emsgroot("For 'tv_covar' in file '"+tab.file+"' the ordering of times is not right");
+						if(ti == tf) emsgroot("For 'tv_covar' in file '"+tab.file+"' two rows have equal time");
 						
 						for(auto t = ti; t <= tf; t++){
 							if(t >= 0 && t < (int)details.period){
@@ -473,15 +473,15 @@ void Data::read_covars()
 						ti -= details.start; tf -= details.start;
 				
 						if(r == 0 && ti > 0){
-							emsg("For 'area_tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
+							emsgroot("For 'area_tv_covar' in file '"+tab.file+"' the dates must start at or before the analysis period.");
 						}
 						
 						if(r == tab.nrow-2 && tf < (int)details.period-1){
-							emsg("For 'area_tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
+							emsgroot("For 'area_tv_covar' in file '"+tab.file+"' the dates must end at or after the analysis period.");
 						}
 						
-						if(tf < ti) emsg("For 'area_tv_covar' in file '"+tab.file+"' the ordering of times is not right");
-						if(ti == tf) emsg("For 'area_tv_covar' in file '"+tab.file+"' two rows have equal time");
+						if(tf < ti) emsgroot("For 'area_tv_covar' in file '"+tab.file+"' the ordering of times is not right");
+						if(ti == tf) emsgroot("For 'area_tv_covar' in file '"+tab.file+"' two rows have equal time");
 						
 						for(auto t = ti; t <= tf; t++){
 							if(t >= 0 && t < (int)details.period){
@@ -500,7 +500,7 @@ void Data::read_covars()
 			for(auto c = 0u; c < narea; c++){
 				for(auto t = 0u; t < details.period; t++){ 
 					auto v = cov.value[c][t];
-					if(v <= 0) emsg("In file '"+cov.file+"' the values must be positive for log transformation.");
+					if(v <= 0) emsgroot("In file '"+cov.file+"' the values must be positive for log transformation.");
 					cov.value[c][t] = log(v);
 				}
 			}
@@ -544,7 +544,7 @@ void Data::read_level_effect()
 			}
 			
 			if(t_new < t || t_new > details.period){
-				emsg("In the file '"+level_effect.file+"' the dates are out of the analysis range");
+				emsgroot("In the file '"+level_effect.file+"' the dates are out of the analysis range");
 			}				
 			
 			while(t < t_new){
@@ -556,7 +556,7 @@ void Data::read_level_effect()
 			for(auto c = 0u; c < narea; c++){
 				auto val = tab.ele[r][area_col[c]];
 				auto i = 0u; while(i < imax && val != level_effect.ps[i].name) i++;
-				if(i == imax) emsg("In 'level_effect' the value '"+val+"' in file '"+level_effect.file+"' is not contained in 'param'");
+				if(i == imax) emsgroot("In 'level_effect' the value '"+val+"' in file '"+level_effect.file+"' is not contained in 'param'");
 				
 				param_area[c] = i;
 			}
@@ -580,7 +580,7 @@ void Data::read_level_effect()
 			}
 			
 			for(auto i = 0u; i < imax; i++) cout << level_effect.frac[i] << " Parameter Fraction" << endl;
-			emsg("Done");	
+			emsgroot("Done");	
 		}
 	}
 }
@@ -626,7 +626,7 @@ vector <double> Data::get_table_column(const unsigned int col, string file, cons
 	vector <double> result;	
 	chop_dir(file,dir);
 	auto tab = load_table(file,dir,true,true);
-	if(col >= tab.ncol) emsg("The file '"+file+"' does not have column "+to_string(col));
+	if(col >= tab.ncol) emsgroot("The file '"+file+"' does not have column "+to_string(col));
 	for(auto row = 0u; row < tab.nrow; row++) result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
 	return result;
 }
@@ -723,7 +723,7 @@ void Data::make_table_with_time(const string file_in, const string file_out, con
 	auto c = find_column(tab,col);	
 
 	ofstream fout(filefull.c_str());
-	if(!fout) emsg("Cannot open the file '"+filefull+"'");
+	if(!fout) emsgroot("Cannot open the file '"+filefull+"'");
 	fout << "Time," << tab.heading[c] << endl;
 	for(auto r = 0u; r < tab.nrow; r++){
 		fout << details.gettime(tab.ele[r][date_col],"In file '"+tab.file+"'")-details.start;
@@ -747,7 +747,7 @@ vector < vector <double> > Data::get_demo_frac(const unsigned int d, const Table
 	}
 	
 	if(v_st.size() < nval-1){
-		emsg("File '"+tab.file+"' must have columns for "+to_string(nval-1)+" of the "+to_string(nval)+" categories in '"+democat[d].name+"'");
+		emsgroot("File '"+tab.file+"' must have columns for "+to_string(nval-1)+" of the "+to_string(nval)+" categories in '"+democat[d].name+"'");
 	}
 	
 	vector <double> row_sum(tab.nrow);
@@ -758,7 +758,7 @@ vector < vector <double> > Data::get_demo_frac(const unsigned int d, const Table
 		for(auto i = 0u; i < col_st.size(); i++){
 			row_val[row][i] = get_double_positive(tab.ele[row][col_st[i]],"In file '"+tab.file+"'");
 			if(row_val[row][i] < 0){
-				emsg("In file '"+tab.file+"' cannot have a negative value in column '"+tab.heading[col_st[i]]);
+				emsgroot("In file '"+tab.file+"' cannot have a negative value in column '"+tab.heading[col_st[i]]);
 			}
 			sum += row_val[row][i];
 		}
@@ -816,7 +816,10 @@ vector < vector <double> > Data::get_demo_frac(const unsigned int d, const Table
 		}
 		
 		NumberType nt;
-		if(max > 100) nt = POPULATION;
+		if(max > 100){
+			nt = POPULATION;
+			cout << "  The values are assumed to be population sizes (add a column for '" << democat[d].value[unset_st[0]] << "' to disambiguate)." << endl;
+		}
 		else{
 			if(max > 1){ 
 				nt = PERCENT; 
@@ -852,7 +855,7 @@ vector < vector <double> > Data::get_demo_frac(const unsigned int d, const Table
 				else{
 					ss << "the column '" << tab.heading[col_st[0]] << "' is " << row_sum[row];
 				}
-				ss << ", which is more than the total population size " << target;
+				ss << ", which is more than the expected value " << target;
 				emsgroot(ss.str()); 
 			}
 			
@@ -870,12 +873,12 @@ vector < vector <double> > Data::get_demo_frac(const unsigned int d, const Table
 void Data::load_democat_change(const Table &tabarea)
 {
 	for(auto &dcc : democat_change){   
-		dcc.area = create_area_sel(tabarea,dcc.geo_filt);
+		dcc.area = create_area_sel(tabarea,dcc.geo_filt,"In 'geo_filt' for 'democat_change'");
 		
 		auto tab = load_table(dcc.file);
 		
 		auto d = 0u; while(d < ndemocat && democat[d].name != dcc.name) d++;
-		if(d == ndemocat) emsg("In 'democat_change' the name '"+dcc.name+"' is not in 'democats'");
+		if(d == ndemocat) emsgroot("In 'democat_change' the name '"+dcc.name+"' is not in 'democats'");
 		dcc.d = d;
 		
 		auto date_col = find_column(tab,details.time_format_str);
@@ -898,13 +901,13 @@ void Data::load_democat_change(const Table &tabarea)
 				for(auto i = 0u; i < nval; i++) cout << frac[row][i] << " "; 
 				cout << endl;
 			}
-			emsg("Done");
+			emsgroot("Done");
 		}
 		
 		if(times[0] > 0){
 			cout << "  Demographic proportions assumed the same before '" << tab.ele[0][date_col] << "'" << endl;
 		}
-		if(tab.nrow < 2) emsg("File '"+dcc.file+"' must contain at least two rows of data.");
+		if(tab.nrow < 2) emsgroot("File '"+dcc.file+"' must contain at least two rows of data.");
 		
 		if(times[tab.nrow-1] < (int)details.period-1){
 			cout << "  Demographic proportions assumed the same after '" << tab.ele[tab.nrow-1][date_col] << "'" << endl;
@@ -930,10 +933,10 @@ void Data::load_democat_change(const Table &tabarea)
 			for(auto sett = 0u; sett < details.ndivision; sett++){
 				cout << sett << " "; for(auto i = 0u; i < nval; i++) cout << dcc.frac[sett][i] << " "; cout << endl;
 			}
-			emsg("Done");
+			emsgroot("Done");
 		}
 		
-		auto dp_sel = create_dp_sel(dcc.democats_filt);
+		auto dp_sel = create_dp_sel(dcc.democats_filt,"In 'democats_filt' for 'democat_change'");
 		
 		for(auto v = 0u; v < nval; v++){   // Groups dp into groups which vary in the selected demographic classification
 			for(auto dp : dp_sel){
@@ -968,7 +971,7 @@ void Data::load_democat_change(const Table &tabarea)
 				}
 				cout << endl;
 			}
-			emsg("Done");
+			emsgroot("Done");
 		}
 	}
 }
@@ -988,7 +991,7 @@ void Data::load_datatable(const Table &tabarea)
 	}
 	
 	nobs = obs.size();
-	if(false){ cout << nobs <<" Number of observations" << endl; emsg("Done");}
+	if(false){ cout << nobs <<" Number of observations" << endl; emsgroot("Done");}
 }
 
 
@@ -1003,7 +1006,7 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 	ob.obsmodel = dt.obsmodel; ob.shape = dt.shape; ob.invT = dt.invT;
 	ob.datatable = i;
 	
-	auto datafilter = get_datafilter(tabarea,dt.geo_dep,dt.democats_dep,dt.geo_filt,dt.democats_filt,dt.type,dt.observation);
+	auto datafilter = get_datafilter(tabarea,dt.geo_dep,dt.democats_dep,dt.geo_filt,dt.democats_filt,dt.type,dt.observation,dt.file);
 
 	vector <int> obs_times;
 	
@@ -1013,178 +1016,226 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 		if(sim == false){
 			table_loaded = true; 
 			tab = load_table(dt.file);
-			table_select_dates(dt.start,dt.end,dt.timestep,tab,"trans",dt.shift,obs_times);
+			table_select_dates(dt.start,dt.end,dt.timestep,tab,dt.type,dt.shift,obs_times);
 		}
 		else{
 			for(auto t = dt.start; t <= dt.end; t += dt.timestep) obs_times.push_back(t+dt.shift);
 		}
 	}
 
+	vector <string> no_column;
+	
 	auto flag = false;
 	for(const auto &df : datafilter){
-		auto col=0u; if(table_loaded == true) col = find_column(tab,df.colname);
-		
-		ob.dp_sel = df.dp_sel;
-		
-		flag = true;
-		ob.area = df.area;
-		ob.graph = graph.size();
-		
-		string fulldesc, fulldesc_data;
-		
-		Graph gr;
-		if(dt.file != ""){ 
-			gr.tab = details.analysis_type; 
-			gr.tab2 = "Data Table";
-			gr.tab3 = dt.file; 
-			if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
+		auto col=0u; if(table_loaded == true) col = find_column_noerror(tab,df.colname);
+							
+		if(col == UNSET){
+			no_column.push_back(df.colname);
+		}
+		else{
+			auto colSD = UNSET; if(table_loaded == true && ob.obsmodel == LOADSD_OBSMODEL) colSD = find_column(tab,df.colname+" SD");
+	
+			ob.dp_sel = df.dp_sel;
 			
-			if(details.siminf == SIMULATE){
-				fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
-				if(datafilter.size() > 1) fulldesc += " for "+df.colname;
-				fulldesc += ".";
-				fulldesc += "  The red line shows the underlying state";
-				if(details.mode != SIM) fulldesc += " (with the dashed lines giving 95% of the stochastic variation across simulations)";
-				fulldesc += ".";
+			flag = true;
+			ob.area = df.area;
+			ob.graph = graph.size();
+			
+			string fulldesc, fulldesc_data;
+			
+			Graph gr;
+			if(dt.file != ""){ 
+				gr.tab = details.analysis_type; 
+				gr.tab2 = "Data Table";
+				gr.tab3 = dt.file; 
+				if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
 				
-				if(details.mode == SIM)	fulldesc += "  The black line shows data generated from this state (for example if data is measured weekly, this stepped curve would have a periodicity of 7 days). This data is saved in the file "+dt.file+" in the simulated data directory.";
-				else fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
-			}
-			else{
-				fulldesc_data = "Data table "+dt.file+": This visualises the file "+dt.file+" which gives the temporal variation in "+observation_description(dt.type,dt.observation);
-				if(datafilter.size() > 1) fulldesc_data += " for "+df.colname;
-				fulldesc_data += ".";
-				
-				fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
-				if(datafilter.size() > 1) fulldesc += " for "+df.colname;
-				fulldesc += ".";
-				fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
-				fulldesc += "  The red line (with dashed 95% credible intervals) shows the posterior distribution for the inferred underlying system state.";
-				fulldesc += "  Under a suitable model, and with accurate inferece, it would be expected that the black and red curves exhibit the same temporal behaviour (barring variation coming from the observation model).";	
-				fulldesc += " Large deviations between the two lines indicate that either the model is not able to properly account for the actual observed system dynamics, or that inference has not converged on the true posterior distribution.";
-			}
-		}
-		else{ 
-			gr.tab = details.analysis_type;
-			gr.tab2 = "State Output";
-			gr.tab3 = dt.plot_name; 
-			if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
-			
-			fulldesc = "State Output: This shows the plot *"+dt.plot_name+"*, as specifed in the input TOML file. ";
-			if(details.siminf == SIMULATE){
-				if(details.mode != SIM) fulldesc += "The dashed lines giving 95% of the stochastic variation across simulations.";
-			}
-			else{
-				fulldesc += "The dashed lines give 95% credible intervals.";
-			}
-		}
-		gr.fulldesc = fulldesc;
-		gr.fulldesc_data = fulldesc_data;
-		
-		gr.type = GRAPH_TIMESERIES;
-		gr.file = df.file;
-		gr.name = df.name; if(dt.label != "" && datafilter.size() == 1) gr.name = dt.label;
-		gr.desc = df.desc;
-		gr.colname = df.colname;
-		gr.factor_spline = UNSET;
-		gr.datatable = i;
-		gr.dp_sel = ob.dp_sel;
-		gr.area = ob.area;
-		
-		ob.factor = dt.factor;
-		if(dt.type == POPFRAC){
-			auto total_pop = 0.0;
-			if(dt.type == POPFRAC){
-				for(auto c :	gr.area){
-					for(auto dp : gr.dp_sel){
-						for(const auto &vec : area[c].pop_init) total_pop += vec[dp];
-					}
-				}
-			}
-			ob.factor *= 1.0/total_pop;	
-		}
-		
-		gr.factor = ob.factor;
-			
-		switch(dt.type){
-			case POP: case POPFRAC:		
-				for(auto row = 0u; row < obs_times.size(); row++){
-					int ti = obs_times[row]*details.division_per_time;
-					if(ti < 0 || ti > int(details.ndivision-1)){
-						emsg("In 'data_tables' the file '"+dt.file+"' provides information which is out of the specified time range");
-					}
-											
-					GraphPoint gp;
-					gp.xi = ti/details.division_per_time;
-					gp.xf = (ti+1)/details.division_per_time;
-					gp.obs = obs.size();
-					gr.point.push_back(gp);
+				if(details.siminf == SIMULATE){
+					fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
+					if(datafilter.size() > 1) fulldesc += " for "+df.colname;
+					fulldesc += ".";
+					fulldesc += "  The red line shows the underlying state";
+					if(details.mode != SIM) fulldesc += " (with the dashed lines giving 95% of the stochastic variation across simulations)";
+					fulldesc += ".";
 					
-					if(table_loaded == true) ob.value = get_data(tab.ele[row][col],"In file '"+df.file+"'",threshold_str,nodata_str); 
-					else ob.value = UNSET;
-					ob.sett_i = ti;
-					ob.sett_f = ti+1;
-				
-					obs.push_back(ob);
+					if(details.mode == SIM)	fulldesc += "  The black line shows data generated from this state (for example if data is measured weekly, this stepped curve would have a periodicity of 7 days). This data is saved in the file "+dt.file+" in the simulated data directory.";
+					else fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
 				}
-				break;
+				else{
+					fulldesc_data = "Data table "+dt.file+": This visualises the file "+dt.file+" which gives the temporal variation in "+observation_description(dt.type,dt.observation);
+					if(datafilter.size() > 1) fulldesc_data += " for "+df.colname;
+					fulldesc_data += ".";
+					
+					fulldesc = "Data table "+dt.file+": This shows the temporal variation in "+observation_description(dt.type,dt.observation);
+					if(datafilter.size() > 1) fulldesc += " for "+df.colname;
+					fulldesc += ".";
+					fulldesc += "  The black line shows the raw data (from the input file "+dt.file+").";
+					fulldesc += "  The red line (with dashed 95% credible intervals) shows the posterior distribution for the inferred underlying system state.";
+					fulldesc += "  Under a suitable model, and with accurate inferece, it would be expected that the black and red curves exhibit the same temporal behaviour (barring variation coming from the observation model).";	
+					fulldesc += " Large deviations between the two lines indicate that either the model is not able to properly account for the actual observed system dynamics, or that inference has not converged on the true posterior distribution.";
+				}
+			}
+			else{ 
+				gr.tab = details.analysis_type;
+				gr.tab2 = "State Output";
+				gr.tab3 = dt.plot_name; 
+				if(df.colname != "Data") gr.tab4 = df.colname; else gr.tab4 = "";
+				
+				fulldesc = "State Output: This shows the plot *"+dt.plot_name+"*, as specifed in the input TOML file. ";
+				if(details.siminf == SIMULATE){
+					if(details.mode != SIM) fulldesc += "The dashed lines giving 95% of the stochastic variation across simulations.";
+				}
+				else{
+					fulldesc += "The dashed lines give 95% credible intervals.";
+				}
+			}
+			gr.fulldesc = fulldesc;
+			gr.fulldesc_data = fulldesc_data;
 			
-			case TRANS:
-				{
-					auto val = 0u;
-					auto ti = obs_times[0]*details.division_per_time;
+			gr.type = GRAPH_TIMESERIES;
+			gr.file = df.file;
+			gr.name = df.name; if(dt.label != "" && datafilter.size() == 1) gr.name = dt.label;
+			gr.desc = df.desc;
+			gr.colname = df.colname;
+			gr.factor_spline = UNSET;
+			gr.datatable = i;
+			gr.dp_sel = ob.dp_sel;
+			gr.area = ob.area;
 			
-					for(auto row = 0u; row < obs_times.size(); row++){
-						if(table_loaded == true){
-							auto v = get_data(tab.ele[row][col],"In file '"+df.file+"'",threshold_str,nodata_str); 
-							if(details.trans_combine != UNSET){
-								if(v == UNSET){
-									emsg("In file '"+df.file+"' a value for 'trans_combine' cannot be set in conjunction with unknown data");
-								}
-								if(v == THRESH){
-									emsg("In file '"+df.file+"' a value for 'trans_combine' cannot be set in conjunction with thresholded data");
-								}
-							}
-							val += v;
-						}
-						else val = UNSET;
-										
-						GraphPoint gp;
-						unsigned int tf = (obs_times[row]+dt.timestep)*details.division_per_time;
-
-						if(details.obs_section == true){
-							for(auto t = ti+1; t < tf; t++){
-								if(details.sec_define[t] == true) emsg("Observations cross particle filtering time points.");
-							}
-						}
-						
-						if(sim == true || row == obs_times.size()-1 || details.trans_combine == UNSET  
-     						 || val >= details.trans_combine || (details.obs_section == true && details.sec_define[tf] == true)){
-							gp.xi = ti/details.division_per_time;
-							gp.xf = tf/details.division_per_time;
-						
-							gp.obs = obs.size();
-							gr.point.push_back(gp);
-						
-							ob.sett_i = ti;
-							ob.sett_f = tf;
-							ob.value = val;
-						
-							obs.push_back(ob);
-							val = 0;
-							ti = tf;
+			ob.factor = dt.factor;
+			if(dt.type == POPFRAC){
+				auto total_pop = 0.0;
+				if(dt.type == POPFRAC){
+					for(auto c :	gr.area){
+						for(auto dp : gr.dp_sel){
+							for(const auto &vec : area[c].pop_init) total_pop += vec[dp];
 						}
 					}
 				}
-				break;
+				ob.factor *= 1.0/total_pop;	
+			}
 			
-			case MARGINAL: emsgEC("Data",2); break;
+			gr.factor = ob.factor;
+				
+			switch(dt.type){
+				case POP: case POPFRAC:		
+					for(auto row = 0u; row < obs_times.size(); row++){
+						int ti = obs_times[row]*details.division_per_time;
+						if(ti < 0 || ti > int(details.ndivision-1)){
+							emsgroot("In 'data_tables' the file '"+dt.file+"' provides information which is out of the specified time range");
+						}
+												
+						GraphPoint gp;
+						gp.xi = ti/details.division_per_time;
+						gp.xf = (ti+1)/details.division_per_time;
+						gp.obs = obs.size();
+						gr.point.push_back(gp);
+						
+						if(table_loaded == true) ob.value = get_data(tab.ele[row][col],"In file '"+df.file+"'",threshold_str,nodata_str); 
+						else ob.value = UNSET;
+						
+						ob.sd = UNSET; 
+						if(ob.obsmodel == LOADSD_OBSMODEL){							
+							if(table_loaded == true) ob.sd = get_double(tab.ele[row][colSD],"In file '"+df.file+"'");
+						}
+					
+						if(ob.obsmodel == POWER_OBSMODEL){						
+							if(table_loaded == true) ob.sd = pow(ob.value,power_obsmodel);
+						}
+						
+						ob.sett_i = ti;
+						ob.sett_f = ti+1;
+					
+						obs.push_back(ob);
+					}
+					break;
+				
+				case TRANS:
+					{
+						auto val = 0.0;
+						auto ti = obs_times[0]*details.division_per_time;
+				
+						for(auto row = 0u; row < obs_times.size(); row++){
+							if(table_loaded == true){
+								auto v = get_data(tab.ele[row][col],"In file '"+df.file+"'",threshold_str,nodata_str); 
+								if(details.trans_combine != UNSET){
+									if(v == UNSET){
+										emsgroot("In file '"+df.file+"' a value for 'trans_combine' cannot be set in conjunction with unknown data");
+									}
+									if(v == THRESH){
+										emsgroot("In file '"+df.file+"' a value for 'trans_combine' cannot be set in conjunction with thresholded data");
+									}
+								}
+								val += v;
+							}
+							else val = UNSET;
+											
+							ob.sd = UNSET; 
+							if(ob.obsmodel == LOADSD_OBSMODEL){
+								if(details.trans_combine != UNSET) emsg("'loadSD' cannot be used in conjuction with 'trans_combine'"); 
+								if(table_loaded == true) ob.sd = get_double(tab.ele[row][colSD],"In file '"+df.file+"'");
+							}
+
+							GraphPoint gp;
+							unsigned int tf = (obs_times[row]+dt.timestep)*details.division_per_time;
+
+							if(details.obs_section == true){
+								for(auto t = ti+1; t < tf; t++){
+									if(details.sec_define[t] == true) emsgroot("Observations cross particle filtering time points.");
+								}
+							}
+							
+							if(sim == true || row == obs_times.size()-1 || details.trans_combine == UNSET  
+									 || val >= details.trans_combine || (details.obs_section == true && details.sec_define[tf] == true)){
+								gp.xi = ti/details.division_per_time;
+								gp.xf = tf/details.division_per_time;
+							
+								gp.obs = obs.size();
+								gr.point.push_back(gp);
+							
+								ob.sett_i = ti;
+								ob.sett_f = tf;
+								ob.value = val;
+							
+								if(ob.obsmodel == POWER_OBSMODEL){						
+									if(table_loaded == true) ob.sd = pow(ob.value,power_obsmodel);
+								}
+							
+								obs.push_back(ob);
+								val = 0;
+								ti = tf;
+							}
+						}
+					}
+					break;
+				
+				case MARGINAL: emsgEC("Data",2); break;
+			}
+			
+			dt.graph_ref.push_back(graph.size());
+			graph.push_back(gr);
 		}
-		
-		dt.graph_ref.push_back(graph.size());
-		graph.push_back(gr);
 	} 
-	if(flag == false) emsg("In 'data_tables' the data in '"+dt.file+"' was not used");
+	
+	if(flag == false){
+		string em = "In 'data_tables' the data in '"+dt.file+"' was not used. ";
+		em += "Expected columns such as '" +no_column[0]+"' etc...";
+		emsgroot(em);
+	}
+	
+	if(no_column.size() > 0){
+		string em = "WARNING! In the file '"+dt.file+"' there ";
+		if(no_column.size() == 1) em += "was no column '"+no_column[0]+"'.";
+		else{
+			em += "were no columns :";
+			for(auto i = 0u; i < no_column.size(); i++){
+				if(i > 0) em += ", ";
+				em += "'"+no_column[i]+"'";
+			}
+			em += ".";
+		}
+		cout << em << endl;
+	}
 }
 
 
@@ -1194,11 +1245,11 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 	auto &dt = datatable[i];
 	
 	if(dt.geo_dep == "" && dt.democats_dep == ""){
-		emsg("For marginal distributions in 'data_tables' either 'democats_dep' or 'geo_dep' must be set");
+		emsgroot("For marginal distributions in 'data_tables' either 'democats_dep' or 'geo_dep' must be set");
 	}
 
 	if(dt.geo_dep != "" && dt.democats_dep != ""){
-		emsg("For marginal distributions in 'data_tables', 'democats_dep' and 'geo_dep' cannot both be set");
+		emsgroot("For marginal distributions in 'data_tables', 'democats_dep' and 'geo_dep' cannot both be set");
 	}
 		
 	string dep;
@@ -1212,10 +1263,10 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 	ob.graph = graph.size();
 	ob.factor = dt.factor;
 	
-	auto datafilter = get_datafilter(tabarea,dt.geo_dep,dt.democats_dep,dt.geo_filt,dt.democats_filt,dt.type,dt.observation);
+	auto datafilter = get_datafilter(tabarea,dt.geo_dep,dt.democats_dep,dt.geo_filt,dt.democats_filt,dt.type,dt.observation,dt.file);
 
 	if(datafilter.size() == 0){ 
-		emsg("In 'data_tables' the marginal distribution for '"+dt.observation+"' does not contain any valid entries");
+		emsgroot("In 'data_tables' the marginal distribution for '"+dt.observation+"' does not contain any valid entries");
 	}
 	
 	Table tab; if(sim == false) tab = load_table(dt.file);
@@ -1257,7 +1308,7 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 	for(const auto &df : datafilter){
 		if(sim == false){
 			for(row = 0; row < tab.nrow; row++) if(tab.ele[row][0] == df.colname) break;
-			if(row == tab.nrow) emsg("In 'data_tables' cannot find the value '"+df.colname+"' in the first column of '"+dt.file+"'");
+			if(row == tab.nrow) emsgroot("In 'data_tables' cannot find the value '"+df.colname+"' in the first column of '"+dt.file+"'");
 		}
 		
 		dt.demolist.push_back(df.colname);
@@ -1274,7 +1325,7 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 		int ti = dt.start*details.division_per_time;
 		int tf = dt.end*details.division_per_time;
 	
-		if(ti < 0 || tf > int(details.ndivision)) emsg("In 'data_tables' the file '"+dt.file+"' contains information which is outside the inference time range");
+		if(ti < 0 || tf > int(details.ndivision)) emsgroot("In 'data_tables' the file '"+dt.file+"' contains information which is outside the inference time range");
 		
 		ob.sett_i = ti;
 		ob.sett_f = tf;
@@ -1293,7 +1344,7 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 
 
 /// Based on expressions for geo and democats in the data file this generates information for all the data columns
-vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_dep, const string democats_dep, const string geo_filt, const string democats_filt, const DataType type, const string observation) const
+vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_dep, const string democats_dep, const string geo_filt, const string democats_filt, const DataType type, const string observation, const string datafile) const
 { 
 	string file, name, desc;
 	
@@ -1315,16 +1366,25 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 	}
 	
 	if(democats_filt != ""){
-		file += "-"+replace(democats_filt,":","=");
-		name += " "+democats_filt;
-		desc += " "+democats_filt;
+		auto filt = democats_filt;
+		if(democats_filt.substr(0,7) == "age:age") filt = filt.substr(7); // TO DO
+		cout <<  democats_filt << " " << filt << " filt\n";
+		file += "-"+replace(filt,":","=");
+		name += " "+filt;
+		desc += " "+filt;
 	}
 
 	vector <DataFilter> datafilter;
 	
 	if(democats_dep != ""){
 		auto dc = 0u; while(dc < democat.size() && democat[dc].name != democats_dep) dc++;
-		if(dc == democat.size()) emsg("In the expression 'democats_dep="+democats_dep+"' as a name in 'democats'");
+		if(dc == democat.size()){
+			emsgroot("For file '"+datafile+"', the expression 'democats_dep="+democats_dep+"' is not a value in 'democats'");
+		}
+		
+		if(democat[dc].value.size() == 1){
+			emsgroot("For file '"+datafile+"', the expression 'democats_dep=\""+democats_dep+"\"' can only be used if '"+democats_dep+"' has more than one value.");
+		}
 		
 		if(type != MARGINAL){
 			file += "-"+democats_dep;
@@ -1340,9 +1400,9 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 			df.colname = val;
 			df.name = name+valst;
 			df.desc = desc+valst;
-			df.area = create_area_sel(tabarea,geo_filt);
+			df.area = create_area_sel(tabarea,geo_filt,"In 'geo_filt' for '"+datafile+"'");
 			auto state = democat[dc].name+":"+val; if(democats_filt != "") state += ","+democats_filt;
-			df.dp_sel = create_dp_sel(state);
+			df.dp_sel = create_dp_sel(state,"In 'democats_filt' for '"+datafile+"'");
 			
 			if(df.area.size() > 0 && df.dp_sel.size() > 0) datafilter.push_back(df);	
 		}		
@@ -1364,8 +1424,8 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 				df.name = name+valst;
 				df.desc = desc+valst;
 				auto state = geo_dep+":"+gm.region; if(geo_filt != "") state += ","+geo_filt;
-				df.area = create_area_sel(tabarea,state);
-				df.dp_sel = create_dp_sel(democats_filt);
+				df.area = create_area_sel(tabarea,state,"In 'geo_filt' for '"+file+"'");
+				df.dp_sel = create_dp_sel(democats_filt,"In 'democats_filt' for '"+datafile+"'");
 				if(df.area.size() > 0 && df.dp_sel.size() > 0) datafilter.push_back(df);		
 			}		
 		}
@@ -1375,8 +1435,8 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 			df.colname = "Data";
 			df.name = name;
 			df.desc = desc;
-			df.area = create_area_sel(tabarea,geo_filt);
-			df.dp_sel = create_dp_sel(democats_filt);
+			df.area = create_area_sel(tabarea,geo_filt,"In 'geo_filt' for '"+datafile+"'");
+			df.dp_sel = create_dp_sel(democats_filt,"In 'democats_filt' for '"+datafile+"'");
 			if(df.area.size() > 0 && df.dp_sel.size() > 0) datafilter.push_back(df);	
 		}
 	}
@@ -1389,7 +1449,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 		if(democats_filt != "") ss << "'democats_filt=\"" << democats_filt << "\"' ";
 		if(geo_filt != "") ss << "'geo_filt=\"" << geo_filt << "\"' ";
 		ss << "does not generate any valid states";
-		emsg(ss.str());
+		emsgroot(ss.str());
 	}
 	
 	if(false){
@@ -1404,7 +1464,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 			}
 			cout << endl;
 		}
-		emsg("Done");
+		emsgroot("Done");
 	}
 	
 	return datafilter;
@@ -1415,6 +1475,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 void Data::set_datatable_weights()
 {
 	vector <unsigned int> num_obs(datatable.size());
+	vector <unsigned int> num_obs_cut(datatable.size());
 	vector <double> value_max(datatable.size());
 
 	auto ngraph = 0u;
@@ -1422,13 +1483,18 @@ void Data::set_datatable_weights()
 	ngraph++;
 
 	vector <double> graph_value_max(ngraph);
+	vector <double> sd_max(ngraph);
+	vector <unsigned int> num_obs_graph_cut(ngraph);
 	for(auto gr = 0u; gr < ngraph; gr++){
 		graph_value_max[gr] = 0;
+		sd_max[gr] = 0;
+		num_obs_graph_cut[gr] = 0;
 	}
 		
 	for(auto dt = 0u; dt < datatable.size(); dt++){		
 		num_obs[dt] = 0;
 		value_max[dt] = 0;
+		num_obs_cut[dt] = 0;
 	}
 	
 	for(auto &ob : obs){		
@@ -1439,6 +1505,20 @@ void Data::set_datatable_weights()
 		if(val != UNKNOWN && val != THRESH){
 			if(val > value_max[dt]) value_max[dt] = val;
 			if(val > graph_value_max[gr]) graph_value_max[gr] = val;
+			
+			if(ob.sd > sd_max[gr]) sd_max[gr] = ob.sd;
+		}
+	}
+	
+	for(auto &ob : obs){	
+		auto dt = ob.datatable;	
+		auto gr = ob.graph;
+		auto val = ob.value;
+		if(val != UNKNOWN && val != THRESH){
+			if(val > 0.1*graph_value_max[gr]){
+				num_obs_cut[dt]++;
+				num_obs_graph_cut[gr]++;
+			}
 		}
 	}
 	
@@ -1447,13 +1527,77 @@ void Data::set_datatable_weights()
 		auto gr = ob.graph;
 		if(gr >= ngraph) emsgEC("data",3);
 		
-		ob.w = datatable[dt].weight/num_obs[dt];
+		//ob.w = datatable[dt].weight/num_obs[dt];  TO DO this is another possibility
+		if(ob.obsmodel == NORMAL_OBSMODEL){
+			//auto max = graph_value_max[gr]; 
+			auto max = value_max[dt];
+			if(max < 3) max = 3;
+			ob.w = datatable[dt].weight/(num_obs[dt]*max*max);  
+		}
+		else{
+			ob.w = datatable[dt].weight;
+		}
+		
+		if(ob.obsmodel == POWER_OBSMODEL){
+			//ob.sd *= 0.01*(graph_value_max[gr]/sd_max[gr])*sqrt(num_obs_cut[dt]); 
+			if(graph_value_max[gr] == 0){
+				emsgroot("For the 'power' observation model the graph '"+graph[gr].name+"' must have a non zero maximum"); 
+			}
+			
+			ob.sd *= 0.1*(graph_value_max[gr]/sd_max[gr])*sqrt(num_obs_graph_cut[gr]); 
+			if(std::isnan(ob.sd)) emsgEC("Data",4);
+		}
+		
+		if(ob.obsmodel == SCALE_OBSMODEL){
+			auto fac = ob.value/graph_value_max[gr];
+		
+			ob.epsilon = 0.02*graph_value_max[gr];
+		
+			ob.weight = sqrt(fac);
+			//cout << datatable[dt].file << " Value: " << ob.value << "  Epsilon: " << ob.epsilon << "   Weight: " << ob.weight << "   Max: " << graph_value_max[gr] << " \n"; 
+		}
+	}
+	
+	/// Accounts for many observations on some graphs compared to others
+	vector <double> graph_weightsum(ngraph);		
+	for(auto gr = 0u; gr < ngraph; gr++) graph_weightsum[gr] = 0;
+	for(auto &ob : obs) graph_weightsum[ob.graph] += ob.weight;	
+	for(auto &ob : obs) ob.weight /= graph_weightsum[ob.graph];
+
+	//. Accounts for the fact that some graphs within a datatable have fewer point (combining transition events)
+	vector <double> ngraph_point(ngraph);
+	for(auto gr = 0u; gr < ngraph; gr++) ngraph_point[gr] = 0;
+	for(auto &ob : obs) ngraph_point[ob.graph]++;
+	
+	
+	auto ndatatable = datatable.size();
+	vector <double> ndatatable_point(ndatatable);
+	for(auto dt = 0u; dt < ndatatable; dt++) ndatatable_point[dt] = 0;
+	
+	for(auto &ob : obs){
+		auto dt = ob.datatable;	
+		auto gr = ob.graph;
+		if(ngraph_point[gr] > ndatatable_point[dt]) ndatatable_point[dt] = ngraph_point[gr];
+	}
+	
+	for(auto &ob : obs){
+		auto dt = ob.datatable;	
+		auto gr = ob.graph;
+		auto fac = sqrt(ngraph_point[gr]/ndatatable_point[dt]);
+		ob.weight *= fac;
+	}
+
+	if(false){
+		for(auto &ob : obs){	
+			auto dt = ob.datatable;
+			cout << ob.value << " " << ob.sd << " " << ob.w << " " << datatable[dt].file << " weig\n";
+		}
 	}
 }
 
 
 /// Creates all the demographic categories consistent with a string 
-vector <unsigned int> Data::create_dp_sel(const string dp_str) const
+vector <unsigned int> Data::create_dp_sel(const string dp_str, const string em) const
 {
 	vector <unsigned int> dp_sel;
 
@@ -1472,23 +1616,23 @@ vector <unsigned int> Data::create_dp_sel(const string dp_str) const
 		
 		for(auto val : st){
 			auto valsp = split(val,':');
-			if(valsp.size() != 2) emsg("The expression '"+dp_str+"' must specify the demographic category and its value");
+			if(valsp.size() != 2) emsgroot(em+" the expression '"+dp_str+"' must specify the demographic category and its value");
 			
 			auto d = 0u; while(d < ndemocat && democat[d].name != valsp[0]) d++;
-			if(d == ndemocat) emsg("Cannot find the value '"+valsp[0]+"' in 'ages' or 'democats'");
+			if(d == ndemocat) emsgroot(em+" cannot find the value '"+valsp[0]+"' in 'ages' or 'democats'");
 			
 			auto val_list = split(valsp[1],'|');
 			
 			for(auto i = 0u; i < val_list.size(); i++){                 // Checks for repeated values
 				for(auto j = i+1; j < val_list.size(); j++){
-					if(val_list[i] == val_list[j]) emsg("In 'data_tables' the value '"+val_list[i]+"' must not be repeated.");
+					if(val_list[i] == val_list[j]) emsgroot(em+" the value '"+val_list[i]+"' must not be repeated.");
 				}
 			}
 			
 			for(auto i = 0u; i < val_list.size(); i++){ 
 				auto pos = 0u; while(pos < democat[d].value.size() && democat[d].value[pos] != val_list[i]) pos++;
 				if(pos == democat[d].value.size()){
-					emsg("In 'data_tables' cannot find the value '"+val_list[i]+"' in 'name=\""+valsp[0]+"\"'");
+					emsgroot(em+" cannot find the value '"+val_list[i]+"' in 'name=\""+valsp[0]+"\"'");
 				}
 			
 				flag[d][pos]++;
@@ -1517,7 +1661,7 @@ vector <unsigned int> Data::create_dp_sel(const string dp_str) const
  
  
 /// Creates all the areas consistent with a string 
-vector <unsigned int> Data::create_area_sel(const Table &tabarea, const string str) const
+vector <unsigned int> Data::create_area_sel(const Table &tabarea, const string str, const string em) const
 {
 	vector <unsigned int> area_sel; 
 	
@@ -1531,14 +1675,14 @@ vector <unsigned int> Data::create_area_sel(const Table &tabarea, const string s
 		auto spl = split(str,',');
 		for(const auto &sp : spl){
 			auto geosp = split(sp,':');
-			if(geosp.size() != 2) emsg("There was a problem with the expression '"+str+"'");
+			if(geosp.size() != 2) emsgroot(em+" there was a problem with the expression '"+str+"'");
 		
 			auto geomap = create_geomap(tabarea,geosp[0]);
 			auto reg_list = split(geosp[1],'|');
 			
 			for(auto i = 0u; i < reg_list.size(); i++){                  // Checks for repeated values
 				for(auto j = i+1; j < reg_list.size(); j++){
-					if(reg_list[i] == reg_list[j]) emsg("In 'data_tables' the value '"+reg_list[i]+"' must not be repeated.");
+					if(reg_list[i] == reg_list[j]) emsgroot(em+" the value '"+reg_list[i]+"' must not be repeated.");
 				}
 			}
 			
@@ -1550,7 +1694,7 @@ vector <unsigned int> Data::create_area_sel(const Table &tabarea, const string s
 						for(auto c : gm.area) flag[c]++;
 					}
 				}
-				if(fl == false)  emsg("In 'data_tables' the value '"+reg_str+"' is not found in '"+geosp[0]+"'."); 
+				if(fl == false)  emsgroot(em+" the value '"+reg_str+"' is not found in '"+geosp[0]+"'."); 
 			} 
 		}
 		
@@ -1626,7 +1770,7 @@ Table Data::load_table_from_datapipeline(const string file) const
 
 	cout << "Loaded table '" << file << "' from data pipeline" << endl;
 #else
-	emsg("load_tablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
+	emsgroot("load_tablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
 #endif
 
 	return tab;
@@ -1642,7 +1786,7 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 	if(dir != ""){
     used_file = dir+"/"+file;
 		in.open(used_file.c_str());
-		if(!in) emsg("Cannot open the file '"+dir+"/"+file+"'.");
+		if(!in) emsgroot("Cannot open the file '"+dir+"/"+file+"'.");
 	}
 	else{
     used_file = details.output_directory+"/Simulated_data/"+file;
@@ -1650,7 +1794,7 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 		if(!in){
       used_file = data_directory+"/"+file;
 			in.open(used_file.c_str());
-			if(!in) emsg("Cannot open the file '"+used_file+"'");
+			if(!in) emsgroot("Cannot open the file '"+used_file+"'");
 		}
 	}
 	
@@ -1690,7 +1834,7 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 		}while(true);
 		if(tab.ncol == 0) tab.ncol = vec.size();
 		else{
-			if(vec.size() != tab.ncol) emsg("Rows in the file '"+file+"' do not all share the same number of columns.");
+			if(vec.size() != tab.ncol) emsgroot("Rows in the file '"+file+"' do not all share the same number of columns.");
 		}
 		
 		tab.ele.push_back(vec);
@@ -1726,7 +1870,7 @@ void Data::table_create_column(const string head, const vector <unsigned int> &c
 
 
 /// Selects dates as specified in the TOML file
-void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Table &tab, const string type, const unsigned int shift, vector <int> &times) const 
+void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Table &tab, const DataType type, const unsigned int shift, vector <int> &times) const 
 {
 	auto c = find_column(tab,details.time_format_str);
 	
@@ -1739,7 +1883,7 @@ void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Tabl
 	while(row_start < int(tab.nrow) && (times[row_start] < 0 || (start != UNSET && times[row_start] < start))) row_start++;
 	if(row_start == (int)tab.nrow) emsgroot("In file '"+tab.file+"' there is no data in the specified time period");
 	if(start != UNSET && start != times[row_start]){
-		emsg("In data_tables' the value for 'start' does not agree with file '"+tab.file+"'");
+		emsgroot("In data_tables' the value for 'start' does not agree with file '"+tab.file+"'");
 	}
 	start = times[row_start];
 	
@@ -1748,30 +1892,30 @@ void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Tabl
 	
 	if(row_end == -1) emsgroot("In file '"+tab.file+"' there is no data in the specified time period");
 	if(end != UNSET && end != times[row_end]){
-		emsg("In data_tables' the value for 'end' does not agree with file '"+tab.file+"'");
+		emsgroot("In data_tables' the value for 'end' does not agree with file '"+tab.file+"'");
 	}
 	end = times[row_end];
 	
-	if(type != "trans") timestep = 1;
+	if(type != TRANS) timestep = 1;
 	else{
 		if(row_start == row_end){
-			if(timestep == UNSET) emsg("In file '"+tab.file+"' with only one row of data a value for 'timestep' must be set.");
+			if(timestep == UNSET) emsgroot("In file '"+tab.file+"' with only one row of data a value for 'timestep' must be set.");
 		}
 		else{
 			auto tstep = UNSET;
 			for(auto row = row_start; row < row_end; row++){
-				if(times[row+1] < times[row]) emsg("In file '"+tab.file+"' the measurements must be time ordered.");
-				if(times[row+1] == times[row]) emsg("In file '"+tab.file+"' each measurement must be at a different time.");
+				if(times[row+1] < times[row]) emsgroot("In file '"+tab.file+"' the measurements must be time ordered.");
+				if(times[row+1] == times[row]) emsgroot("In file '"+tab.file+"' each measurement must be at a different time.");
 				
 				unsigned int ts = times[row+1]-times[row]; 
 				if(tstep == UNSET) tstep = ts;
-				else{ if(ts != tstep) emsg("In file '"+tab.file+"' measurements should have an equal timestep.");}
+				else{ if(ts != tstep) emsgroot("In file '"+tab.file+"' measurements should have an equal timestep.");}
 			}
 			
 			if(timestep == UNSET) timestep = tstep;
 			else{
 				if(timestep != tstep){
-					emsg("In 'data_tables' the value for 'timestep' does not agree with the timestep in file '"+tab.file+"'.");
+					emsgroot("In 'data_tables' the value for 'timestep' does not agree with the timestep in file '"+tab.file+"'.");
 				}
 			}
 			
@@ -1810,7 +1954,7 @@ void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Tabl
 			for(const auto &ele : tab.ele[row]) cout << ele << " ";
 			cout << "TABLE" << endl;
 		}
-		emsg("Done");
+		emsgroot("Done");
 	}
 }				
 
@@ -1819,7 +1963,7 @@ void Data::table_select_dates(int &start, int &end, unsigned int &timestep, Tabl
 unsigned int Data::find_column(const Table &tab, const string name) const
 {
 	auto c = find_column_noerror(tab,name); 
-	if(c == UNSET) emsg("Cannot find the column heading '"+name+"' in file '"+tab.file+"'.");
+	if(c == UNSET) emsgroot("Cannot find the column heading '"+name+"' in file '"+tab.file+"'.");
 	return c;
 }		
 
@@ -1849,7 +1993,7 @@ void Data::generate_file_from_table(const string file_data, const string file, c
 	
 	auto filefull = details.output_directory+"/"+file_data;
 	ofstream fout(filefull);
-	if(!fout) emsg("Cannot open the file '"+file+"'");
+	if(!fout) emsgroot("Cannot open the file '"+file+"'");
 	
 	for(auto c = 0u; c < ncol; c++){ fout << tab.heading[co[c]]; if(c < ncol-1) fout << sep;}
 	fout << endl;
@@ -1893,8 +2037,8 @@ void Data::load_modification(Inputs &inputs, const Table &tabarea)
 		inputs.find_modification(details,modification);
 		
 		for(auto &cf : modification){
-			cf.dp_sel = create_dp_sel(cf.democats_filt);
-			cf.area = create_area_sel(tabarea,cf.geo_filt);  
+			cf.dp_sel = create_dp_sel(cf.democats_filt,"In 'democats_filt' for 'modification'");
+			cf.area = create_area_sel(tabarea,cf.geo_filt,"In 'geo_filt' for 'modification'");  
 		}
 	}
 }

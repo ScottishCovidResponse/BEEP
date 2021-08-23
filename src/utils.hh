@@ -65,6 +65,7 @@ double get_double_with_tobeset(string st, const string em);
 double get_double_positive(const string st, const string em);
 double get_double(const string st, const string em);
 unsigned int get_int(string st, const string em);
+int get_pos_neg_int(string st, const string em);
 unsigned int get_int_error(string st);
 double get_data(const string val, const string em, const string &threshold_str, const string &nodata_str);
 string replace(const string st, const string s1, const string s2);

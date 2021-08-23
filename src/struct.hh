@@ -294,7 +294,10 @@ struct Observation {                       // A single observation made on the s
 	unsigned int datatable;                  // The data table the observation belongs to
 	unsigned int graph;                      // The primary graph the observation belongs to
 	double value;                            // The value of the observation
+	double sd;                               // This is the standard deviation (loaded in the "loadSD" observation model)
 	double factor;                           // The factor which multiplies it (used for POPFRAC)
+	double epsilon;                          // The small value limit (used for SCALE obsmodel)
+	double weight;                           // Weight given to observation (used for SCALE obsmodel)
 	unsigned int sett_i;                     // The start time
 	unsigned int sett_f;                     // The end time
 	vector <unsigned int> area;              // The areas involved
@@ -339,7 +342,8 @@ struct GraphMultiPlot {                    // Allows for multiple graphs to be p
 	double max;                              // The maximum in the graph
 	vector <LineColour> line_colour;         // Stores the colour of the line when plotted
 	vector <string> file;                    // The filenames used for the graph     
-	vector <string> file_data;               // The filenames for data used for the graph     
+	vector <string> file_data;               // The filenames for data used for the graph    
+	vector <bool> file_data_EB;              // Set to true if data contains an error bar
 	vector <string> file_data_thresh;        // The filenames for thresholds used for the graph   
 };
 	

@@ -11,6 +11,7 @@ struct OutputLine{                                            // Specifies a lin
 	string name;                                                // The name of the line 
 	string file;                                                // The file providing the raw data
 	unsigned int xcol, ycol;                                    // Which columns in the file provide x and y information
+	unsigned int EB;                                            // The column which gives the error bar information (optional)
 	LineType style;                                             // The style of the line
 };
 
@@ -25,6 +26,7 @@ struct OutputPlot{                                            // Specifies a plo
 	string xaxis;                                               // The name of the x axis
 	string yaxis;                                               // The name of the y axis
 	double min, max;                                            // The minimum and maximum values in the plot
+	double xmin, xmax;                                          // The minimum and maximum x values in the plot (optional)
 	vector <OutputLine> line;                                   // The lines within the plot_distribution
 	
 	vector <string> label;                                      // Stores label (in the case of marginals)
@@ -34,7 +36,7 @@ struct OutputPlot{                                            // Specifies a plo
 	
 	string source;                                              // Stores information about the source files.
 	
-	void addline(const string name, const string file, const unsigned int xcol, const unsigned int ycol, const LineType style);
+	void addline(const string name, const string file, const unsigned int xcol, const unsigned int ycol, const LineType style, const unsigned int EB = UNSET);
 };
 
 struct Statistics{                                            // Stores statistical information
@@ -119,10 +121,14 @@ class Output
 
 		void readme() const;
 		
+		bool plot_param_values;                                 // Determines if simulated parameter values are put on plots
+		
 		OutputProp prop;                                        // Defines properties of the output
 		unsigned int nrun;                                      // Stores the number of runs (used for trace plots)
 		
 		string post_dir;                                        // The output directory depending on mode
+		
+		string boundaries;                                      // Loads up boundary information
 		
 		AreaPlot area_plot;                                     // Stores information about plotting areas
 		

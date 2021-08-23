@@ -994,12 +994,15 @@ void Mpi::pack(const Particle &part)
 }
 
 void Mpi::pack(const Observation &ob)
-{
+{           
 	pack(ob.factor_spline);
 	pack(ob.datatable);
 	pack(ob.graph);
 	pack(ob.value);
+	pack(ob.sd);
 	pack(ob.factor);
+	pack(ob.epsilon);
+	pack(ob.weight);
 	pack(ob.sett_i);
 	pack(ob.sett_f);
 	pack(ob.area);	
@@ -1223,7 +1226,10 @@ void Mpi::unpack(Observation &ob)
 	unpack(ob.datatable);
 	unpack(ob.graph);
 	unpack(ob.value);
+	unpack(ob.sd);
 	unpack(ob.factor);
+	unpack(ob.epsilon);
+	unpack(ob.weight);
 	unpack(ob.sett_i);
 	unpack(ob.sett_f);
 	unpack(ob.area);	
