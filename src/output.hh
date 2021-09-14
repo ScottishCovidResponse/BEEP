@@ -92,10 +92,11 @@ class Output
 		void level_effect_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void mean_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void branch_prob_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
+		void age_mixing_perturb_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void derived_parameter_distributions(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void posterior_parameter_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void spatial_R_map(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
-		void age_mixing_matrix(vector <OutputPlot> &op) const;
+		void age_mixing_matrix(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
 		void covar_data(vector <OutputPlot> &op) const;
 		void level_data(vector <OutputPlot> &op) const;
 		void spatial_mixing_map(vector <OutputPlot> &op) const;
@@ -125,6 +126,8 @@ class Output
 		
 		OutputProp prop;                                        // Defines properties of the output
 		unsigned int nrun;                                      // Stores the number of runs (used for trace plots)
+		
+		StateUncertainty stateuncer;                            // Determines if state uncertaity uses EB / curve
 		
 		string post_dir;                                        // The output directory depending on mode
 		

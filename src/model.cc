@@ -398,10 +398,13 @@ void Model::add_region_effect()
 				if(file_check){
 					file_check.close();
 		
-					auto column = data.get_table_column("Region effect",file,details.output_directory);
+					auto tab = data.get_table(file,details.output_directory);
+					auto column = data.get_table_column("Region effect",tab);
 					
 					if(column.size() != data.narea) emsgEC("Model",5);
-					for(auto c = 0u; c < data.narea; c++) RE[c] = get_double(column[c],"In 'region_effect' from file '"+file+"'");
+					for(auto c = 0u; c < data.narea; c++){
+						RE[c] = get_double(column[c],"In 'region_effect' from file '"+file+"'");
+					}
 				}
 			}
 		}
@@ -1348,16 +1351,17 @@ vector < vector < vector <double> > > Model::create_Ntime(const vector < vector<
 				case ROW_COLUMN: case PERTURB:
 					auto si = N.size();
 					vector <bool> flag(si);
-					for(auto i = 0u; i < si; i++) flag[i] = false;
+					//for(auto i = 0u; i < si; i++) flag[i] = false;
 					
-					for(auto a : mm.ages) flag[a] = true;
+					//for(auto a : mm.ages) flag[a] = true;
 				
 					auto fac = disc_spline[mm.spline_ref][sett];
 				
 					for(auto a : mm.ages){
 						for(auto i = 0u; i < si; i++){
 							N[a][i] *= fac;
-							if(flag[i] == false) N[i][a] *= fac; 
+							N[i][a] *= fac; 
+							//if(flag[i] == false) N[i][a] *= fac; 
 						}
 					}
 					break;
@@ -2110,7 +2114,7 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 			so.desc = spline[sp].desc;
 			if(sp == geo_spline_ref){
 				so.fulldesc = "Time variation in spatial mixing: This plot shows the time variation in spatial mixing. A value of &m_{t}&=1 implies that the geographical mixing matrix &M_{a,a′}& is as specifed by the file given in the *geo-mixing-matrix* command. A value of &m_{t}&=0, however, implies no contacts between areas.";
-				so.tab = details.analysis_type; so.tab2 = "Mixing"; so.tab3 = "Spatial Mixing"; so.tab4 = "&m_{t}&";
+				so.tab = details.analysis_type; so.tab2 = "Spatial Mixing"; so.tab3 = "Time series"; so.tab4 = "&m_{t}&";
 			}
 			else{
 				auto mm = 0u; while(mm < data.genQ.matmod.size() && data.genQ.matmod[mm].spline_ref != sp) mm++;
@@ -2141,7 +2145,7 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 							so.fulldesc += " of the age mixing matrix.";
 							break;
 					}
-					so.tab = details.analysis_type; so.tab2 = "Mixing"; so.tab3 = "Age Mixing"; so.tab4 = "Modification "+to_string(mm+1); 
+					so.tab = details.analysis_type; so.tab2 = "Age Mixing"; so.tab3 = "Time series"; so.tab4 = "Modification "+to_string(mm+1); 
 				}
 				else{
 					so.fulldesc = "Spline: "+spline[sp].desc;
@@ -2497,10 +2501,9 @@ vector < vector <double> > Model::calculate_R_age(const vector <double> &paramv_
 				auto F = calculate_F(paramv_dir,susceptibility,Ntime[sett],st,info.democatpos_dist);
 				auto NGM = calculate_NGM(F,Vinv);
 
-					for(auto j = 0u; j < NGM.size(); j++){
-			for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 3");
-		}
-	
+				for(auto j = 0u; j < NGM.size(); j++){
+					for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 3");
+				}
 	
 				vector <double> eigenvector;
 				ratio = largest_eigenvalue(NGM,eigenvector);
@@ -2574,7 +2577,7 @@ vector < vector <double> > Model::calculate_F(const vector <double> &paramv_dir,
 	auto Q = data.ndemocatpos_per_strain;
 	auto S = inf_state.size();
 	auto N = Q*S;
-	
+
 	F.resize(Q);
 	for(auto q = 0u; q < Q; q++){
 		F[q].resize(N);
@@ -2608,6 +2611,7 @@ vector < vector <double> > Model::calculate_NGM(const vector < vector<double> > 
 	
 	auto Q = F.size();
 	auto N = Vinv.size();
+	
 	NGM.resize(Q);
 	for(auto q = 0u; q < Q; q++){
 		NGM[q].resize(Q);
@@ -2624,7 +2628,7 @@ vector < vector <double> > Model::calculate_NGM(const vector < vector<double> > 
 double Model::calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &Vinv, const unsigned int st, const vector <double> &democatpos_dist) const
 {
 	auto F = calculate_F(paramv_dir,susceptibility,A,st,democatpos_dist);
-
+	
 	auto NGM = calculate_NGM(F,Vinv);
 	
 	if(checkon == true){
@@ -2657,7 +2661,8 @@ double Model::calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir,
 			cout << " NGM" << endl;
 		}
 		
-		cout << ratio << "Ratio" << endl; 
+		cout << ratio << "Ratio" << endl;
+		emsg("done");		
 	}
 	
 	return ratio;
@@ -2901,7 +2906,7 @@ void Model::set_dirichlet()
 			}
 
 			if(tobeset.size() == 1){
-				if(sum > 1) emsgroot("The value of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+				if(sum > 1) emsgroot("The value of the parameter '"+param[tobeset[0].th].name+"' cannot be set (because the average is over one)");
 			
 				auto th = tobeset[0].th;
 				auto val = (1-sum)/tobeset[0].frac;
@@ -3344,18 +3349,82 @@ void Model::print_parameter_types()
 	}
 }
 
-/*
-/// This estimates the modification that need to be done to A to give the correct eigen vector	
-vector < vector < vector <double> > > Model::estimate_A_modification()(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate,	const vector < vector <double> > &disc_spline) const 
-void Model::
-{
-	auto Vinv = calculate_Vinv(transrate,st);
-	auto A = Ntime[0];
-	
-	auto F = calculate_F(paramv_dir,susceptibility,A,st,democatpos_dist);
 
+/// Looks at different models to estimate eigenvectors (this is used in the raw data analysis)
+void Model::eignevector_compare_models(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate) const
+{
+	auto Vinv = calculate_Vinv(transrate,0);
+		
+	auto F = calculate_F(paramv_dir,susceptibility,Ntime[0],0,data.democat_dist[0]);
+	 
 	auto NGM = calculate_NGM(F,Vinv);
 	
+	vector <double> eigenvector;
+	largest_eigenvalue(NGM,eigenvector);
 	
+	auto nage = susceptibility.size();
+	vector <double> sus(nage);
+	for(auto a = 0u; a < nage; a++) sus[a] = 1;
+	sus[nage-1] = 1.8;
+	
+	// This is the vector we are aiming for 
+	vector <double> aim = {0.041777881,0.083194264,0.091183693,0.089258079,0.086831252,0.077545859,0.064406066,0.056545308,0.056864718,0.068969452,0.078228807,0.075130564,0.042264548,0.026687841,0.022323116,0.019930333,0.018858221};
+	
+	// This is for getting the relative susceptibility
+	for(auto loop = 0u; loop < 10000; loop++){
+		auto F = calculate_F(paramv_dir,sus,Ntime[0],0,data.democat_dist[0]);
+		auto NGM = calculate_NGM(F,Vinv);
+		
+		largest_eigenvalue(NGM,eigenvector);
+			
+		for(auto a = 0u; a < nage-1; a++){
+			sus[a] += 0.1*(aim[a]-eigenvector[a]);
+		}
+		
+		auto sum = 0.0;
+		for(auto a = 0u; a < nage; a++){
+			sum += data.democat_dist[0][a]*sus[a]; 
+		}
+		
+		for(auto a = 0u; a < nage; a++) sus[a] /= sum;
+		sus[nage-1] = 1.8;
+	}
+	for(auto val : sus) cout << val << endl; cout << " relative susceptibility" << endl;	
+	
+	vector <double> v(nage);
+	for(auto a = 0u; a < nage; a++) v[a] = 1;
+	v[nage-1] = 1.6;
+	
+	for(auto a = 0u; a < nage; a++) sus[a] = 1;
+	
+	// This is for getting the adjusted age mixing matrix
+	for(auto loop = 0u; loop < 10000; loop++){
+		auto A = Ntime[0];
+		
+		for(auto j = 0u; j < nage; j++){
+			for(auto i = 0u; i < nage; i++){
+				A[j][i] *= v[j]*v[i];
+			}
+		}
+		
+		auto F = calculate_F(paramv_dir,sus,A,0,data.democat_dist[0]);
+		auto NGM = calculate_NGM(F,Vinv);
+		
+		largest_eigenvalue(NGM,eigenvector);
+			
+		for(auto a = 0u; a < nage-1; a++){
+			v[a] += 0.1*(aim[a]-eigenvector[a]);
+		}
+		
+		auto sum = 0.0;
+		for(auto a = 0u; a < nage; a++){
+			sum += data.democat_dist[0][a]*v[a]; 
+		}
+		
+		for(auto a = 0u; a < nage; a++) v[a] /= sum;
+		v[nage-1] = 1.6;
+	}
+	for(auto val : v) cout << val << " "; cout << " age contact factors" << endl;	
+
+	emsg("done");
 }
-*/

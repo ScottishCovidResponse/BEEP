@@ -82,6 +82,20 @@ struct Joint            // These make joint changes to all the points on a splin
 	Status MH(double al, ParamUpdate pup);
 	Status propose(vector <double> &param_prop, const vector <double> &paramval, const Model &model);
 };
+
+	
+struct CovarArea        // These make joint proposals on covariates and area effects
+{
+	unsigned int covar_ref;
+	
+	double size;
+	unsigned int ntr;
+	unsigned int nac;
+	double ac_rate;
+	
+	Status MH(double al, ParamUpdate pup);
+	Status propose(vector <double> &param_prop, const vector <double> &paramval, const Model &model, const Data &data);
+};
 	
 	
 class ParamProp                                  // Information about kernals for propsals in parameter space
@@ -99,6 +113,8 @@ public:
 
 	vector <Joint> joint;                          // Proposals which change multiple variables
 
+	vector <CovarArea> covar_area;                 // Proposals which simultaneously change covariate and area effects
+	
 	vector <FixedTree> fixedtree;                  // Proposals which simulate areas distinct areas
 
 	vector <SliceTime> slicetime;                  // Proposals which simulate a time period
@@ -127,6 +143,7 @@ private:
 	void mean_time_init();
 	void neighbour_init();
 	void joint_init();
+	void covar_area_init();
 		
 	const Details &details;
 	const Data &data;

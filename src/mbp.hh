@@ -36,6 +36,7 @@ class Mbp
 		void mean_time_proposal(MeanTime &mt);
 		void neighbour_proposal(Neighbour &rn);
 		void joint_proposal(Joint &rn);		
+		void covar_area_proposal(CovarArea &ca);
 	
 		void check_MBP();
 		

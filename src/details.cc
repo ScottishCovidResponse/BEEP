@@ -85,6 +85,8 @@ Details::Details(Inputs &inputs)
 
 	division_per_time = inputs.find_positive_integer("steps_per_unit_time",2);
 	
+	graph_step = division_per_time;
+	
 	ndivision = division_per_time*period;
 	division_time.resize(ndivision);
 	for(auto s = 0u; s < ndivision; s++){

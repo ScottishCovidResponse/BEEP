@@ -453,7 +453,9 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			datatab.start = 0;
 			datatab.end = details.end-details.start;
 			
-			if(td.contains("fraction")) emsgroot("In 'state_outputs' the value 'fraction' should not be set.");
+			if(td.contains("factor_spline")) emsgroot("In 'state_outputs' the value 'factor_spline' should not be set.");
+			
+			datatab.factor = 1;
 			datatab.factor_spline = "";
 			
 			datatab.democats_filt = td.stringfield_allowcomma("democats_filt",""); 
@@ -1531,18 +1533,10 @@ void Inputs::check_from_table(string &s)
 		
 		unsigned int ncol = UNSET;
 		do{
-			vector <string> vec;
 			string line;
 			getline(in,line);
 			if(in.eof()) break;
-			
-			stringstream ss(line);
-			do{
-				string st;
-				getline(ss,st,del); strip(st);
-				vec.push_back(st);
-				if(ss.eof()) break;
-			}while(true);
+			auto vec = split(line,del);
 			
 			if(ncol == UNSET) ncol = vec.size();
 			else{
@@ -1682,6 +1676,19 @@ void Inputs::find_nrun(unsigned int &nrun)
 	nrun = find_positive_integer("nrun",1);                    // Sets the number of runs
 	if(nrun < 1) emsgroot("'nrun' must be positive");
 	if(nrun > 100) emsgroot("'nrun' is too large");
+}
+
+
+/// Finds how uncertainty in 
+void Inputs::find_stateuncer(StateUncertainty &stateuncer)
+{
+	string val = toLower(find_string("state_uncertainty","CI"));  
+	
+	if(val == "ci") stateuncer = CI;
+	else{
+		if(val == "curves") stateuncer = CURVES;
+		else emsgroot("The value for 'state_uncertainty' is not recognised");
+	}
 }
 
 
@@ -1872,6 +1879,8 @@ void Inputs::find_plot_param_values(bool &plot_param_values)
 	else{
 		if(plot_param_values_str != "false") emsgroot("'plot_param_values' must be 'true' or 'false'");
 	}
+	
+	if(get_siminf() == SIMULATE) plot_param_values = true;
 }
 
 /// Finds any modifications made to the model

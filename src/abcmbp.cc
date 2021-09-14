@@ -119,20 +119,29 @@ void ABCMBP::EF_cutoff(Generation &gen, vector <Particle> &part, vector <unsigne
 
 		EFmin = partef[int(0.025*Ntot)].EF; EFmax = partef[int(0.975*Ntot)].EF;
 		
+		vector < vector <unsigned int> > list(nrun);
 		for(auto ru = 0u; ru < nrun; ru++){
-			vector <unsigned int> list;
 			for(auto j = 0u; j < npart; j++){
 				auto i = ru*npart + j;
 				if(EFtot[i] < EFcut){ 
-					partcopy[i] = UNSET; list.push_back(i);
+					partcopy[i] = UNSET; list[ru].push_back(i);
 				}
 			}
-			if(list.size() == 0) emsgEC("ABCMBP",1);
+		}
+		
+		for(auto ru = 0u; ru < nrun; ru++){
+			auto ru_sel = ru;
+			if(list[ru_sel].size() == 0){  // No valid state in this run so sample from another
+				cout << "Sample from another run" << endl;
+				do{
+					ru_sel = (unsigned int)(ran()*nrun);
+				}while(list[ru_sel].size() == 0);
+			}
 			
 			for(auto j = 0u; j < npart; j++){
 				auto i = ru*npart + j;
 				if(EFtot[i] >= EFcut){ 
-					partcopy[i] = list[(unsigned int)(ran()*list.size())]; 
+					partcopy[i] = list[ru_sel][(unsigned int)(ran()*list[ru_sel].size())]; 
 				}
 			}
 		}
@@ -205,7 +214,8 @@ void ABCMBP::model_evidence(vector <Generation> &generation)
 						}
 					}
 				}
-				ME += log(num_below/num);
+				if(num_below == 0 || num == 0) ME += -1000;
+				else ME += log(num_below/num);
 			}
 			gen.model_evidence.push_back(ME);
 		}

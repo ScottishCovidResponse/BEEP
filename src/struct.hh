@@ -49,6 +49,7 @@ struct Sample{                             // Stores information about a state p
 	vector <SplineOutput> spline_output;     // The splines that need to be output
 	vector <DerivedParam> derived_param;     // Derived parameters
 	vector <RMap> Rmap;                      // The maps in the reproduction number
+	vector < vector < vector <double> > > Nsample;// A sample of the age mixing matrix
 };
 
 struct ParamSample{                      	 // Stores information about a parameter sample from the posterior
@@ -186,6 +187,7 @@ struct TimePlot {                          // A label can be used for specific d
 struct Matrix {                            // Loads a matrix
 	unsigned int N;													 // The size of the matrix
 	vector <vector <double> > ele;           // The elements of the matrix
+	double norm_factor;                      // The factor used when matrix is normalised
 };
 
 struct SparseMatrix {                      // Loads a matrix

@@ -21,6 +21,8 @@ const bool all_diagnostics = false;                    // Set to true to show al
 
 const bool plot_sim_param_global = true;               // Determines if simulated parameter values are put on plots
 
+const bool plot_obs_model = false;                      // This is set to true if we want error bars to indicate the error function
+ 
 const double power_obsmodel = 0.7;                     // The power used in the power observation model
 
 enum Mode { SIM, MULTISIM, PREDICTION,                 // Different modes of operation 
@@ -37,7 +39,7 @@ enum ObsModelFunc { NORMAL_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL, SCALE_O
 	
 enum Dir { X,Y};                                       // Different directions areas sorted by
 
-enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIMERMAX};
+enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_COVAR_AREA, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIMERMAX};
 
 enum GraphType { GRAPH_TIMESERIES, GRAPH_MARGINAL };
 	
@@ -61,7 +63,7 @@ enum IndSus { BOTH_SUSCEPTIBLE, ONLY_PROPOSE_SUSCEPTIBLE         // Classifies i
 enum SmoothType { NOSMOOTH, LOGSMOOTH, SMOOTH };                 // The type of smoothing used for a spline
 						
 enum PropType { MVN_PROP, FIXEDTREE_PROP, SLICETIME_PROP,        // Different types of proposal
-MEAN_TIME_PROP, NEIGHBOUR_PROP, JOINT_PROP, SELF_PROP};
+MEAN_TIME_PROP, NEIGHBOUR_PROP, JOINT_PROP, COVAR_AREA_PROP, SELF_PROP};
 					
 enum MVNType { MULTIPLE, SINGLE };                               // Different types of MVN proposal
 					
@@ -94,14 +96,15 @@ enum JointType { UP_DOWN, SINE};                                 // Different ty
 	
 enum OutputPlotType { OP_GRAPH, OP_GRAPH_MARGINAL, OP_MARGINAL,  // The type of output plot
               OP_PARAMDIST, OP_SPLINE, OP_GENERATION, OP_LOG_GENERATION, OP_CPU, OP_TRACE, OP_ME, 
-							OP_ANIM_MAP, OP_AGE_MATRIX, OP_PARAM_TABLE, OP_PRIOR_TABLE, OP_COMP_MODEL, OP_FOI_MODEL,OP_MIXING_WITHIN_ANIM_MAP, OP_MIXING_WITHIN_MAP, OP_MIXING_BETWEEN_ANIM_MAP, OP_MIXING_BETWEEN_MAP, OP_MIXING_POP_ANIM_MAP, OP_MIXING_POP_MAP, OP_DESC,
+							OP_ANIM_MAP, OP_AGE_MATRIX, OP_AGE_MATRIX_POST, OP_AGE_MATRIX_DIF, OP_PARAM_TABLE, OP_PRIOR_TABLE, OP_COMP_MODEL, OP_FOI_MODEL,OP_MIXING_WITHIN_ANIM_MAP, OP_MIXING_WITHIN_MAP, OP_MIXING_BETWEEN_ANIM_MAP, OP_MIXING_BETWEEN_MAP, OP_MIXING_POP_ANIM_MAP, OP_MIXING_POP_MAP, OP_DESC,
 							OP_AREA_COVAR, OP_TV_COVAR, OP_AREA_TV_COVAR, OP_LEVEL_EFFECT};
 
 enum LineType { NOLINE, RED_SOLID, RED_DASHED, GREEN_SOLID,      // Different styles of line
                 GREEN_DASHED, BLUE_SOLID, BLUE_DASHED, BLACK_SOLID, BLACK_DASHED, 
 								RED_DOTTED, RED_DOTDASH, GREEN_DOTTED,     
                 GREEN_DOTDASH, BLUE_DOTTED, BLUE_DOTDASH, BLACK_DOTTED, BLACK_DOTDASH,
-								YELLOW_SOLID, YELLOW_DASHED, CYAN_SOLID, CYAN_DASHED,MAGENTA_SOLID, MAGENTA_DASHED};
+								YELLOW_SOLID, YELLOW_DASHED, CYAN_SOLID, CYAN_DASHED,MAGENTA_SOLID, MAGENTA_DASHED,
+								RED_THIN, GREEN_THIN, BLUE_THIN, BLACK_THIN};
 
 enum LineColour { UNSET_COLOUR, RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, BLACK};// Different colours of line 
 	
@@ -115,6 +118,8 @@ enum ModificationType { CF_TRANS_RATE, CF_EFOI,                  // DIfferent ty
 												CF_SPLINEFAC, CF_SPLINESET, CF_BETA};
 
 enum ParamUpdate { NO_UPDATE, SLOW_UPDATE, FAST_UPDATE};         // Whether to update parameters with MH
+
+enum StateUncertainty{ CI, CURVES};                         // Determines how state uncertainty plotted
 
 const double fac_up_invT = 1.05, fac_down_invT = 0.9;            // These are used to dynamically change invT
 const double fac_up_invT_fast = 1.5, fac_down_invT_fast = 0.7;    
@@ -141,5 +146,4 @@ const unsigned int initialise_param_samp = 100;                  // Number of ra
 
 const double map_ratio = 1.22;                                   // The ratio of the map (used when plotting
 
-const unsigned int graph_step = 2;                               // The step size used when plotting the posterior
 #endif

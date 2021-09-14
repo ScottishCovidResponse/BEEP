@@ -37,6 +37,8 @@ struct Details                                                     // Provides d
 	unsigned int division_per_time;                                  // # divisions per unit time
 	double timestep;                                                 // The timestep per division
 
+	unsigned int graph_step;                                         // The number of steps used when plotting 
+		
 	bool stochastic;                                                 // Determines if simulations are stochastic or not
 	
 	MCMCUpdate mcmc_update;                                          // Stores information about the mcmc updates

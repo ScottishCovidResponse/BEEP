@@ -6,7 +6,7 @@ function init()
 		return;
 	}
 	
-	//pr(jsonstr.substr(399175-4000,4000));
+	//pr(jsonstr.substr(6960492-400,800));
 	
 	visjson = JSON.parse(jsonstr);
 

@@ -8,9 +8,10 @@ outputdir = "Output_England_Simple"
 time_labels = [{name="Lockdown", time="2020-03-23"},{name="Start Vaccinating", time="2020-12-08"}]
 
 comps			= [{name="S"},
-						 {name="E", dist="Erlang", k="2", mean_value="4"},
+						#{name="E", dist="Erlang", k="2", mean_value="4"},
+						 {name="E", dist="Exp", mean_value="4"},
 						 {name="I", dist="Exp", mean_value="4", inf_value="1"},
-						 {name="N", dist="Exp", mean_prior="Uniform(10,30)"},
+						 {name="N", dist="Exp", mean_value="20.9", mean_prior="Uniform(10,30)"},
 						 {name="R"},
 						 {name="D"},
 						]
@@ -18,8 +19,8 @@ comps			= [{name="S"},
 trans   	=	[{from="S", to="E", infection="yes"},
 						 {from="E", to="I"},	 
 						 {from="I", to="N"},	 
-						 {from="N", to="R", prob_prior="Dir(1)"},
-						 {from="N", to="D", prob_prior="Dir(0.3)"},
+						 {from="N", to="R", prob_value="*", prob_prior="Dir(1)"},
+						 {from="N", to="D", prob_value="0.00981", prob_prior="Dir(0.3)"},
 						 
 						 #{from="I", to="R", prob_prior="Dir(1)"},
 						 #{from="I", to="D", prob_prior="Dir(0.3)"},

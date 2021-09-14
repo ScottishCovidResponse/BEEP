@@ -30,6 +30,7 @@ private:
 	void joint_proposal(Joint &jn);
 	void neighbour_proposal(Neighbour &nei);
 	void mean_time_proposal(MeanTime& mt);
+	void covar_area_proposal(CovarArea &ca);
 
 	double invT;                               // This inverse temperature is used to smooth the likelihood function
 	

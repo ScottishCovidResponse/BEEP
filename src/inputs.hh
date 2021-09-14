@@ -51,6 +51,7 @@ class Inputs
 		void find_Tpower(double &Tpower);
 		void find_invT(double &invT);
 		void find_nrun(unsigned int &nrun);
+		void find_stateuncer(StateUncertainty &stateuncer);
 		void find_nparticle(unsigned int &npart, unsigned int &Ntot, unsigned int &N, const unsigned int nrun, const unsigned int ncore);
 		void find_nparticle_pmcmc(unsigned int &npart, unsigned int &N, const unsigned int ncore);
 		void find_nchain(unsigned int &nchain, unsigned int &Ntot, unsigned int &N, const unsigned int nrun, const unsigned int ncore);
@@ -164,6 +165,7 @@ const vector<string> definedparams = {                                // A list 
 		"seed",
 		"start",
 		"state_outputs",
+		"state_uncertainty",
 		"steps_per_unit_time",
 		"strains",
 		"threshold_str",

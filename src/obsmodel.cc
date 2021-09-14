@@ -125,6 +125,7 @@ vector < vector <double> > ObservationModel::get_graph_state(const State *state)
 		switch(gra.type){
 			case GRAPH_TIMESERIES:
 				{
+					auto graph_step = details.graph_step;
 					auto fac_trans = gra.factor*double(details.division_per_time)/graph_step;
 					auto fac_pop = gra.factor*double(1.0)/graph_step;
 
@@ -149,7 +150,7 @@ vector < vector <double> > ObservationModel::get_graph_state(const State *state)
 								}
 							}
 						}
-						
+
 						graph_state[gr].push_back(sum);
 					}
 				}
@@ -311,7 +312,6 @@ double ObservationModel::obs_prob(double value, const Observation& ob) const
 			{
 				auto offset = ob.epsilon;
 				auto d = log((value+offset)/(val+offset));
-			//	cout << 0.5*ob.invT*ob.w*ob.weight*d*d  << " " << value << " " << val << " " << ob.epsilon << " obs\n";
 				return -0.5*ob.invT*ob.w*ob.weight*d*d;
 			}
 		}

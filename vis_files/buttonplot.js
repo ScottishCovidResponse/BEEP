@@ -204,7 +204,7 @@ function butplot(i,ov)
 			fillrect(xx,y,xx2-xx,dy,"rgb("+col_map.map[i].R+","+col_map.map[i].G+","+col_map.map[i].B+")");  
 		}
 		drawrect(x,y,dx,dy,DGREY,1);  
-		
+
 		for(i = 0; i < nticky; i++){
 			if(val == "log") xx = Math.floor(x + dx*(Math.log(ticky[i]+col_map.shift)-col_map.min)/(col_map.max-col_map.min));
 			else xx = Math.floor(x + dx*(ticky[i]-col_map.min)/(col_map.max-col_map.min));

@@ -205,16 +205,26 @@ void binomial_check()
 
 
 /// Split up a string at a specified delimiter
-vector<string> split(const string &s, char delimiter)                                                               
+vector<string> split(const string &s, char delimiter)                                                          
 {                              
-  std::vector<std::string> splits;                       
-  std::string split;                                      
-  std::istringstream ss(s);                               
-  while (std::getline(ss, split, delimiter)) splits.push_back(split);   
-
+  vector<string> splits;                       
+ 
+  bool quoteon = false;
+	auto j = 0u;
+	for(auto i = 0u; i < s.length(); i++){
+		if(s.substr(i,1) == "\""){
+			if(quoteon == false) quoteon = true; else quoteon = false;
+		}
+		
+		if(s.at(i) == delimiter && quoteon == false){
+			splits.push_back(s.substr(j,i-j)); j = i+1; 
+		}
+	}
+	splits.push_back(s.substr(j,s.length()-j));
+	
 	for(auto &spl : splits) strip(spl);
 	
-  return splits;                                           
+	return splits;                                           
 }
 
 

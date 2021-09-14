@@ -29,7 +29,7 @@ Mbp::Mbp(ObsModelMode obsmodel_mode_, const Details &details, const Data &data, 
 	initialise_variables();                                // Initialises the variables in the class
 }
 
-
+ 
 /// Updates a vector of particles using MBP proposals
 unsigned int Mbp::mcmc_updates(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_,ParamUpdate pup_, ParamProp &paramprop)
 {
@@ -98,6 +98,10 @@ void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, Para
 				joint_proposal(paramprop.joint[num]);    
 				break;
 				
+			case COVAR_AREA_PROP:
+				covar_area_proposal(paramprop.covar_area[num]);    
+				break;
+			
 			case FIXEDTREE_PROP:
 				mbp_fixedtree(paramprop.fixedtree[num]);
 				break;
@@ -403,6 +407,26 @@ void Mbp::joint_proposal(Joint &rn)
 	if(rn.MH(al,pup) == SUCCESS) swap_initial_propose_state();
 	
 	timer[TIME_JOINT].stop();
+}
+
+
+/// Looks at making proposals to change a covariate and area effects
+void Mbp::covar_area_proposal(CovarArea &ca)
+{
+	timer[TIME_COVAR_AREA].start();
+		
+	auto al = 0.0;
+	vector <double> param_prop;
+	if(ca.propose(param_prop,initial->paramval,model,data) == SUCCESS){
+		if(mbp(param_prop,INF_DIF_UPDATE) == SUCCESS){ 
+			al = get_al();
+		}
+	}
+	else al = -1;
+			
+	if(ca.MH(al,pup) == SUCCESS) swap_initial_propose_state();
+	
+	timer[TIME_COVAR_AREA].stop();
 }
 
 

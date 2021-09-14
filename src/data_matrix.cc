@@ -119,6 +119,8 @@ void Data::agematrix_normalise(Matrix &mat)
 	}
 	sum /= sum2;
 	
+	mat.norm_factor = 1.0/sum;
+	
 	for(auto a = 0u; a < nage; a++){         
 		for(auto aa = 0u; aa < nage; aa++) mat.ele[aa][a] /= sum;
 	}
@@ -161,9 +163,7 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 			mat.ele[j][i] = get_double(tab.ele[j][i],"In the file '"+tab.file+"'");
 		}
 	}
-				 
-	//for(auto j = 0u; j < N; j++) cout << j << " " << double(pop[j])/poptot << "prop\n";
-	
+		
 	for(auto j = 0u; j < N; j++){
 		for(auto i = 0u; i < N; i++){
 			mat.ele[j][i] /= double(pop[j])/poptot;
@@ -178,24 +178,14 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 		}
 	}
 	
-	if(false){
+	if(true){
+		auto mat_st = mat;  // Makes the matrix symetric
 		for(auto j = 0u; j < N; j++){
 			for(auto i = 0u; i < N; i++){
-				cout << int(mat.ele[j][i]*10) << ", ";
+				mat.ele[j][i] = 0.5*(mat_st.ele[j][i]+mat_st.ele[i][j]);
 			}
-			cout  << endl;
-		}
-		cout << "before\n";
-	}
-	
-	/*
-	auto mat_st = mat;  // Makes the matrix symetric
-	for(auto j = 0u; j < N; j++){
-		for(auto i = 0u; i < N; i++){
-			mat.ele[j][i] = 0.5*(mat_st.ele[j][i]+mat_st.ele[i][j]);
 		}
 	}
-	*/
 	
 	if(false){
 		for(auto j = 0u; j < N; j++){
@@ -204,7 +194,6 @@ Matrix Data::age_mixing_matrix(const Table &tab) const
 			}
 			cout  << endl;
 		}
-			cout << "after\n";
 		emsg("Done");
 	}
 	

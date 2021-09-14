@@ -274,6 +274,10 @@ void PMCMC::mcmc_updates()
 				joint_proposal(paramprop.joint[num]);    
 				break;
 				
+			case COVAR_AREA_PROP:
+				covar_area_proposal(paramprop.covar_area[num]);    
+				break;
+				
 			case FIXEDTREE_PROP: case SLICETIME_PROP: 
 				emsgEC("PMCMC",4);
 				break;
@@ -429,6 +433,26 @@ void PMCMC::mean_time_proposal(MeanTime &mt)
 	}
 	
 	timer[TIME_MEANTIME].stop();
+}
+
+
+/// Looks at making proposals to change a covariate and area effects
+void PMCMC::covar_area_proposal(CovarArea &ca)
+{
+	timer[TIME_COVAR_AREA].start();
+		
+	auto al = 0.0;
+	auto suc = 0u; if(core == 0){ if(ca.propose(Pp.paramval,Pi.paramval,model,data) == SUCCESS) suc = 1;}
+	mpi.bcast(suc);
+	
+	if(suc == 1){
+		al = get_al();
+		if(core == 0){
+			if(ca.MH(al,pup) == SUCCESS) copy_propose_state();
+		}
+	}
+	
+	timer[TIME_COVAR_AREA].stop();
 }
 
 

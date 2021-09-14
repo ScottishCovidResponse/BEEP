@@ -39,7 +39,7 @@ ParamProp::ParamProp(const Details &details, const Data &data, const Model &mode
 		}
 		
 		if(details.mcmc_update.single == true) add_single();
-		
+
 		//if(details.mcmc_update.demo_spec == true) add_demographic_specific();
 		
 		if(details.mcmc_update.mean_time == true) mean_time_init();
@@ -47,7 +47,9 @@ ParamProp::ParamProp(const Details &details, const Data &data, const Model &mode
 		if(details.mcmc_update.neighbour == true) neighbour_init();
 		
 		if(details.mcmc_update.joint == true) joint_init();
-			 
+		
+		covar_area_init();
+		
 		if(details.mode == ABC_MBP || details.mode == MC3_INF || details.mode == MCMC_MBP || details.mode == PAIS_INF){
 			FixedTree ft; ft.n = 0; ft.sim_frac = 1;
 			fixedtree.push_back(ft);
@@ -118,6 +120,23 @@ void ParamProp::add_single()
 			vector <unsigned int> vec; vec.push_back(th);
 			MVN mv("Univariate: "+model.param[th].name,vec,1,type,SINGLE);
 			mvn.push_back(mv);
+		}
+	}
+}
+
+
+/// Joint proposals on covariate and area effects 
+void ParamProp::covar_area_init()
+{
+	if(data.area_effect.on == false) return;
+	
+	for(auto loop = 0u; loop < 3; loop++){
+		for(auto i = 0u; i < model.covariate_param.size(); i++){
+			CovarArea ca;
+			ca.covar_ref = i;
+				
+			ca.size = 0.05;
+			covar_area.push_back(ca);
 		}
 	}
 }
@@ -271,6 +290,8 @@ void ParamProp::zero_ntr_nac()
 	
 	for(auto &jo : joint){ jo.ntr = 0; jo.nac = 0; jo.nbo = 0;}
 	
+	for(auto &ca : covar_area){ ca.ntr = 0; ca.nac = 0;}
+	
 	for(auto &ft : fixedtree){ ft.ntr = 0; ft.nac = 0;}
 	
 	for(auto &st : slicetime){ st.ntr = 0; st.nac = 0;}
@@ -318,6 +339,13 @@ void ParamProp::update_proposals()
 		rn.ac_rate = a_rate;
 		
 		update(rn.size,a_rate);
+	}
+	
+	for(auto &ca : covar_area){
+		auto a_rate = mpi.get_acrate(ca.nac,ca.ntr); 
+		ca.ac_rate = a_rate;
+		
+		update(ca.size,a_rate);
 	}
 	
 	for(auto &ft : fixedtree){
@@ -368,6 +396,10 @@ void ParamProp::set_ac_rate()
 	for(auto &rn : joint){
 		rn.bo_rate = double(rn.nbo)/rn.ntr;
 		rn.ac_rate = double(rn.nac)/rn.ntr;
+	}
+	
+	for(auto &ca : covar_area){
+		ca.ac_rate = double(ca.nac)/ca.ntr;
 	}
 }
 
@@ -523,8 +555,8 @@ vector <Proposal> ParamProp::get_proposal_list(const vector <ParamSample> &param
 				case SINGLE: if(num > 10) num = 10; break;
 			}
 		}
-		//if(num < 3) num = 3; 
-		if(num < 1) num = 1; 
+		if(num < 3) num = 3; 
+		//if(num < 1) num = 1; 
 		//if(num < 6) num = 6; 
 		
 		Proposal prop; prop.type = MVN_PROP; prop.num = i;
@@ -543,6 +575,11 @@ vector <Proposal> ParamProp::get_proposal_list(const vector <ParamSample> &param
 	
 	for(auto i = 0u; i < joint.size(); i++){
 		Proposal prop; prop.type = JOINT_PROP; prop.num = i;
+		prop_list.push_back(prop);
+	}	
+	
+	for(auto i = 0u; i < covar_area.size(); i++){
+		Proposal prop; prop.type = COVAR_AREA_PROP; prop.num = i;
 		prop_list.push_back(prop);
 	}	
 	
@@ -574,6 +611,7 @@ void ParamProp::print_prop_list(const vector <Proposal> &prop_list) const
 			case MEAN_TIME_PROP: cout << "Mean Time: " << num << " " << mean_time[num].size << endl; break;
 			case NEIGHBOUR_PROP: cout << "Neighbour: " << num << " " << neighbour[num].size << endl; break;
 			case JOINT_PROP: cout << "Joint: " << num << " " << joint[num].size << endl; break;
+			case COVAR_AREA_PROP: cout << "Covar Area: " << num << " " << covar_area[num].size << endl; break;
 			case SELF_PROP: cout << "Self: " << endl; break;
 			case FIXEDTREE_PROP: cout << "Fixed tree: " << num << endl; break;
 			case SLICETIME_PROP: cout << "Slice time: " << num << endl; break;
@@ -671,6 +709,12 @@ string ParamProp::print_proposal_information(const bool brief) const
 			case SINE: ss << "Sine " << rn.sinenum; break;
 		}
 		ss << " -   Acceptance: " <<  per(rn.ac_rate) << "    Size: " << rn.size << endl;
+	}
+	
+	for(auto &ca : covar_area){
+		ss << "Covar Area: ";
+		ss << model.param[model.covariate_param[ca.covar_ref]].name; 
+		ss << " -   Acceptance: " <<  per(ca.ac_rate) << "    Size: " << ca.size << endl;
 	}
 
 	if(brief == true){
@@ -841,6 +885,51 @@ Status Joint::propose(vector <double> &param_prop, const vector <double> &paramv
 		break;
 	}
 
+	if(model.inbounds(param_prop) == false) return FAIL;
+	else return SUCCESS;
+}
+
+
+/// The Metropolis-Hastings proposal
+Status CovarArea::MH(double al, ParamUpdate pup)
+{
+	ntr++;
+	if(ran() < al){ 
+		if(pup == FAST_UPDATE) size *= fac_up_fast;
+		if(pup == SLOW_UPDATE) size *= fac_up;
+		nac++; 
+		return SUCCESS;
+	}
+	if(pup == FAST_UPDATE) size *= fac_down_fast;
+	if(pup == SLOW_UPDATE) size *= fac_down;
+
+	return FAIL;
+}
+
+
+/// The joint proposals on a spline
+Status CovarArea::propose(vector <double> &param_prop, const vector <double> &paramval, const Model &model, const Data &data)
+{
+	param_prop = paramval;
+	
+	auto th = model.covariate_param[covar_ref];
+	
+	auto param_st = param_prop[th];
+	param_prop[th] += normal_sample(0,size);
+	
+	auto narea = data.narea;
+	
+	auto sum = 0.0;
+	for(auto c = 0u; c < narea; c++){
+		auto fac = exp((param_st-param_prop[th])*data.covar[covar_ref].value[c][0]);
+		sum += log(fac);
+	}
+
+	for(auto c = 0u; c < narea; c++){
+		auto fac = exp((param_st-param_prop[th])*data.covar[covar_ref].value[c][0] - sum/narea);
+		param_prop[model.area_effect_param_list[c]] *= fac;
+	}
+	
 	if(model.inbounds(param_prop) == false) return FAIL;
 	else return SUCCESS;
 }

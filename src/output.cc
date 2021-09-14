@@ -26,6 +26,7 @@ Output::Output(const Details &details, const Data &data, const Model &model, Inp
 		inputs.find_outputprop(prop);                                     // Load output properties
 		inputs.find_plot_param_values(plot_param_values);
 		inputs.find_nrun(nrun);
+		inputs.find_stateuncer(stateuncer);
 		
 		inputs.find_area_plot(area_plot);                                 // Finds information about plotting areas 
 		
@@ -40,6 +41,8 @@ Output::Output(const Details &details, const Data &data, const Model &model, Inp
 /// Generates the output files along with the final pdf report that gives graphical outputs
 void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp) const
 { 
+	cout << "Generating graphs..." << endl;
+
 	for(auto &psa : psamp) psa.paramval = model.dirichlet_correct(psa.paramval);
 	
 	cout << endl;
@@ -57,7 +60,7 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 		
 		spatial_mixing_map(op);
 	
-		age_mixing_matrix(op);
+		age_mixing_matrix(opsamp,op);
 		
 		datatable_maps(opsamp,op);
 		
@@ -76,7 +79,7 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 
 		spatial_mixing_map(op);
 		
-		age_mixing_matrix(op);
+		age_mixing_matrix(opsamp,op);
 			
 		datatable_maps(opsamp,op);
 			
@@ -90,6 +93,8 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 
 		branch_prob_distributions(psamp,op);
 
+		age_mixing_perturb_distributions(psamp,op);
+				
 		level_effect_distributions(psamp,op);
 		
 		area_effect_distributions(psamp,op);
@@ -188,7 +193,8 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 			case OP_MARGINAL:	
 				ss << "uses columns 1, 2 and " << line.ycol << " in '";
 				break;
-			case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
+			case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_AGE_MATRIX_POST: case OP_AGE_MATRIX_DIF: 
+			case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
 			case OP_COMP_MODEL: case OP_FOI_MODEL: case OP_DESC:	
 			case OP_MIXING_WITHIN_ANIM_MAP: case OP_MIXING_WITHIN_MAP:
 			case OP_MIXING_BETWEEN_ANIM_MAP: case OP_MIXING_BETWEEN_MAP: 
@@ -203,7 +209,8 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 		}
 	
 		switch(oppl.type){
-			case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
+			case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_AGE_MATRIX_POST: case OP_AGE_MATRIX_DIF: 
+			case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
 			case OP_COMP_MODEL: case OP_FOI_MODEL: case OP_DESC:
 			case OP_MIXING_WITHIN_ANIM_MAP: case OP_MIXING_WITHIN_MAP:
 			case OP_MIXING_BETWEEN_ANIM_MAP: case OP_MIXING_BETWEEN_MAP: 
@@ -222,7 +229,8 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 	for(auto i = 0u; i < op.size(); i++){
 		const auto &oppl = op[i];
 		
-		if(oppl.type != OP_ANIM_MAP && oppl.type != OP_AGE_MATRIX 
+		if(oppl.type != OP_ANIM_MAP && oppl.type != OP_AGE_MATRIX && oppl.type != OP_AGE_MATRIX_POST
+			&& oppl.type != OP_AGE_MATRIX_DIF
 			&& oppl.type != OP_COMP_MODEL && oppl.type != OP_FOI_MODEL && oppl.type != OP_DESC
 			&& oppl.type != OP_MIXING_WITHIN_ANIM_MAP && oppl.type != OP_MIXING_WITHIN_MAP
 			&& oppl.type != OP_MIXING_BETWEEN_ANIM_MAP && oppl.type != OP_MIXING_BETWEEN_MAP
@@ -255,6 +263,8 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 /// Generates a text description of the pdf file
 void Output::generate_visualisation(const vector <OutputPlot> &op, const string grfile) const
 {
+	cout << "Generating visualisation..." <<  endl;
+	
 	auto opdir = details.output_directory;
 	ensure_directory(opdir+"/vis_files");              // Copies the output 
 	stringstream ss; ss << "cp ./vis_files/* " << opdir << "/vis_files/" << endl;
@@ -314,6 +324,8 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 			case OP_MIXING_POP_ANIM_MAP: ty = "OP_MIXING_POP_ANIM_MAP"; break;
 			case OP_MIXING_POP_MAP: ty = "OP_MIXING_POP_MAP"; break;
 			case OP_AGE_MATRIX: ty = "OP_AGE_MATRIX"; break;
+			case OP_AGE_MATRIX_POST: ty = "OP_AGE_MATRIX_POST"; break;
+			case OP_AGE_MATRIX_DIF: ty = "OP_AGE_MATRIX_DIF"; break;
 			case OP_PARAM_TABLE: ty = "OP_PARAM_TABLE"; break;
 			case OP_PRIOR_TABLE: ty = "OP_PRIOR_TABLE"; break;
 			case OP_COMP_MODEL: ty = "OP_COMP_MODEL"; break;
@@ -352,7 +364,8 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 				{
 					vis << ",\"array\":" << data.get_array_JSON(opi.title,details.output_directory);
 					
-					vector <string> dates = data.get_table_column_str(0,opi.title,details.output_directory);
+					auto tab = data.get_table(opi.title,details.output_directory);
+					vector <string> dates = data.get_table_column_str(0,tab);
 					vis << ",\"dates\":[";
 					for(auto i = 0u; i < dates.size(); i++){
 						if(i > 0) vis << ",";
@@ -459,7 +472,8 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 					}
 					vis << "]";
 						
-					auto covar = data.get_table_column(opi.yaxis,data.areas_file,data.data_directory);
+					auto tab = data.get_table(data.areas_file,data.data_directory);
+					auto covar = data.get_table_column(opi.yaxis,tab);
 				
 					vis << ",\"array\":[[";
 					for(auto c = 0u; c < data.narea; c++){
@@ -470,7 +484,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 				}
 				break;
 				
-			case OP_AGE_MATRIX:
+			case OP_AGE_MATRIX: case OP_AGE_MATRIX_POST: case OP_AGE_MATRIX_DIF:
 				{
 					vis << ",\"ages\":[";
 					for(auto a = 0u; a < data.democat[0].value.size(); a++){
@@ -483,14 +497,40 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 					}
 					vis << "]";
 					
-					const auto &N = data.genQ.N[0];
-					vis << ",\"ele\":[";
+					auto N = data.genQ.N[0];
 					for(auto i = 0u; i < N.ele.size(); i++){
+						for(auto j = 0u; j < N.ele[i].size(); j++) N.ele[j][i] *= data.agedist[j]/N.norm_factor;
+					}
+					
+					Matrix Nplot;
+					switch(opi.type){
+						case OP_AGE_MATRIX:
+							Nplot = N;
+							break;
+							
+						case OP_AGE_MATRIX_POST:
+							Nplot = data.get_matrix(opi.title,details.output_directory);
+							break;
+							
+						case OP_AGE_MATRIX_DIF:
+							Nplot = data.get_matrix(opi.title,details.output_directory);
+							for(auto i = 0u; i < N.ele.size(); i++){
+								for(auto j = 0u; j < N.ele[i].size(); j++){
+									Nplot.ele[j][i] /= N.ele[j][i];
+								}
+							}
+							break;
+							
+						default: emsgEC("Output",45); break;
+					}
+					
+					vis << ",\"ele\":[";
+					for(auto i = 0u; i < Nplot.ele.size(); i++){
 						if(i > 0) vis << ",";
 						vis << "[";
-						for(auto j = 0u; j < N.ele[i].size(); j++){
+						for(auto j = 0u; j < Nplot.ele[i].size(); j++){
 							if(j > 0) vis << ",";
-							vis << N.ele[j][i]*data.agedist[j];
+							vis << Nplot.ele[j][i];
 						}
 						vis << "]";
 					}
@@ -522,32 +562,48 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 			
 			default:
 				vis << ",\"line\":[";		
-				
+				Table tab;
+				string file_loaded = "";
 				for(auto j = 0u; j < opi.line.size(); j++){						
 					vis << "{";
 					auto li = opi.line[j];
+					auto file = li.file;
+					if(file_loaded != file && file.length() > 4){
+						auto file_end = file.substr(file.length()-4,4);
+						if(file_end == ".csv" || file_end == ".txt"){
+							tab = data.get_table(file,details.output_directory);
+							file_loaded = file;
+						}
+					}
+					
 					vis << "\"name\":\"" << li.name << "\"";
 			
 					if(opi.type == OP_MARGINAL || opi.type == OP_GRAPH_MARGINAL){
 						auto lab = 3u;
 						if(opi.type == OP_GRAPH_MARGINAL) lab = 2;
-						auto vec = data.get_table_column_str(lab-1,li.file,details.output_directory);
+						
+						auto vec = data.get_table_column_str(lab-1,tab);
 						vis << ",\"label\":[";
 						for(auto k = 0u; k < vec.size(); k++){
-							vis << "\"" << vec[k] << "\""; if(k < vec.size()-1) vis << ",";
+							auto val = vec[k];
+							if(val.length() > 3){
+								if(val.substr(0,3) == "age") val = val.substr(3);
+							}
+							
+							vis << "\"" << val << "\""; if(k < vec.size()-1) vis << ",";
 						}				
 						vis << "]";
 					}
 					
 					if(plot_param_values == true && (opi.type == OP_GENERATION || opi.type == OP_PARAMDIST || opi.type == OP_TRACE) && j != 0 && j == opi.line.size()-1 && li.name == "Value"){
-						if(get_double(li.file,"This parameter value ") != UNSET){
-							vis << ",\"true\":" << li.file;
+						if(get_double(file,"This parameter value ") != UNSET){
+							vis << ",\"true\":" << file;
 						}
 					}
 					else{
 						auto xcol = li.xcol;
 						if(xcol != UNSET){
-							auto vec = data.get_table_column(xcol-1,li.file,details.output_directory);
+							auto vec = data.get_table_column(xcol-1,tab);
 							vis << ",\"xcol\":[";
 							for(auto k = 0u; k < vec.size(); k++){
 								vis << vec[k]; if(k < vec.size()-1) vis << ",";
@@ -557,7 +613,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 						
 						auto ycol = li.ycol;
 						if(ycol != UNSET){
-							auto vec = data.get_table_column(ycol-1,li.file,details.output_directory);
+							auto vec = data.get_table_column(ycol-1,tab);
 						 
 							vis << ",\"ycol\":[";
 							for(auto k = 0u; k < vec.size(); k++){
@@ -567,14 +623,14 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 		
 							auto EBcol = li.EB;
 							if(EBcol != UNSET){
-								auto vecmin = data.get_table_column(EBcol-1,li.file,details.output_directory);
+								auto vecmin = data.get_table_column(EBcol-1,tab);
 								vis << ",\"errbarmin\":[";
 								for(auto k = 0u; k < vecmin.size(); k++){
 									vis << vecmin[k]; if(k < vecmin.size()-1) vis << ",";
 								}				
 								vis << "]";
 									
-								auto vecmax = data.get_table_column(EBcol,li.file,details.output_directory);
+								auto vecmax = data.get_table_column(EBcol,tab);
 								vis << ",\"errbarmax\":[";
 								for(auto k = 0u; k < vecmax.size(); k++){
 									vis << vecmax[k]; if(k < vecmax.size()-1) vis << ",";
@@ -585,14 +641,14 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 							
 							if((opi.type == OP_MARGINAL || opi.type == OP_GRAPH_MARGINAL) && j == 0 && details.siminf == INFERENCE){
 								if(details.mode != SIM){
-									auto vecmin = data.get_table_column(ycol,li.file,details.output_directory);
+									auto vecmin = data.get_table_column(ycol,tab);
 									vis << ",\"errbarmin\":[";
 									for(auto k = 0u; k < vecmin.size(); k++){
 										vis << vecmin[k]; if(k < vecmin.size()-1) vis << ",";
 									}				
 									vis << "]";
 									
-									auto vecmax = data.get_table_column(ycol+1,li.file,details.output_directory);
+									auto vecmax = data.get_table_column(ycol+1,tab);
 									vis << ",\"errbarmax\":[";
 									for(auto k = 0u; k < vecmax.size(); k++){
 										vis << vecmax[k]; if(k < vecmax.size()-1) vis << ",";
@@ -602,7 +658,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 							}
 							
 							if(opi.type == OP_ME && j == 0 && opi.line.size() > 1){
-								auto sd = data.get_table_column(ycol,li.file,details.output_directory);
+								auto sd = data.get_table_column(ycol,tab);
 								vis << ",\"errbarmin\":[";
 								for(auto k = 0u; k < sd.size(); k++){
 									vis << vec[k]-sd[k]; if(k < sd.size()-1) vis << ",";
@@ -643,6 +699,10 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 						case CYAN_DASHED: vis << "CYAN_DASHED"; break;
 						case MAGENTA_SOLID: vis << "MAGENTA_SOLID"; break;
 						case MAGENTA_DASHED: vis << "MAGENTA_DASHED"; break;
+						case RED_THIN: vis << "RED_THIN"; break;
+						case GREEN_THIN: vis << "GREEN_THIN"; break;
+						case BLUE_THIN: vis << "BLUE_THIN"; break;
+						case BLACK_THIN: vis << "BLACK_THIN"; break;
 					}
 					vis << "\"";
 					vis << "}";
@@ -954,15 +1014,44 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 {
 	if(opsamp.size() == 0) return;
 	
-	vector <GraphMultiPlot> graph_plot;
+	auto ngraph = data.graph.size();
+	
+	vector <bool> EBflag(ngraph);                                                     // This sets error bars from observation model
+	auto EBnum = LARGE;
 	
 	for(auto gr_num = 0u; gr_num < data.graph.size(); gr_num++){
+		EBflag[gr_num] = false;
+		 
+		auto gr = data.graph[gr_num];
+		const auto &dt = data.datatable[gr.datatable];
+					
+		if(plot_obs_model == true && details.siminf == INFERENCE){	
+			if(dt.obsmodel == POWER_OBSMODEL) EBflag[gr_num] = true; 
+
+			if(dt.obsmodel == SCALE_OBSMODEL){
+				EBflag[gr_num] = true;		
+				auto max = 0.0;
+				auto imax = 0u;
+				for(auto i = 0u; i < gr.point.size(); i++){
+					auto val = data.obs[gr.point[i].obs].value;
+					if(val > max){ max = val; imax = i;}
+				}
+				
+				if(max > 0){
+					const auto &ob = data.obs[gr.point[imax].obs];
+					auto num = 0.2*ob.w*ob.weight;
+					if(num < EBnum) EBnum = num; 
+				}
+			}
+		}
+	}
+	
+	vector <GraphMultiPlot> graph_plot;
+	
+	for(auto gr_num = 0u; gr_num < ngraph; gr_num++){
 		auto gr = data.graph[gr_num];
 		const auto &dt = data.datatable[gr.datatable];
 			
-		bool EBflag = false;
-		if(dt.obsmodel == POWER_OBSMODEL || SCALE_OBSMODEL) EBflag = true;
-		
 		auto file = details.output_directory+"/"+post_dir+"/state/"+gr.file;
 
 		ofstream stateout(file.c_str());
@@ -972,23 +1061,48 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			case GRAPH_TIMESERIES: stateout << "Time"; break;
 			case GRAPH_MARGINAL: stateout << "Ref. Num.,Demographic state"; break;
 		} 
-		stateout << ",Mean,95% CI min,95% CI max" << endl; 
+		stateout << ",Mean";
+		switch(stateuncer){
+			case CI: 
+				stateout << ",95% CI min,95% CI max" << endl; 
+				break;
+				
+			case CURVES:
+				for(auto sa = 0u; sa < opsamp.size(); sa++) stateout << ",Sample " << sa;
+				stateout << endl;
+				break;
+		}
 		
 		auto imax = opsamp[0].graph_state[gr_num].size();
 		auto min = LARGE, max = -LARGE;
 		for(auto i = 0u; i < imax; i++){
 			vector <double> vec; for(const auto &opsa : opsamp) vec.push_back(opsa.graph_state[gr_num][i]);		
 			auto stat = get_statistic(vec);
-			
+		
 			switch(gr.type){
-				case GRAPH_TIMESERIES: stateout << details.division_time[i*graph_step+graph_step/2]; break;				
+				case GRAPH_TIMESERIES:
+					stateout << details.division_time[i*details.graph_step+details.graph_step/2]; 
+					break;				
 				case GRAPH_MARGINAL: stateout << i << "," << dt.demolist[i]; break;
 			}
 			
-			stateout << "," << stat.mean << "," << stat.CImin << "," << stat.CImax << endl; 
-			
-			if(stat.CImax > max) max = stat.CImax;
-			if(stat.CImin < min) min = stat.CImin;
+			stateout << "," << stat.mean;
+			switch(stateuncer){
+				case CI: 
+					stateout << "," << stat.CImin << "," << stat.CImax << endl;
+					if(stat.CImax > max) max = stat.CImax;
+					if(stat.CImin < min) min = stat.CImin;	
+					break;
+					
+				case CURVES:
+					for(const auto &opsa : opsamp){
+						auto val = opsa.graph_state[gr_num][i]; 
+						stateout << "," << val; 
+						if(val > max) max = val; if(val < min) min = val;	
+					}
+					stateout << endl;
+					break;
+			}
 		}
 		
 		auto thresh_flag = false;
@@ -1006,7 +1120,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			else{
 				dataout << "Time,Data";
 			}
-			if(EBflag == true) dataout << ",EB min,EB max";
+			if(EBflag[gr_num] == true) dataout << ",EB min,EB max";
 	
 			dataout << endl;
 			
@@ -1027,22 +1141,19 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			
 			for(auto i = 0u; i < gr.point.size(); i++){
 				const auto &p = gr.point[i];
-				//auto ob = p.obs;
 				const auto &ob = data.obs[p.obs];
 				
 				auto val = ob.value;
 				
-				double EBmin = 0.0, EBmax = 0.0;
-				if(EBflag == true){
+				auto EBmin = 0.0, EBmax = 0.0;
+				if(EBflag[gr_num] == true){
 					if(dt.obsmodel == POWER_OBSMODEL){	EBmin = val - ob.sd; EBmax = val + ob.sd;}
 					if(dt.obsmodel == SCALE_OBSMODEL){
-						auto num = 0.001;
-						EBmin = (ob.value+ob.epsilon)*exp(-num/(ob.w*ob.weight)) - ob.epsilon;
-						EBmax = (ob.value+ob.epsilon)*exp(num/(ob.w*ob.weight)) - ob.epsilon;
+						EBmin = (ob.value+ob.epsilon)*exp(-EBnum/(ob.w*ob.weight)) - ob.epsilon;
+						EBmax = (ob.value+ob.epsilon)*exp(EBnum/(ob.w*ob.weight)) - ob.epsilon;
 						if(EBmax > ob.value*4) EBmax = ob.value*4;
 					}
 				}
-				
 				
 				if(dt.type == TRANS && val != UNKNOWN && val != THRESH){
 					val /= p.xf - p.xi;
@@ -1052,7 +1163,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				auto shift = 0.0; if(details.time_format == TIME_FORMAT_NUM) shift = details.start;
 				
 				string EBstr = "";
-				if(EBflag == true) EBstr = ","+to_string(EBmin)+","+to_string(EBmax);
+				if(EBflag[gr_num] == true) EBstr = ","+to_string(EBmin)+","+to_string(EBmax);
 			
 				switch(dt.type){
 					case MARGINAL:
@@ -1099,7 +1210,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 								if(thresh_flag == true) datathreshout << endl;
 							}
 							else{
-								dataout << 0.5*(p.xi+p.xf) + shift << "," << val << EBstr << endl;;
+								dataout << 0.5*(p.xi+p.xf) + shift << "," << val << EBstr << endl;
 								if(thresh_flag == true) datathreshout << endl;
 							}
 						}
@@ -1130,8 +1241,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				
 				if(file_data != ""){
 					gp.file_data.push_back(file_data);
-					gp.file_data_EB.push_back(EBflag);
-					if(thresh_flag == true) gp.file_data_thresh.push_back(file_data_thresh);
+					gp.file_data_EB.push_back(EBflag[gr_num]);
+					if(thresh_flag == true)	gp.file_data_thresh.push_back(file_data_thresh);
 				}
 				new_plot = false;
 			}
@@ -1150,7 +1261,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			gp.max = max;
 			if(file_data != ""){
 				gp.file_data.push_back(file_data);
-				gp.file_data_EB.push_back(EBflag);
+				gp.file_data_EB.push_back(EBflag[gr_num]);
 				if(thresh_flag == true) gp.file_data_thresh.push_back(file_data_thresh);
 			}
 			graph_plot.push_back(gp);
@@ -1163,12 +1274,14 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 		vector <LineType> lt, lt2;
 		get_line_colours(gp.line_colour,lt,lt2);	
 				
+		auto time_label = "Time";
+		
 		switch(gp.type){                                                // Generates the final plot
 			case GRAPH_TIMESERIES:
 				{
 					auto ylabel = gp.name[0]; if(gp.file.size() > 1) ylabel = "Value";
 		
-					OutputPlot oppl(OP_GRAPH,gp.plot_name,gp.fulldesc,gp.tab,gp.tab2,gp.tab3,gp.tab4,"Time",ylabel,min,max);
+					OutputPlot oppl(OP_GRAPH,gp.plot_name,gp.fulldesc,gp.tab,gp.tab2,gp.tab3,gp.tab4,time_label,ylabel,min,max);
 				
 					for(auto i = 0u; i < gp.file.size(); i++){
 						auto legend = details.analysis_type; if(gp.file.size() > 1) legend = gp.name[i];
@@ -1177,31 +1290,42 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 							oppl.addline(legend,file,1,2,lt[i]);
 						}
 						else{
+							switch(stateuncer){
+								case CI: 
+									oppl.addline("95% CI min",file,1,3,lt2[i]);
+									oppl.addline("95% CI max",file,1,4,lt2[i]);
+									break;
+							
+								case CURVES:
+									for(auto sa = 0u; sa < opsamp.size(); sa++){
+										oppl.addline("",file,1,3+sa,lt2[i]);
+									}
+									break;
+							}
+							
 							oppl.addline(legend,file,1,2,lt[i]);
-							oppl.addline("95% CI min",file,1,3,lt2[i]);
-							oppl.addline("95% CI max",file,1,4,lt2[i]);
 						}
 					}
 					
-					for(auto file_data : gp.file_data) oppl.addline("Data",file_data,1,2,BLACK_SOLID);
-					/*
 					for(auto i = 0u; i < gp.file_data.size(); i++){
-						if(gp.file_data_EB[i] == true) oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID,3);
+						if(gp.file_data_EB[i] == true){
+							//oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID,3);
+							oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID);
+							oppl.addline("Obs. Model",gp.file_data[i],1,3,BLACK_DASHED);
+							oppl.addline("Obs. Model",gp.file_data[i],1,4,BLACK_DASHED);
+						}
 						else oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID);
 					}
-					*/
 					
 					for(auto file_data_thresh : gp.file_data_thresh) oppl.addline("Threshold",file_data_thresh,1,2,BLACK_DOTTED);
 					
 					if(details.siminf != DATAVIEW) op.push_back(oppl);
 					
 					if((details.siminf == INFERENCE || details.siminf == DATAVIEW) && gp.file_data.size() > 0){
-						OutputPlot oppl(OP_GRAPH,gp.plot_name,gp.fulldesc_data,"Data",gp.tab2,gp.tab3,gp.tab4,"Time",ylabel,min,max);
+						OutputPlot oppl(OP_GRAPH,gp.plot_name,gp.fulldesc_data,"Data",gp.tab2,gp.tab3,gp.tab4,time_label,ylabel,min,max);
 						oppl.xmin = 0; oppl.xmax = details.period;
 						
 						for(auto i = 0u; i < gp.file_data.size(); i++){
-							//if(gp.file_data_EB[i] == true) oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID,3);
-							//else
 							oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID);
 							
 							if(gp.file_data_EB[i] == true){
@@ -1210,8 +1334,10 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 							}
 						}
 					
-						for(auto file_data_thresh : gp.file_data_thresh) oppl.addline("Threshold",file_data_thresh,1,2,BLACK_DOTTED);
-					
+						for(auto file_data_thresh : gp.file_data_thresh){
+							oppl.addline("Threshold",file_data_thresh,1,2,BLACK_DOTTED);
+						}
+						
 						op.push_back(oppl);
 					}
 				}
@@ -1261,7 +1387,12 @@ void Output::get_line_colours(vector <LineColour> line_colour, vector <LineType>
 	
 	for(auto i = 0u; i < line_colour.size(); i++){
 		switch(line_colour[i]){
-			case RED: lt.push_back(RED_SOLID); lt2.push_back(RED_DASHED); break;
+			case RED:
+				lt.push_back(RED_SOLID);
+				if(stateuncer == CURVES) lt2.push_back(BLUE_THIN);
+				else lt2.push_back(RED_DASHED);
+			
+				break;
 			case GREEN: lt.push_back(GREEN_SOLID); lt2.push_back(GREEN_DASHED); break;
 			case BLUE: lt.push_back(BLUE_SOLID); lt2.push_back(BLUE_DASHED); break;
 			case YELLOW: lt.push_back(YELLOW_SOLID); lt2.push_back(YELLOW_DASHED); break;
@@ -1472,6 +1603,8 @@ void Output::mean_distributions(const vector <ParamSample> &psamp, vector <Outpu
 			auto demodep = get_demodep(dep);
 			
 			auto plot_sim_param = plot_param_values;
+			if(details.analysis_type == "Simulation") plot_sim_param = true;
+			
 			for(auto i = 0u; i < demodep.size(); i++){
 				if(model.param[co.param_mean[demodep[i].dp]].value == UNSET) plot_sim_param = false;
 			}
@@ -1545,6 +1678,8 @@ void Output::branch_prob_distributions(const vector <ParamSample> &psamp, vector
 			auto demodep = get_demodep(dep);
 			
 			auto plot_sim_param = plot_param_values;
+			if(details.analysis_type == "Simulation") plot_sim_param = true;
+			
 			for(auto i = 0u; i < demodep.size(); i++){
 				if(model.param[tr.param_prob[demodep[i].dp]].value == UNSET) plot_sim_param = false;
 			}
@@ -1611,6 +1746,85 @@ void Output::branch_prob_distributions(const vector <ParamSample> &psamp, vector
 }
 
 
+/// Plots marginal distribitions showing how the age mixing matrix is modified at different break points
+void Output::age_mixing_perturb_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const 
+{
+	const auto &matmod = data.genQ.matmod; 
+	
+	if(matmod.size() == 0) return;
+	if(matmod.size() != data.nage) emsgEC("Output",32);
+	
+	auto plot_sim_param = plot_param_values;
+	if(details.analysis_type == "Simulation") plot_sim_param = true;
+		
+	auto nbp = matmod[0].bp.size();
+	for(auto bp = 0u; bp < nbp; bp++){
+		auto d = matmod[0].bp[bp];
+
+		auto dir = details.output_directory+"/"+post_dir+"/age_mixing";
+		auto file = "Day "+to_string(d)+".csv";
+		ensure_directory(dir);
+		auto filefull = dir+"/"+file;
+	
+		ofstream distout(filefull.c_str());
+		if(!distout) emsg("Cannot open the file '"+filefull+"'");
+
+		if(suppress_output == false) cout << "'" << file << "' gives stratified age mixing modification on day " << d << "." << endl;
+
+		distout << "# Stratified age mixing modification on day " << d << "." << endl;
+
+		distout << "Ref.Num.,Ref.Lab,Age";
+		distout << ",Mean,95% CI Min,95% CI Max";
+		if(plot_sim_param == true) distout << ",Simulated";
+		distout << endl;
+	
+		vector <string> label;
+		auto max = -LARGE, min = LARGE;
+		for(auto i = 0u; i < data.nage; i++){
+			distout << i << "," << reference_label(i) << "," << data.democat[0].value[i];
+				
+			auto &spl = model.spline[matmod[i].spline_ref];
+			
+			auto th = spl.p[bp].param;
+			
+			vector <double> vec; for(const auto &psa : psamp) vec.push_back(psa.paramval[th]);
+			auto stat = get_statistic(vec);
+
+			distout << "," << stat.mean << "," << stat.CImin << "," << stat.CImax;	
+			if(stat.CImax > max) max = stat.CImax;
+			if(stat.CImin < min) min = stat.CImin;
+			
+			if(plot_sim_param == true){
+				auto num = model.param[th].value; if(num > max) max = num; if(num < min) min = num;
+				distout << "," << num;
+			}
+			distout << endl;
+		}
+
+			string fulldesc = "Age mixing modification: ";
+			/*
+			if(details.siminf == SIMULATE){
+				fulldesc += "The red bars show branching probabilities for the *"+tr.name+"* transition for different *"+dep+"*. ";
+			}
+			else{
+				fulldesc += "The red bars show the posterior mean branching probabilities for the *"+tr.name+"* transition for different *"+dep+"*. The error bars show the 95% credible intervals.";
+			
+				if(plot_sim_param == true) fulldesc += "  The horizontal black lines show the true values used to simulate the data. ";
+			}
+			*/
+			
+		OutputPlot oppl(OP_MARGINAL,"Age mixing modification",fulldesc,details.analysis_type,"Age Mixing","Break points","Day "+to_string(d),"Age","Value",UNSET,UNSET);
+
+		oppl.label = label;
+		if(details.analysis_type != "Simulation") oppl.addline(details.analysis_type,filefull,1,4,RED_SOLID);
+		
+		if(plot_sim_param == true) oppl.addline("Value",filefull,1,7,BLACK_SOLID);
+
+		op.push_back(oppl);
+	}
+}
+	
+	
 /// Outputs a bar chart giving level effects split by demographic groups
 void Output::level_effect_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const 
 {
@@ -2193,7 +2407,7 @@ void Output::spatial_mixing_map(vector <OutputPlot> &op) const
 	
 	if(mod_name != ""){
 		auto fulldesc = "Spatial mixing within areas: This shows the average percentage of daily contacts (which could potentially transmit infection) made by an individual within a given area with other individuals in that area (with all other contacts made elsewhere).  Clicking on the play button animates over time (note, the left and right arrow keys can be used to step single time units). This visualises the *"+data.genQ.M_name+"* input file modulated by the spline *"+mod_name+"*.";
-		OutputPlot oppl(OP_MIXING_WITHIN_ANIM_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,details.analysis_type,"Mixing","Spatial Mixing","Within areas","","",UNSET,UNSET);
+		OutputPlot oppl(OP_MIXING_WITHIN_ANIM_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,details.analysis_type,"Spatial Mixing","Within areas","","","",UNSET,UNSET);
 		op.push_back(oppl);
 	}
 	
@@ -2205,7 +2419,7 @@ void Output::spatial_mixing_map(vector <OutputPlot> &op) const
 	
 	if(mod_name != ""){
 		auto fulldesc = "Spatial mixing between areas: This shows the average percentage of contacts made by an individual within a given area with individuals in other areas (thicker blue arrows indicate a higher percentage and the black circles represent the geographical centers of each area).  Clicking on the play button animates over time (note, the left and right arrow keys can be used to step single time units). Hovering over an area shows results for that area only. This visualises the *"+data.genQ.M_name+"* input file modulated by the spline *"+mod_name+"*.";
-		OutputPlot oppl(OP_MIXING_BETWEEN_ANIM_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,details.analysis_type,"Mixing","Spatial Mixing","Between areas","","",UNSET,UNSET);
+		OutputPlot oppl(OP_MIXING_BETWEEN_ANIM_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,details.analysis_type,"Spatial Mixing","Between areas","","","",UNSET,UNSET);
 		op.push_back(oppl);
 	}
 	
@@ -2225,13 +2439,57 @@ void Output::spatial_mixing_map(vector <OutputPlot> &op) const
 	
 	
 /// Outputs a matrix giving the mixing between different age groups
-void Output::age_mixing_matrix(vector <OutputPlot> &op) const
+void Output::age_mixing_matrix(const vector <Sample> &opsamp, vector <OutputPlot> &op) const
 {
 	if(data.nage == 1) return;
 	
 	auto fulldesc = "Age Mixing matrix: This shows the relative contact rate with which different age groups mix within the population (darker red colours indicate more frequent contacts). This visualises the *"+data.genQ.N_name[0]+"* input file.";
 	OutputPlot oppl(OP_AGE_MATRIX,"This is a visualistation of the '"+data.genQ.N_name[0]+"' input file",fulldesc,"Data","Age Mixing","","","","",UNSET,UNSET);
 	op.push_back(oppl);
+	
+		
+	auto file = post_dir+"/age_mixing/matrix.csv";
+	auto filefull = details.output_directory+"/"+file;
+		
+	ofstream Nout(filefull.c_str());
+	if(!Nout) emsg("Cannot open the file '"+filefull+"'");
+	
+	auto Nsize = data.nage;
+	
+	Nout << "Age category";
+	for(auto c = 0u; c < Nsize; c++) Nout << "," << data.democat[0].value[c] << " Mean";
+	for(auto c = 0u; c < Nsize; c++) Nout << "," << data.democat[0].value[c] << " CI min";
+	for(auto c = 0u; c < Nsize; c++) Nout << "," << data.democat[0].value[c] << " CI max";
+	Nout << endl;
+
+	auto N = data.genQ.N[0];
+	
+	for(auto j = 0u; j < Nsize; j++){
+		vector <Statistics> stat(Nsize);
+		for(auto i = 0u; i < Nsize; i++){
+			vector <double> vec;
+			for(const auto &opsa : opsamp){
+				vec.push_back(opsa.Nsample[0][j][i]*data.agedist[j]/N.norm_factor);	
+			}				
+			stat[i] = get_statistic(vec);
+		}
+		
+		Nout << data.democat[0].value[j];
+		for(auto i = 0u; i < Nsize; i++) Nout << "," << stat[i].mean;
+		for(auto i = 0u; i < Nsize; i++) Nout << "," << stat[i].CImin;
+		for(auto i = 0u; i < Nsize; i++) Nout << "," << stat[i].CImax;
+		Nout << endl;
+	}
+				 	
+	if(details.siminf == INFERENCE){
+		auto fulldesc2 = "Modified age mixing matrix: This shows the inferred relative contact rate with which different age groups mix within the population (darker red colours indicate more frequent contacts).";
+		OutputPlot oppl2(OP_AGE_MATRIX_POST,file,fulldesc2,"Posterior","Age Mixing","Matrix","","","",UNSET,UNSET);
+		op.push_back(oppl2);
+		
+		auto fulldesc3 = "Modified age mixing matrix: This shows the inferred relative contact rate with which different age groups mix within the population (darker red colours indicate more frequent contacts).";
+		OutputPlot oppl3(OP_AGE_MATRIX_DIF,file,fulldesc3,"Posterior","Age Mixing","Difference","","","",UNSET,UNSET);
+		op.push_back(oppl3);
+	}
 }
 
 
@@ -2320,7 +2578,12 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 	gnuplot << "set style line 20 lt 2 lc rgb '#22ffff' lw 5" << endl; // CYAN_DASHED
 	gnuplot << "set style line 21 lt 1 lc rgb '#ff22ff' lw 5" << endl; // MAGENTA_SOLID
 	gnuplot << "set style line 22 lt 2 lc rgb '#ff22ff' lw 5" << endl; // MAGENTA_DASHED
-
+	gnuplot << "set style line 23 lt 1 lc rgb '#ff2222' lw 0.25" << endl; // RED_THIN
+	gnuplot << "set style line 24 lt 1 lc rgb '#aaffaa' lw 0.25" << endl; // GREEN_THIN
+	gnuplot << "set style line 25 lt 1 lc rgb '#aaaaff' lw 0.25" << endl; // BLUE_THIN
+	gnuplot << "set style line 26 lt 1 lc rgb '#222222' lw 0.25" << endl; // BLACK_THIN
+	
+	
 	gnuplot << "set style line 80 lt 1 lc rgb '#222222' lw 2" << endl; // BLACK_THIN
 	gnuplot << "set style line 81 lt 2 lc rgb '#ff2222' lw 2" << endl; // RED_THIN
 	gnuplot << "set style line 82 lt 2 lc rgb '#22ff22' lw 2" << endl; // GREEN_THIN
@@ -2332,7 +2595,8 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 	for(auto i = 0u; i < op.size(); i++){
 		const auto &oppl = op[i];
 			
-		if(oppl.tab != "Data" && oppl.type != OP_ANIM_MAP && oppl.type != OP_AGE_MATRIX 
+		if(oppl.tab != "Data" && oppl.type != OP_ANIM_MAP && oppl.type != OP_AGE_MATRIX
+			&& oppl.type != OP_AGE_MATRIX_POST && oppl.type != OP_AGE_MATRIX_DIF
 			&& oppl.type != OP_COMP_MODEL && oppl.type != OP_FOI_MODEL && oppl.type != OP_DESC
 			&& oppl.type != OP_MIXING_WITHIN_ANIM_MAP && oppl.type != OP_MIXING_WITHIN_MAP
 			&& oppl.type != OP_MIXING_BETWEEN_ANIM_MAP && oppl.type != OP_MIXING_BETWEEN_MAP
@@ -2348,8 +2612,8 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 			if(oppl.type == OP_TRACE){ keyfontsize = 16u; labelfontsize = 18; ticfontsize = 16u;}
 			gnuplot << "set tics font ', " << ticfontsize << "'" << endl;
 			gnuplot << "set key font ', " << keyfontsize << "'" << endl;
-			gnuplot << "set xlabel '" << label(oppl.xaxis) << "' font '," << labelfontsize << "'" << endl;
-			gnuplot << "set ylabel '" << label(oppl.yaxis) << "' font '," << labelfontsize << "'" << endl;
+			gnuplot << "set xlabel '" << label(replace(oppl.xaxis,"age:age","")) << "' font '," << labelfontsize << "'" << endl;
+			gnuplot << "set ylabel '" << label(replace(oppl.yaxis,"age:age","")) << "' font '," << labelfontsize << "'" << endl;
 		
 			if(oppl.type == OP_PARAMDIST)	gnuplot << "unset ytics" << endl;
 			else gnuplot << "set ytics" << endl;
@@ -2366,20 +2630,20 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 						
 						for(const auto &tp : details.timeplot){
 							gnuplot << "set arrow from " << tp.time - shift << ",0 to " << tp.time - shift << ","
-											<< ymax << " lw 3 lc rgb '#000066' lt 1 nohead" << endl;
+											<< ymax << " lw 3 lc rgb '#0000aa' lt 1 nohead" << endl;
 					
-							gnuplot << "set label '" << label(tp.name) << "' at " << tp.time - shift << "," << ymax << " left rotate by 270 offset 1,-1" << endl;
+							gnuplot << "set label  '" << label(tp.name) << "' at " << tp.time - shift << "," << ymax << " left rotate by 270 offset 0.7,-0.2 font ',16' textcolor rgb '#0000aa' " << endl;
 						}
 						
 						for(const auto &tp : pred_timeplot){
 							gnuplot << "set arrow from " << tp.time << ",0 to " << tp.time << ","
-											<< ymax << " lw 3 lc rgb '#0000aa' ";
+											<< ymax << " lw 3 lc rgb '#00aa00' ";
 
 							if(tp.name != "") gnuplot << "lt 1"; else gnuplot << "lt 4"; 
 							gnuplot << " nohead" << endl;
 					
 							if(tp.name != ""){
-								gnuplot << "set label '" << label(tp.name) << "' at " << tp.time << "," << ymax << " tc rgb '#0000aa'  left rotate by 270 offset 1,-1" << endl;
+								gnuplot << "set label '" << label(tp.name) << "' at " << tp.time << "," << ymax << " tc rgb '#00aa00'  left rotate by 270 offset 1,-1 font ',16' " << endl;
 							}
 						}
 						
@@ -2388,9 +2652,27 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 							const auto &line = oppl.line[j];
 							if(j != 0) gnuplot << ", ";
 							gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << " with lines ls " << line.style << " ";
-							if(line.name == "" || line.name == "95% CI min" || line.name == "95% CI max") gnuplot << "notitle"; 
+							
+							if(line.name == "" || line.name == "95% CI min" || line.name == "95% CI max" || oppl.line.size() == 1) gnuplot << "notitle"; 
 							else gnuplot << "title '" << label(line.name) << "'";
 						}
+						gnuplot << endl;
+
+						/*
+						gnuplot << "plot ";
+						for(auto j = 0u; j < oppl.line.size(); j++){
+							const auto &line = oppl.line[j];
+							if(j != 0) gnuplot << ", "; 
+							
+							if(j == oppl.line.size()-1){
+								gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << " lc rgb '#000000' lw 3 ps 2 ";
+							}
+							else{
+								gnuplot << "'" << line.file << "' using " << line.xcol << ":" << line.ycol << " with lines ls " << line.style << " ";
+							}
+							gnuplot << "notitle"; 
+						}
+						*/
 						
 						gnuplot << endl;
 						gnuplot << "unset label"<< endl;
@@ -2433,6 +2715,7 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 					gnuplot << "set style fill solid" << endl;
 					{
 						auto lab = 3u; if(oppl.legend_labelson == true) lab = 2;
+						if(oppl.line.size() == 0) emsg("Marginal graph '"+oppl.title+"' does not contain any lines");
 						auto col = oppl.line[0].ycol;
 						gnuplot << "plot '" << oppl.line[0].file << "' using ($1+0.5):" << col << ":xtic(" << lab <<") with boxes notitle, ";
 						if(details.mode != SIM){
@@ -2562,7 +2845,8 @@ void Output::generate_gnuplot_file(const vector <OutputPlot> &op, const string g
 					gnuplot << endl;
 					break;
 					
-				case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
+				case OP_ANIM_MAP: case OP_AGE_MATRIX: case OP_AGE_MATRIX_POST: case OP_AGE_MATRIX_DIF:
+				case OP_PARAM_TABLE: case OP_PRIOR_TABLE: 
 				case OP_COMP_MODEL: case OP_FOI_MODEL: case OP_DESC:
 				case OP_MIXING_WITHIN_ANIM_MAP: case OP_MIXING_WITHIN_MAP:
 				case OP_MIXING_BETWEEN_ANIM_MAP: case OP_MIXING_BETWEEN_MAP: 
@@ -2849,6 +3133,7 @@ vector <double> Output::get_Gelman_Rubin_statistic(const vector < vector < vecto
 		
 	auto nrun = param_GR.size(); if(nrun < 1) emsgEC("Output",6);
 	
+	/* // TO DO This has been temporarily turned off because of error 7
 	if(nrun > 1){
 		auto N = LARGE;
 		for(auto ru = 0u; ru < nrun; ru++){
@@ -2874,6 +3159,7 @@ vector <double> Output::get_Gelman_Rubin_statistic(const vector < vector < vecto
 			}
 		}
 	}
+	*/
 	
 	return GR;
 }
@@ -3087,6 +3373,8 @@ void Output::ensure_directories()
 	
 	if(details.siminf == INFERENCE) ensure_directory(dir+"/samples");
 	
+	if(data.nage > 1) ensure_directory(dir+"/age_mixing");
+			
 	if(details.siminf == SIMULATE) ensure_directory(details.output_directory+"/Simulated_data");
 }
 
@@ -3225,6 +3513,7 @@ void Output::generate_graphs(vector <Particle> &particle_store) const
 	auto dir = details.output_directory+"/"+post_dir+"/samples/";
 	vector <ParamSample> psamp;
 	vector <Sample> opsamp;
+	if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering samples..." << endl;
 	mpi.gather_samples(psamp,opsamp,particle_store,state,dir);
 
 	if(mpi.core == 0) generate_graphs(psamp,opsamp);

@@ -595,12 +595,19 @@ void Data::chop_dir(string &file, const string dir) const
 }
 
 
+/// Gets a table (used in output)
+Table Data::get_table(const string file, const string dir) const 
+{
+	string file_copy = file;
+	chop_dir(file_copy,dir);
+	return load_table(file_copy,dir,true,true);
+}
+
+
 /// Gets a column from a table
-vector <string> Data::get_table_column_str(const unsigned int col, string file, const string dir) const
+vector <string> Data::get_table_column_str(const unsigned int col, const Table &tab) const
 {
 	vector <string> result;
-	chop_dir(file,dir);
-	auto tab = load_table(file,dir,true,true);
 	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
 	
 	return result;
@@ -608,11 +615,9 @@ vector <string> Data::get_table_column_str(const unsigned int col, string file, 
 
 
 /// Gets a column from a table
-vector <string> Data::get_table_column(const string col_name, string file, const string dir) const
+vector <string> Data::get_table_column(const string col_name, const Table &tab) const
 {
 	vector <string> result;
-	chop_dir(file,dir);
-	auto tab = load_table(file,dir,true,true);
 	auto col = find_column(tab,col_name);
 	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
 	
@@ -621,14 +626,32 @@ vector <string> Data::get_table_column(const string col_name, string file, const
 
 
 /// Loads a column of numbers from a table
-vector <double> Data::get_table_column(const unsigned int col, string file, const string dir) const
+vector <double> Data::get_table_column(const unsigned int col, const Table &tab) const
 {
 	vector <double> result;	
-	chop_dir(file,dir);
-	auto tab = load_table(file,dir,true,true);
-	if(col >= tab.ncol) emsgroot("The file '"+file+"' does not have column "+to_string(col));
+	if(col >= tab.ncol) emsgroot("The file '"+tab.file+"' does not have column "+to_string(col));
 	for(auto row = 0u; row < tab.nrow; row++) result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
 	return result;
+}
+
+
+// Gets a matrix from a file
+Matrix Data::get_matrix(const string file, const string dir) const
+{
+	Matrix mat;
+	
+	auto tab = load_table(file,dir,true,true);
+
+	mat.N = tab.nrow;
+	mat.ele.resize(tab.nrow);
+	for(auto j = 0u; j < tab.nrow; j++){
+		mat.ele[j].resize(tab.nrow);
+		for(auto i = 0u; i < tab.nrow; i++){
+			mat.ele[j][i] = get_double(tab.ele[j][i+1],"Error loading file'"+file+"'");
+		}		
+	}
+	
+	return mat;
 }
 
 
@@ -1368,7 +1391,6 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 	if(democats_filt != ""){
 		auto filt = democats_filt;
 		if(democats_filt.substr(0,7) == "age:age") filt = filt.substr(7); // TO DO
-		cout <<  democats_filt << " " << filt << " filt\n";
 		file += "-"+replace(filt,":","=");
 		name += " "+filt;
 		desc += " "+filt;
@@ -1554,7 +1576,6 @@ void Data::set_datatable_weights()
 			ob.epsilon = 0.02*graph_value_max[gr];
 		
 			ob.weight = sqrt(fac);
-			//cout << datatable[dt].file << " Value: " << ob.value << "  Epsilon: " << ob.epsilon << "   Weight: " << ob.weight << "   Max: " << graph_value_max[gr] << " \n"; 
 		}
 	}
 	
@@ -1590,7 +1611,7 @@ void Data::set_datatable_weights()
 	if(false){
 		for(auto &ob : obs){	
 			auto dt = ob.datatable;
-			cout << ob.value << " " << ob.sd << " " << ob.w << " " << datatable[dt].file << " weig\n";
+			cout << ob.value << " " << ob.sd << " " << ob.w << " " << datatable[dt].file << " weight" << endl;
 		}
 	}
 }
@@ -1809,29 +1830,18 @@ Table Data::load_table_from_file(const string file, const string dir, const bool
 			getline(in,line);
 		}while(line.substr(0,1) == "#");
 		
-		stringstream ss(line);
-		do{
-			string st;
-			getline(ss,st,sep); strip(st);
-			tab.heading.push_back(st);
-			if(ss.eof()) break;
-		}while(true);
+		tab.heading = split(line,sep);
+	
 		tab.ncol = tab.heading.size();
 	}
 	else tab.ncol = 0;
 		
 	do{
-		vector <string> vec;
 		getline(in,line);
 		if(in.eof()) break;
-				
-		stringstream ss(line);
-		do{
-			string st;
-			getline(ss,st,sep); strip(st);
-			vec.push_back(st);
-			if(ss.eof()) break;
-		}while(true);
+
+		auto vec = split(line,sep);
+	
 		if(tab.ncol == 0) tab.ncol = vec.size();
 		else{
 			if(vec.size() != tab.ncol) emsgroot("Rows in the file '"+file+"' do not all share the same number of columns.");
