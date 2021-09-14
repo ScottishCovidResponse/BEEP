@@ -56,6 +56,9 @@ void output_timers(string file, Mpi &mpi)
 		if(time_av[TIME_OBSPROB] > 0) dia << per(time_av[TIME_OBSPROB]/time_av[TIME_ALG]) << " Obsevation probability / Error function" << endl;
 		
 		if(time_av[TIME_STATESAMPLE] > 0) dia << per(time_av[TIME_STATESAMPLE]/time_av[TIME_ALG]) << " PMCMC Generating state samples" << endl;
+		if(time_av[TIME_CREATEN] > 0) dia << per(time_av[TIME_CREATEN]/time_av[TIME_ALG]) << " Create N " << endl;
+		if(time_av[TIME_BETA_FROM_R] > 0) dia << per(time_av[TIME_BETA_FROM_R]/time_av[TIME_ALG]) << " Beta from R " << endl;
+		
 		if(time_av[TIME_RESULTS] > 0) dia << per(time_av[TIME_RESULTS]/time_av[TIME_ALG]) << " Generating final results " << endl;
 		if(time_av[TIME_WAIT] > 0) dia << per(time_av[TIME_WAIT]/time_av[TIME_ALG]) << " MPI Waiting" << endl;
 		
@@ -68,6 +71,7 @@ void output_timers(string file, Mpi &mpi)
 			if(time_av[TIME_MEANTIME] > 0) dia << per(time_av[TIME_MEANTIME]/time_av[TIME_ALG]) << " Mean Time" << endl;
 			if(time_av[TIME_NEIGHBOUR] > 0) dia << per(time_av[TIME_NEIGHBOUR]/time_av[TIME_ALG]) << " Spline neighbour" << endl;
 			if(time_av[TIME_JOINT] > 0) dia << per(time_av[TIME_JOINT]/time_av[TIME_ALG]) << " Spline joint" << endl;
+			if(time_av[TIME_COVAR_AREA] > 0) dia << per(time_av[TIME_COVAR_AREA]/time_av[TIME_ALG]) << " Covar area" << endl;
 			if(time_av[TIME_FIXEDTREE] > 0) dia << per(time_av[TIME_FIXEDTREE]/time_av[TIME_ALG]) << " Fixed tree" << endl;
 			if(time_av[TIME_SLICETIME] > 0) dia << per(time_av[TIME_SLICETIME]/time_av[TIME_ALG]) << " Splice time" << endl;
 		}

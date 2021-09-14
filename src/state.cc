@@ -81,7 +81,9 @@ void State::set_param(const vector <double> &paramv)
 	Ntime = model.create_Ntime(disc_spline);
  
 	beta = model.calculate_beta_from_R(susceptibility,paramv_dir,Ntime,transrate,disc_spline);
-	
+		
+	//model.eignevector_compare_models(susceptibility,paramv_dir,Ntime,transrate);
+		
 	timer[TIME_SETPARAM].stop();
 }
 
@@ -560,6 +562,8 @@ Sample State::create_sample() const
 	
 	sample.Rmap = model.get_Rmap(paramv_dir,disc_spline,areafactor,susceptibility,Ntime,transrate,pop);
 
+	sample.Nsample.push_back(Ntime[0]);
+		
 	return sample;
 }
 

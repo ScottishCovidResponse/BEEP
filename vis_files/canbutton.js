@@ -170,7 +170,7 @@ function canbutplot(i,ov)
 		break;
 		
 	case CATVERTBUT:
-		verticaltext(text,x+3,y,CATFONT,col)   
+		verticaltext(text,x+dx/2-5,y,CATFONT,col)   
 		break;
 	
 	case XTICKBUT:

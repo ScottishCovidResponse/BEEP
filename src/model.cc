@@ -236,7 +236,8 @@ void Model::add_transition(const string &from, const string &to, const TransInf 
 {
 	Transition tr;
 	
-	tr.name = from+"→"+to;
+	//tr.name = from+"→"+to;
+	tr.name = from+"->"+to;
 	tr.name_file = from+"-"+to;
 	
 	tr.from = get_compartment(from,LAST);
@@ -289,8 +290,19 @@ void Model::trans_check() const
 	for(const auto &co : comp){                                      // Checks if prob_dep is specified for all branches
 		for(auto tr : co.trans){
 			for(auto tr2 : co.trans){
-				if(trans[tr].prob_dep != trans[tr2].prob_dep){
-					emsgroot("In 'trans' the transitions '"+trans[tr].name+"' and '"+trans[tr2].name+"' must have a consistent value for 'prob_dep'");
+				auto tr_dep = trans[tr].prob_dep;
+				auto tr_dep2 = trans[tr2].prob_dep;
+				if(tr_dep != tr_dep2){
+					string em = "In 'trans' the transitions '"+trans[tr].name+"' and '"+trans[tr2].name+"' must have a consistent dependency. ";
+					em += "Here '"+trans[tr].name+"' ";
+					if(tr_dep == "") em += "has no dependency ";
+					else em += "is dependent on '"+tr_dep+"' ";
+					
+					em += "and '"+trans[tr2].name+"' ";
+					if(tr_dep2 == "") em += "has no dependency.";
+					else em += "is dependent on '"+tr_dep2+"'.";
+		
+					emsgroot(em);
 				}
 			}
 		}			
@@ -386,10 +398,13 @@ void Model::add_region_effect()
 				if(file_check){
 					file_check.close();
 		
-					auto column = data.get_table_column("Region effect",file,details.output_directory);
+					auto tab = data.get_table(file,details.output_directory);
+					auto column = data.get_table_column("Region effect",tab);
 					
 					if(column.size() != data.narea) emsgEC("Model",5);
-					for(auto c = 0u; c < data.narea; c++) RE[c] = get_double(column[c],"In 'region_effect' from file '"+file+"'");
+					for(auto c = 0u; c < data.narea; c++){
+						RE[c] = get_double(column[c],"In 'region_effect' from file '"+file+"'");
+					}
 				}
 			}
 		}
@@ -741,7 +756,7 @@ void Model::add_splines()
 		}
 		
 		if(flag == true){ 		
-			string desc = "\""+name_vec[num]+"\" is a factor mapping observation to data";
+			string desc = "*"+name_vec[num]+"* is a factor mapping observation to data";
 			if(efoi_agedist_vec[num].size() != 0) emsgroot("In 'obs_spline' a value for 'age_dist' cannot be set");
 			if(strain[num].size() != 0) emsgroot("In 'obs_spline' a value for 'strain' cannot be set");
 
@@ -804,7 +819,7 @@ double Model::param_prior_sample(const unsigned int th, const vector <double> &p
 			case NORMAL_PRIOR:
 				return normal_sample(get_val1(th,paramv),get_val2(th,paramv));
 			
-			case DIRICHLET_PRIOR: case MDIRICHLET_PRIOR:
+			case DIRICHLET_PRIOR: case DIRICHLET_ALPHA_PRIOR: case MDIRICHLET_PRIOR:
 				return gamma_sample(get_val1(th,paramv),get_val2(th,paramv));
 			
 			case DIRICHLET_FLAT_PRIOR:
@@ -958,7 +973,7 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 		value = val1;
 		break;
 		
-	case INFERENCE:
+	case INFERENCE: case DATAVIEW:
 		if(ps.value != "") value = get_double_with_tobeset(ps.value,"For parameter '"+ps.name+"'");
 		
 		if(ps.prior == "") emsgroot("The prior for parameter '"+ps.name+"' must be set.");
@@ -979,6 +994,7 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 			if(vals.size() != 1){
 				emsgroot("For parameter '"+ps.name+"' there was a problem with the prior expression '"+ps.prior+"'"); 
 			}
+		
 			if(vals[0] == "*") val1 = TOBESET;
 			else get_prior_val(ps.name,vals[0],val1,val1_param);
 		}
@@ -1005,10 +1021,18 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 					else{
 						if(toLower(spl[0]) == "dir"){
 							if(vals.size() == 1){
-								pt = DIRICHLET_FLAT_PRIOR;
-								if(vals[0] != "*") emsgroot("For parameter '"+ps.name+"' the prior '"+ps.prior+"' is not recognised.");
-								dir_mean = TOBESET;
-								dir_sd = TOBESET;
+								if(vals[0] == "*"){ 
+									pt = DIRICHLET_FLAT_PRIOR;
+									dir_mean = TOBESET;
+									dir_sd = TOBESET;
+								}
+								else{
+									pt = DIRICHLET_ALPHA_PRIOR;
+									val1 = get_double(vals[0],"For parameter '"+ps.name+"' the prior '"+ps.prior+"'");
+									val2 = 1;
+									dir_mean = UNSET;
+									dir_sd = UNSET;
+								}
 							}
 							else{
 								pt = DIRICHLET_PRIOR;
@@ -1041,7 +1065,8 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 	par.name = ps.name; par.priortype = pt;
 	par.val1 = val1; par.val2 = val2; par.val1_param = val1_param; par.val2_param = val2_param; 
 	par.fixed = val1; 
-	par.dir_mean = dir_mean; par.dir_sd = dir_sd; 
+	
+	par.dir_mean = dir_mean; par.dir_sd = dir_sd;
 	par.value = value;
 	par.type = type;
 	par.ps = ps;
@@ -1312,6 +1337,8 @@ double Model::calculate_area_av(const vector < vector <double> > &areafactor) co
 /// Defines the time variation in the age mixing matrix
 vector < vector < vector <double> > > Model::create_Ntime(const vector < vector<double> > &disc_spline) const
 {	
+	timer[TIME_CREATEN].start();
+	
 	vector < vector < vector <double> > > Ntime;
 
 	Ntime.resize(details.ndivision);
@@ -1324,16 +1351,17 @@ vector < vector < vector <double> > > Model::create_Ntime(const vector < vector<
 				case ROW_COLUMN: case PERTURB:
 					auto si = N.size();
 					vector <bool> flag(si);
-					for(auto i = 0u; i < si; i++) flag[i] = false;
+					//for(auto i = 0u; i < si; i++) flag[i] = false;
 					
-					for(auto a : mm.ages) flag[a] = true;
+					//for(auto a : mm.ages) flag[a] = true;
 				
 					auto fac = disc_spline[mm.spline_ref][sett];
 				
 					for(auto a : mm.ages){
 						for(auto i = 0u; i < si; i++){
 							N[a][i] *= fac;
-							if(flag[i] == false)	N[i][a] *= fac; 
+							N[i][a] *= fac; 
+							//if(flag[i] == false) N[i][a] *= fac; 
 						}
 					}
 					break;
@@ -1346,11 +1374,13 @@ vector < vector < vector <double> > > Model::create_Ntime(const vector < vector<
 					cout << N[j][i] << " ";
 					
 				}
-				cout << "before" << endl;
+				cout << "   " << sett << " Mixing matrix" << endl;
 			}				
 		}
 	}	
 	
+	timer[TIME_CREATEN].stop();
+		
 	return Ntime;
 }
 
@@ -1360,7 +1390,8 @@ bool Model::equal(const vector < vector <double> > &Ntime_1, const vector < vect
 {
 	for(auto i = 0u; i < Ntime_1.size(); i++){
 		for(auto j = 0u; j < Ntime_1[i].size(); j++){
-			if(Ntime_1[i][j] != Ntime_2[i][j]) return false;
+			auto val1 = Ntime_1[i][j], val2 = Ntime_2[i][j];
+			if(val1 < val2-TINY || val1 > val2+TINY) return false;
 		}
 	}
 	return true;
@@ -1370,6 +1401,8 @@ bool Model::equal(const vector < vector <double> > &Ntime_1, const vector < vect
 /// Calculates the transmission rate beta from R
 vector < vector < vector <double> > > Model::calculate_beta_from_R(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate,	const vector < vector <double> > &disc_spline) const 
 {
+	timer[TIME_BETA_FROM_R].start();
+		
 	vector < vector < vector <double> > > beta;
 
 	beta.resize(data.nstrain);
@@ -1406,6 +1439,8 @@ vector < vector < vector <double> > > Model::calculate_beta_from_R(const vector 
 			}
 		}
 	}
+	
+	timer[TIME_BETA_FROM_R].stop();
 		
 	return beta;
 }
@@ -1431,7 +1466,7 @@ unsigned int Model::get_transition(const string transname)
 	for(auto tr = 0u; tr < trans.size(); tr++){
 		if(transname == comp[trans[tr].from].name + "->" + comp[trans[tr].to].name) return tr;
 	}
-	emsg("The transition '"+transname+"' is not recognised");
+	emsgroot("The transition '"+transname+"' is not recognised");
 }
 
 
@@ -1651,7 +1686,7 @@ double Model::prior(const vector<double> &paramv) const
 				}
 				break;
 				
-			case DIRICHLET_PRIOR: case MDIRICHLET_PRIOR:
+			case DIRICHLET_PRIOR: case DIRICHLET_ALPHA_PRIOR: case MDIRICHLET_PRIOR:
 				{
 					auto val = paramv[th];
 					auto alpha = get_val1(th,paramv);
@@ -1734,7 +1769,8 @@ double Model::get_val1(const unsigned int th, const vector <double> &paramv) con
 /// Gets val2 from the parameter
 double Model::get_val2(const unsigned int th, const vector <double> &paramv) const 
 {
-	auto val2 = param[th].val2; if(val2 == UNSET) val2 = paramv[param[th].val2_param]; if(val2 == UNSET) emsgEC("Model",16);
+	auto val2 = param[th].val2; 
+	if(val2 == UNSET) val2 = paramv[param[th].val2_param]; if(val2 == UNSET) emsgEC("Model",16);
 	return val2;
 }
 
@@ -1763,7 +1799,7 @@ double Model::dPr_dth(const unsigned int th, const vector<double> &paramv) const
 			}
 			break;
 			
-		case DIRICHLET_PRIOR: case MDIRICHLET_PRIOR:
+		case DIRICHLET_PRIOR: case DIRICHLET_ALPHA_PRIOR: case MDIRICHLET_PRIOR:
 			{
 				auto a = get_val1(th,paramv), b = get_val2(th,paramv);
 				dPr_dth += (a-1)/val - b;
@@ -2078,7 +2114,7 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 			so.desc = spline[sp].desc;
 			if(sp == geo_spline_ref){
 				so.fulldesc = "Time variation in spatial mixing: This plot shows the time variation in spatial mixing. A value of &m_{t}&=1 implies that the geographical mixing matrix &M_{a,a′}& is as specifed by the file given in the *geo-mixing-matrix* command. A value of &m_{t}&=0, however, implies no contacts between areas.";
-				so.tab = details.analysis_type; so.tab2 = "Mixing"; so.tab3 = "Spatial Mixing"; so.tab4 = "&m_{t}&";
+				so.tab = details.analysis_type; so.tab2 = "Spatial Mixing"; so.tab3 = "Time series"; so.tab4 = "&m_{t}&";
 			}
 			else{
 				auto mm = 0u; while(mm < data.genQ.matmod.size() && data.genQ.matmod[mm].spline_ref != sp) mm++;
@@ -2109,7 +2145,7 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 							so.fulldesc += " of the age mixing matrix.";
 							break;
 					}
-					so.tab = details.analysis_type; so.tab2 = "Mixing"; so.tab3 = "Age Mixing"; so.tab4 = "Modification "+to_string(mm+1); 
+					so.tab = details.analysis_type; so.tab2 = "Age Mixing"; so.tab3 = "Time series"; so.tab4 = "Modification "+to_string(mm+1); 
 				}
 				else{
 					so.fulldesc = "Spline: "+spline[sp].desc;
@@ -2465,10 +2501,9 @@ vector < vector <double> > Model::calculate_R_age(const vector <double> &paramv_
 				auto F = calculate_F(paramv_dir,susceptibility,Ntime[sett],st,info.democatpos_dist);
 				auto NGM = calculate_NGM(F,Vinv);
 
-					for(auto j = 0u; j < NGM.size(); j++){
-			for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 3");
-		}
-	
+				for(auto j = 0u; j < NGM.size(); j++){
+					for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 3");
+				}
 	
 				vector <double> eigenvector;
 				ratio = largest_eigenvalue(NGM,eigenvector);
@@ -2542,7 +2577,7 @@ vector < vector <double> > Model::calculate_F(const vector <double> &paramv_dir,
 	auto Q = data.ndemocatpos_per_strain;
 	auto S = inf_state.size();
 	auto N = Q*S;
-	
+
 	F.resize(Q);
 	for(auto q = 0u; q < Q; q++){
 		F[q].resize(N);
@@ -2576,6 +2611,7 @@ vector < vector <double> > Model::calculate_NGM(const vector < vector<double> > 
 	
 	auto Q = F.size();
 	auto N = Vinv.size();
+	
 	NGM.resize(Q);
 	for(auto q = 0u; q < Q; q++){
 		NGM[q].resize(Q);
@@ -2586,13 +2622,13 @@ vector < vector <double> > Model::calculate_NGM(const vector < vector<double> > 
 	}
 	return NGM;
 }
-	
-	
+
+
 /// Estimates the ratio between R and beta based on largest eigenvector of next generation matrix
 double Model::calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &Vinv, const unsigned int st, const vector <double> &democatpos_dist) const
 {
 	auto F = calculate_F(paramv_dir,susceptibility,A,st,democatpos_dist);
-
+	
 	auto NGM = calculate_NGM(F,Vinv);
 	
 	if(checkon == true){
@@ -2606,7 +2642,7 @@ double Model::calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir,
 	vector <double> eigenvector;
 	auto ratio = largest_eigenvalue(NGM,eigenvector);
 	
-	if(false){ for(auto val: eigenvector) cout << val << ","; cout << "eig" << endl;}
+	if(false){ for(auto val: eigenvector) cout << val << ","; cout << "eigen" << endl;}
 	
 	if(false){
 		auto N = Vinv.size();
@@ -2625,7 +2661,8 @@ double Model::calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir,
 			cout << " NGM" << endl;
 		}
 		
-		cout << ratio << "Ratio" << endl; 
+		cout << ratio << "Ratio" << endl;
+		emsg("done");		
 	}
 	
 	return ratio;
@@ -2654,7 +2691,7 @@ bool Model::inbounds(const vector <double> &paramv) const
 			case NORMAL_PRIOR:
 				break;
 				
-			case DIRICHLET_PRIOR: case MDIRICHLET_PRIOR:
+			case DIRICHLET_PRIOR: case DIRICHLET_ALPHA_PRIOR: case MDIRICHLET_PRIOR:
 				if(val < 0) return false;
 				break;
 				
@@ -2869,7 +2906,7 @@ void Model::set_dirichlet()
 			}
 
 			if(tobeset.size() == 1){
-				if(sum > 1) emsgroot("The value of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+				if(sum > 1) emsgroot("The value of the parameter '"+param[tobeset[0].th].name+"' cannot be set (because the average is over one)");
 			
 				auto th = tobeset[0].th;
 				auto val = (1-sum)/tobeset[0].frac;
@@ -2887,109 +2924,144 @@ void Model::set_dirichlet()
 		}
 	}
 	
-	if(details.siminf == INFERENCE){
+	if(details.siminf == INFERENCE || details.siminf == DATAVIEW){
 		for(const auto &dir : dirichlet){                         // Sets the prior distributions used by the Dirichtlet
 			switch(dir.dirtype){
 			case DIR_NORM:
 				{
-					auto nfixed = 0u, ndir = 0u, ndirflat = 0u;
+					auto nfixed = 0u, ndir = 0u, ndiral = 0u, ndirflat = 0u;
 					for(auto par : dir.param){
 						auto th = par.th;
 						if(param[th].priortype == FIXED_PRIOR) nfixed++;
 						if(param[th].priortype == DIRICHLET_PRIOR) ndir++;
+						if(param[th].priortype == DIRICHLET_ALPHA_PRIOR) ndiral++;
 						if(param[th].priortype == DIRICHLET_FLAT_PRIOR) ndirflat++;
-					}
+					}			
 					
-					if(nfixed != dir.param.size()){
-						if(ndir != dir.param.size() && ndirflat != dir.param.size()){
+					if(nfixed == dir.param.size()){             // The case of fixed priors
+						auto sum = 0.0;
+						vector <unsigned int> unset_list;
+						for(auto par : dir.param){
+							auto th = par.th; 
+							if(param[th].val1 == TOBESET) unset_list.push_back(th);
+							else{
+								param[th].value = param[th].val1;
+								sum += param[th].value;
+							}
+						}
+						
+						auto flag = false;
+						switch(unset_list.size()){
+							case 0: if(sum < 1-TINY || sum > 1+TINY) flag = true; break;
+							case 1:
+								if(sum > 1) flag = true;
+								param[unset_list[0]].value = 1-sum;
+								param[unset_list[0]].val1 = 1-sum;
+								break;
+							default: flag = true; break;
+						}
+						
+						if(flag == true){
+							stringstream ss; ss << "The prior for parameters: ";
+							for(auto par : dir.param) ss << "'" << param[par.th].name << "' ";
+							ss << "is not valid";
+							emsgroot(ss.str());
+						}
+					}	
+					else{
+						if(ndir != dir.param.size() && ndirflat != dir.param.size() && ndiral != dir.param.size()){
 							stringstream ss; ss << "The parameters: ";
 							for(auto par : dir.param) ss << param[par.th].name << " ";
 							ss << "must either all be fixed (by setting a value and leaving the prior unspecified)";
-							ss << ", all set to a prior value of 'Dir(*)', which implies a flat Dirichlet distribution, or set to 'Dir(mean,sd)' for a constraining prior (see manual).";
+							ss << ", all set to a prior value of 'Dir(*)', which implies a flat Dirichlet distribution, or set to 'Dir(α) or 'Dir(mean,sd)' for a constraining prior (see manual).";
 							emsgroot(ss.str());
 						}
 				
-						if(ndir == dir.param.size()){
-							vector <DirichletParam> tobeset;
-							auto sum = 0.0;
-							for(auto i = 0u; i < dir.param.size(); i++){
-								const auto &par = dir.param[i];
-								auto th = par.th;
-								if(param[th].dir_mean == UNSET){
-									emsgroot("The Dirichlet mean for the parameter '"+param[th].name+"' must be set");
-								}
+						if(ndiral == dir.param.size()){    // This is the case when the values of alpha are specified							
+						}
+						else{                              // This is the case when mu and sd are specified
+							if(ndir == dir.param.size()){
+								vector <DirichletParam> tobeset;
+								auto sum = 0.0;
+								for(auto i = 0u; i < dir.param.size(); i++){
+									const auto &par = dir.param[i];
+									auto th = par.th;
+									if(param[th].dir_mean == UNSET){
+										emsgroot("The Dirichlet mean for the parameter '"+param[th].name+"' must be set");
+									}
 
-								if(param[th].dir_mean == TOBESET) tobeset.push_back(par);
-								else sum += param[th].dir_mean*par.frac; 
-							}
+									if(param[th].dir_mean == TOBESET) tobeset.push_back(par);
+									else sum += param[th].dir_mean*par.frac; 
+								}
+							
+								if(tobeset.size() == 0){
+									emsgroot("The mean of the Dirichlet prior for one of the parameters: "+list_dir_param(dir.param)+"must have a value set to '*'");
+								}
+							
+								if(tobeset.size() > 1){
+									emsgroot("For the means of the Dirichlet prior, all but one of the parameters: "+list_dir_param(tobeset)+"must have their value set");
+								}
+							
+								if(tobeset.size() == 1){
+									if(sum > 1){
+										emsgroot("The value for the Dirichlet prior mean of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+									}
+									
+									auto th = tobeset[0].th;
+									auto val = (1-sum)/tobeset[0].frac;
+								
+									param[th].dir_mean = val; if(param[th].priortype == FIXED_PRIOR) param[th].val1 = 1-sum;
 						
-							if(tobeset.size() == 0){
-								emsgroot("The mean of the Dirichlet prior for one of the parameters: "+list_dir_param(dir.param)+"must have a value set to '*'");
-							}
-						
-							if(tobeset.size() > 1){
-								emsgroot("For the means of the Dirichlet prior, all but one of the parameters: "+list_dir_param(tobeset)+"must have their value set");
-							}
-						
-							if(tobeset.size() == 1){
-								if(sum > 1){
-									emsgroot("The value for the Dirichlet prior mean of the parameter '"+param[tobeset[0].th].name+"' cannot be set");
+									if(details.siminf == SIMULATE && mpi.core == 0){
+										cout << "The Dirichlet mean for parameter '"+param[tobeset[0].th].name+"' has been set to "+to_string(val) << endl;
+									}
+								}
+					
+								vector <DirichletParam> sdset;
+								for(auto i = 0u; i < dir.param.size(); i++){
+									const auto &par = dir.param[i];
+									auto th = par.th;
+									if(param[th].dir_sd == UNSET) emsgroot("The Dirichlet standard deviation '"+param[th].name+"' must be set");
+									if(param[th].dir_sd != TOBESET) sdset.push_back(par);
 								}
 								
-								auto th = tobeset[0].th;
-								auto val = (1-sum)/tobeset[0].frac;
-							
-								param[th].dir_mean = val; if(param[th].priortype == FIXED_PRIOR) param[th].val1 = 1-sum;
-					
-								if(details.siminf == SIMULATE && mpi.core == 0){
-									cout << "The Dirichlet mean for parameter '"+param[tobeset[0].th].name+"' has been set to "+to_string(val) << endl;
+								if(sdset.size() == 0){
+									emsgroot("The standard deviation of the Dirichlet prior, for one of the parameters: "+list_dir_param(dir.param)+"must be set");
 								}
-							}
-				
-							vector <DirichletParam> sdset;
-							for(auto i = 0u; i < dir.param.size(); i++){
-								const auto &par = dir.param[i];
-								auto th = par.th;
-								if(param[th].dir_sd == UNSET) emsgroot("The Dirichlet standard deviation '"+param[th].name+"' must be set");
-								if(param[th].dir_sd != TOBESET) sdset.push_back(par);
-							}
-							
-							if(sdset.size() == 0){
-								emsgroot("The standard deviation of the Dirichlet prior, for one of the parameters: "+list_dir_param(dir.param)+"must be set");
-							}
-					
-							if(sdset.size() > 1){
-								emsgroot("The standard deviation of the Dirichlet prior, for only one of the parameters: "+list_dir_param(dir.param)+"must be set");
-							}
-							
-							auto th = sdset[0].th;
-							auto mu = param[th].dir_mean*sdset[0].frac;
-							auto var = param[th].dir_sd*param[th].dir_sd*sdset[0].frac*sdset[0].frac;
-							auto alpha0 = mu*(1-mu)/var - 1;
-							
-							sum = 0.0;
-							for(auto i = 0u; i < dir.param.size(); i++){
-								auto th = dir.param[i].th;
-								param[th].val1 = param[th].dir_mean*dir.param[i].frac;
-								param[th].val2 = 1; 
-								sum += param[th].val1;
-							}
-							
-							for(auto i = 0u; i < dir.param.size(); i++){
-								auto th = dir.param[i].th;
-								param[th].val1 *= alpha0/sum;
-							}
-							
-							double a0=0;
-							for(auto i = 0u; i < dir.param.size(); i++){
-								auto th = dir.param[i].th;
-								a0 += param[th].val1;
-							}
-							
-							for(auto i = 0u; i < dir.param.size(); i++){
-								auto th = dir.param[i].th;
-								if(param[th].dir_sd == TOBESET){
-									param[th].dir_sd = sqrt((param[th].val1/a0)*(1-(param[th].val1/a0))/(a0+1))/dir.param[i].frac;
+						
+								if(sdset.size() > 1){
+									emsgroot("The standard deviation of the Dirichlet prior, for only one of the parameters: "+list_dir_param(dir.param)+"must be set");
+								}
+								
+								auto th = sdset[0].th;
+								auto mu = param[th].dir_mean*sdset[0].frac;
+								auto var = param[th].dir_sd*param[th].dir_sd*sdset[0].frac*sdset[0].frac;
+								auto alpha0 = mu*(1-mu)/var - 1;
+								
+								sum = 0.0;
+								for(auto i = 0u; i < dir.param.size(); i++){
+									auto th = dir.param[i].th;
+									param[th].val1 = param[th].dir_mean*dir.param[i].frac;
+									param[th].val2 = 1; 
+									sum += param[th].val1;
+								}
+								
+								for(auto i = 0u; i < dir.param.size(); i++){
+									auto th = dir.param[i].th;
+									param[th].val1 *= alpha0/sum;
+								}
+								
+								double a0=0;
+								for(auto i = 0u; i < dir.param.size(); i++){
+									auto th = dir.param[i].th;
+									a0 += param[th].val1;
+								}
+								
+								for(auto i = 0u; i < dir.param.size(); i++){
+									auto th = dir.param[i].th;
+									if(param[th].dir_sd == TOBESET){
+										param[th].dir_sd = sqrt((param[th].val1/a0)*(1-(param[th].val1/a0))/(a0+1))/dir.param[i].frac;
+									}
 								}
 							}
 						}
@@ -3087,7 +3159,13 @@ string Model::print_prior(const unsigned int p) const
 	switch(param[p].priortype){
 		case FIXED_PRIOR:
 			ss << "Fixed(";
-			if(param[p].val1 != UNSET) ss << param[p].fixed; else ss << param[param[p].val1_param].name;
+			if(param[p].val1 != UNSET){
+				if(param[p].fixed == TOBESET) ss << param[p].val1;
+				else ss << param[p].fixed;
+			}
+			else{
+				ss << param[param[p].val1_param].name;
+			}
 			ss << ")";
 			break;
 		
@@ -3118,6 +3196,12 @@ string Model::print_prior(const unsigned int p) const
 			ss << param[p].dir_mean;
 			ss << ","; 
 			ss << param[p].dir_sd;
+			ss << ")";
+			break;
+			
+		case DIRICHLET_ALPHA_PRIOR:
+			ss << "Dir(";
+			ss << param[p].val1;
 			ss << ")";
 			break;
 			
@@ -3155,7 +3239,7 @@ string Model::print() const
 			}
 			break;
 		
-		case INFERENCE:
+		case INFERENCE: case DATAVIEW:
 			ss << "Priors:" << endl;
 			for(auto p = 0u; p < param.size(); p++){
 				ss << "  " << param[p].name << " = ";
@@ -3263,4 +3347,84 @@ void Model::print_parameter_types()
 			default: emsgEC("Model",26); break;
 		}
 	}
+}
+
+
+/// Looks at different models to estimate eigenvectors (this is used in the raw data analysis)
+void Model::eignevector_compare_models(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate) const
+{
+	auto Vinv = calculate_Vinv(transrate,0);
+		
+	auto F = calculate_F(paramv_dir,susceptibility,Ntime[0],0,data.democat_dist[0]);
+	 
+	auto NGM = calculate_NGM(F,Vinv);
+	
+	vector <double> eigenvector;
+	largest_eigenvalue(NGM,eigenvector);
+	
+	auto nage = susceptibility.size();
+	vector <double> sus(nage);
+	for(auto a = 0u; a < nage; a++) sus[a] = 1;
+	sus[nage-1] = 1.8;
+	
+	// This is the vector we are aiming for 
+	vector <double> aim = {0.041777881,0.083194264,0.091183693,0.089258079,0.086831252,0.077545859,0.064406066,0.056545308,0.056864718,0.068969452,0.078228807,0.075130564,0.042264548,0.026687841,0.022323116,0.019930333,0.018858221};
+	
+	// This is for getting the relative susceptibility
+	for(auto loop = 0u; loop < 10000; loop++){
+		auto F = calculate_F(paramv_dir,sus,Ntime[0],0,data.democat_dist[0]);
+		auto NGM = calculate_NGM(F,Vinv);
+		
+		largest_eigenvalue(NGM,eigenvector);
+			
+		for(auto a = 0u; a < nage-1; a++){
+			sus[a] += 0.1*(aim[a]-eigenvector[a]);
+		}
+		
+		auto sum = 0.0;
+		for(auto a = 0u; a < nage; a++){
+			sum += data.democat_dist[0][a]*sus[a]; 
+		}
+		
+		for(auto a = 0u; a < nage; a++) sus[a] /= sum;
+		sus[nage-1] = 1.8;
+	}
+	for(auto val : sus) cout << val << endl; cout << " relative susceptibility" << endl;	
+	
+	vector <double> v(nage);
+	for(auto a = 0u; a < nage; a++) v[a] = 1;
+	v[nage-1] = 1.6;
+	
+	for(auto a = 0u; a < nage; a++) sus[a] = 1;
+	
+	// This is for getting the adjusted age mixing matrix
+	for(auto loop = 0u; loop < 10000; loop++){
+		auto A = Ntime[0];
+		
+		for(auto j = 0u; j < nage; j++){
+			for(auto i = 0u; i < nage; i++){
+				A[j][i] *= v[j]*v[i];
+			}
+		}
+		
+		auto F = calculate_F(paramv_dir,sus,A,0,data.democat_dist[0]);
+		auto NGM = calculate_NGM(F,Vinv);
+		
+		largest_eigenvalue(NGM,eigenvector);
+			
+		for(auto a = 0u; a < nage-1; a++){
+			v[a] += 0.1*(aim[a]-eigenvector[a]);
+		}
+		
+		auto sum = 0.0;
+		for(auto a = 0u; a < nage; a++){
+			sum += data.democat_dist[0][a]*v[a]; 
+		}
+		
+		for(auto a = 0u; a < nage; a++) v[a] /= sum;
+		v[nage-1] = 1.6;
+	}
+	for(auto val : v) cout << val << " "; cout << " age contact factors" << endl;	
+
+	emsg("done");
 }

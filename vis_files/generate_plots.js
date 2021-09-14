@@ -6,6 +6,8 @@ function generate_plots()
 	
 	switch(vis.type){
 	case "OP_ANIM_MAP": get_colourbar(vis); break;
+	case "OP_AGE_MATRIX": case "OP_AGE_MATRIX_POST": case "OP_AGE_MATRIX_DIF": get_colourbar_matrix(vis); break;
+	
 	case "OP_MIXING_WITHIN_MAP": case "OP_MIXING_WITHIN_ANIM_MAP": get_colourbar_linear(vis); break;
 	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP": break;
 	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP": break;
@@ -14,7 +16,7 @@ function generate_plots()
 		else get_colourbar_linear(vis);
 		break;
 	case "OP_LEVEL_EFFECT": break;
-	case "OP_AGE_MATRIX": case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
+	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
 	case "OP_COMP_MODEL": case "OP_FOI_MODEL": break; case "OP_DESC": break;
 	case "OP_CPU": get_logaxrange(vis); break;
 	default: get_axrange(vis); break;
@@ -38,7 +40,7 @@ function generate_plots()
 		display_foi();
 		break;
 		
-	case "OP_AGE_MATRIX":
+	case "OP_AGE_MATRIX": case "OP_AGE_MATRIX_POST": case "OP_AGE_MATRIX_DIF":
 		matrixframe(menux+10,10,vis);
 		break;
 	
@@ -100,6 +102,7 @@ function generate_plots()
 	switch(vis.type){
 	case "OP_ANIM_MAP": case "OP_MIXING_WITHIN_MAP": case "OP_MIXING_WITHIN_ANIM_MAP":
 	case "OP_AREA_COVAR": case "OP_AREA_TV_COVAR": 
+	case "OP_AGE_MATRIX": case "OP_AGE_MATRIX_POST": case "OP_AGE_MATRIX_DIF": 
 		topline = sourcey - 40;
 		addbutton("",x,topline,wid-10,20,-1,COLOURSCALEBUT,col_map.type,-1);
 		break;
@@ -131,12 +134,12 @@ function generate_plots()
 		}
 		break;
 		
-	case "OP_ME": case "OP_AGE_MATRIX":	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": case "OP_MARGINAL": 
+	case "OP_ME":
+	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": case "OP_MARGINAL": 
 	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP":
 	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP":
 	case "OP_TV_COVAR":
 	case "OP_GRAPH_MARGINAL":
-	case "OP_LOG_GENERATION":
 		topline = sourcey - 20;
 		break;
 		
@@ -251,7 +254,8 @@ function plot_results()
 	case "OP_FOI_MODEL": case "OP_DESC": break;
 	case "OP_MIXING_BETWEEN_ANIM_MAP": case "OP_MIXING_BETWEEN_MAP": drawmixingmap(vis); break;
 	case "OP_MIXING_POP_ANIM_MAP": case "OP_MIXING_POP_MAP": drawmixingmap(vis); break;
-	case "OP_AGE_MATRIX": drawmatrix(vis); break;
+	case "OP_AGE_MATRIX": case "OP_AGE_MATRIX_POST": case "OP_AGE_MATRIX_DIF": drawmatrix(vis); break;
+	//case "OP_AGE_MATRIX_DIF": drawmatrix_dif(vis); break; zz
 	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
 	case "OP_SPLINE": case "OP_GRAPH": drawlines(vis); draw_timelabels(); break;
 	case "OP_GENERATION": case "OP_LOG_GENERATION": case "OP_TRACE": drawlines(vis); break;
@@ -298,15 +302,22 @@ function get_ax_bound(vis)
 			}
 		}
 	}
+	
+	if(vis.xmin != null){
+		axxmin = vis.xmin; axxmax = vis.xmax; 
+	}
+	
+	//axymin = 0; axymax = 200000;
+	//axymin = 0; axymax = 3000;
+	//axymin = 0; axymax = 6000000;
+	//axymin = 0; axymax = 10000;
 }
-
 
 /// Sets up the x and y axes
 function get_axrange(vis)
 {
-	get_ax_bound(vis)
-	
-	//pr(vis.type);
+	get_ax_bound(vis);
+
 	switch(vis.type){
 		case "OP_MARGINAL":	case "OP_GRAPH_MARGINAL": case "OP_SPLINE": case "OP_GRAPH":
 			if(axymin > 0) axymin = 0; 
@@ -405,7 +416,7 @@ function get_colourbar(vis)
 		collist.push({R:255, G:255, B:255, val:Math.log(axymin+shift)});
 		collist.push({R:0, G:0, B:0, val:Math.log(axymax+shift)});
 	}
-			
+	
 	var ncoldiv = 100;
 
 	col_map = {type:"log", div:ncoldiv, min:Math.log(axymin+shift), max:Math.log(axymax+shift), shift:shift, map:[]};
@@ -467,20 +478,57 @@ function get_colourbar_linear(vis)
 		}
 	}
 	
-	var light = 220;
-	
 	var collist=[];
-
 	collist.push({R:255, G:255, B:255, val:axymin});
 	collist.push({R:0, G:0, B:0, val:axymax});
-			
+	
+	set_col_map(collist,axymin,axymax);
+}
+
+function get_colourbar_matrix(vis)
+{
+	var collist=[];
+	
+	var nage = vis.ages.length;
+	
+	var min = 0, max = 0;		
+	
+	if(vis.type == "OP_AGE_MATRIX_DIF"){ 
+		for(i = 0; i < nage; i++){
+			for(j = 0; j < nage; j++){
+				var val = vis.ele[i][j];
+				if(val > max) max = val;
+			}
+		}
+		
+		collist.push({R:0, G:0, B:255, val:min});
+		collist.push({R:255, G:255, B:255, val:1});
+		collist.push({R:255, G:0, B:0, val:max});
+	}
+	else{
+		for(i = 0; i < nage; i++){
+			for(j = 0; j < nage; j++){
+				if(vis.ele[i][j] > max) max = vis.ele[i][j];
+			}
+		}	
+		collist.push({R:255, G:255, B:255, val:0});
+		collist.push({R:255, G:0, B:0, val:max});
+	}
+
+	axymin = min; axymax = max; setytics(); 
+	
+	set_col_map(collist,min,max);
+}
+		
+function set_col_map(collist,min,max)
+{
 	var ncoldiv = 100;
 
-	col_map = {type:"linear", div:ncoldiv, min:axymin, max:axymax, shift:0, map:[]};
+	col_map = {type:"linear", div:ncoldiv, min:min, max:max, shift:0, map:[]};
 	
 	var i=0;
 	for(div = 0; div <= ncoldiv; div++){
-		val = axymin + ((axymax - axymin)*div)/ncoldiv;
+		val = min + ((max - min)*div)/ncoldiv;
 		while(i < collist.length-2 && val > collist[i+1].val) i++; 
 
 		frac = (val - collist[i].val)/(collist[i+1].val - collist[i].val);
@@ -493,7 +541,7 @@ function get_colourbar_linear(vis)
 	setytics();
 }
 
-
+  
 /// Sets up ticks along the y axis
 function setytics()                                      
 {
@@ -867,6 +915,9 @@ function seleq_info(x,y,wid)
 /// Generates a frame for drawing a graph
 function graphframe(x,y,x1,y1,x2,y2,w,labx,laby,vis)
 {	
+	laby = laby.replace("age:age","  ");
+	laby = laby.replace("->","→");
+
 	graphdx = resdx - (x1+x2); graphdy = resdy - (y1+y2);
 
 	addbutton("",x,y,resdx,resdy,CANVASBUT,CANVASBUT,-1,-1);
@@ -1234,22 +1285,17 @@ function drawmatrix(vis)
 	cv.clearRect(0,0,graphdx,graphdy);
 	
 	var nage = vis.ages.length;
-
-	var max = 0;		
-	for(i = 0; i < nage; i++){
-		for(j = 0; j < nage; j++){
-			if(vis.ele[i][j] > max) max = vis.ele[i][j];
-		}
-	}	
 	
 	var d = graphdx/nage;
 	for(i = 0; i < nage; i++){
 		for(j = 0; j < nage; j++){
-			cv.globalAlpha = vis.ele[i][j]/max;
-			fillrect(i*d,j*d,d,d,RED);     
+			var div = Math.floor(0.999999*col_map.div*(vis.ele[i][j]-col_map.min)/(col_map.max-col_map.min));
+			pr(div+" "+vis.ele[i][j]+" "+col_map.min+" "+col_map.max+"k");
+			var col = "rgb("+col_map.map[div].R+","+col_map.map[div].G+","+col_map.map[div].B+")";
+				
+			fillrect(i*d,j*d,d,d,col);     
 		}
 	}
-	cv.globalAlpha = 1;
 }
 
 
@@ -1264,7 +1310,9 @@ function drawlines(vis)
 	
 	for(li = 0; li < vis.line.length; li++){
 		var visli = vis.line[li];
+
 		var xcol = visli.xcol;
+
 		if(xcol){
 			var ycol = visli.ycol;
 		
@@ -1273,8 +1321,14 @@ function drawlines(vis)
 				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
 				y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
 				
-				if(i == 0) cv.moveTo(x,y);
-				else cv.lineTo(x,y);
+				if(xcol.length == 1){
+					 cv.moveTo(x+4,y+4); cv.lineTo(x-4,y-4);
+					 cv.moveTo(x+4,y-4); cv.lineTo(x-4,y+4);
+				}
+				else{
+					if(i == 0) cv.moveTo(x,y);
+					else cv.lineTo(x,y);
+				}
 			}	
 		}
 		else{
@@ -1288,6 +1342,13 @@ function drawlines(vis)
 		}
 		setstyle(visli.style);
 		cv.stroke();
+		
+		if(visli.errbarmin != null && xcol != null){
+			for(i = 0; i < xcol.length; i++){
+				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
+				draw_errorbar(x,ycol[i],visli.errbarmin[i],visli.errbarmax[i],6);
+			}
+		}
 	} 	
 	
 	setdash(0);
@@ -1299,7 +1360,7 @@ function draw_timelabels()
 {
 	for(i = 0; i < visjson.time_labels.length; i++){
 		var x = Math.floor(graphdx*(visjson.time_labels[i].time-axxmin)/(axxmax-axxmin));
-		add_verticle_line(visjson.time_labels[i].name,x,BLACK);
+		add_verticle_line(visjson.time_labels[i].name,x,DPURPLE);
 	}
 
 	for(i = 0; i < visjson.pred_timeplot.length; i++){
@@ -1428,7 +1489,7 @@ function drawparamdist(vis)
 /// Draws a vertical line with a label
 function add_verticle_line(text,x,col)
 {
-	cv.strokeStyle = "#000000"; setdash(0);
+	cv.strokeStyle = col; setdash(2);
 	cv.lineWidth = 1;
 	cv.beginPath(); 
 	cv.moveTo(x,0);
@@ -1520,6 +1581,7 @@ function draw_errorbar(xx,y,min,max,tic)
 /// Sets the style for a line
 function setstyle(style)
 {
+	cv.lineWidth = 2;
 	switch(style){
 		case "RED_SOLID": cv.strokeStyle = "#ff2222"; setdash(0); break;
 		case "RED_DASHED": cv.strokeStyle = "#ffaaaa"; setdash(1); break;
@@ -1543,6 +1605,10 @@ function setstyle(style)
 		case "CYAN_DASHED": cv.strokeStyle = "#22ffff"; setdash(1); break;
 		case "MAGENTA_SOLID": cv.strokeStyle = "#ff22ff"; setdash(0); break;
 		case "MAGENTA_DASHED": cv.strokeStyle = "#ff22ff"; setdash(1); break;
+		case "RED_THIN": cv.strokeStyle = "#ff2222"; setdash(0); cv.lineWidth = 0.5; break;
+		case "GREEN_THIN": cv.strokeStyle = "#22ff22"; setdash(0); cv.lineWidth = 0.5; break;
+		case "BLUE_THIN": cv.strokeStyle = "#2222ff"; setdash(0); cv.lineWidth = 0.1; break;
+		case "BLACK_THIN": cv.strokeStyle = "#222222"; setdash(0); cv.lineWidth = 0.5; break;
 	}
 }
 

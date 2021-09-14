@@ -20,7 +20,7 @@ Details::Details(Inputs &inputs)
 	if(mode == MULTISIM) analysis_type = "Multisim";
 	
 	description = inputs.find_string("description","UNSET",true); 
-		
+	
 	stochastic = true;
 	auto dynamics = inputs.find_string("dynamics","stochastic");  
 	if(dynamics != "stochastic"){
@@ -85,6 +85,8 @@ Details::Details(Inputs &inputs)
 
 	division_per_time = inputs.find_positive_integer("steps_per_unit_time",2);
 	
+	graph_step = division_per_time;
+	
 	ndivision = division_per_time*period;
 	division_time.resize(ndivision);
 	for(auto s = 0u; s < ndivision; s++){
@@ -92,7 +94,7 @@ Details::Details(Inputs &inputs)
 		if(time_format == TIME_FORMAT_NUM) division_time[s] += start;
 	}
 	
-	trans_combine = inputs.find_double("trans_combine",UNSET);         // Determines if trans data is combined
+	trans_combine = inputs.find_double("trans_combine",20);            // Determines if trans data is combined
 	
 	if(mode == PMCMC_INF){                                             // This defines when particle filtering is performed 
 		obs_section = true;
@@ -134,7 +136,7 @@ unsigned int Details::gettime(const string st, const string em) const
 			time_t tt = mktime(&result);
 			t = tt/(60*60*24);
 		}
-		else emsg(em+" the expression '"+st+"' is not regonised as 'year-month-day' format.");
+		else emsgroot(em+" the expression '"+st+"' is not recognised as 'year-month-day' format.");
 		break;
 		
 	case TIME_FORMAT_DMY_SLASH:
@@ -143,7 +145,7 @@ unsigned int Details::gettime(const string st, const string em) const
 			time_t tt = mktime(&result);
 			t = tt/(60*60*24);
 		}
-		else emsg(em+" the expression '"+st+"' is not regonised as 'day/month/year' format.");
+		else emsgroot(em+" the expression '"+st+"' is not recognised as 'day/month/year' format.");
 		break;
 		
 	case TIME_FORMAT_DMY_DOT:
@@ -152,7 +154,7 @@ unsigned int Details::gettime(const string st, const string em) const
 			time_t tt = mktime(&result);
 			t = tt/(60*60*24);
 		}
-		else emsg(em+" the expression '"+st+"' is not regonised as 'day.month.year' format.");
+		else emsg(em+" the expression '"+st+"' is not recognised as 'day.month.year' format.");
 		break;
 	
 	default:

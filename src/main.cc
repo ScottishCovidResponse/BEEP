@@ -44,40 +44,6 @@ OPTIONS: nsample / GR_max, invT, nburnin, nthin, nrun
 MC3 inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
 OPTIONS: nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
-
-./beepmbp inputfile="examples/EX2.toml" mode="sim" 
-mpirun -n 20 ./beepmbp inputfile="examples/EX2.toml" mode="abcmbp" nparticle=200 ngeneration=5 
-
-./beepmbp inputfile="examples/EX_covid.toml" mode="sim"
-mpirun -n 20 ./beepmbp inputfile="examples/EX_covid.toml" mode="abcmbp"  nparticle=20 ngeneration=3 
-
-mpirun -n 20 ./beepmbp inputfile="examples/EX_covid.toml" mode="abcmbp"  nparticle=20 ngeneration=80 
-
-./beepmbp inputfile="examples/EX1.toml" mode="sim" 
-
-./beepmbp inputfile="examples/EX1temp.toml" mode="sim" 
-mpirun -n 20 ./beepmbp inputfile="examples/EX1temp.toml" mode="abcmbp"  nparticle=20 ngeneration=20
-
-
-./beepmbp inputfile="examples/EX2temp.toml" mode="sim" 
-mpirun -n 20 ./beepmbp inputfile="examples/EX2.toml" mode="abcmbp"  nparticle=20 ngeneration=3 
-mpirun -n 20 ./beepmbp inputfile="examples/EX2temp.toml" mode="abcmbp"  nparticle=20 ngeneration=3 
-
-mpirun -n 20 ./beepmbp inputfile="examples/EX2temp.toml" mode="pais" nparticle=20 ngeneration=10
-
-./beepmbp inputfile="examples/temp.toml" mode="sim" 
-
-./beepmbp inputfile="examples/EX2.toml" mode="sim" 
-
-mpirun -n 20 ./beepmbp inputfile="examples/EX3.toml" mode="abcmbp" nparticle=20 ngeneration=10
-
-./beepmbp inputfile="examples/EX_IZ.toml" mode="sim" 
-
-mpirun -n 20 ./beepmbp inputfile="examples/EX_IZ.toml" mode="abcmbp" nparticle=20 ngeneration=3
-
-./beepmbp inputfile="examples/Covid.toml" mode="sim" 
-
-mpirun -n 20 ./beepmbp inputfile="examples/Covid.toml" mode="abcmbp" nparticle=20 ngeneration=3
 */
 
 #include <iostream>
@@ -256,6 +222,17 @@ int main(int argc, char** argv)
 		}
 		break;
 
+	case DATAONLY:
+		{
+			vector <Particle> particle_store;
+			auto param = model.sample_from_prior();   
+			State state(details,data,model,obsmodel);
+			state.simulate(param);
+			particle_store.push_back(state.create_particle(0));
+			output.generate_graphs(particle_store); 
+		}
+		break;
+		
 	default: emsgroot("Mode not recognised"); break;
  	}
 	

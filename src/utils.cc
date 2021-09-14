@@ -95,7 +95,6 @@ double gamma_sample(const double a, const double b)
 	return distribution(generator);
 }
 
-
 /// The log of the probability from the normal distribution
 double normal_probability(const double x, const double mean, const double var)
 {
@@ -206,16 +205,26 @@ void binomial_check()
 
 
 /// Split up a string at a specified delimiter
-vector<string> split(const string &s, char delimiter)                                                               
+vector<string> split(const string &s, char delimiter)                                                          
 {                              
-  std::vector<std::string> splits;                       
-  std::string split;                                      
-  std::istringstream ss(s);                               
-  while (std::getline(ss, split, delimiter)) splits.push_back(split);   
-
+  vector<string> splits;                       
+ 
+  bool quoteon = false;
+	auto j = 0u;
+	for(auto i = 0u; i < s.length(); i++){
+		if(s.substr(i,1) == "\""){
+			if(quoteon == false) quoteon = true; else quoteon = false;
+		}
+		
+		if(s.at(i) == delimiter && quoteon == false){
+			splits.push_back(s.substr(j,i-j)); j = i+1; 
+		}
+	}
+	splits.push_back(s.substr(j,s.length()-j));
+	
 	for(auto &spl : splits) strip(spl);
 	
-  return splits;                                           
+	return splits;                                           
 }
 
 
@@ -482,8 +491,10 @@ double vec_max(const vector <double> &vec)
 /// Outputs a number to a given precision
 string prec(const double num, const unsigned int pre)
 {
+	if(num == 0) return "0";
+	
 	auto numpos = num; if(numpos < 0) numpos = -numpos;
-	auto v = -10u; while(numpos > pow(10,v)) v++;
+	int v = -10; while(numpos > pow(10,v)) v++;
 	
 	int precor = pre-v; if(precor < 0) precor = 0;
 	stringstream ss; ss << std::fixed; ss.precision(precor); 
@@ -539,7 +550,7 @@ double get_double_with_tobeset(string st, const string em)
 double get_double_positive(const string st, const string em)
 {
 	auto val = get_double(st,em);
-	if(val < 0) emsgroot(em+" the expression '"+st+"' is not positive.");
+	if(val < 0) emsg(em+" the expression '"+st+"' is not positive.");
 	return val;
 }
 
@@ -571,6 +582,22 @@ unsigned int get_int(string st, const string em)
 	ptrdiff_t j = endptr-&st[0];
 	if(j != (int)st.length()) emsgroot(em+" the expression '"+st+"' is not an integer.");
 	if(val < 0) emsgroot(em+" the expression '"+st+"' cannot be negative.");
+	
+	return val;
+}
+
+
+/// Return an int from a string
+int get_pos_neg_int(string st, const string em)
+{
+	strip(st);
+	
+	if(allow_string(st,"-0123456789") == false) emsgroot(em+" the expression '"+st+"' is not an integer.");
+
+	char* endptr;
+	int val = strtol(&st[0],&endptr,10);
+	ptrdiff_t j = endptr-&st[0];
+	if(j != (int)st.length()) emsgroot(em+" the expression '"+st+"' is not an integer.");
 	
 	return val;
 }

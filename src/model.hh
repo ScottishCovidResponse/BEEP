@@ -56,6 +56,7 @@ class Model                                             // Stores information ab
 		double calculate_area_av(const vector < vector <double> > &areafactor) const;
 		vector < vector <double> > calculate_F(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const unsigned int sp, const vector <double> &democatpos_dist) const;
 		vector < vector <double> > calculate_NGM(const vector < vector<double> > &F, const vector < vector<double> > &Vinv) const;
+		void eignevector_compare_models(const vector <double> &susceptibility, const vector <double> &paramv_dir, const vector < vector < vector <double> > > &Ntime, const vector < vector <double> > &transrate) const;
 		double calculate_R_beta_ratio_using_NGM(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &Vinv, const unsigned int sp, const vector <double> &democatpos_dist) const;
 		vector <double> calculate_probreach(const vector<double> &paramv_dir, const unsigned int st) const;
 		vector <double> calculate_external_ninf(const vector<double> &paramv_dir) const;

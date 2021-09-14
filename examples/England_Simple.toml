@@ -1,0 +1,49 @@
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2021-06-09"
+
+datadir = "examples/Data_England_Simple"
+outputdir = "Output_England_Simple"
+
+time_labels = [{name="Lockdown", time="2020-03-23"},{name="Start Vaccinating", time="2020-12-08"}]
+
+comps			= [{name="S"},
+						#{name="E", dist="Erlang", k="2", mean_value="4"},
+						 {name="E", dist="Exp", mean_value="4"},
+						 {name="I", dist="Exp", mean_value="4", inf_value="1"},
+						 {name="N", dist="Exp", mean_value="20.9", mean_prior="Uniform(10,30)"},
+						 {name="R"},
+						 {name="D"},
+						]
+
+trans   	=	[{from="S", to="E", infection="yes"},
+						 {from="E", to="I"},	 
+						 {from="I", to="N"},	 
+						 {from="N", to="R", prob_value="*", prob_prior="Dir(1)"},
+						 {from="N", to="D", prob_value="0.00981", prob_prior="Dir(0.3)"},
+						 
+						 #{from="I", to="R", prob_prior="Dir(1)"},
+						 #{from="I", to="D", prob_prior="Dir(0.3)"},
+						]
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="Uniform(0.4,5)", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="0.4"}]
+
+efoi_spline	= [{ param="efoi", value="1", bp="[bp:efoi_england_spline.csv]", factor="[factor:efoi_england_spline.csv]"}]
+
+areas = "England.csv"
+			
+data_tables = [
+{type="transition", observation="E->I", obsmodel="scale", weight="1", timestep="1", shift="-7", file="Cases_cut.csv", factor_spline="obs1"},
+{type="transition", observation="N->D", obsmodel="scale", weight="1", timestep="7", file="Deaths.csv"},
+{type="population", observation="R", obsmodel="scale", weight="1", file="antibody.csv"},
+]
+
+obs_spline = [{name="obs1", param = "f | f", prior="Uniform(0,1)", bp="start|end"}]
+																	 
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R",line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
