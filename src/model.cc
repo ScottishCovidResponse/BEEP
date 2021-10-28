@@ -3090,6 +3090,7 @@ void Model::set_dirichlet()
 							
 					if(nmdir == dir.param.size()){ // This applies a modified Dirichlet prior
 						auto kappa = param[dir.param[0].th].dir_mean;
+						// cout << kappa << "kappa\n";
 						auto beta = ((dir.param.size()-1)/(kappa*kappa))-1;
 						
 						for(auto i = 0u; i < dir.param.size(); i++){
