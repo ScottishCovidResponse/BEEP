@@ -29,7 +29,8 @@ Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp) :
 	nodata_str = inputs.find_string("nodata_str",".");               // The string which represents no data (if specified) 
 	
 	democat = inputs.find_demographic_category(strain);              // Gets information about demographic categories
-	ndemocat = democat.size();	
+	ndemocat = democat.size();
+	
 	nstrain = strain.size();
 	nage = democat[0].value.size();
 		
@@ -133,6 +134,8 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 	if(mpi.ncore > 1) mpi.copy_data(narea,area,nobs,obs,genQ,modification,covar,level_effect,democat_change);
 
 	if(details.siminf == INFERENCE) set_datatable_weights();
+	
+	if(details.siminf == INFERENCE) normal_approximation();
 
 	agedist.resize(nage); for(auto &aged : agedist) aged = 0;
 	democatpos_dist.resize(ndemocatpos_per_strain); for(auto &dpd : democatpos_dist) dpd = 0;
@@ -161,7 +164,9 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 	}
 	
 	if(false){
-		for(auto &aged : agedist) cout << aged << endl; cout << "agedist" << endl; emsgroot("Done");
+		for(auto &aged : agedist) cout << aged << endl; 
+		cout << "agedist" << endl; 
+		emsgroot("Done");
 	}
 	
 	for(auto &aged : agedist) aged /= popsize;
@@ -176,7 +181,8 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 			for(auto i = 0u; i < democat_dist[d].size(); i++) cout << d << " " << i << " " << democat_dist[d][i] << "," << endl;
 		}
 		
-		for(auto a = 0u; a < agedist.size(); a++) cout << agedist[a] << ","; cout << "h" << endl;
+		for(auto a = 0u; a < agedist.size(); a++) cout << agedist[a] << ","; 
+		cout << "h" << endl;
 		emsgroot("Done");	
 	}
 	
@@ -280,9 +286,9 @@ void Data::check_or_create_column(Table &tab, string head, unsigned int d) const
 /// Reads in the initial population
 void Data::read_initial_population(Table &tab, Inputs &inputs)
 {
-	auto comps = inputs.find_compartments();
-	auto co_sus = inputs.find_susceptible_compartment();
-	
+	unsigned int co_sus;
+	auto comps = inputs.find_compartment_names(co_sus,democat,democatpos);
+
 	auto codecol = find_column(tab,"area");          
 	for(auto row = 0u; row < tab.nrow; row++){                  // Sets up areas with zero population
 		Area are;
@@ -296,12 +302,18 @@ void Data::read_initial_population(Table &tab, Inputs &inputs)
 	}
 	narea = area.size();
 	
-	if(init_pop != "") read_init_pop_file(comps);              // Uses an 'init_pop' file to load initial population
+	if(init_pop != "") read_init_pop_file(comps);         // Uses an 'init_pop' file to load initial population
 	else read_initial_population_areas(co_sus,tab);       // Uses columns in 'areas' to load initial population
 	
-	for(auto &are : area){                                     // Sets the area population total
+	for(auto &are : area){                                // Sets the area population total
 		auto total = 0.0; for(const auto &vec : are.pop_init){ for(auto val : vec) total += val;}
 		are.total_pop = total;
+		
+		are.pop_dp.resize(ndemocatpos);
+		for(auto dp = 0u; dp < ndemocatpos; dp++){
+			auto sum = 0.0; for(auto co = 0u; co < comps.size(); co++) sum += are.pop_init[co][dp];
+			are.pop_dp[dp] = sum;
+		}
 	}
 	
 	if(false){
@@ -334,6 +346,14 @@ void Data::read_init_pop_file(const vector <string> comps)
 		else demo_col[d] = UNSET;
 	}
 	
+	for(auto c = 0u; c < narea; c++){
+		for(auto co = 0u; co < comps.size(); co++){
+			for(auto dp = 0u; dp < ndemocatpos; dp++){
+				area[c].pop_init[co][dp] = UNSET;
+			}
+		}
+	}
+	
 	for(auto row = 0u; row < tab.nrow; row++){
 		auto areacode = tab.ele[row][area_col];
 		auto c = 0u; while(c < narea && area[c].code != areacode) c++;
@@ -356,15 +376,42 @@ void Data::read_init_pop_file(const vector <string> comps)
 		auto pop = get_double_positive(tab.ele[row][pop_col],"In file '"+init_pop+"'");
 		
 		auto comp = tab.ele[row][compartment_col];
-		auto co = find_in(comps,comp);
-		if(co == UNSET) emsgroot("In 'init_pop' file '"+init_pop+"' the compartment '"+comp+"' is not recognised.");
-			
+		
+		vector <unsigned int> co_list;
+		for(auto co = 0u; co < comps.size(); co++){
+			if(comps[co] == comp) co_list.push_back(co);
+		}		
+		if(co_list.size() == 0) emsgroot("In 'init_pop' file '"+init_pop+"' the compartment '"+comp+"' is not recognised.");
+
 		unsigned int dp;
 		for(dp = 0u; dp < ndemocatpos; dp++){
 			auto d = 0u; while(d < ndemocat && index[d] == democatpos[dp][d]) d++; 
-			if(d == ndemocat){ area[c].pop_init[co][dp] = pop; break;}
+			if(d == ndemocat){ 
+				for(auto i = 0u; i < co_list.size(); i++){   // This places all the population in the first compartment with the specified name
+					auto co = co_list[i];
+					
+					if(i == 0) area[c].pop_init[co][dp] = pop;
+					else area[c].pop_init[co][dp] = 0;
+				}
+				break;
+			}
 		}
 		if(dp == ndemocatpos) emsgEC("Data",23);
+	}
+	
+	for(auto co = 0u; co < comps.size(); co++){
+		auto fl = false, fl2 = false;
+		for(auto c = 0u; c < narea; c++){
+			for(auto dp = 0u; dp < ndemocatpos; dp++){
+				if(area[c].pop_init[co][dp] == UNSET) fl = true;
+				else fl2 = true;
+					
+			}
+		}
+		if(fl == true){
+			if(fl2 == false) emsgroot("The initial populations for '"+comps[co]+"' are not specified");
+			else emsgroot("The initial populations for '"+comps[co]+"' are not all specified");
+		}
 	}
 }
 
@@ -433,7 +480,7 @@ void Data::read_covars()
 				
 			case TV_COVAR:
 				{
-					auto date_col = find_column(tab,"Date");
+					auto date_col = find_column(tab,details.time_format_str);
 					auto col = find_column(tab,cov.name);
 					
 					for(auto r = 0u; r < tab.nrow-1; r++){
@@ -463,7 +510,7 @@ void Data::read_covars()
 				
 			case AREA_TV_COVAR:
 				{
-					auto date_col = find_column(tab,"Date");
+					auto date_col = find_column(tab,details.time_format_str);
 					vector <unsigned int> cols(narea);
 					for(auto c = 0u; c < narea; c++) cols[c] = find_column(tab,area[c].code);
 			
@@ -524,7 +571,7 @@ void Data::read_level_effect()
 {
 	if(level_effect.on == true){
 		auto tab = load_table(level_effect.file);
-		auto date_col = find_column(tab,"Date");
+		auto date_col = find_column(tab,details.time_format_str);
 		vector <unsigned int> area_col(narea);
 		for(auto c = 0u; c < narea; c++) area_col[c] = find_column(tab,area[c].code);
 			
@@ -576,7 +623,8 @@ void Data::read_level_effect()
 		if(false){
 			for(auto t = 0u; t < details.period; t++){
 				cout << t << " ";
-				for(auto c = 0u; c < narea; c++) cout << level_effect.param_map[t][c] << " "; cout << endl;
+				for(auto c = 0u; c < narea; c++) cout << level_effect.param_map[t][c] << " ";
+				cout << endl;
 			}
 			
 			for(auto i = 0u; i < imax; i++) cout << level_effect.frac[i] << " Parameter Fraction" << endl;
@@ -607,6 +655,8 @@ Table Data::get_table(const string file, const string dir) const
 /// Gets a column from a table
 vector <string> Data::get_table_column_str(const unsigned int col, const Table &tab) const
 {
+	if(tab.file == "") emsgEC("Data",31);
+	
 	vector <string> result;
 	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
 	
@@ -617,6 +667,8 @@ vector <string> Data::get_table_column_str(const unsigned int col, const Table &
 /// Gets a column from a table
 vector <string> Data::get_table_column(const string col_name, const Table &tab) const
 {
+	if(tab.file == "") emsgEC("Data",32);
+	
 	vector <string> result;
 	auto col = find_column(tab,col_name);
 	for(auto r = 0u; r < tab.nrow; r++) result.push_back(tab.ele[r][col]);
@@ -629,6 +681,8 @@ vector <string> Data::get_table_column(const string col_name, const Table &tab) 
 vector <double> Data::get_table_column(const unsigned int col, const Table &tab) const
 {
 	vector <double> result;	
+	
+	if(tab.file == "") emsgEC("Data",33);
 	if(col >= tab.ncol) emsgroot("The file '"+tab.file+"' does not have column "+to_string(col));
 	for(auto row = 0u; row < tab.nrow; row++) result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
 	return result;
@@ -713,7 +767,8 @@ string Data::get_table_cols_JSON(const string file, const string dir, const vect
 	ss << "{ \"heading\":[";
 	bool fl = false;
 	for(auto col : cols){
-		if(fl == true) ss << ","; fl = true;
+		if(fl == true) ss << ","; 
+		fl = true;
 		ss << "\"" << tab.heading[col] << "\"";
 	}
 	ss << "]";
@@ -725,7 +780,8 @@ string Data::get_table_cols_JSON(const string file, const string dir, const vect
 		ss << "[";
 		bool fl = false;
 		for(auto col : cols){
-			if(fl == true) ss << ","; fl = true;
+			if(fl == true) ss << ","; 
+			fl = true;
 			ss << "\"" << replace(tab.ele[row][col],"|",",") << "\"";
 		}		
 		ss << "]";
@@ -1014,7 +1070,63 @@ void Data::load_datatable(const Table &tabarea)
 	}
 	
 	nobs = obs.size();
+
 	if(false){ cout << nobs <<" Number of observations" << endl; emsgroot("Done");}
+}
+
+
+/// Generates a normal approximation to the observation model (used in approximate methods)
+void Data::normal_approximation()
+{
+	for(auto &ob : obs){
+		auto value = ob.value;
+		
+		switch(ob.obsmodel){
+		case POWER_OBSMODEL:
+			{
+				auto var = ob.sd*ob.sd/(ob.w*ob.invT); if(var < 0.5) var = 0.5;
+				ob.var_approx = var;
+			}
+			break;
+			
+		case LOADSD_OBSMODEL: 
+			{
+				ob.var_approx = 1.0/(ob.sd*ob.sd*ob.w*ob.invT);
+			}
+			break;
+			
+		case NORMAL_OBSMODEL:
+			{
+				//return ob.w*ob.invT*normal_probability(val,value,value+0.5*ob.factor);
+				ob.var_approx = 1.0/(ob.w*ob.invT*ob.w*ob.invT);
+			}
+			break;
+			
+		case POISSON_OBSMODEL:
+			{
+				auto lam = value; if(lam < 1) lam = 1;
+				ob.var_approx = lam/(ob.w*ob.invT);
+				break;
+			}
+			
+		case NEGBINO_OBSMODEL:
+			{
+				auto m = value; if(m < 1) m = 1;
+				ob.var_approx = (m + m*m/ob.shape)/(ob.w*ob.invT);
+			}
+			break;
+			
+		case SCALE_OBSMODEL:
+			{
+				auto offset = ob.epsilon;
+				ob.var_approx = (value+offset)*(value+offset)/(ob.invT*ob.w*ob.weight);
+			}
+			break;
+		}
+		
+		if(std::isinf(ob.var_approx)) emsgroot("Cannot have infinite variance for observation model");
+		if(ob.var_approx == 0) emsgroot("Cannot have zero variance for observation model");
+	}		
 }
 
 
@@ -1208,7 +1320,9 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 								}
 							}
 							
-							if(sim == true || row == obs_times.size()-1 || details.trans_combine == UNSET  
+							//load_datatable zz
+							// TEMP turn off combine
+							if(1 == 1 || sim == true || row == obs_times.size()-1 || details.trans_combine == UNSET  
 									 || val >= details.trans_combine || (details.obs_section == true && details.sec_define[tf] == true)){
 								gp.xi = ti/details.division_per_time;
 								gp.xf = tf/details.division_per_time;
@@ -1479,10 +1593,12 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 		cout << "geo_dep: " << geo_dep << "   democats_dep: " << democats_dep <<  "      geo_filt: " <<  geo_filt << "   democats: " << democats_filt << endl;
 		for(auto  df : datafilter){
 			cout << df.name << "  Datafilter: ";
-			cout << "Areas: "; for(auto c : df.area) cout << area[c].code << ","; cout << "  ";
+			cout << "Areas: "; for(auto c : df.area) cout << area[c].code << ","; 
+			cout << "  ";
 			cout << "DP: "; 
 			for(auto dp : df.dp_sel){ 
-				for(auto i = 0u; i < ndemocat; i++) cout << democat[i].value[democatpos[dp][i]] << ","; cout << "  ";
+				for(auto i = 0u; i < ndemocat; i++) cout << democat[i].value[democatpos[dp][i]] << ",";
+				cout << "  ";
 			}
 			cout << endl;
 		}
@@ -1554,7 +1670,8 @@ void Data::set_datatable_weights()
 			//auto max = graph_value_max[gr]; 
 			auto max = value_max[dt];
 			if(max < 3) max = 3;
-			ob.w = datatable[dt].weight/(num_obs[dt]*max*max);  
+			//ob.w = datatable[dt].weight/(num_obs[dt]*max*max);  
+			ob.w = datatable[dt].weight;     // This has been temporarily changed
 		}
 		else{
 			ob.w = datatable[dt].weight;
@@ -1571,11 +1688,11 @@ void Data::set_datatable_weights()
 		}
 		
 		if(ob.obsmodel == SCALE_OBSMODEL){
-			auto fac = ob.value/graph_value_max[gr];
+			//auto fac = ob.value/graph_value_max[gr];
+			ob.weight = 1;// sqrt(fac);  THIS HAS BEEN CHANGED
 		
 			ob.epsilon = 0.02*graph_value_max[gr];
 		
-			ob.weight = sqrt(fac);
 		}
 	}
 	
@@ -1672,7 +1789,8 @@ vector <unsigned int> Data::create_dp_sel(const string dp_str, const string em) 
 		if(false){
 			for(auto d = 0u; d < ndemocat; d++){
 				cout << d << ": ";
-				for(auto i = 0u; i < democat[d].value.size(); i++) cout << flag[d][i] <<","; cout << "flag" << endl;
+				for(auto i = 0u; i < democat[d].value.size(); i++) cout << flag[d][i] << ","; 
+				cout << "flag" << endl;
 			}
 		}
 	}

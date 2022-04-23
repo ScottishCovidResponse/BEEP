@@ -9,7 +9,7 @@ const bool sim_only = false;                           // Set if looking at an a
 
 const bool langevin_on = false;                        // Set to true if langevin shift is used when performing MVN proposals
 
-const bool obsmodel_transmean = true;                  // Set to true if the trans mean is used in the observation model
+const bool obsmodel_transmean = false;                  // Set to true if the trans mean is used in the observation model
 
 const bool suppress_output = true;                     // Suppresses overly verbose output
 
@@ -25,8 +25,14 @@ const bool plot_obs_model = false;                      // This is set to true i
  
 const double power_obsmodel = 0.7;                     // The power used in the power observation model
 
+const double pmcmc_start_param = true;                 // Set to true if pmcmc starts on true parameter value
+
+const double cor_update_num = 0.8;                     // The value of cor used to make changes to num_updates  
+const double num_updates_max = 10;                     // The maximum number for num_updates
+const double num_updates_min = 1;                      // The minimun number for num_updates
+
 enum Mode { SIM, MULTISIM, PREDICTION,                 // Different modes of operation 
-            ABC_SIMPLE, ABC_SMC, ABC_MBP, MC3_INF, MCMC_MBP, PAIS_INF, PMCMC_INF,
+            ABC_SIMPLE, ABC_SMC, ABC_MBP, ABC_DA, ABC_CONT, MC3_INF, MCMC_MBP, PAIS_INF, PMCMC_INF, IMPORTANCE_INF, ML_INF,
 						DATAONLY};       
 
 enum SimInf { SIMULATE, INFERENCE, DATAVIEW};          // Determines if simulation or inference is being performed
@@ -37,16 +43,20 @@ enum ErlangPos { FIRST, LAST};                          // Position in Erland di
 
 enum ObsModelFunc { NORMAL_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL, SCALE_OBSMODEL, LOADSD_OBSMODEL, POWER_OBSMODEL}; 
 	
+enum ObsType { OBS_EXACT, OBS_APPROX };                // Approximate or exact observation (used in likelihood approx)
+	
 enum Dir { X,Y};                                       // Different directions areas sorted by
 
-enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_COVAR_AREA, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIMERMAX};
+enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_PARAMPROP, TIME_STATEPROP, TIME_UPDATE, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_COVAR_AREA, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIME_CUTOFF, TIME_PROP, TIME_MVNSETUP, TIME_MBPUPDATE, TIME_UPDATEPROP, TIME_LIKELIHOOD_APPROX, TIME_OBS_APPROX, TIME_FUTURE_OBS_APPROX, TIME_COVAR, TIME_CORRECT, TIME_GRAD, TIME_POSTERIOR_SAMPLE, TIME_EF_CALCULATE, TIME_TEMP1, TIME_TEMP2, TIME_TEMP3, TIME_TEMP4, TIME_INV_MATRIX, TIME_DETERMINANT, TIME_MATRIX_MULT, TIME_LINEAR_EQ, TIME_ADD_REMOVE_S, TIMERMAX};
+
+enum Accuracy {DOUBLE, FLOAT};                                  // Sets the level computation
 
 enum GraphType { GRAPH_TIMESERIES, GRAPH_MARGINAL };
 	
 enum ParamType { DISTVAL_PARAM, BRANCHPROB_PARAM,               // Different types of parameters 
                    INF_PARAM, RE_PARAM, SIGMA_PARAM, OBS_PARAM,
 									 COVAR_PARAM, R_EFOI_PARAM, GEOMIX_PARAM, MODIFY_PARAM, SUSCEPTIBILITY_PARAM, DEMO_SPECIFIC_PARAM, 
-									 LEVEL_EFFECT_PARAM, RFACTOR_PARAM, AREA_EFFECT_PARAM, ALL_PARAM, PARAMTYPEMAX};
+									 LEVEL_EFFECT_PARAM, RFACTOR_PARAM, AREA_EFFECT_PARAM, ALL_PARAM, DIST_R_JOINT, R_NEIGH, PARAM_PROP, PARAMTYPEMAX};
 	
 enum Status { SUCCESS, FAIL};                                    // Determines if successful
 
@@ -90,7 +100,11 @@ enum PriorType { FIXED_PRIOR, UNIFORM_PRIOR, EXP_PRIOR,          // Different ty
 								 NORMAL_PRIOR, DIRICHLET_PRIOR, DIRICHLET_ALPHA_PRIOR, DIRICHLET_FLAT_PRIOR,
 								 MDIRICHLET_PRIOR}; 
 				
+enum MLAlg { ML_GD, ML_CMAES};                                   // Different types of maximum likelihood algorithm
+
 enum DirType { DIR_NORM, DIR_MODIFIED};                          // The type of Dirichlet distribution
+
+enum MatrixType { DIAG, FULL};
 
 enum JointType { UP_DOWN, SINE};                                 // Different type of joint proposal
 	
@@ -115,20 +129,29 @@ enum FileType{ KML, GEOJSON};                                    // DIfferent ty
 enum DistPropType { BINNING, KDE };                              // Different ways to display probability distributions
 						 
 enum ModificationType { CF_TRANS_RATE, CF_EFOI,                  // DIfferent types of model modification
-												CF_SPLINEFAC, CF_SPLINESET, CF_BETA};
+						CF_SPLINEFAC, CF_SPLINESET, CF_BETA};
 
-enum ParamUpdate { NO_UPDATE, SLOW_UPDATE, FAST_UPDATE};         // Whether to update parameters with MH
+enum ParamUpdate { NO_UPDATE, COMBINE_UPDATE,                    // Whether to update parameters with MH
+									 COMBINE_DYNAMIC_UPDATE, SLOW_UPDATE, FAST_UPDATE};
 
-enum StateUncertainty{ CI, CURVES};                         // Determines how state uncertainty plotted
+enum StateUncertainty{ CI, CURVES};                              // Determines how state uncertainty plotted
 
-const double fac_up_invT = 1.05, fac_down_invT = 0.9;            // These are used to dynamically change invT
-const double fac_up_invT_fast = 1.5, fac_down_invT_fast = 0.7;    
+const double eta_fast = 1, eta = 0.1;
+const double eta_pmcmc_fast = 0.1, eta_pmcmc = 0.01;
+const double eta_combine = 4;
+const double eta_invT = 0.1;
 
-const double fac_up = 1.1, fac_down = 0.95;                      // These are used to dynamically change the size of proposals
-const double fac_up_fast = 1.5, fac_down_fast = 0.7;  
+const double ac_rate = 0.33;                                     // Target acceptance rate
+//const double ac_rate_tree = 0.5;                               // Target acceptance rate for trees
+const double ac_rate_tree = 0.33;                                // Target acceptance rate for trees
+const double ac_rate_slice = 0.33;                               // Target acceptance rate for slicetime
+const double ac_rate_self = 0.7;                                 // Target acceptance rate for self proposals (PMCMC);
 
-const double sizemax = 2;                                        // The maximum size of parameter proposals
-const double sizemin = 0.2;                                      // The minimum size of parameter proposals
+const double sizemax = 1.5;                                        // The maximum size of parameter proposals
+
+const auto pmcmc_init_samp = 100u;                               // The number of initial PMCMC samples
+
+const double self_cor_PMCMC = 0.99;                              // Gives the correlation in self acceptance when using PMCMC
 
 const double VTINY = 0.000000000000001;                          // Used to represent a very tiny number
 const double TINY = 0.00000001;                                  // Used to represent a tiny number

@@ -26,11 +26,15 @@ struct Details                                                     // Provides d
 	TimeFormat time_format;                                          // The time format (e.g. times or dates)
 	string time_format_str;                                          // A description of the time format ('time' or 'date').
 
+	long time_start;                                                 // The execution start time
+
 	unsigned int start;                                              // Start time over which simulation/inference is performed
 	unsigned int end;                                                // End time over which simulation/inference is performed
 	unsigned int period;                                             // Period over which simulation/inference is performed
 	unsigned int pred_start;                                         // The start time of prediction
 	unsigned int pred_end;                                           // The end time of prediction
+
+	unsigned int prop_max;                                           // The maximum number of proposals (ABCMBP/PAIS)
 
 	vector <TimePlot> timeplot;                                      // Descriptive times which can be used 
 	

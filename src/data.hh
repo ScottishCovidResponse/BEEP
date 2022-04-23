@@ -116,6 +116,7 @@ class Data
 		vector < vector <double> > get_demo_frac(const unsigned int d, const Table &tab, const vector <double> &pop) const;
 		void load_democat_change(const Table &tabarea);
 		void load_datatable(const Table &tabarea);
+		void normal_approximation();
 		void check_datatable();
 		void load_timeseries_datatable(const Table &tabarea, const unsigned int i, const bool sim);
 		void load_marginal_datatable(const Table &tabarea, const unsigned int i, const bool sim);
@@ -176,6 +177,8 @@ class Data
 		void generate_tvcovar();
 		void generate_level_effect();
 		void reducesize_geojson(const string file);
+		void generate_age_mixing_perturb();
+		void generate_geo_mixing_matrix();
 	
 		const Details &details;
 		Inputs &inputs;
