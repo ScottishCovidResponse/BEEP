@@ -10,13 +10,14 @@ using namespace std;
 #include "output.hh"
 #include "mpi.hh"
 
+const auto weight_limit = 0.000001;
 
 ABCSMC::ABCSMC(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), details(details), model(model), output(output), obsmodel(obsmodel), mpi(mpi)
 {
-	inputs.find_nrun(nrun);
-	inputs.find_nsample_GRmax(Ntot,GRmax,nrun);
-	inputs.find_generation_or_cutoff_final(G,cutoff_final);
-	inputs.find_cutoff_frac(cutoff_frac);
+	inputs.find_nsample(Ntot,1); 
+	inputs.find_nsample_final(Ntot_final,Ntot);
+	inputs.find_generation_or_cutoff_final_or_cpu_time(G,cutoff_final,cpu_time);
+	inputs.find_cutoff_frac(cutoff_frac,cutoff_frac_init);
 	inputs.find_propsize(propsize);
 }
 
@@ -26,24 +27,25 @@ void ABCSMC::run()
 {	
 	MVN mvn("ABCSMC",model.param_not_fixed,propsize,ALL_PARAM,MULTIPLE); // Used for sampling from MVN distribution
 	
-	for(auto g = 0u; g < G; g++){                                        // Sequentially goes through generations
+	auto g = 0u;                                                         // Sequentially goes through generations
+	do{
 		timer[TIME_ALG].start();
+		
+		particle_store.clear();
 		
 		auto acrate = 1.0;
 		
 		particle_store.clear();
 		
-		Generation gen;
-		gen.time = clock();
+		Generation gen; gen.num = g;
+		
 		if(g == 0){                                                        // For the initial generation sample states
 			do{          
-				for(auto ru = 0u; ru < nrun; ru++){
-					auto param = model.sample_from_prior();                      // Samples parameters from the prior
+				auto param = model.sample_from_prior();                        // Samples parameters from the prior
 						
-					state.simulate(param);                                       // Simulates the state
+				state.simulate(param);                                         // Simulates the state
 				
-					store_sample(gen,g,ru,1);                                    // Stores the sample   
-				}
+				store_sample(gen,1);                                           // Stores the sample   
 			}while(!terminate(gen));
 		}
 		else{                                                              // Subsequent generations sample from particles
@@ -54,35 +56,34 @@ void ABCSMC::run()
 			setup_particle_sampler(gen_last);                                // Sets up sampler for particles
 		
 			auto ntr = 0u, nac = 0u;
-			vector <double> wtot(nrun), wcut(nrun);                          // Sets up quantities for estimating model evidence
-      for(auto ru = 0u; ru < nrun; ru++){ wtot[ru] = 0; wcut[ru] = 0;}      
-			do{
-				for(auto ru = 0u; ru < nrun; ru++){
-					do{
-						ntr++;
-							
-						auto p = particle_sampler(ru);                             // Samples from a particle in last generation
+			auto wtot = 0.0, wcut = 0.0;                                     // Sets up quantities for estimating model evidence
 			
-						auto param_prop = mvn.propose(gen_last.param_samp[p].paramval);// Proposes a new parameter set using MVN kernal
+			do{
+				for(auto loop = 0u; loop < 10; loop++){
+					ntr++;
 						
-						
-						if(model.inbounds(param_prop) == true){                    // Checks if parameters within bounds
-							state.simulate(param_prop);                              // Simulates a new state
+					auto p = particle_sampler();                               // Samples from a particle in last generation
+		
+					auto param_prop = mvn.propose(gen_last.param_samp[p].paramval); // Proposes a new parameter set using MVN kernal
+					
+					
+					if(model.inbounds(param_prop) == true){                    // Checks if parameters within bounds
+						state.simulate(param_prop);                              // Simulates a new state
 
-							auto w = calculate_particle_weight(param_prop,gen_last,ru,mvn); // Calculates the weight for the sample
-	
-							wtot[ru] += w;
-							if(state.EF < gen_last.EFcut){                           // Checks if error function less than cutoff
-								store_sample(gen,g,ru,w);
-								nac++; wcut[ru] += w;
-								break;
-							}
+						auto w = calculate_particle_weight(param_prop,gen_last,mvn); // Calculates the weight for the sample
+
+						wtot += w;
+						if(state.EF < gen_last.EFcut){                           // Checks if error function less than cutoff
+							store_sample(gen,w);
+							nac++; wcut += w;
 						}
-					}while(true);			
+					}
 				}
+				
+				remove_small_weights(gen);                                      // Removes samples with very small weight
 			}while(!terminate(gen));
 			
-			for(auto ru = 0u; ru < nrun; ru++) gen.model_evidence.push_back(log(mpi.get_ratio(wcut[ru],wtot[ru])));
+			gen.model_evidence.push_back(log(mpi.get_ratio(wcut,wtot)));
 			acrate = mpi.get_acrate(nac,ntr);
 		}
 		
@@ -92,36 +93,68 @@ void ABCSMC::run()
 		
 		normalise_particle_weights(gen);                                   // Normalises the particle weights
 		
+		output.set_generation_time(gen);                                   // Sets the CPU time for the generation
+	
+		gen.time = clock();
 		generation.push_back(gen);                                         // Stores the current generation
 		
 		timer[TIME_ALG].stop();
 		
 		print_generation(generation,acrate);                               // Outputs statistics about generation
 		
+		if(true){
+			auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
+			auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
+			if(mpi.core == 0){	
+			  cout << g << "," << gen.EFcut << "," << double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " RESULT" << endl;
+			  cout << endl;
+			}
+		}
+		
 		auto time_av = mpi.average(timer[TIME_TOTAL].val+clock());
 		if(false && mpi.core == 0) cout <<  "Total time: " << prec(double(time_av)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
 
-		if(gen.EFcut == cutoff_final) break;                               // Terminates if final EF is reached
-	}
+		g++;
+	}while(terminate_generation(g,generation[g-1].EFcut) == false);
 		
 	if(mpi.core == 0) print_model_evidence();                            // Prints the final model evidence
 
 	results();                                                           // Generates pdf of graphs
 }
 
-
 /// Stores parameter and state sample 
-void ABCSMC::store_sample(Generation &gen, const unsigned int g, const unsigned int run, const double w)
+void ABCSMC::store_sample(Generation &gen, const double w)
 {
-	gen.param_samp.push_back(state.create_param_sample(run));            // Stores the parameter samples
+	gen.param_samp.push_back(state.create_param_sample(UNSET));          // Stores the parameter samples
 	gen.EF_datatable.push_back(obsmodel.get_EF_datatable(&state));
 	gen.w.push_back(w);
-	if(g == G-1 || cutoff_final != UNSET){                               // In last generation stores particles for plotting  
-		particle_store.push_back(state.create_particle(run));   
+	particle_store.push_back(state.create_particle(UNSET));
+}
+
+		
+/// Removes samples with very small weight (to save memory)		
+void ABCSMC::remove_small_weights(Generation &gen)
+{
+	auto wtot = mpi.combine(gen.w);
+	double wmax = 0.0;
+	if(mpi.core == 0){
+		for(auto val : wtot) if(val > wmax) wmax = val;
+	}
+	mpi.bcast(wmax);
+		
+	auto p = 0u;
+	while(p < gen.param_samp.size()){
+		if(gen.w[p] < weight_limit*wmax){
+			gen.EF_datatable.erase(gen.EF_datatable.begin()+p);
+			gen.w.erase(gen.w.begin()+p);
+			gen.param_samp.erase(gen.param_samp.begin()+p);
+			particle_store.erase(particle_store.begin()+p);
+		}
+		else p++;
 	}
 }
 
-							
+						
 /// Selects EFcut to remove samples at a certain acceptance rate
 void ABCSMC::implement_cutoff_frac(Generation &gen)
 {
@@ -131,7 +164,8 @@ void ABCSMC::implement_cutoff_frac(Generation &gen)
 	double EFcut;
 	if(mpi.core == 0){
 		sort(EFtot.begin(),EFtot.end());
-		EFcut = EFtot[(unsigned int)(cutoff_frac*EFtot.size())]; 
+		auto co = cutoff_frac; if(gen.num == 0) co = cutoff_frac_init;
+		EFcut = EFtot[(unsigned int)(co*EFtot.size())]; 
 		if(cutoff_final != UNSET && EFcut < cutoff_final) EFcut = cutoff_final;
 	}
 	
@@ -140,22 +174,14 @@ void ABCSMC::implement_cutoff_frac(Generation &gen)
 	auto p = 0u;
 	while(p < gen.param_samp.size()){
 		if(gen.param_samp[p].EF >= EFcut){
-			//wcut[gen.param_samp[p].run] -= gen.w[p];
 			gen.EF_datatable.erase(gen.EF_datatable.begin()+p);
 			gen.w.erase(gen.w.begin()+p);
 			gen.param_samp.erase(gen.param_samp.begin()+p);
-		}
-		else p++;
-	}
-
-	p = 0;
-	while(p < particle_store.size()){
-		if(particle_store[p].EF >= EFcut){
 			particle_store.erase(particle_store.begin()+p);
 		}
 		else p++;
 	}
-	 
+
 	gen.EFcut = EFcut;
 }
 
@@ -164,25 +190,35 @@ void ABCSMC::implement_cutoff_frac(Generation &gen)
 bool ABCSMC::terminate(const Generation &gen) const
 {
 	bool term = false;
-	auto samptot = mpi.sum(long(gen.w.size()));
+
+	auto w_tot = mpi.combine(gen.w);
+	if(mpi.core == 0){
+		auto Neff = effective_particle_number(w_tot);
+		auto N = Ntot;
+		if(gen.num == G-1) N = Ntot_final;
+		auto co = cutoff_frac; if(gen.num == 0) co = cutoff_frac_init;
+		//cout << Neff << " " << N/co << "Neff\n"; 
+		if(Neff >= N/co) term = true;
+	}
 	
-	if(GRmax != UNSET){
-		auto psamp_tot = mpi.gather_psamp(gen.param_samp);
-		auto w_tot = mpi.gather(gen.w);
-		if(mpi.core == 0){
-			auto GR = output.get_Gelman_Rubin_statistic(psamp_tot,w_tot,nrun);
-			if(vec_max(GR) < GRmax && samptot >= nrun*20) term = true; 
-			cout << "Number of samples: " << samptot << "    Largest GR value:" << vec_max(GR) << "     GRmax: " << GRmax << endl;
-		}
-	}
-	else{
-		if(mpi.core == 0){
-			if(samptot >= nrun*Ntot/cutoff_frac) term = true;
-		}
-	}
 	mpi.bcast(term);
 	
 	return term;
+}
+
+
+/// Determines when generations are stopped
+bool ABCSMC::terminate_generation(unsigned int g, double EFcut) const 
+{
+	if(EFcut == cutoff_final) return true;
+	if(g == G-1) return true;
+	
+	auto time_av = mpi.average((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC));
+	if(time_av > cpu_time){
+		if(mpi.core == 0)	cout << "Maximum execution time reached." << endl << flush;
+		return true;
+	}
+	return false;
 }
 
 
@@ -190,26 +226,22 @@ bool ABCSMC::terminate(const Generation &gen) const
 void ABCSMC::setup_particle_sampler(const Generation &gen)
 {
 	auto NN = gen.w.size();
-	wsum.resize(nrun);
-	for(auto ru = 0u; ru < nrun; ru++){
-		wsum[ru].resize(NN);
-		auto sum = 0.0;
-		auto num = 0u;
-		for(auto i = 0u; i < NN; i++){ 
-			if(gen.param_samp[i].run == ru){ sum += gen.w[i]; num++;}
-			wsum[ru][i] = sum;
-		}
-		if(num == 0) emsgEC("ABCSMC",1);
+	
+	wsum.resize(NN);
+	auto sum = 0.0;
+	for(auto i = 0u; i < NN; i++){ 
+		sum += gen.w[i];
+		wsum[i] = sum;
 	}
 }
 			
 
 /// Samples the next particle
-unsigned int ABCSMC::particle_sampler(const unsigned int run) const
+unsigned int ABCSMC::particle_sampler() const
 {
-	auto NN = wsum[run].size();
-	double z = ran()*wsum[run][NN-1]; 
-	auto p = 0u; while(p < NN && z > wsum[run][p]) p++;
+	auto NN = wsum.size();
+	double z = ran()*wsum[NN-1]; 
+	auto p = 0u; while(p < NN && z > wsum[p]) p++;
 	if(p == NN) emsgEC("ABCSMC",2);
 	
 	return p;
@@ -226,16 +258,14 @@ unsigned int ABCSMC::effective_particle_number(const vector <double> &w) const
 
 
 /// Calculates the weights for the different particles
-double ABCSMC::calculate_particle_weight(const vector <double> param_prop, const Generation &gen_last, const unsigned int run, const MVN &mvn)
+double ABCSMC::calculate_particle_weight(const vector <double> param_prop, const Generation &gen_last, const MVN &mvn)
 {	
 	auto NN = gen_last.param_samp.size();
 	
 	auto sum = 0.0;
 	for(auto j = 0u; j < NN; j++){
 		const auto ps_last = gen_last.param_samp[j];
-		if(ps_last.run == run){
-			sum += gen_last.w[j]*exp(mvn.probability(param_prop,ps_last.paramval));
-		}
+		sum += gen_last.w[j]*exp(mvn.probability(param_prop,ps_last.paramval));
 	}
 	
 	return exp(model.prior(param_prop))/sum;
@@ -247,13 +277,10 @@ void ABCSMC::normalise_particle_weights(Generation &gen)
 {
 	auto NN = gen.param_samp.size();
 		
-	for(auto ru = 0u; ru < nrun; ru++){                                      // Normalises the results
-		auto wsum = 0.0;
-		auto num = 0u;
-		for(auto i = 0u; i < NN; i++){ if(gen.param_samp[i].run == ru){ wsum += gen.w[i]; num++;}}
-		wsum /= num;
-		for(auto i = 0u; i < NN; i++){ if(gen.param_samp[i].run == ru) gen.w[i] /= wsum;}
-	}
+	auto wsum = 0.0;
+	for(auto i = 0u; i < NN; i++) wsum += gen.w[i];
+	wsum /= NN;
+	for(auto i = 0u; i < NN; i++) gen.w[i] /= wsum;
 }
 
 	
@@ -271,7 +298,7 @@ void ABCSMC::results()
 		
 		setup_particle_sampler(gen_last);
 		for(auto i = 0u; i < particle.size(); i++){
-			auto p = particle_sampler(i%nrun);
+			auto p = particle_sampler();
 			particle_plot.push_back(particle[p]);
 		}
 	}

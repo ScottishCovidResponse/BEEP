@@ -15,16 +15,18 @@ public:
 	void run();
 	
 private:
-	double calculate_particle_weight(const vector <double> param_prop, const Generation &gen_last, const unsigned int run, const MVN &mvn);
+	double calculate_particle_weight(const vector <double> param_prop, const Generation &gen_last, const MVN &mvn);
 	void normalise_particle_weights(Generation &gen);
 	
 	unsigned int effective_particle_number(const vector <double> &w) const;
 	void setup_particle_sampler(const Generation &gen);
-	unsigned int particle_sampler(const unsigned int run) const;
+	unsigned int particle_sampler() const;
 	bool terminate(const Generation &gen) const;
+	bool terminate_generation(unsigned int g, double EFcut) const;
 	void print_generation(const vector <Generation> &generation, const double acrate) const;
 	void implement_cutoff_frac(Generation &gen);
-	void store_sample(Generation &gen, const unsigned int g, const unsigned int run, const double w);
+	void remove_small_weights(Generation &gen);
+	void store_sample(Generation &gen, const double w);
 	void print_model_evidence();
 	void results();
 	
@@ -32,18 +34,22 @@ private:
 	
 	unsigned int G;                          // The total number of generations 
 	
+	double cpu_time;                         // Limit on the cpu time
+	
 	double cutoff_final;                     // The final error function
 
 	unsigned int Ntot;                       // The total number of particles
 
-	unsigned int nrun;                       // The number of runs
-	double GRmax;                            // The maximum value for the Gelman-Rubin statistics
+	unsigned int Ntot_final;                 // The total number of particles in the final generation
+	
+	//double GRmax;                          // The maximum value for the Gelman-Rubin statistics
 
 	double cutoff_frac;                      // Sets the acceptance fraction
+	double cutoff_frac_init;                 // Sets the acceptance fraction in the initial generation
 	
 	double propsize;                         // The size of the MVN proposals
 	
-	vector <vector <double> > wsum;	         // Used to sample particles
+	vector <double> wsum;	                   // Used to sample particles
 		
 	State state;                             // Stores the state of the system
 		
