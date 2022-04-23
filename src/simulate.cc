@@ -48,6 +48,8 @@ void Simulate::run()
 
 	particle_store.push_back(state.create_particle(0));                          // Generate the pdf output file
 	output.generate_graphs(particle_store); 
+	
+	//state.save(details.output_directory+"/sample");
 }
 
 
@@ -85,7 +87,9 @@ void Simulate::find_posterior_info(const string dir)
 		string line;
 		getline(fin,line);
 		auto spl = split(line,'='); if(spl.size() != 2) emsgEC("Simulate",2);
-		auto spl2 = split(spl[1],'\''); if(spl2.size() != 2) emsgEC("Simulate",3);
+		auto spl2 = split(spl[1],'\''); 
+		if(spl2.size() == 3){ if(spl2[2] == "") spl2.pop_back();}    // This removes /r
+		if(spl2.size() != 2) emsgEC("Simulate",3);
 		
 		string quant = spl[0], val = spl2[1]; 
 		unsigned int vali;

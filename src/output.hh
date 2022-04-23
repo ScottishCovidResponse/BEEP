@@ -66,18 +66,23 @@ class Output
 		void trace_plot_inititialise(const string name, ofstream &trace) const;
 		void trace_plot(const unsigned int samp, const double Li, const vector <double> &paramval, ofstream &trace) const;
 		void simulated_data(const vector <double>& obs_value, const string dir) const;
+		void set_generation_time(Generation &gen) const; 
 		void generation_results(const vector <Generation> &generation) const;
 		vector <unsigned int> get_effective_sample_size(const vector <ParamSample> &psamp) const;
+		vector <double> get_correlation(const vector <ParamSample> &before, const vector <ParamSample> &after) const;
 		vector <double>	get_Gelman_Rubin_statistic(const vector <ParamSample> &psamp, const vector <double> &w, const unsigned int nrun) const;
 		vector <double>	get_Gelman_Rubin_statistic(const vector <ParamSample> &psamp) const;
 		vector <double> get_Gelman_Rubin_statistic(const vector < vector < vector <double> > > &param_GR) const;
 		Statistics get_statistic(const vector <double> &vec) const;
+		Statistics get_statistic_75_percent(const vector <double> &vec) const;
 		void print_percentage(const double s, const unsigned int nsamp, unsigned int &percentage) const;
+		void ensure_directory(const string &path) const; // temporarily made public
 		
 	private:
 		void EF_datatable_plot(const string file, const vector <Generation> &generation) const;
 		void generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp) const;
 		void generation_plot(const string file, const vector <Generation> &generation) const;
+		void EF_dist(const vector <ParamSample> &psamp) const;
 		void generate_pdf(const string file, const string desc) const;
 		void generate_visualisation(const vector <OutputPlot> &op, const string grfile) const;
 		void generate_pdf_description(vector <OutputPlot> &op, const string grfile) const;
@@ -114,7 +119,6 @@ class Output
 		Statistics get_statistic_with_weight(vector <WeightedPoint> vec) const;	
 		Distribution get_distribution(const vector <double> &vec, const double priormin, const double priormax) const;
 		void ensure_directories();
-		void ensure_directory(const string &path) const;
 		void print_model_specification() const;
 		string rus(string st) const;
 		string reference_label(const unsigned int i) const;

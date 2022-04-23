@@ -12,6 +12,7 @@ using namespace std;
 
 #include "mvn.hh"
 #include "model.hh"
+#include "matrix.hh"
 
 MVN::MVN(string name_, const vector <unsigned int> &var_, double size_, ParamType type_, MVNType mvntype_)
 {
@@ -22,6 +23,7 @@ MVN::MVN(string name_, const vector <unsigned int> &var_, double size_, ParamTyp
 	type = type_;
 	mvntype =  mvntype_;
 	number = 1;
+	num_updates = num_updates_min;
 }
 
 
@@ -81,9 +83,18 @@ void MVN::covariance_matrix(const vector <ParamSample> &param_samp)
 			for(auto i2 = 0u; i2 < nvar; i2++){
 				cout << M[i1][i2] << " ";
 			}
-			cout << "M" << endl;
+			cout << "M covariance matrix" << endl;
 		}
 	}
+}
+
+
+/// Directly sets the covariance matrix
+void MVN::set_covariance_matrix(const vector < vector <double> > &_M)
+{
+	if(_M.size() != nvar) emsgEC("MVN",58);
+	M = _M;
+	calculate_cholesky_matrix();
 }
 
 
@@ -137,6 +148,8 @@ void MVN::covariance_matrix(const vector <ParamSample> &param_samp, const vector
 /// Calculates a lower diagonal matrix used in Cholesky decomposition
 void MVN::calculate_cholesky_matrix()
 {	
+	auto fail = 0u;
+
 	auto fl=0u;
 	do{
 		vector <vector <double> > A;
@@ -202,17 +215,20 @@ void MVN::calculate_cholesky_matrix()
 				}
 			}		
 			
-			if(false){
+			int core; MPI_Comm_rank(MPI_COMM_WORLD,&core);
+			if(core == 0) cout << "Cholesky convergence" << endl;
+			
+			
+			fail++;
+			if(fail == 10 && core == 0){
 				for(auto v1 = 0u; v1 < nvar; v1++){
 					for(auto v2 = 0u; v2 < nvar; v2++){
 						cout << M[v1][v2] << " ";
 					}
 					cout << "M" << endl;
 				}	
+				emsg("Could not get Cholesky convergence");
 			}
-			
-			int core; MPI_Comm_rank(MPI_COMM_WORLD,&core);
-			if(core == 0) cout << "Cholesky convergence" << endl;
 		}
 	}while(fl == 1);
 	
@@ -241,7 +257,6 @@ Status MVN::propose_langevin(vector <double> &param_prop, const vector <double> 
 	auto mean = langevin_shift(paramval,model);
 	param_prop = propose(mean);
 	probif = probability(param_prop,mean);
-	
 	if(model.inbounds(param_prop) == false) return FAIL;
 	else return SUCCESS;
 }
@@ -270,20 +285,45 @@ Status MVN::sigma_propose(vector <double> &param_prop, const vector <double> &pa
 
 
 /// Perform the Metropolis-Hastings acceptance probability
-Status MVN::MH(const double al, const ParamUpdate pup)
+Status MVN::MH(double al, const ParamUpdate pup)
 {
-	if(al == -1) nbo++;
-	ntr++;
-	if(ran() < al){
-		if(pup == FAST_UPDATE) size *= fac_up_fast;
-		if(pup == SLOW_UPDATE) size *= fac_up;
-		if(size > sizemax) size = sizemax;
-		nac++; 
-		return SUCCESS;
+	if(al == -1){ nbo++; al = 0;}
+	
+	if(al > 1) al = 1;
+	if(pup == FAST_UPDATE) update(size,al,eta_fast);
+	if(pup == SLOW_UPDATE) update(size,al,eta);
+	if(size > sizemax) size = sizemax; 
+	
+	ntr++; nac += al;
+	if(ran() < al) return SUCCESS;
+	return FAIL;
+}		
+	
+
+/// Perform the Metropolis-Hastings acceptance probability
+Status MVN::MH_PMCMC(double al, const double self_ac, const ParamUpdate pup)
+{
+	if(al == -1){ nbo++; al = 0;}
+		
+	auto target_ac_rate = self_ac/2;
+	if(pmcmc_start_param == true) target_ac_rate = 0.3;
+	
+	if(al > 1) al = 1;
+	if(pup == FAST_UPDATE) update(size,al,eta_pmcmc_fast,target_ac_rate);
+	if(pup == SLOW_UPDATE) update(size,al,eta_pmcmc,target_ac_rate);
+	
+	auto sizemin = 0.5*2.4*2.4/nvar;
+	if(sizemin > 0.3) sizemin = 0.3;
+
+	if(size > sizemax) size = sizemax;	
+	if(pup != FAST_UPDATE){
+		if(size < sizemin) size = sizemin;
 	}
-	if(pup == FAST_UPDATE) size *= fac_down_fast;
-	if(pup == SLOW_UPDATE) size *= fac_down;
-	if(size < sizemin) size = sizemin;
+	
+	ntr++; nac += al;
+	//cout << self_ac << " " << size << " " << al << "al\n";
+	if(ran() < al) return SUCCESS;
+	
 	return FAIL;
 }		
 		
@@ -295,14 +335,14 @@ vector <double> MVN::propose(const vector <double> &paramval) const
 
 	double norm[nvar];	
 	for(auto v = 0u; v < nvar; v++) norm[v] = normal_sample(0,1);
-	
-  for(auto v = 0u; v < nvar; v++){
+
+	for(auto v = 0u; v < nvar; v++){
 		double dva = 0; for(auto v2 = 0u; v2 <= v; v2++) dva += cholesky_matrix[v][v2]*norm[v2];
 
 		auto th = var[v];
 		vec[th] += size*dva;
 	}
-	
+
 	return vec;
 }
 
@@ -331,6 +371,72 @@ vector <double> MVN::langevin_shift(const vector <double> &paramv, const Model &
 	return vec;
 }
 
+
+/// Adds a vector giving the difference between the initial and proposed states 
+void MVN::add_prop_vec(vector <double> &paramv_init, vector <double> &paramv_prop)
+{
+	vector <double> vec(nvar);
+	for(auto v = 0u; v < nvar; v++){
+		vec[v] = paramv_prop[var[v]] - paramv_init[var[v]];
+	}
+	
+	prop_vec.push_back(vec);
+	
+	for(auto v = 0u; v < nvar; v++){
+		vec[v] = paramv_prop[var[v]];
+	}
+	
+	after_prop_vec.push_back(vec);
+}
+
+
+/// Samples from a MVN distribution with specified mean and covariance matrix
+vector <double> MVN::sample(const vector <double> &mean, const vector < vector <double> > &_M)
+{
+	M = _M;
+	nvar = mean.size();
+	var.clear(); for(auto i = 0u; i < nvar; i++) var.push_back(i);
+	size = 1;
+	calculate_cholesky_matrix();
+	
+	return propose(mean);
+}
+
+
+/// Checks the sampling function is working correctly
+void MVN::sample_check(const vector <double> &mean, const vector < vector <double> > &_M)
+{
+	auto N = mean.size();
+	
+	vector <double> mu(N);
+	vector < vector <double> > covar;
+	
+	covar.resize(N);
+	for(auto j = 0u; j < N; j++){
+		mu[j] = 0;
+		covar[j].resize(N); for(auto i = 0u; i < N; i++) covar[j][i] = 0;
+	}
+	
+	const auto loopmax = 1000000u;
+	for(auto loop = 0u; loop < loopmax; loop++){ 
+		auto p = sample(mean,_M);
+		for(auto j = 0u; j < N; j++){
+			mu[j] += p[j];
+			for(auto i = 0u; i < N; i++) covar[j][i] += p[j]*p[i];
+		}
+	}
+	
+	for(auto j = 0u; j < N; j++) mu[j] /= loopmax;
+		
+	for(auto j = 0u; j < N; j++){
+		for(auto i = 0u; i < N; i++) covar[j][i] = covar[j][i]/loopmax - mu[j]*mu[i];
+	}
+	
+	print_matrix("M",M);
+	print_matrix("covar",covar);
+	emsg("Done");
+}
+			
 
 /// Outputs the covariance matrix
 void MVN::output_M(const string file)

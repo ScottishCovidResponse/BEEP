@@ -112,7 +112,8 @@ string Model::param_JSON(const vector <unsigned int> &vec) const
 	for(auto th : vec){
 		auto name = param[th].name;
 		if(name != "zero" && name != "one"){
-			if(fl == true) ss << ","; fl = true;
+			if(fl == true) ss << ","; 
+			fl = true;
 			ss << "\"" << name << "\"";
 		}
 	}
@@ -136,33 +137,41 @@ string Model::foi_model_JSON() const
 	
 	stringstream ss;
 	if(data.nstrain > 1){ 
-		if(fl == true) vis << ","; fl = true;
+		if(fl == true) vis << ","; 
+		fl = true;
 		vis << "s";
 		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"&s& indexes pathogen strain.\"";
 	}
 
 	if(data.narea > 1){ 
-		if(fl == true) vis << ","; fl = true;
+		if(fl == true) vis << ","; 
+		fl = true;
 		vis << "a";
 		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"&a& indexes area.\"";
 	}
 	
 	if(data.ndemocatpos_per_strain > 1){ 
-		if(fl == true) vis << ","; fl = true;
+		if(fl == true) vis << ","; 
+		fl = true;
 		vis << "d";
 		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"&d& indexes demographic group.\"";
 	}
 	
-	if(fl == true) vis << ","; fl = true;
+	if(fl == true) vis << ","; 
+	fl = true;
 	vis << "t";
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"&t& indexes time.\"";
 
 	vis << "}&\"";
@@ -177,10 +186,12 @@ string Model::foi_model_JSON() const
 	}
 	
 	if(susvar == true){                                   // sigma
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"&σ_d& sets the relative susceptiblity of demographic group &d&.\"";
 		
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"&σ_d&\"";
 		
 		vector <unsigned int> sus_param_list;
@@ -193,7 +204,8 @@ string Model::foi_model_JSON() const
 	}
 	
 	if(susvar == true){
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"[\"}";
 	}
 	
@@ -201,22 +213,26 @@ string Model::foi_model_JSON() const
 	if(data.nstrain > 1) r = "&r_{s,t}&";
 	else r = "&r_{t}&";
 		
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ",";
+	descfl = true;
 	ss << "\"" << r << " is an automatically calculated propotionality contant.\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"" << r << "\"}";
 	
 	string R;                                           // Adds R
 	if(Rspline_info.size() > 1) R = "&R_{a,t}&";
 	else R = "&R_{t}&";
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"" << R << " represents the ";
 	if(data.narea > 1) ss << "spatially averaged ";
 	ss << "reproduction number.\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"" << R << "\"";
 	
 	vector <unsigned int> param_list;
@@ -234,7 +250,8 @@ string Model::foi_model_JSON() const
 	for(auto th : level_effect_param_list) add_vec(area_param_list,th);
 	
 	if(area_param_list.size() > 0){
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		
 		string alpha;
 		if(areaeffect_timevary() == false){
@@ -244,17 +261,20 @@ string Model::foi_model_JSON() const
 			alpha = "&α_{a,t}&"; ss << "\"" << alpha << " gives a time-varying factor change in &R& for different areas.\"";
 		}			
 		
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"" << alpha << "\"";
 	
 		vis << param_JSON(area_param_list) << "}";
 	}
 	
 	if(data.nstrain > 1){                              // psi		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"&Ψ_s& gives a factor change in &R& for different strains.\"";
 	
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"&Ψ_s&\"";
 	
 		vector <unsigned int> psi_param_list;
@@ -264,35 +284,41 @@ string Model::foi_model_JSON() const
 	}
 	
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"(\"}";
 	
 	bool sumfl = false;                                        // Sum
 	string sum_desc = "sums over ";
 	string sum = "Σ&_{";
 	if(data.narea > 1){
-		if(sumfl == true){ sum += ","; sum_desc += ", ";}; sumfl = true;
+		if(sumfl == true){ sum += ","; sum_desc += ", ";}; 
+		sumfl = true;
 		sum += "a′";
 		sum_desc += "area &a′&";
 	}
 	
 	if(data.ndemocatpos_per_strain > 1){
-		if(sumfl == true){ sum += ","; sum_desc += ", ";}; sumfl = true;
+		if(sumfl == true){ sum += ","; sum_desc += ", ";}; 
+		sumfl = true;
 		sum += "d′";
 		sum_desc += "demographic group &d′&";
 	}
 	
-	if(sumfl == true){ sum += ","; sum_desc += ", ";}; sumfl = true;
+	if(sumfl == true){ sum += ","; sum_desc += ", ";}; 
+	sumfl = true;
 	sum += "c";
 	sum_desc += "compartment &c&.";
 
 	sum += "}&";
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"" << sum << sum_desc << "\"";
 	
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"" << sum << "\"}";
 	
 	if(data.narea > 1){                                       // Adds M
@@ -305,10 +331,12 @@ string Model::foi_model_JSON() const
 		if(spline[sp].name != "UNSET") M = "&M_{a,a′,t}&";
 		else M = "&M_{a,a′}&";
 		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"" << M << " represents the geographical mixing of individuals.\"";
 	
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"" << M << "\"" << param_JSON(M_param_list) << "}";
 	}
 	
@@ -323,10 +351,12 @@ string Model::foi_model_JSON() const
 		if(data.genQ.matmod.size() > 0) A = "&A_{d,d′,t}&";
 		else A = "&A_{d,d′}&";
 		
-		if(descfl == true) ss << ","; descfl = true;
+		if(descfl == true) ss << ","; 
+		descfl = true;
 		ss << "\"" << A << " represents the demographic mixing of individuals.\"";
 	
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ","; 
+		eqfl = true;
 		vis << "{\"text\":\"" << A << "\"" << param_JSON(A_param_list) << "}";
 	}
 	
@@ -334,40 +364,49 @@ string Model::foi_model_JSON() const
 	vector <unsigned int> i_param_list;                    // Adds i   
 	for(const auto &co : comp) add_vec(i_param_list,co.infectivity_param);
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"&i^c& gives the relative infectivity of compartments.\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"&i^c&\"" << param_JSON(i_param_list) << "}";
 	
 	bool Nfl = false;                                      // Adds N
 	string N = "&N^c_{";
 	string Ndesc = " gives the give the number of individuals in &c&";
 	if(data.narea > 1){
-		if(Nfl == true) N += ","; Nfl = true;
+		if(Nfl == true) N += ","; 
+		Nfl = true;
 		Ndesc += ", ";
 		N += "a′"; Ndesc += "&a′&";
 	}
 	if(data.ndemocatpos_per_strain > 1){
-		if(Nfl == true) N += ","; Nfl = true;
+		if(Nfl == true) N += ","; 
+		Nfl = true;
 		Ndesc += ", ";
 		N += "d′"; Ndesc += "&d′&";
 	}
 	N += "}&"; Ndesc += ".";
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"" << N << Ndesc << "\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"" << N << "\"" << "}";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\")\"}";
 		
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"+\"}";
 	
-	if(eqfl == true) vis << ","; eqfl = true;       // Adds EFOI
+	if(eqfl == true) vis << ","; 
+	eqfl = true;       // Adds EFOI
 	vis << "{\"text\":\"(\"}";
 	
 	string efoi;                                         
@@ -380,10 +419,12 @@ string Model::foi_model_JSON() const
 		else efoi = "&η_{t}&";
 	}
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"" << efoi << " represents the external force of infection (FOI).\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"" << efoi << "\"";
 	
 	vector <unsigned int> efoi_param_list;
@@ -396,20 +437,25 @@ string Model::foi_model_JSON() const
 	
 	vis << param_JSON(efoi_param_list) << "}";
 	
-	if(eqfl == true) vis << ","; eqfl = true;               // f
+	if(eqfl == true) vis << ",";
+	eqfl = true;               // f
 	vis << "{\"text\":\"/\"}";
 	
-	if(descfl == true) ss << ","; descfl = true;
+	if(descfl == true) ss << ","; 
+	descfl = true;
 	ss << "\"&f& converts the external FOI such that it is per " << details.efoi_factor << " individuals.\"";
 	
-	if(eqfl == true) vis << ","; eqfl = true;
+	if(eqfl == true) vis << ","; 
+	eqfl = true;
 	vis << "{\"text\":\"&f&\"}";
 	
-	if(eqfl == true) vis << ","; eqfl = true;              // Adds EFOI
+	if(eqfl == true) vis << ","; 
+	eqfl = true;              // Adds EFOI
 	vis << "{\"text\":\")\"}";
 	
 	if(susvar == true){
-		if(eqfl == true) vis << ","; eqfl = true;
+		if(eqfl == true) vis << ",";
+		eqfl = true;
 		vis << "{\"text\":\"]\"}";
 	}
 	

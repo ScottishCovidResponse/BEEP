@@ -11,6 +11,8 @@
 #include "inputs.hh"
 #include "output.hh"
 
+bool start_from_sim = true;   // This is set to true when doing speed testing.
+
 using namespace std;
 
 /// Initilaises the MC3 class
@@ -22,15 +24,17 @@ MC3::MC3(const Details &details, const Data &data, const Model &model, Inputs &i
 			inputs.find_nchain(nchain,Ntot,N,nrun,mpi.ncore);
 			inputs.find_invT_start_invT_final(invT_start,invT_final);
 			break;
+			
 		case MCMC_MBP:
 			nchain = 1; Ntot = nrun; if(Ntot%mpi.ncore != 0) emsgroot("'nrun' must be a multiple of the number of cores");
 			N = Ntot/mpi.ncore;
 			invT_start = UNSET;
 			inputs.find_invT(invT_final);
 			break;
+			
 		default: emsgEC("MC3",1); break;
 	}
-	inputs.find_nsample_GRmax(nsample,GRmax,nrun);
+	inputs.find_nsample_or_ESSmin_or_cpu_time(nsample,ESSmin,cpu_time);
 	inputs.find_nburnin(nburnin,nsample);
 	inputs.find_nquench(nquench,nburnin);
 	inputs.find_Tpower(Tpower);
@@ -62,15 +66,31 @@ void MC3::run()
 		}
 		
 		swap_states();                                          // Swaps between neighbouring chains
-			
+
 		if(burnin == false && samp%thin == 0) store_sample();   // Stores samples for plotting later
 		samp++;
 	}while(!terminate(samp));
+
 	timer[TIME_ALG].stop();
 
+	if(Ntot == 64) find_nchain_optimum();  // TO DO
+	else{
+		auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
+		auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
+		
+		if(mpi.core == 0) cout << invT_final;
+		find_EF_range();
+		if(mpi.core == 0){
+			auto samp_fac = double(samp-nburnin)/samp;
+			cout << "," << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " RESULT" << endl;
+			cout << endl;
+		}
+	}
+	
 	model_evidence();                                         // Calculates the model evidence
 
 	output.generate_graphs(part_plot);	                      // Draws the final pdf
+
 	diagnostics();                                            // Outputs diagnostic information
 }
  
@@ -81,11 +101,13 @@ void MC3::initialise()
 	for(auto ch = 0u; ch < N; ch++){
 		auto param = model.sample_from_prior();                 // Samples parameters from the prior
 
-		if(false){                                              // Sets parameters to simulated values
+		if(start_from_sim){                                     // Sets parameters to simulated values TURNOFF
 			for(auto th = 0u; th < model.param.size(); th++) param[th] = model.param[th].value;
 		}
-				
+		
 		state.simulate(param);                                  // Simulates a state
+
+		//state.load(details.output_directory+"/sample",details.ndivision); // TEMP
 	
 		auto n = mpi.core*N+ch;
 		auto run = n/nchain;
@@ -118,7 +140,8 @@ void MC3::initialise()
 void MC3::update_burnin(const unsigned int samp)
 {
 	if(samp < nburnin){
-		burnin = true; if(samp < nburnin/2) pup = FAST_UPDATE; else pup = SLOW_UPDATE;
+		burnin = true;	
+		if(samp < nburnin/2) pup = FAST_UPDATE; else pup = SLOW_UPDATE;
 	}
 	else{
 		burnin = false; pup = NO_UPDATE;
@@ -214,11 +237,21 @@ void MC3::store_param_samp(unsigned int ch)
 /// Calculates an estimate for the model evidence
 void MC3::model_evidence() const
 {
+	if(details.mode == MCMC_MBP){
+		if(mpi.core == 0) cout << "The 'mcmcmbp' inference algorithm does not provide an estimate for model evidence." << endl;
+		return;
+	}
+		
 	vector <double> invT_total;
 
 	auto EF_chain_sample = mpi.gather_EF_chain_sample(chain,part,N,nchain,nrun,invT_total);
 	
-	if(mpi.core == 0){
+	if(mpi.core == 0){		
+		if(invT_total[nchain-1] != 0){
+			cout << "The 'mc3' inference algorithm can only provide an estimate for model evidence if the hottest chain has an inverse temperature of zero." << endl;
+			return;
+		}
+		
 		if(false){
 			for(auto ch = 0u; ch < nchain; ch++) cout << ch << " " <<  invT_total[ch] << " invT" << endl;
 
@@ -256,9 +289,14 @@ void MC3::model_evidence() const
 void MC3::diagnostics()
 {	
 	for(auto ch = 0u; ch < N; ch++){
-		string filefull = details.output_directory+"/Diagnostics/" + chain[ch].name+"_MCMC_proposals.txt";
+		auto chain_name = chain[ch].name+"_";
+		if(details.mode == MCMC_MBP) chain_name = "";
+		
+		string filefull = details.output_directory+"/Diagnostics/" + chain_name+"MCMC_proposals.txt";
 		ofstream dia(filefull);
 		if(!dia) emsg("Cannot open the file '"+filefull+"'");
+		
+		paramprop[ch].set_ac_rate();
 		dia << paramprop[ch].print_proposal_information(false);
 	}	
 	
@@ -329,7 +367,7 @@ void MC3::set_invT(const unsigned int samp)
 	for(auto ch = 0u; ch < N; ch++){
 		auto num = chain[ch].num;
 		
-		auto fac = 1.0; if(samp < nquench) fac = double(samp)/nquench;
+		auto fac = 1.0; if(samp < nquench && start_from_sim == false) fac = double(samp)/nquench;
 	
 		if(nchain == 1){
 			chain[ch].invT = invT_final*pow(fac,Tpower);
@@ -355,31 +393,125 @@ void MC3::set_invT(const unsigned int samp)
 bool MC3::terminate(const unsigned int samp)
 {
 	bool term = false;
-	if(GRmax != UNSET){
-		if(samp <= nburnin){
-			if(mpi.core == 0) cout << "Burnin samples: " <<  samp << endl;	
-		}
-		else{
-			auto psamp_tot = mpi.gather_psamp(part_plot);
-			if(mpi.core == 0){
-				auto GR = output.get_Gelman_Rubin_statistic(psamp_tot);
-				if(vec_max(GR) < GRmax && samp-nburnin >= 20) term = true; 
-				cout << "Number of samples: " << samp-burnin;
-				cout << "    Largest GR value:" << vec_max(GR) << "     GRmax: " << GRmax << endl;
+	if(ESSmin != UNSET){
+		if(samp%100 == 0){
+			if(samp <= nburnin){
+				if(mpi.core == 0) cout << "Burnin samples: " <<  samp << endl;	
+			}
+			else{
+				auto psamp_tot = mpi.gather_psamp(part_plot);
+				if(mpi.core == 0){
+					auto ESS = output.get_effective_sample_size(psamp_tot);
+					if(vec_min(ESS) > ESSmin && samp-nburnin >= 20) term = true; 
+					cout << "Number of samples: " << samp-burnin;
+					cout << "    Smallest ESS value:" << vec_min(ESS) << "     ESSmin: " << ESSmin << endl;
+				}
 			}
 		}
 	}
-	else{
+	
+	if(cpu_time != UNSET){
+		auto time_av = mpi.average((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC));
+		if(time_av > cpu_time){
+			term = true;
+			if(mpi.core == 0)	cout << "Maximum execution time reached." << endl << flush;
+		}
+	}
+	
+	if(nsample != UNSET){
 		if(mpi.core == 0){
 			if(samp == nsample) term = true;
 			
 			output.print_percentage(samp,nsample,percentage);       // Prints the percentage to show progress
 		}
 	}
-	
+
 	mpi.bcast(term);
 	
 	return term;
+}
+
+
+/// Finds the range in EF for the posterior chain
+void MC3::find_EF_range()
+{
+	vector <double> invT_total;
+	auto EF_chain_sample = mpi.gather_EF_chain_sample(chain,part,N,nchain,nrun,invT_total);
+	
+	if(mpi.core == 0){
+		auto stat = output.get_statistic_75_percent(EF_chain_sample[0][0]);
+		cout << "," << stat.CImax;
+		stat = output.get_statistic(EF_chain_sample[0][0]);
+		cout << "," << stat.CImax;
+	}
+}
+
+/// Finds the optimum number of chains for a given inverse temperature
+void MC3::find_nchain_optimum() const 
+{
+	vector <double> invT_total;
+
+	auto EF_chain_sample = mpi.gather_EF_chain_sample(chain,part,N,nchain,nrun,invT_total);
+	
+	if(mpi.core == 0){		
+		vector <Statistics> stat(nchain);
+		for(auto ch = 0u; ch < nchain; ch++){
+			stat[ch] = output.get_statistic_75_percent(EF_chain_sample[0][ch]);				
+			//cout << ch << " " <<  invT_total[ch] << " " << stat.CImin << " " << stat.CImax << " invT" << endl;
+		}
+		
+		for(auto ch = 0u; ch < nchain; ch++){
+			cout << ch << " " <<  invT_total[ch] << " " << stat[ch].CImin << " " << stat[ch].CImax << " invT original" << endl;
+		}
+		
+		for(auto ch = 0u; ch < nchain; ch+=2){
+			auto kappa = double(ch)/(nchain-1);
+			auto invT_fin = pow(1-kappa,Tpower)*invT_final;
+		
+			vector <Statistics> stat_new;
+			
+			unsigned int nch; 
+			for(nch = 2; nch < 100; nch++){
+				stat_new.resize(nch);
+				for(auto c = 0u; c < nch; c++){
+					auto kap = double(c)/(nch-1);
+					auto invT = pow(1-kap,Tpower)*invT_fin;
+					
+					unsigned int chh;
+					for(chh = 0; chh < nchain-1; chh++){
+						auto kap1 = double(chh)/(nchain-1);
+						auto invT1 =  pow(1-kap1,Tpower)*invT_final;
+					
+						auto kap2 = double(chh+1)/(nchain-1);
+						auto invT2 = pow(1-kap2,Tpower)*invT_final;
+						
+						if(invT1 >= invT && invT2 <= invT){
+							auto f = (invT1-invT)/(invT1-invT2);
+							stat_new[c].CImin = stat[chh].CImin*(1-f) + stat[chh+1].CImin*f;
+							stat_new[c].CImax = stat[chh].CImax*(1-f) + stat[chh+1].CImax*f;
+							break;
+						}
+					}
+					if(chh == nchain-1) emsgEC("Mc3",22);
+				}					
+				
+				auto jmax = (unsigned int)(0.8*nch);
+				auto j = 0u; while(j < jmax && stat_new[j].CImax > stat_new[j+1].CImin) j++;
+				
+				if(j == jmax) break;
+			}
+		
+			cout << ch << " " << invT_fin << " " << nch << " Answer\n";
+			/*
+			for(auto c = 0u; c < nch; c++){
+				auto kap = double(c)/(nch-1);
+				auto invT = pow(1-kap,Tpower)*invT_fin;
+				cout << c << " " <<  invT << " " << stat_new[c].CImin << " " << stat_new[c].CImax << " CI answer" << endl;
+			}
+			*/
+			cout << "\n";
+		}
+	}
 }
 
 

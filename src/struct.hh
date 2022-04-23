@@ -71,10 +71,10 @@ struct ParamSpec {                         // Gives the specification for a para
 	double factor;
 };
 
-struct Param{                              // Store information about a model parameter
+struct Param{                            	 // Store information about a model parameter
  	string name;                             // The name
 	PriorType priortype;                     // The type of the prior
-  double val1;                             // Value for the prior (the minimum value assuming a uniform prior) 
+	double val1;                             // Value for the prior (the minimum value assuming a uniform prior) 
 	double val2;                             // Value for the prior (the maximum value assuming a uniform prior)
 	unsigned int val1_param;                 // Gives the parameter giving that value
 	unsigned int val2_param;                 // Gives the parameter giving that value
@@ -96,9 +96,16 @@ struct Compartment{                        // Stores information about a compart
 	unsigned int num;                        // The position the distribution has in an Erlang distribution
 	unsigned int shape;                      // The shape (1 if Exp else Erlang)
  	string mean_dep;                         // The demographic dependency for the mean
+	vector <ParamSpec> mean_spec;            // Parameters specificiations for means
 	vector <unsigned int> param_mean;        // The parameter for the mean of the distribution (potentially age dependant
+	ParamSpec inf_spec;                      // Parameter specification for infectivity
 	unsigned int infectivity_param;          // How infectious that compartment is
 	vector <unsigned int> trans;             // The transitions leaving that compartment
+};
+
+struct CompartmentName{
+	string name;                             // The compartments name
+	vector <unsigned int> comp;              // List the compartments with this name
 };
 
 struct Transition{                         // Stores information about a compartmental model transition
@@ -109,7 +116,28 @@ struct Transition{                         // Stores information about a compart
 	TransInf inf;                            // Determines if an infection transition
 	unsigned int comptrans_ref;              // The reference to comptrans in from
 	string prob_dep;                         // The demographic dependency for the mean
+	vector <ParamSpec> prob_spec;            // Parameters specificiations for brancing probabilities
 	vector <unsigned int> param_prob;        // The parameter for the probability of going down transition (age dependant)
+};
+
+struct CompApprox{                         // A unique compartment used in the approximate method
+	unsigned int c;                          // The area
+	unsigned int co;                         // The compartment
+	unsigned int dp;                         // The demographic possibility
+};
+
+struct CompCopy{                           // Used to split merged compartments (used for ML approaches)
+	unsigned int c;                          // The number of the compartment being copied
+	unsigned int c_copy;                     // The new compartment
+	unsigned int index;                      // The index for the transition 
+};
+	
+struct TransApprox{                        // A unique compartment used in the approximate method
+	unsigned int c;                          // The area
+	unsigned int tr;                         // The transition
+	unsigned int dp;                         // The demographic possibility
+	unsigned int ca_from;                    // The unique compartment from
+	unsigned int ca_to;                      // The unique compartment to
 };
 
 struct CompProb{                           // Gives compartmental probabilities
@@ -159,8 +187,19 @@ struct Particle
 	}
 };
 
+struct ParticleApprox                      // A particle used when generting posterior samples using the approximate method
+{
+	vector < vector < vector < vector <double> > > > transnum; // Transition numbers 
+	vector < vector < vector < vector <double> > > > pop_store;// The populations numbers 
+	vector < vector < vector <double> > > pop_end;             // The population at the end
+	vector < vector < vector <double> > > pop_end_new;         // The population at the end (new version)
+	double L;                                // The likelihood (used for bootstrap)
+	double wsum;                             // The sum of weights
+};
+
 struct Generation                          // Stores inforamtion about a generation when doing ABC methods
 {
+	unsigned int num;                        // The number of the generation                 
 	vector <ParamSample> param_samp;         // Parameter samples generated
 	vector < vector <double> > EF_datatable; // Stores how the error function is divided into datatables
 	vector <unsigned int> partcopy;          // Shows which are copied particles
@@ -168,7 +207,7 @@ struct Generation                          // Stores inforamtion about a generat
 	double EFcut;                            // The error function cut-off used (in CUTOFF mode)
 	double EFmin, EFmax;                     // Diagnostic information about EF range
 	double invT;                             // The inverse temperature used (in INVT mode)
-	long time;                               // The clock time
+	double time;                             // The execution time
 	vector <double> model_evidence;          // Sets the model evidence for each run
 };
 
@@ -195,6 +234,11 @@ struct SparseMatrix {                      // Loads a matrix
 	vector <double> diag;                    // The diagonal contribution to the matrix
 	vector < vector <unsigned int> > to;     // The value of the element to
 	vector < vector <double> > val;          // The the non-diagonal elements of the matrix
+};
+
+struct MatrixElement {                     // Identifies an element of a matrix
+	unsigned int j;                          // y position in matrix
+	unsigned int i;                          // x position in matrix
 };
 
 struct MatrixModification {                // Used to modify the mixing matrix
@@ -308,6 +352,20 @@ struct Observation {                       // A single observation made on the s
 	double invT;                             // Parameter used to scale observation model
 	ObsModelFunc obsmodel;                   // The observation model used
 	double shape;                            // Shape paremeter (used for negative binomial).
+	double var_approx;                       // The variance used when doing a normal approimation (for approximate methods)
+};
+
+struct ObsSlice {                          // Gives all the observations at a particular point in time
+	unsigned int sett;                       // The time of the slice
+	vector <unsigned int> obs_ref;           // The observations at that time
+	ObsType obs_type;                        // The type of observation (exact or approximate)
+	
+	
+	//vector < vector <double> > Minv;         // The inverse covariance matrix from the observations
+	//vector <double> Minv_mu;                 // The inverse matrix multiplied by mean
+	//double mu_Minv_mu;                       // The mean times the inverse matrix multiplied by mean 
+	//vector <double> mu;                      // The value of the mean
+	//double log_factor;                       // The factor which norlaises the distribution
 };
 
 struct GraphPoint {                        // Details of a point on a graph
@@ -396,6 +454,7 @@ struct Covariate {                         // Stores the  covariate for the area
 struct Area {                              // Provides information about an area
 	string code;                             // The code for the area
   vector < vector <double> > pop_init;     // The initial population in different comparments and demographic categories  
+	vector <double> pop_dp;                  // The population within a demographic category
 	unsigned int total_pop;                  // The total population in the area
 };
 
@@ -445,10 +504,11 @@ struct ModelMod{                           // Specifies modifications made to th
 	vector < vector <double> > spline_set;   // Sets a spline to a value
 };
 
-struct MCMCUpdate{                         // Determines how mcmc updates are permormed
+struct MCMCUpdate{                           // Determines how mcmc updates are permormed
 	bool full_mvn;                           // Determines if mvn update on all parameters is performed
 	bool mvn;                                // Determines if mvn updates done on seperate groups of parameters
 	bool single;                             // Determines if updates performed of individual parameters
+	bool dist_R_joint;                       // Determines if joint updates on distribution values and R performed
 	bool demo_spec;                          // Determines if demographic specific updates performed
 	bool mean_time;                          // Determines if mean time updates performed
 	bool neighbour;                          // Determines if neighbour updates performed 
@@ -500,6 +560,16 @@ struct AreaPlot {                          // Stores information about plotting 
 	string boundfile;                        // A files which specifies boundaries
 	string xcol, ycol;                       // Defines columns which specify the location ofr an area
 	Project project;                         // Stores the type of projection
+};
+
+struct PointInfo {                         // Provides the likelihood and gradient
+	double value;                            // The likelihood value
+	vector <double> grad;                    // The gradient in the likelihood
+};
+
+struct NormalApprox {                      // A normal approximation
+	double mean;                             // The normal mean
+	double var;                              // The normal variance
 };
 
 struct UsedTomlKey{                        // Used to detemine if a TOML key has been used

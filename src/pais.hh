@@ -14,12 +14,16 @@ public:
 private:
 	void bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned int> &partcopy, const double invT);
 	void store_sample(Generation &gen);
-	void param_GR_clear();
-	bool terminate();
+	bool terminate_generation(unsigned int g, double invT) const;
 	void model_evidence(vector <Generation> &generation);
 	void print_generation(const Generation &gen, const unsigned int g) const;
 
+	double cor_max;                          // The maximum correlation  
+	double cor_max_last;                     // The maximum correlation in the last generation
+
 	unsigned int G;                          // The total number of generations 
+
+	double cpu_time;                         // Maximum cpu for execution
 
 	double invT_final;                       // The final inverse temperature
 
@@ -30,9 +34,6 @@ private:
 
 	unsigned int npart;                      // The number of particles 
 	unsigned int nrun;                       // The number of runs
-	
-	unsigned int nupdate;                    // Sets the number of updates per generation
-	double GRmax;                            // The maximum value for the Gelman-Rubin statistics
 	
 	vector <Particle> part;		    	         // These particles store the state
 	vector <unsigned int> partcopy;          // Store which particle to copy
@@ -48,7 +49,7 @@ private:
 	
 	ParamProp paramprop;                     // Stores information about parameter proposals
  	
-	vector <ParamSample> psamp_GR;           // Parameter samples used by Gelman Rubin statistics
+	//ofstream invT_vs_EF;                     // Used to generate a plot of invT vs EF
 	
 	const Details &details;
 	const Data &data;

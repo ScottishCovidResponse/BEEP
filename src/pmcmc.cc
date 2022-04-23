@@ -17,10 +17,12 @@ PMCMC::PMCMC(const Details &details, const Data &data, const Model &model, Input
 {
 	inputs.find_nrun(nrun);
 	inputs.find_nparticle_pmcmc(Ntot,N,mpi.ncore);
-	inputs.find_nsample_GRmax(nsample,GRmax,nrun);
+	inputs.find_nsample_or_ESSmin_or_cpu_time(nsample,ESSmin,cpu_time);
 	inputs.find_nburnin(nburnin,nsample);
+	if(nburnin < pmcmc_init_samp) emsg("'nburnin' must be at least "+to_string(2*pmcmc_init_samp));
 	inputs.find_nthin(thin,nsample);
 	invT = inputs.find_double("invT",UNSET); 
+	inputs.find_sd(sd_init);
 	initialise_variables();
 	
 	percentage = UNSET;
@@ -31,7 +33,7 @@ PMCMC::PMCMC(const Details &details, const Data &data, const Model &model, Input
 void PMCMC::run()
 {
 	initialise();
-	
+
 	ofstream trace[nrun];
 	if(core == 0){                                                           // Sets files for writing trace plots
 		for(auto ru = 0u; ru < nrun; ru++){
@@ -40,16 +42,22 @@ void PMCMC::run()
 		}
 	}
 
+	if(pmcmc_start_param == true && true) calculate_start_invT();
+	
+	unsigned int get_prop_period = nburnin/20; if(get_prop_period == 0) get_prop_period = 1;
+	
 	timer[TIME_ALG].start();
 	auto samp = 0u;
-	do{                                                                      // Sequentially goes through MCMC samples
+	do{     
+		// Sequentially goes through MCMC samples
+		
 		update_burnin(samp);                                                   // Updates the burnin procedure
 		
 		if(core == 0){                                                         // Outputs parameters to trace plot
 			for(auto ru = 0u; ru < nrun; ru++) output.trace_plot(samp,Li_run[ru],Pi_run[ru].paramval,trace[ru]);   
 		}
 		
-		if(samp%10 == 0) get_proposals();                                      // Gets a list of proposals used as an "update"
+		if(burnin == true && samp%get_prop_period == 0) get_proposals();       // Gets a list of proposals used as an "update"
 
 		for(auto ru = 0u; ru < nrun; ru++){
 			Li = Li_run[ru]; Pi = Pi_run[ru]; Pri = Pri_run[ru];                 // Loads stored values for run
@@ -58,7 +66,7 @@ void PMCMC::run()
 
 			if(core == 0 && burnin == true){                                     // Samples adaptively improving proposals
 				ParamSample ps; ps.paramval = Pi.paramval; ps.run = UNSET; ps.EF = Li;
-				param_samp.push_back(ps);  
+				param_samp.push_back(ps);
 			}
 		
 			if(core == 0 && burnin == false && samp%thin == 0){                  // Stores samples for plotting later
@@ -68,14 +76,41 @@ void PMCMC::run()
 			
 			Li_run[ru] = Li; Pi_run[ru] = Pi; Pri_run[ru] = Pri;                 // Saves stored values for run
 		}
+		
+		if(samp%100000 == 0 && samp > 2*nburnin){
+			output.generate_graphs(particle_store);
+			if(core == 0) get_EF_dist();
+			auto alg_time_sum = mpi.sum(timer[TIME_ALG].val+clock());
+			auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
+			cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+			cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+			auto samp_fac = double(samp-nburnin)/samp;
+			cout <<  "Algorithm-wait time: " << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+		}
+		
 		samp++;
 	}while(!terminate(samp));
 	timer[TIME_ALG].stop();
 	
 	output.generate_graphs(particle_store);		                               // Outputs the results
 	
-	if(core == 0) paramprop.set_ac_rate();                                   // Outputs diagnostic information about proposals
+	paramprop.set_ac_rate();                                                 // Outputs diagnostic information about proposals
 	paramprop.diagnostics();
+	
+	auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
+	auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
+	if(core == 0){
+		cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+		cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+		auto samp_fac = double(samp-nburnin)/samp;
+		cout << samp_fac << " samp fac" << endl;
+		cout <<  "Algorithm-wait time-burn: " << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+	
+	
+		cout << Ntot;
+		get_EF_dist();
+		cout << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << "\n";
+	}
 }
 
 
@@ -83,7 +118,7 @@ void PMCMC::run()
 void PMCMC::update_burnin(const unsigned int samp)
 {
 	if(samp < nburnin){
-		burnin = true; if(samp < nburnin/4) pup = FAST_UPDATE; else pup = SLOW_UPDATE;
+		burnin = true; if(samp < 2*pmcmc_init_samp) pup = FAST_UPDATE; else pup = SLOW_UPDATE;
 	}
 	else{	
 		if(samp == nburnin){
@@ -103,15 +138,15 @@ void PMCMC::initialise()
 	
 	for(auto ru = 0u; ru < nrun; ru++){                              // Goes over all the runs
 		Li_run[ru] = -LARGE;
-		for(auto i = 0u; i < ninit_samp; i++){                         // Randomly samples parameters / states and picks the best
+		for(auto i = 0u; i < ninit_samp; i++){                       // Randomly samples parameters / states and picks the best
 			if(core == 0){
-				Pi.paramval = model.sample_from_prior();                   // Randomly samples from the prior
-				if(false){                                                 // Sets parameters to those used in the simulation
+				Pi.paramval = model.sample_from_prior();             // Randomly samples from the prior
+				if(pmcmc_start_param == true){                       // Sets parameters to those used in the simulation TURNOFF
 					for(auto th = 0u; th < model.param.size(); th++) Pi.paramval[th] = model.param[th].value;
 				}
 			}
 			
-			Li = obs_prob(Pi.paramval);                                  // Calculates unbiased estimate of likelihood
+			Li = obs_prob(Pi.paramval);                              // Calculates unbiased estimate of likelihood
 			mpi.bcast(Li);
 			
 			if(Li > Li_run[ru]){
@@ -122,12 +157,15 @@ void PMCMC::initialise()
 			
 		if(core == 0){
 			// This generates parameter samples near to the intial set (for the initial normal and MVN proposal distributions)
-			for(auto loop = 0u; loop < 10; loop++){
+			for(auto loop = 0u; loop < pmcmc_init_samp; loop++){
 				auto par = Pi_run[ru].paramval;		
 				auto par_samp = model.sample_from_prior();
 
 				ParamSample ps; ps.paramval.resize(par.size());
-				for(auto th = 0u; th < par.size(); th++) ps.paramval[th] = 0.9*par[th] + 0.1*par_samp[th];
+				//for(auto th = 0u; th < par.size(); th++) ps.paramval[th] = 0.9*par[th] + 0.1*par_samp[th];
+				//for(auto th = 0u; th < par.size(); th++) ps.paramval[th] = 0.5*par[th] + 0.5*par_samp[th];
+				for(auto th = 0u; th < par.size(); th++) ps.paramval[th] = 0.95*par[th] + 0.05*par_samp[th];
+				//for(auto th = 0u; th < par.size(); th++) ps.paramval[th] = par_samp[th];
 				ps.run = UNSET; ps.EF = UNSET;
 				param_samp.push_back(ps);
 			}
@@ -155,15 +193,14 @@ double PMCMC::obs_prob(vector <double> &paramv)
 
 		for(auto p = 0u; p < N; p++){ 	
 			particle[p].simulate(obsmodel.section_ti[sec],obsmodel.section_tf[sec]);
-		
+			
 			L[p] = obsmodel.calculate_section(&particle[p],sec);
 		}
-	
+
 		obprob += bootstrap(sec,L);
 		
 		if(std::isnan(obprob) || std::isinf(obprob)) emsgEC("PMCMC",1);
 	}
-	
 	timer[TIME_PMCMCLIKE].stop();
 	
 	return obprob;
@@ -177,6 +214,8 @@ double PMCMC::bootstrap(const unsigned int sec, vector <double> &L)
 	
 	vector <double> w(Ntot), wsum(Ntot);
 	
+	mpi.barrier();
+	
 	auto Ltot = mpi.gather(L);
 
 	auto obprob = 0.0;
@@ -188,12 +227,12 @@ double PMCMC::bootstrap(const unsigned int sec, vector <double> &L)
 		}
 	
 		for(auto p = 0u; p < Ntot; p++){
-			w[p] = exp(Ltot[p]-Lmax);
+			w[p] = exp(invT*(Ltot[p]-Lmax));
 			sum += w[p];
 			wsum[p] = sum;
 		}
 	
-		obprob = Lmax + log(sum/Ntot);
+		obprob = invT*Lmax + log(sum/Ntot);
 	}
 	
 	auto &bp = backpart[sec+1];
@@ -232,7 +271,18 @@ double PMCMC::bootstrap(const unsigned int sec, vector <double> &L)
 /// Gets the proposals used for the next itermation of MCMC
 void PMCMC::get_proposals()
 {
-	if(core == 0) prop_list = paramprop.get_proposal_list(param_samp); 
+	if(core == 0){
+		vector <ParamSample> param_samp_top;  // Gets just the top half of the samples 
+		auto N = param_samp.size();
+		unsigned int step = N/2000; if(step == 0) step = 1;
+		
+		for(auto i = N/2; i < param_samp.size(); i += step){
+			param_samp_top.push_back(param_samp[i]);
+		}
+		
+		prop_list = paramprop.get_proposal_list(param_samp_top); 
+		//paramprop.zero_ntr_nac();
+	}
 	mpi.bcast(prop_list);
 
 	if(core == 0 && diagnotic_output == true) cout << "# Proposals " << prop_list.size() << endl;
@@ -247,10 +297,10 @@ void PMCMC::mcmc_updates()
 	for(auto i = 0u; i < prop_list.size(); i++){
 		auto &prop = prop_list[i];
 		auto num = prop.num;
-		
+
 		switch(prop.type){
 			case SELF_PROP:
-				self_proposal(paramprop.self);    
+				if(burnin == true) self_proposal(paramprop.self);    
 				break;
 
 			case MVN_PROP:
@@ -296,9 +346,10 @@ double PMCMC::get_al()
 	Pp = mpi.particle_sample(UNSET,backpart,particle,obsmodel);
 	if(core == 0) Prp = model.prior(Pp.paramval);
 	
-	double al = exp(invT*(Lp-Li) + Prp-Pri);
+	auto al = exp(Lp-Li + Prp-Pri);
+	
 	if(core == 0 && false){
-		cout << al << " " << invT << " " << Lp <<  " " << Li <<  " " << Prp << " " << Pri << " pr" << endl;
+		cout << al << " " << invT << " " << Lp <<  " " << Li <<  " " << Prp << " " << Pri << " proposal prob" << endl;
 	}
 
 	if(std::isnan(al)) emsgEC("PMCMC",5);
@@ -347,7 +398,7 @@ void PMCMC::mvn_proposal(MVN &mvn)
 		auto al = get_al();
 		if(core == 0){
 			al *= exp(mvn.get_probfi(Pi.paramval,Pp.paramval,model) - probif);
-			if(mvn.MH(al,pup) == SUCCESS) copy_propose_state();
+			if(mvn.MH_PMCMC(al,paramprop.self.av_ac,pup) == SUCCESS) copy_propose_state();
 		}
 	}
 	
@@ -477,7 +528,7 @@ void PMCMC::initialise_variables()
 	
 	invT_dynamic = false; 
 	if(invT == UNSET){
-		invT = 1;
+		invT = 1000;
 		invT_dynamic = true; 
 		if(core == 0){
 			cout << "'invT' is dynamically altered during burnin for efficient operation." << endl << endl;
@@ -490,21 +541,32 @@ void PMCMC::initialise_variables()
 bool PMCMC::terminate(const unsigned int samp)
 {
 	bool term = false;
-	if(GRmax != UNSET){
-		if(samp <= nburnin){
-			if(mpi.core == 0) cout << "Burnin samples: " <<  samp << endl;	
-		}
-		else{
-			auto psamp_tot = mpi.gather_psamp(particle_store);
-			if(mpi.core == 0){
-				auto GR = output.get_Gelman_Rubin_statistic(psamp_tot);
-				if(vec_max(GR) < GRmax && samp-nburnin >= 20) term = true; 
-				cout << "Number of samples: " << samp-burnin;
-				cout << "    Largest GR value:" << vec_max(GR) << "     GRmax: " << GRmax << endl;
+	if(ESSmin != UNSET){
+		if(samp%100 == 0){
+			if(samp <= nburnin){
+				if(mpi.core == 0) cout << "Burnin samples: " <<  samp << endl;	
+			}
+			else{
+				auto psamp_tot = mpi.gather_psamp(particle_store);
+				if(mpi.core == 0){
+					auto ESS = output.get_effective_sample_size(psamp_tot);
+					if(vec_min(ESS) > ESSmin && samp-nburnin >= 20) term = true; 
+					cout << "Number of samples: " << samp-burnin;
+					cout << "    Smallest ESS value:" << vec_min(ESS) << "     ESSmin: " << ESSmin << endl;
+				}
 			}
 		}
 	}
-	else{
+	
+	if(cpu_time != UNSET){
+		auto time_av = mpi.average((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC));
+		if(time_av > cpu_time){
+			term = true;
+			if(mpi.core == 0)	cout << "Maximum execution time reached." << endl << flush;
+		}
+	}	
+	
+	if(nsample != UNSET){
 		if(mpi.core == 0){
 			if(samp == nsample) term = true;
 			
@@ -515,4 +577,81 @@ bool PMCMC::terminate(const unsigned int samp)
 	mpi.bcast(term);
 	
 	return term;
+}
+
+
+/// Calculates the start invT based on getting the variance in the unbiased predictor
+void PMCMC::calculate_start_invT()
+{
+	if(core == 0) Pp.paramval = Pi.paramval;
+	
+	mpi.bcast(Pp.paramval);
+
+	auto loopmax = 40u;
+	
+	auto invTav = 0.0;
+	for(auto loop = 0u; loop < loopmax; loop++){
+		auto N = 100u;
+
+		auto av = 0.0, av2 = 0.0; 
+		for(auto i = 0u; i < N; i++){
+			Lp = obs_prob(Pp.paramval);
+			av += Lp; av2 += Lp*Lp;
+		}
+		auto sd = sqrt(av2/N - (av/N)*(av/N));
+		
+		auto fac = sd_init-sd;
+		if(fac < -2) fac = -2;
+		if(fac > 2) fac = 2;
+		
+		invT *= exp(1*fac);
+		if(core == 0) cout << loop << " " << invT << " " <<  sd << " standard deviation\n";
+		if(loop >= loopmax/2) invTav += invT/(loopmax/2);
+	}
+	invT = invTav;
+	if(core == 0) cout << invT << " invT estimate\n";
+	
+	for(auto ru = 0u; ru < nrun; ru++){                              // Goes over all the runs
+		Li_run[ru] = obs_prob(Pi.paramval);       
+		
+		Pi_run[ru] = mpi.particle_sample(ru,backpart,particle,obsmodel);
+	}		
+}
+
+
+/// Outputs the distribution in error function
+void PMCMC::get_EF_dist() const 
+{
+	State s(details,data,model,obsmodel);
+	
+	vector <double> EF_sample;
+	for(const auto &p : particle_store){
+		s.initialise_from_particle(p);  
+		s.set_EF();
+		EF_sample.push_back(s.EF);
+	}
+	
+	sort(EF_sample.begin(),EF_sample.end());
+	
+	auto n = EF_sample.size();
+	
+	/*
+	cout << "Distribution in EF (using cumulative distribution): " << endl;
+	auto i = (unsigned int)((n-1)*0.025); auto f = (n-1)*0.025 - i;
+	cout << "2.5%: " << EF_sample[i]*(1-f) + EF_sample[i+1]*f << "  ";
+				
+	i = (unsigned int)((n-1)*0.25); f = (n-1)*0.25 - i;
+	cout << "25%: " << EF_sample[i]*(1-f) + EF_sample[i+1]*f << "  ";
+		
+	i = (unsigned int)((n-1)*0.75); f = (n-1)*0.75 - i;
+	cout << "75%: " << EF_sample[i]*(1-f) + EF_sample[i+1]*f << "  ";
+			
+	i = (unsigned int)((n-1)*0.975); f = (n-1)*0.975 - i;
+	cout << "97.5%: " << EF_sample[i]*(1-f) + EF_sample[i+1]*f << endl;
+	*/
+	
+	auto i = (unsigned int)((n-1)*0.75); auto f = (n-1)*0.75 - i;
+	cout << "," << EF_sample[i]*(1-f) + EF_sample[i+1]*f << ",";
+	i = (unsigned int)((n-1)*0.975); f = (n-1)*0.975 - i;
+	cout << EF_sample[i]*(1-f) + EF_sample[i+1]*f << ",";
 }

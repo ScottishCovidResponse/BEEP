@@ -8,13 +8,14 @@ using namespace std;
 
 #include "state.hh"
 #include "output.hh"
+#include "utils.hh"
 
 /// Initialises the state class
 State::State(const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel) : comp(model.comp), trans(model.trans), param(model.param), details(details), data(data), model(model), obsmodel(obsmodel)
 {
 	disc_spline.resize(model.spline.size());
 
-	pop.resize(details.ndivision);
+	pop.resize(details.ndivision+1);
 	for(auto sett = 0u; sett < details.ndivision; sett++){
 		pop[sett].resize(data.narea); 
 		for(auto c = 0u; c < data.narea; c++){
@@ -81,7 +82,9 @@ void State::set_param(const vector <double> &paramv)
 	Ntime = model.create_Ntime(disc_spline);
  
 	beta = model.calculate_beta_from_R(susceptibility,paramv_dir,Ntime,transrate,disc_spline);
-		
+
+	genT = model.calculate_generation_time(paramv_dir,susceptibility,Ntime[0],transrate,data.democatpos_dist,0);
+	
 	//model.eignevector_compare_models(susceptibility,paramv_dir,Ntime,transrate);
 		
 	timer[TIME_SETPARAM].stop();
@@ -123,14 +126,9 @@ void State::set_Imap_using_dI(const unsigned int sett, const State *state, const
 /// Sets the infection map Imap and Idiag as a function of time (based on transitions in transnum)
 void State::set_Imap(const unsigned int check)
 {
-	vector < vector <double> > Ima(data.narage);
-	vector < vector <double> > Idia(data.narage);
-	
-	Ima.resize(data.nstrain); Idia.resize(data.nstrain); 
-	for(auto st = 0u; st < data.nstrain; st++){
-		Ima[st].resize(data.narage); Idia[st].resize(data.narage); 
-		for(auto v = 0u; v < data.narage; v++){ Ima[st][v] = 0; Idia[st][v] = 0;}
-	}
+	set_I_from_pop(0,false);
+	auto Ima = Imap[0];
+	auto Idia = Idiag[0];
 	
 	for(auto sett = 0u; sett < details.ndivision; sett++){
 		for(auto st = 0u; st < data.nstrain; st++){
@@ -165,17 +163,10 @@ void State::set_Imap(const unsigned int check)
 /// Sets the infectivity map at a particular time
 void State::set_Imap_sett(const unsigned int sett)
 {
-	auto &Ima = Imap[sett];
-	auto &Idia = Idiag[sett];
-	
-	if(sett == 0){
-		for(auto st = 0u; st < data.nstrain; st++){
-			auto &Ima_inft = Ima[st];
-			auto &Idia_inft = Idia[st];
-			for(auto v = 0u; v < data.narage; v++){ Ima_inft[v] = 0; Idia_inft[v] = 0;}
-		}
-	}
+	if(sett == 0) set_I_from_pop(sett,false);
 	else{
+		auto &Ima = Imap[sett];
+		auto &Idia = Idiag[sett];
 		Ima = Imap[sett-1];
 		Idia = Idiag[sett-1];
 		update_I_from_transnum(Ima,Idia,transnum[sett-1]);
@@ -228,20 +219,92 @@ void State::update_I_from_transnum(vector < vector <double> > &Ima, vector< vect
 }
 
 
+/// Sets the infectivty map based on the populations in compoartments
+void State::set_I_from_pop(const unsigned int sett, const bool check)
+{
+	auto &Ima = Imap[sett];                        // Sets infectivity map to zero
+	auto &Idia = Idiag[sett];
+
+	vector< vector <double> > Ima_store;          // The infectivity map coming from other areas
+	vector< vector <double> > Idia_store;  
+	
+	if(check == true){
+		Ima_store = Ima; Idia_store = Idia;
+	}
+	
+	for(auto st = 0u; st < data.nstrain; st++){
+		auto &Ima_inft = Ima[st];
+		auto &Idia_inft = Idia[st];
+		for(auto v = 0u; v < data.narage; v++){ Ima_inft[v] = 0; Idia_inft[v] = 0;}
+	}
+	
+	auto narea = data.narea;
+	auto nage = data.nage;
+	auto dpmax = data.ndemocatpos_per_strain;
+	vector <double> dinf(nage);
+
+	for(auto st = 0u; st < data.nstrain; st++){
+		auto &Ima_inft = Ima[st];
+		auto &Idia_inft = Idia[st];
+		
+		for(auto c = 0u; c < narea; c++){
+			for(auto a = 0u; a < nage; a++) dinf[a] = 0;
+			
+			for(auto co = 0u; co < model.comp.size(); co++){
+				auto inf = paramval[comp[co].infectivity_param];  // infectivity
+			
+				if(inf != 0){
+					auto dpp = st*dpmax;
+					for(auto dp = 0u; dp < dpmax; dp++){
+						auto p = pop[sett][c][co][dpp]; 
+						if(p != 0) dinf[data.democatpos[dp][0]] += inf*p;
+						dpp++;
+					}
+				}
+			}
+			
+			auto diag = data.genQ.M.diag[c];
+			auto &to = data.genQ.M.to[c];
+			auto &val = data.genQ.M.val[c];
+			
+			auto jmax = to.size();
+			auto v = c*nage;
+			for(auto a = 0u; a < nage; a++){
+				auto di = dinf[a];
+				if(di != 0){
+					Idia_inft[v+a] += di*diag;
+					for(auto j = 0u; j < jmax; j++) Ima_inft[to[j]*nage+a] += di*val[j]; 
+				}
+			}
+		}
+	}
+	
+	if(check == true){
+		for(auto st = 0u; st < data.nstrain; st++){
+			for(auto v = 0u; v < data.narage; v++){
+				auto d = Ima[st][v] - Ima_store[st][v];
+				if(d*d > SMALL) emsg("Problem with infectivty map");
+			}
+		}
+	}
+}
+
+
 /// Initialises the state based on a particle
 void State::initialise_from_particle(const Particle &part)
 {
 	timer[TIME_INITFROMPART].start();
-		
+	
 	paramval = part.paramval;
 	EF = part.EF;
 	transnum = part.transnum;
 		
 	Pr = model.prior(paramval);
+	if(paramval.size()  == 0) emsg("zero size");
 	
 	set_param(paramval);
 	
-	pop_init();	
+	pop_init();
 	for(auto sett = 0u; sett < details.ndivision; sett++){
 		democat_change_pop_adjust(sett);
 		if(sett < details.ndivision-1) update_pop(sett);
@@ -363,6 +426,10 @@ void State::set_transmean(const unsigned int sett, const unsigned int c)
 			else{
 				auto a = data.democatpos[dp][0];
 				tmean[tr][dpp] = dt*popu*susceptibility[dpp]*(be*NMI[a] + eta_age[a]);
+				if(std::isnan(tmean[tr][dpp])){
+					cout << popu << " " << susceptibility[dpp] << be << " " << NMI[a] << " " << eta_age[a] << " jj\n";
+					emsgEC("State",4);
+				}
 			}
 			dpp++;
 		}
@@ -421,6 +488,64 @@ void State::update_pop(const unsigned int sett)
 }
 
 
+/// Updates the population corresponding to transnum going backwards in time (used for steering)
+void State::update_pop_rev(const unsigned int sett)
+{
+	timer[TIME_UPDATEPOP].start();
+	
+	auto &popnext = pop[sett-1];
+	popnext = pop[sett];
+
+	for(auto c = 0u; c < data.narea; c++){
+		auto &popnext_c = popnext[c];
+		auto &tnum = transnum[sett][c];
+
+		for(auto tr = 0u; tr < model.trans.size(); tr++){
+			auto from = model.trans[tr].from;
+			auto to = model.trans[tr].to;
+			
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){	
+				int num = -tnum[tr][dp];				
+				if(num != 0){
+					popnext_c[from][dp] -= num;
+					popnext_c[to][dp] += num; 
+				}
+			}		
+		}
+	}
+	
+	timer[TIME_UPDATEPOP].stop();
+}
+
+
+/// Makes sure that the populations are positive
+void State::pop_positive(const unsigned int sett)
+{
+	timer[TIME_UPDATEPOP].start();
+	
+	for(auto c = 0u; c < data.narea; c++){
+		for(auto dp = 0u; dp < data.ndemocatpos; dp++){	
+			auto sum = 0.0;
+			auto &p = pop[sett][c];
+			for(auto co = 0u; co < model.comp.size(); co++){
+				if(p[co][dp] < 0){ 
+					//pop[sett][c][model.start_compartment][dp] += p[dp];
+					p[co][dp] = 0; 
+				}
+				sum += p[co][dp];
+			}
+
+			auto fac = data.area[c].pop_dp[dp]/sum;
+			if(fac < 0.999999 || fac > 1.000001){
+				for(auto co = 0u; co < model.comp.size(); co++) p[co][dp] *= fac;
+			}
+		}
+	}		
+	
+	timer[TIME_UPDATEPOP].stop();
+}
+
+
 /// Gets total infectivity as a function of age group at a given time sett for infection transition inft in an area c
 vector <double> State::get_NMI(const unsigned int sett, const unsigned int st, const unsigned int c)
 { 
@@ -433,7 +558,6 @@ vector <double> State::get_NMI(const unsigned int sett, const unsigned int st, c
 	if(nage == 1){   // Faster version when only 1 age group
 		double val = Idiag[sett][st][c]*(d+fac*omd) + Imap[sett][st][c]*d;
 		if(val < 0) val = 0;
-	
 		NMI[0] = val;
 		return NMI;
 	}
@@ -483,10 +607,10 @@ void State::simulate(const unsigned int ti, const unsigned int tf)
 		if(details.mode == SIM && (sett%step == 0 || sett == details.ndivision-1)){
 			cout << print_populations(sett);   // Prints the compartmental populations to the terminal
 		}
-	
 		democat_change_pop_adjust(sett);
-		
-		set_Imap_sett(sett);
+	
+		if(sett == ti) set_I_from_pop(sett,false);
+		else set_Imap_sett(sett);
 
 		timer[TIME_TRANSNUM].start();
 		double mean;
@@ -522,6 +646,7 @@ string State::print_populations(const unsigned int sett) const
 {
 	stringstream ss;
 	
+	
 	vector <double> N(model.comp.size());
 	
 	for(auto co = 0u; co < model.comp.size(); co++){
@@ -540,7 +665,10 @@ string State::print_populations(const unsigned int sett) const
 	auto len = ss.str().length();
 	if(len < 15){ for(auto j = 0u; j < 15-len; j++) ss << " ";}
 	
-	for(auto c = 0u; c < model.comp.size(); c++) ss << "  " << model.comp[c].name << ":"	<< prec(N[c],0);
+	for(const auto &cn : model.comp_name){
+		auto sum = 0.0; for(auto c : cn.comp) sum += N[c];
+		ss << "  " << cn.name << ":"	<< sum;
+	}
 	ss << endl;	
 
 	return ss.str();
@@ -595,7 +723,7 @@ void State::save(const string file) const
 		outp << model.param[th].name << "," << paramval[th] << endl;
 	}
 	
-	filefull = file+"_transition.csv";
+	filefull = file+"_transition.csv"; 
 	ofstream outp_trans(filefull);
 	if(!outp_trans) emsg("Cannot open the file '"+filefull+"'");
 
@@ -681,3 +809,22 @@ void State::load(const string file, const unsigned int ndivision_post)
 	
 	initialise_from_particle(part);
 }
+
+
+/// Calculates the likelihood for the state
+double State::likelihood() const
+{
+	auto Li = 0.0;
+	for(auto sett = 0u; sett < details.ndivision; sett++){  
+		for(auto c = 0u; c < data.narea; c++){      
+			for(auto tr = 0u; tr < model.trans.size(); tr++){
+				for(auto dp = 0u; dp < data.ndemocatpos; dp++){	 
+					Li += poisson_probability(transnum[sett][c][tr][dp],transmean[sett][c][tr][dp]);	
+				}
+			}
+		}
+	}
+	
+	return Li;
+}
+

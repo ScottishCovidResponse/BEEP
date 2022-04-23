@@ -22,19 +22,21 @@ public:
 	Particle particle_sample(const unsigned int ru, const vector < vector <unsigned int> > &backpart, vector <State> &particle, const ObservationModel &obsmodel);
 		
 	vector <double> gather(const vector <double> &vec);
+	vector < vector <double> > gather(const vector < vector <double> > &array);
 	vector <unsigned int> gather(const vector <unsigned int> &vec);	
 	vector <long> gather(const long val);
 	vector <double> gather(const double val);
 	vector <double> scatter(const vector <double> &vectot);
 	vector <unsigned int> scatter(const vector <unsigned int> &vectot);
 	
+	void check(unsigned int num);
 	void barrier();
 	long sum(const long val);
 	double sum(const double val);
 	double average(const double val);
 	vector <double> average(const vector <double> &val);
-	double get_acrate(const unsigned int nac, const unsigned int ntr);
-	vector <double> get_acrate(const vector <unsigned int> &nac, const vector <unsigned int> &ntr);
+	double get_acrate(const double nac, const double ntr);
+	vector <double> get_acrate(const vector <double> &nac, const vector <double> &ntr);
 	double get_ratio(const double nac, const double ntr);
 
 	void bcast(double &val);
@@ -42,6 +44,7 @@ public:
 	void bcast(unsigned int &val);
 	void bcast(vector <unsigned int> &vec);
 	void bcast(vector <double> &vec);
+	void bcast(vector < vector <double> > &M);
 	void bcast(vector <Proposal> &vec);
 	
 	vector <double> combine(const vector <double> &vec);

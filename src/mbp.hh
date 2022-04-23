@@ -17,19 +17,29 @@ class Mbp
 	public:
 		Mbp(ObsModelMode obsmodel_mode_, const Details &details, const Data &data, const Model &model, const ObservationModel &obsmodel, const Output &output, Mpi &mpi);
 		
-		unsigned int mcmc_updates(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_,ParamUpdate pup_, ParamProp &paramprop);
+		unsigned int mcmc_updates(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_,ParamUpdate pup_, ParamProp &paramprop, const double cor_max);
+		unsigned int mcmc_updates_new(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_, ParamUpdate pup_, ParamProp &paramprop);
 		unsigned int mc3_mcmc_updates(Particle &part, const vector <ParamSample> &param_samp, const double invT_, const ParamUpdate pup_, ParamProp &paramprop);
 	
 	private:
+		void update_particle(Particle &pa, ParamProp &paramprop, unsigned int &nprop);
+		//unsigned int mvn_update(vector <Particle> &part, const vector <ParamSample> &param_samp, ParamProp &paramprop, const double cor_max);
+		//unsigned int univariate_update(vector <Particle> &part, const vector <ParamSample> &param_samp, ParamProp &paramprop, const double cor_max);
+		//unsigned int complex_update(vector <Particle> &part, const vector <ParamSample> &param_samp, ParamProp &paramprop, const double cor_max);
+		
 		Status mbp(const vector<double> &paramv, const InfUpdate inf_update);	
+		Status mbp_rev(const vector<double> &paramv);
 		double get_al();
 		void initialise_variables();
 		void simu_or_mbp_reset();
 		void swap_initial_propose_state();
 		void mbp_initialise();
-		void update_particle(Particle &pa, const vector <Proposal> &prop_list, ParamProp &paramprop);
+		//void update_particle(Particle &pa, const vector <Proposal> &prop_list, ParamProp &paramprop);
 		
 		void mvn_proposal(MVN &mvn);
+		void parameter_proposal(MVN &mvn, double &Li);
+		void mvn_proposal_rev(MVN &mvn);
+		void dist_R_joint_proposal(MVN &mvn);
 		void sigma_reff_proposal(MVN &mvn);
 		void mbp_fixedtree(FixedTree &ft);
 		void mbp_slicetime(SliceTime &st);
@@ -37,6 +47,7 @@ class Mbp
 		void neighbour_proposal(Neighbour &rn);
 		void joint_proposal(Joint &rn);		
 		void covar_area_proposal(CovarArea &ca);
+		void copy_initial_to_propse();
 	
 		void check_MBP();
 		
