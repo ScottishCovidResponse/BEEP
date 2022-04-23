@@ -15,10 +15,10 @@ using namespace std;
 
 ABC::ABC(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), details(details), model(model), output(output), obsmodel(obsmodel), mpi(mpi)
 {
-	inputs.find_nrun(nrun);
-	inputs.find_nsample_GRmax(Ntot,GRmax,nrun);
+	inputs.find_nsample(Ntot,1);
+	inputs.find_cpu_time(cpu_time); 
+	if(Ntot != UNSET && Ntot%mpi.ncore != 0)  emsgroot("'nsample' must be a multiple of the number of cores");
 	inputs.find_cutoff(cutoff,cutoff_frac);
-	if(cutoff_frac != UNSET && GRmax != UNSET) emsgroot("'cutoff_frac' cannot be used with 'GRmax'");
 	percentage = UNSET;
 }
 
@@ -26,34 +26,27 @@ ABC::ABC(const Details &details, const Data &data, const Model &model, Inputs &i
 /// Implements a version of simple ABC rejection algorithm
 void ABC::run()
 {
-	ntr.resize(nrun); nac.resize(nrun); 
-	for(auto ru = 0u; ru < nrun; ru++){ ntr[ru] = 0; nac[ru] = 0;}
-	
+	ntr = 0; nac = 0;
 	timer[TIME_ALG].start();
 	do{	
-		for(auto ru = 0u; ru < nrun; ru++){
-			do{
-				auto param = model.sample_from_prior();        // Samples parameters from the prior
+		for(auto loop = 0u; loop < 10; loop++){
+			auto param = model.sample_from_prior();          // Samples parameters from the prior
 
-				state.simulate(param);                         // Simulates a state
-			
-				ntr[ru]++;
-				if(cutoff == UNSET || state.EF < cutoff){      // Stores the state if the error function is below the cutoff    
-					particle_store.push_back(state.create_particle(ru));
-					nac[ru]++; 
-					break;
-				}
-			}while(true);
-		}	
+			state.simulate(param);                           // Simulates a state
+			ntr++;
+			if(cutoff == UNSET || state.EF < cutoff){        // Stores the state if the error function is below the cutoff    
+				particle_store.push_back(state.create_particle(UNSET));
+				nac++; 
+			}
+		}
 	}while(!terminate());                                // Terminates when sufficient samples are generated
-	
+	timer[TIME_ALG].stop();	
+		
 	if(cutoff_frac != UNSET) implement_cutoff_frac();    // Implements the acceptance rate to give cut-off
 
 	diagnostic();                                        // Outputs diagnostic information
 
 	output.generate_graphs(particle_store);		           // Outputs the results
-	
-	timer[TIME_ALG].stop();	
 }
 
 
@@ -63,29 +56,26 @@ bool ABC::terminate()
 	bool term = false;
 
 	auto samptot = mpi.sum(long(particle_store.size()));
-	if(GRmax != UNSET){
-		auto psamp_tot = mpi.gather_psamp(particle_store);
-		if(mpi.core == 0){
-			auto GR = output.get_Gelman_Rubin_statistic(psamp_tot);
-			if(vec_max(GR) < GRmax && samptot >= nrun*20) term = true; 
-			cout << "Number of samples: " << samptot << "    Largest GR value:" << vec_max(GR) << "     GRmax: " << GRmax << endl;
+
+	if(mpi.core == 0){
+		if(cutoff != UNSET){ 
+			if(samptot >= Ntot) term = true;
+			output.print_percentage(samptot,Ntot,percentage);
 		}
-	}
-	else{
-		if(mpi.core == 0){
-			if(cutoff != UNSET){ 
-				if(samptot >= nrun*Ntot) term = true;
-				output.print_percentage(samptot,nrun*Ntot,percentage);
-			}
-			else{
-				if(samptot >= nrun*Ntot/cutoff_frac) term = true;
-				output.print_percentage(samptot*cutoff_frac,nrun*Ntot,percentage);
-			}
+		else{
+			if(samptot >= Ntot/cutoff_frac) term = true;
+			output.print_percentage(samptot*cutoff_frac,Ntot,percentage);
 		}
 	}
 	
 	mpi.bcast(term);
 
+	if(cpu_time != UNSET){
+		if((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC) > cpu_time){
+			emsg("Could not calculate within time limit");
+		}
+	}
+	
 	return term;
 }
 
@@ -100,14 +90,14 @@ void ABC::implement_cutoff_frac()
 
 	if(mpi.core == 0){
 		sort(EFtot.begin(),EFtot.end());
-		cutoff = EFtot[nrun*Ntot];
+		cutoff = EFtot[Ntot];
 	}
 	mpi.bcast(cutoff);
 	
 	auto p = 0u;                                                            // Removes particles above the cut-off
 	while(p < particle_store.size()){
 		if(particle_store[p].EF >= cutoff){
-			nac[particle_store[p].run]--;
+			nac--;
 			particle_store.erase(particle_store.begin()+p);
 		}
 		else p++;
@@ -118,15 +108,12 @@ void ABC::implement_cutoff_frac()
 /// Diagnostic information
 void ABC::diagnostic() const
 {
-	vector <double> ac_rate(nrun);
-	for(auto ru = 0u; ru < nrun; ru++) ac_rate[ru] = mpi.get_acrate(nac[ru],ntr[ru]);     
+	auto ac_rate = mpi.get_acrate(nac,ntr);     
 	
 	if(mpi.core == 0){
-		auto stat = output.get_statistic(ac_rate);
+		cout << endl << "EF cut-off: " << prec(cutoff,2) << "      Fraction accepted: " << per(ac_rate) << endl;	
 
-		cout << endl << "EF cut-off: " << prec(cutoff,2) << "      Fraction accepted: " << per(stat.mean) << endl;	
-
-		vector <double> ME_list; for(auto ru = 0u; ru < nrun; ru++) ME_list.push_back(log(ac_rate[ru]));
+		vector <double> ME_list; ME_list.push_back(log(ac_rate));
 
 		output.final_model_evidence(ME_list,UNSET,cutoff);
 	}
