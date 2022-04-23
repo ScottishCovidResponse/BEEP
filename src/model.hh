@@ -24,12 +24,15 @@ class Model                                             // Stores information ab
 		vector <Param> param;                               // Information about parameters in the model
 		vector <Transition> trans;                          // Stores model transitions
 		vector <Compartment> comp;	                        // Stores model compartments
+		vector <CompartmentName> comp_name;                 // Groups compartments with the same name
 		
 		unsigned int infection_trans;                       // Stores infection transitions in the model
 	
 		unsigned int start_compartment;                     // This defines the compartment individuals start in
 	
 		vector <vector <unsigned int> > parameter_type;     // Different type of pararmeters
+		
+		vector <unsigned int> R_param;                      // Lists all the parameters used for specifying R
 		
 		vector <Spline> spline;                             // Stores the splines used in the model  
 	
@@ -68,6 +71,7 @@ class Model                                             // Stores information ab
 		double calculate_generation_time(const vector<double> &paramv_dir, const vector <double> &susceptibility, const vector <vector <double> > &A, const vector < vector <double> > &transrate, const vector <double> &democatpos_dist, const unsigned int st) const;
 		bool do_mbp_events(const vector <double> &parami, const vector <double> &paramp) const;
 		double prior(const vector<double> &paramv) const;
+		vector <double> simulated_values() const;
 		vector < vector <double> > create_disc_spline(const vector<double> &paramv_dir) const;
 		vector <double> create_disc_spline(const unsigned int ref, const vector<double> &paramv) const;
 		vector <double> create_susceptibility(const vector<double> &paramv_dir) const;
@@ -86,8 +90,10 @@ class Model                                             // Stores information ab
 		void set_strain();
 		string list_dir_param(const vector <DirichletParam> &list) const;
 		void set_dirichlet();
+		void calculate_dirichlet_missing(vector <double> &param) const;
 		string comparmtental_model_JSON() const;
 		void check_prior() const;
+		NormalApprox prior_normal_approx(unsigned int th) const;
 		string print() const;
 		string print_prior(const unsigned int p) const;
 		void print_parameter_types();
@@ -97,21 +103,16 @@ class Model                                             // Stores information ab
 		bool areaeffect_timevary() const;
 		string foi_model_JSON() const;
 		string spline_param_JSON(const unsigned int sp) const;
-		
-	private:
-		vector <unsigned int> inf_state;                    // Makes a list of all the infectious states (used to calculate NGM)
-		vector <unsigned int> inf_state_ref;                // Converts from a compartment to inf_state  
+		vector <unsigned int> trans_comp_divide(unsigned int tr, unsigned int dir) const;
 	
-		vector <ProbReach> prob_reach;                      // Calculates the probability of reaching a certain conpartment
+	private:
+		vector <unsigned int> inf_state;            // Makes a list of all the infectious states (used to calc NGM)
+		vector <unsigned int> inf_state_ref;        // Converts from a compartment to inf_state  
+	
+		vector <ProbReach> prob_reach;              // Calculates the probability of reaching a certain conpartment
 		
 		void load_model();
-		void add_comps();
-		void add_trans();
 		void setup_infectivity();
-		void trans_check() const;
-		void add_compartment(const string& name, const vector <ParamSpec> &mean_spec, const string &mean_dep, const ParamSpec &inf, const unsigned int num, const unsigned int shape);
-		void add_internal_transition(const unsigned int c_from, const unsigned int c_to);
-		void add_transition(const string& from, const string& to, const TransInf inf, const vector <ParamSpec>& prob_spec, const string prob_dep);
 		double get_val1(const unsigned int th, const vector <double> &paramv) const;
 		double get_val2(const unsigned int th, const vector <double> &paramv) const;
 		void get_prior_val(const string name, const string st, double &val, unsigned int &valparam);
@@ -125,9 +126,9 @@ class Model                                             // Stores information ab
 		void complete_datatables();
 		void setup_modification();
 		void create_spline(const string name, const string desc, const vector <ParamSpec> &ps, const vector<unsigned int> &bp, const ParamSpec param_fac, const SmoothType smooth_type, const ParamType type);
+		void add_compartmental_model_parameters();
 		void set_infected_uninfected();
-		unsigned int get_compartment(const string compname, const ErlangPos pos) const;
-		unsigned int get_transition(const string transname);
+		vector <unsigned int> get_transition(const string transname);
 		unsigned int find_param(string name, string em) const;
 		bool prior_order_correct(const vector <double> &paramv) const;
 		void prior_order();
@@ -135,7 +136,8 @@ class Model                                             // Stores information ab
 		void update_R_ref(string &name, string &desc, string area_str, vector <unsigned int>& spl_ref, vector <SplineInfo> &spline_info) const;
 		void update_efoi_ref(string &name, string &desc, string area_str, string strain_str, const vector <double> efoi_ad, vector < vector <unsigned int> > &spl_ref, vector <SplineInfo> &spline_info) const;
 		void counterfactual_modification();
-			
+		void compartmental_model_check() const;
+	
 		const Details &details;
 		Data &data;
 		Inputs &inputs;
