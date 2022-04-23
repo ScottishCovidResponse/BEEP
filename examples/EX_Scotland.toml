@@ -1,9 +1,12 @@
+# Simulation: ./beepmbp inputfile="examples/EX_Scotland.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX_Scotland.toml" mode="ml" algorithm="cmaes" nsample_final=200  posterior_particle=100 nparticle=100 ngeneration=100 invT=1000
+
 time_format = "year-month-day"
 start = "2020-01-01"
 end = "2020-09-01"
 
-datadir = "examples/Data_EX2"
-outputdir = "Output_EX2"
+datadir = "examples/Data_EX_Scotland"
+outputdir = "analysis/Output_EX_Scotland"
 
 time_labels = [{name="Lockdown", time="2020-03-23"}]
 

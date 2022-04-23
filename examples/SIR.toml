@@ -1,0 +1,68 @@
+# ./beepmbp inputfile="examples/SIR.toml" mode="sim" 
+
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="ml" algorithm="cmaes" nsample_final=20   posterior_particle=20 nparticle=200 ngeneration=10 invT=1000
+
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="abcda" nparticle=60 ngeneration=10
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="abccont" nparticle=60 ngeneration=10
+
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="ml" algorithm="gd" 
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="ml" algorithm="cmaes" posterior_particle=100 nparticle=100 ngeneration=10 
+
+# ./beepmbp inputfile="examples/SIR.toml" mode="pais" nparticle=2 ngeneration=5 
+
+# ./beepmbp inputfile="examples/SIR.toml" mode="importance" nsample=1 
+
+# ./beepmbp inputfile="examples/SIR.toml" mode="abcmbp" nparticle=50 ngeneration=5
+
+
+# ./beepmbp inputfile="analysis/Scotland_Spatial.toml" mode="importance" nsample=1 invT=1
+# ./beepmbp inputfile="analysis/England_AS.toml" mode="importance" nsample=1 invT=1
+
+# mpirun -n 20 ./beepmbp inputfile="examples/SIR.toml" mode="ml" algorithm="cmaes"
+
+plot_param_values = "true"
+
+description = "This analysis uses an SEIR model and assumes that the reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of intection." 
+
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2020-09-01"
+
+datadir = "examples/Data_SIR"
+outputdir = "analysis/Output_SIR"
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="4", inf_value="1"},
+#{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(3.99,4.01)"},
+#{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R"}
+] 
+
+R_spline = [{  bp="start|end", param="R0|R0", value="1.3", prior="Uniform(0.5,2)"}]
+#R_spline = [{ value="1.3"}]
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+#{type="transition", observation="S->I", timestep="7", obsmodel="scale", file="SI.csv"},
+{type="transition", observation="I->R", timestep="7", obsmodel="scale", file="IR.csv"}
+]
+
+
+#data_tables = [{type="population", observation="I", timestep="30", obsmodel="normal", file="I.csv"},
+#{type="population", observation="R", timestep="30", obsmodel="normal", file="R.csv"}]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+#modification = [{start="2020-04-01",type="beta_fac",factor="0.3"}]

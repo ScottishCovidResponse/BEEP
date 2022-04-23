@@ -4,8 +4,8 @@ time_format = "year-month-day"
 start = "2020-01-01"
 end = "2020-09-01"
 
-datadir = "examples/Data_EX1"
-outputdir = "Output_EX1"
+datadir = "examples/Data_EX"
+outputdir = "Output_EX"
 
 comps = [
 {name="S"},

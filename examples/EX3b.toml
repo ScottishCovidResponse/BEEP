@@ -1,0 +1,54 @@
+# Simulation: ./beepmbp inputfile="examples/EX3b.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX3b.toml" mode="ml" algorithm="cmaes" nsample_final=200  posterior_particle=100 nparticle=100 ngeneration=100 invT=1000
+
+description = "This analysis uses an SIRD branching spatial model with ten geographical areas (Region A-J). As well as 'area effects', this analysis incorporates 'covariate' effects (which relates properties of areas to local reproduction number, in this case using density of population and temperature). A geographical mixing matrix is specified which gives the rate of effective contact between individuals within and between different regions (note, this matrix only needs to be specified up to a constant factor). The infected individuals can either recover or die with associated branching probabilities. The reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. Data consists of the weekly number of S->I cases and I->R deaths separately for the different regions. The reproduction number (with a region-specific modifying factors) and the infectious period and branching probabilities are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX3b"
+outputdir = "analysis/Output_EX3b"
+
+geo_mixing_matrix = "geo_mixing_matrix.csv"
+	 
+area_effect = {value="[area effect:population.csv]", prior="MDir(0.2)"}
+
+area_covars= [
+{name="density", value="0.3", prior="Uniform(-0.5,0.5)", func="log"},
+{name="temperature", value="0.02", prior="Uniform(-0.05,0.05)", func="linear"}
+]
+	 
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.8", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="scale", geo_dep="area", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="scale", geo_dep="area", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

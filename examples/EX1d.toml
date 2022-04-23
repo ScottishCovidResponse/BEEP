@@ -1,0 +1,48 @@
+# Simulation: ./beepmbp inputfile="examples/EX1d.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX1d.toml" mode="ml" algorithm="cmaes" nsample_final=200   posterior_particle=200 nparticle=200 ngeneration=20 invT=1000
+
+description = "This analysis uses an SEIAR branching model. In this infected indiviudals can either be in a symptomatic I state or asymptomatic A state with associated branching probabilities and relative infectivity. The reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. Data consists of weekly numbers of E->I cases and the population of recovered R individuals. The reproduction number, latent and infectious period and symptomatic branching probabilities are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX1d"
+outputdir = "analysis/Output_EX1d"
+
+comps = [
+{name="S"},
+{name="E", dist="Exp", mean_param="T_E", mean_value="2", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_param="T_I", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="A", dist="Exp", mean_param="T_I", mean_value="4", inf_value="0.5", mean_prior="Uniform(1,10)"},
+{name="R"},
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I", prob_value="0.6", prob_prior="Dir(1)"},
+{from="E", to="A", prob_value="*", prob_prior="Dir(1)"},
+{from="I", to="R"},
+{from="A", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="scale", file="E-I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="scale", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="A", line_colour="cyan"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

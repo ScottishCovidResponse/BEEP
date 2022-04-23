@@ -1,0 +1,9 @@
+area,Sex,compartment,population
+Region,Male,S,4400
+Region,Female,S,4400
+Region,Male,E,0
+Region,Female,E,0
+Region,Male,I,100
+Region,Female,I,100
+Region,Male,R,500
+Region,Female,R,500
