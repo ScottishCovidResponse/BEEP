@@ -127,7 +127,8 @@ void Data::agematrix_normalise(Matrix &mat)
 	
 	if(false){
 		for(auto a = 0u; a < nage; a++){    
-			for(auto aa = 0u; aa < nage; aa++) cout <<  mat.ele[a][aa] << ", "; cout << "m" << endl;
+			for(auto aa = 0u; aa < nage; aa++) cout <<  mat.ele[a][aa] << ", "; 
+			cout << " m" << endl;
 		}
 	}
 }

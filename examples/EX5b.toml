@@ -1,0 +1,59 @@
+# Simulation: ./beepmbp inputfile="examples/EX5b.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX5b.toml" mode="ml" algorithm="cmaes" nsample_final=200   posterior_particle=200 nparticle=200 ngeneration=400 invT=10000
+
+description = "This example looks at the case in which there is time variation in the relative mixing of different age groups (specifically, for each age group the contact matrix is multiplied along the corresponding row and colum by a time-varying 'age contact factor' represented by a spline). This analysis uses an SIRD branching model with the population demographically stratified into four age groups: 0-19, 20-39, 40-59, and 60+. A contact matrix is specified which gives the rate of effective contact between individuals within and between different groups (note, this matrix only needs to be specified up to a constant factor). The infected individuals can either recover or die with associated branching probabilities. The reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. Data consists of the weekly number of S->I cases and I->R deaths separately for the different age groups. The reproduction number, time-varying age contact factors and branching probabilities are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "210"
+
+time_labels = [{name="Lockdown", time="30"}]
+
+datadir = "examples/Data_EX5b"
+outputdir = "analysis/Output_EX5b"
+
+ages = {cats="age0-19 | age20-39 | age40-59 | age60+"}
+	 
+age_mixing_matrix = "age_mixing_matrix.csv"
+
+age_mixing_perturb = [
+{ agecat='age0-19', bp='[bp:amp.csv]', param='[Par0-19:amp.csv]', value='[Value0-19:amp.csv]', prior='MDir(0.3)', smooth='0.1', smooth_type='log_smooth'},
+{ agecat='age20-39', bp='[bp:amp.csv]', param='[Par20-39:amp.csv]', value='[Value20-39:amp.csv]', prior='MDir(0.3)', smooth='0.1', smooth_type='log_smooth'},
+{ agecat='age40-59', bp='[bp:amp.csv]', param='[Par40-59:amp.csv]', value='[Value40-59:amp.csv]', prior='MDir(0.3)', smooth='0.1', smooth_type='log_smooth'},
+{ agecat='age60+', bp='[bp:amp.csv]', param='[Par60+:amp.csv]', value='[Value60+:amp.csv]', prior='MDir(0.3)', smooth='0.1', smooth_type='log_smooth'}
+]
+
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.7", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline = [{ value="0.1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="scale", democats_dep="age", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="scale", democats_dep="age", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

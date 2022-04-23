@@ -14,6 +14,12 @@
 #include <signal.h>
 #include "mpi.hh"
 
+//#include "nmmintrin.h" // for SSE4.2
+//#include "immintrin.h" // for AV
+
+#include <immintrin.h>
+#include <stdio.h>
+
 using namespace std;
 
 const bool debug = false;
@@ -51,7 +57,7 @@ double ran()
 			return v;
 		}
 	}
-	else {
+	else{
 		return double(0.999999999*rand())/RAND_MAX;
 	}
 #else
@@ -172,6 +178,21 @@ unsigned int binomial_sample(const double p, const unsigned int n)
 }
 
 
+/// A sample from the binomial distribution
+double binomial_probability(const unsigned int num, const double p, const unsigned int n)
+{
+	if(num > n || p < 0 || p > 1) emsgEC("Util",2);
+	
+	if(p == 0){
+		if(num == 0) return 0;
+		else return -LARGE;
+	}
+	else{
+		return lgamma(n+1) - lgamma(num+1) - lgamma(n-num+1) + num*log(p) + (n-num)*log(1-p);
+	}
+}
+
+
 /// Checks the binomial sampler
 void binomial_check()
 {
@@ -221,7 +242,6 @@ vector<string> split(const string &s, char delimiter)
 		}
 	}
 	splits.push_back(s.substr(j,s.length()-j));
-	
 	for(auto &spl : splits) strip(spl);
 	
 	return splits;                                           
@@ -274,7 +294,7 @@ bool emsg_throws = false;
 void emsg(const string& msg)
 {
 	//if(emsg_throws) throw(std::runtime_error(msg));
-	cout << msg;
+	cout << "ERROR: " << msg;
 	if(msg.length() > 0 && msg.substr(msg.length()-1,1) != ".") cout << ".";
 	cout << endl;
 	
@@ -331,115 +351,6 @@ bool stringhasending(std::string const &fullString, std::string const &ending)
 }
 
 
-/// Inverts a matrix
-vector <vector <double> > invert_matrix(const vector <vector <double> > &mat)   
-{
-	unsigned int nvar = mat.size();
-	vector <vector <double> > inv_M;
-	
-	double A2[nvar][nvar];
-
-	inv_M.resize(nvar);
-  for(auto i = 0u; i < nvar; i++){
-		inv_M[i].resize(nvar);
-    for(auto j = 0u; j < nvar; j++){
-      A2[i][j] = mat[i][j];
-      if(i == j) inv_M[i][j] = 1; else inv_M[i][j] = 0;
-    }
-  }
-
-  for(auto ii = 0u; ii < nvar; ii++){
-    double r = A2[ii][ii];
-    for(auto i = 0u; i < nvar; i++){
-      A2[ii][i] /= r; inv_M[ii][i] /= r; 
-    }
-
-    for(auto jj = ii+1; jj < nvar; jj++){
-      double r = A2[jj][ii];
-			if(r != 0){
-				for(auto i = 0u; i < nvar; i++){ 
-					A2[jj][i] -= r*A2[ii][i];
-					inv_M[jj][i] -= r*inv_M[ii][i];
-				}
-			}
-    }
-  }
-
-  for(int ii = nvar-1; ii > 0; ii--){
-    for(int jj = ii-1; jj >= 0; jj--){
-      double r = A2[jj][ii];
-			if(r != 0){
-				for(auto i = 0u; i < nvar; i++){ 
-					A2[jj][i] -= r*A2[ii][i];
-					inv_M[jj][i] -= r*inv_M[ii][i];
-				}
-			}
-    }
-  }
-
-	if(false){ // checks inverse
-		for(auto j = 0u; j < nvar; j++){
-			for(auto i = 0u; i < nvar; i++){
-				double sum = 0; for(auto ii = 0u; ii < nvar; ii++) sum += mat[j][ii]*inv_M[ii][i];
-				
-				if(i != j){ if(sum < -TINY || sum > TINY) emsgEC("Utils",8);}
-				else{ if(sum < 1-TINY || sum > 1+TINY) emsgEC("Utils",9);}		
-			}
-		}
-	}
-	
-	return inv_M;
-}
-
-vector <double> initial_guess;
-
-/// Determines the largest eigenvalue and vector from a matrix
-double largest_eigenvalue(const vector < vector <double> > &M, vector <double> &eigenvector)
-{
-	auto N = M.size();
-	
-	if(false){
-		cout << "mat" << endl;
-		for(auto j = 0u; j < N; j++){
-			for(auto i = 0u; i < N; i++) cout << M[i][j] << " ";
-			cout << " M" << endl;
-		}
-	}
-	
-	if(initial_guess.size() == 0){
-		for(auto i = 0u; i < N; i++) initial_guess.push_back(ran());
-	}
-	
-	vector <double> vec = initial_guess;
-	
-	auto ev = 0.0;
-	auto loop = 0u;
-	do{
-		vector <double> vec2(N);
-		for(auto i = 0u; i < N; i++){
-			auto sum = 0.0; for(auto ii = 0u; ii < N; ii++) sum += M[i][ii]*vec[ii];
-			vec2[i] = sum;
-		}
-		
-		auto sum = 0.0; for(auto i = 0u; i < N; i++) sum += vec2[i];
-		for(auto i = 0u; i < N; i++) vec[i] = vec2[i]/sum;
-			
-		auto ev_new = sum;
-		
-		sum = 0.0; for(auto i = 0u; i < N; i++) sum += vec[i];
-		if(ev_new-ev > -TINY && ev_new-ev < TINY) break;
-		ev = ev_new;
-		loop++;
-		if(loop > 10000) emsg("Eigen-vector convergence problem");
-	}while(1 == 1);
-
-	eigenvector = vec;
-
-	initial_guess = vec;
-
-	return ev;
-}
-
 
 /// Finds the index of a value in a vector
 unsigned int find_in(const vector <unsigned int> &vec, const unsigned int val)
@@ -488,6 +399,41 @@ double vec_max(const vector <double> &vec)
 }	
 
 
+/// Returns the mimimum of two numbers
+double min(double a, double b)
+{
+	if(a < b) return a; 
+	return b;
+}
+
+
+/// Returns the mimimum of two numbers
+double max(double a, double b)
+{
+	if(a > b) return a;
+	return b;
+}
+
+
+/// Finds the mimimum value in a vector
+double vec_min(const vector <double> &vec)
+{
+	double num = LARGE;
+	for(auto val : vec){ if(val != UNSET && val < num) num = val;}
+	if(num == LARGE) return UNSET;
+	else return num;
+}	
+
+
+/// Finds the mimimum value in a vector
+unsigned int vec_min(const vector <unsigned int> &vec)
+{
+	unsigned int num = LARGE;
+	for(auto val : vec){ if(val != UNSET && val < num) num = val;}
+	if(num == LARGE) return UNSET;
+	else return num;
+}	
+
 /// Outputs a number to a given precision
 string prec(const double num, const unsigned int pre)
 {
@@ -521,7 +467,7 @@ string per(const double per)
 bool allow_string(const string st, const string ok_char)
 {
 	for(auto i = 0u; i < st.length(); i++){
-		auto j = 0u; while(j == ok_char.length() && st.substr(i,1) != ok_char.substr(j,1)) j++;
+		auto j = 0u; while(j < ok_char.length() && st.substr(i,1) != ok_char.substr(j,1)) j++;
 		if(j == ok_char.length()) return false;
 	}
 	return true;
@@ -559,12 +505,12 @@ double get_double_positive(const string st, const string em)
 double get_double(string st, string em)
 {
 	strip(st);
-	if(allow_string(st,"-0123456789.") == false) emsgroot(em+" the expression '"+st+"' is not a number.");
+	if(allow_string(st,"-0123456789.e") == false) emsgroot(em+" the expression '"+st+"' is not a number1.");
 	else{
 		char* endptr;
 		double val = strtod(&st[0],&endptr);
 		ptrdiff_t j = endptr-&st[0];
-		if(j != (int)st.length()) emsgroot(em+" the expression '"+st+"' is not a number.");
+		if(j != (int)st.length()) emsgroot(em+" the expression '"+st+"' is not a number2.");
 		return val;
 	}
 }
@@ -575,12 +521,20 @@ unsigned int get_int(string st, const string em)
 {
 	strip(st);
 	
-	if(allow_string(st,"-0123456789") == false) emsgroot(em+" the expression '"+st+"' is not an integer.");
+	if(allow_string(st,"-0123456789.") == false) emsgroot(em+" the expression '"+st+"' is not an integer.");
 
 	char* endptr;
 	int val = strtol(&st[0],&endptr,10);
 	ptrdiff_t j = endptr-&st[0];
-	if(j != (int)st.length()) emsgroot(em+" the expression '"+st+"' is not an integer.");
+	if(j != (int)st.length()){
+		auto spl = split(st,'.');
+		if(spl.size() == 2){
+			if(get_int(spl[0],em) != (unsigned int) val || allow_string(spl[1],"0") == false){
+				emsgroot(em+" the expression '"+st+"' is not an integer.");
+			}	
+		}
+		else emsgroot(em+" the expression '"+st+"' is not an integer.");
+	}
 	if(val < 0) emsgroot(em+" the expression '"+st+"' cannot be negative.");
 	
 	return val;
@@ -658,3 +612,24 @@ ParamSpec ps_zero()
 	return ps;
 }
 
+
+/// Updates the size of parameter proposals
+void update(double &val, const double rate, const double eta)
+{
+	val *= exp(eta*(rate-ac_rate)); 
+}
+
+
+/// Updates the size of parameter proposals (limits to 2);
+void update_limit(double &val, const double rate, const double eta)
+{
+	val *= exp(eta*(rate-ac_rate)); 
+	if(val > 2) val = 2;
+}
+
+
+/// Updates with a target rate
+void update(double &val, const double rate, const double eta, const double target)
+{
+	val *= exp(eta*(rate-target));
+}

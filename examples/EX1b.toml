@@ -1,0 +1,46 @@
+# Simulation: ./beepmbp inputfile="examples/EX1b.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX1b.toml" mode="ml" algorithm="cmaes" nsample_final=200   posterior_particle=200 nparticle=200 ngeneration=20 invT=1000
+
+description = "This analysis uses an SEIR model and assumes that the reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. Data consists of the weekly number of E->I cases and weekly meadurements on the total infected I and recovered R populations. The reproduction number and latent and infectious periods are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX1b"
+outputdir = "analysis/Output_EX1b"
+
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="2", mean_prior="Uniform(1,4)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="scale", file="E-I.csv"},
+{type="population", observation="I", timestep="7", obsmodel="scale", file="I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="scale", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

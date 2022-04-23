@@ -15,6 +15,8 @@ Details::Details(Inputs &inputs)
 	
 	mode = inputs.mode();
 	
+	time_start = clock();
+	
 	analysis_type = "Posterior";
 	if(mode == SIM) analysis_type = "Simulation";
 	if(mode == MULTISIM) analysis_type = "Multisim";
@@ -24,10 +26,20 @@ Details::Details(Inputs &inputs)
 	stochastic = true;
 	auto dynamics = inputs.find_string("dynamics","stochastic");  
 	if(dynamics != "stochastic"){
-		if(dynamics != "deterministic") emsg("'dynamics' must be set to 'stochastic' or 'deterministic'");
+		if(dynamics != "deterministic"){
+			emsgroot("'dynamics' must be set to 'stochastic' or 'deterministic'");
+		}
 		stochastic = false;
 	}
 	
+	if(mode == ABC_CONT){
+		stochastic = false;
+		auto dynamics = inputs.find_string("dynamics",""); 
+		if(dynamics != "deterministic" && dynamics != ""){
+			emsgroot("'dynamics' must be set to 'deterministic' for mode 'abccont'");
+		}
+	}
+		
 	if(stochastic == false && (mode == ABC_MBP || mode == MC3_INF || mode == MCMC_MBP || mode == PAIS_INF)){
 		emsgroot("When running 'dynamics=\"determinstic\"', 'mode' can only use inference methods which do not rely on MPBs: 'abc', 'abcsmc' or 'pmcmc'"); 
 	}
@@ -70,7 +82,7 @@ Details::Details(Inputs &inputs)
 		string predstr = inputs.find_string("prediction_start","UNSET");
 		if(predstr != "UNSET"){
 			pred_start = gettime(predstr,"In 'prediction_start'") - start;
-			if(pred_start > period) emsg("'prediction_start' cannot be after 'end'");
+			if(pred_start > period) emsgroot("'prediction_start' cannot be after 'end'");
 		}
 	
 		predstr = inputs.find_string("prediction_end","UNSET");
@@ -98,7 +110,10 @@ Details::Details(Inputs &inputs)
 	
 	if(mode == PMCMC_INF){                                             // This defines when particle filtering is performed 
 		obs_section = true;
-		pmcmc_obs_period = 14*division_per_time;
+		
+		auto max_dt = inputs.find_maximum_timestep();
+		
+		pmcmc_obs_period = division_per_time*max_dt*int(period/(max_dt*10.0));// Divide into 10 sections
 		sec_define.resize(ndivision);
 		for(auto s = 0u; s < ndivision; s++){
 			if(s > 0 && s%pmcmc_obs_period == 0) sec_define[s] = true;
@@ -107,6 +122,7 @@ Details::Details(Inputs &inputs)
 	}
 	else obs_section = false;
 	
+	inputs.find_prop_max(prop_max);	
 	inputs.find_mcmc_update(mcmc_update);
 }
 
@@ -154,11 +170,11 @@ unsigned int Details::gettime(const string st, const string em) const
 			time_t tt = mktime(&result);
 			t = tt/(60*60*24);
 		}
-		else emsg(em+" the expression '"+st+"' is not recognised as 'day.month.year' format.");
+		else emsgroot(em+" the expression '"+st+"' is not recognised as 'day.month.year' format.");
 		break;
 	
 	default:
-		emsg("The time format is not recognised.");
+		emsgroot("The time format is not recognised.");
 		break;
 	}
 
@@ -198,7 +214,7 @@ string Details::getdate(const unsigned int t) const
 		break;
 		
 	default:
-		emsg("The time format is not recognised.");
+		emsgroot("The time format is not recognised.");
 		break;
 	}
 	

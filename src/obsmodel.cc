@@ -42,14 +42,14 @@ double ObservationModel::calculate_section(const State *state, unsigned int sec)
 	
 	vector <double> obs_value(data.nobs);
 	
-	for(auto i : section_obs[sec]) obs_value[i] = 0;
+	for(auto i : section_obs[sec])  obs_value[i] = 0;
 	
 	get_obs_value_section(state,obs_value,section_ti[sec],section_tf[sec]);
 		
 	auto L = 0.0;		
 
 	for(auto i : section_obs[sec]) L += obs_prob(obs_value[i],data.obs[i]);
-		
+
 	if(std::isnan(L)) emsgEC("ObsModel",2);
 	
 	timer[TIME_OBSPROB].stop();
@@ -217,6 +217,30 @@ void ObservationModel::initialise_obs_change()
 }
 
 
+/// Returns mean percentage error in observations
+double ObservationModel::mean_percentage_error(const double invT) const 
+{
+	auto av = 0.0, nav = 0.0;
+	for(const auto &gr : data.graph){
+		if(gr.point.size() > 0){
+			auto max = 0.0, per_max = 0.0;
+			for(const auto &gp : gr.point){
+				const auto &ob = data.obs[gp.obs];
+				auto val = ob.value;
+				if(val > max){
+					max = val;
+					per_max = sqrt(ob.var_approx/invT)/val;
+				}
+			}
+
+			av += per_max; nav++;
+		}
+	}
+	
+	return 100*av/nav;
+}
+
+
 /// The error coming from a given observation
 double ObservationModel::obs_prob(double value, const Observation& ob) const
 {
@@ -293,6 +317,7 @@ double ObservationModel::obs_prob(double value, const Observation& ob) const
 		case NORMAL_OBSMODEL:
 			{
 				//return ob.w*ob.invT*normal_probability(val,value,value+0.5*ob.factor);
+				//cout << ob.datatable << " " << val << " " << value << " j\n";
 				return ob.w*ob.invT*normal_probability(val,value,1); 
 			}
 			
@@ -363,4 +388,42 @@ void ObservationModel::split_observations()
 		}
 	}
 	if(section_tf[nsection-1] != details.ndivision) emsgEC("Obsmodel",6);
+}
+
+
+// Used to order particles by EF
+bool OS_ord (ObsSlice p1, ObsSlice p2)                      
+{ return (p1.sett < p2.sett);};  
+
+
+/// Converts the observations made on the system into a series of time slices
+vector <ObsSlice> ObservationModel::generate_obs_slice() const
+{
+	vector <ObsSlice> obs_slice;
+
+	for(auto o = 0u; o < data.nobs; o++){
+		const auto &ob = data.obs[o];
+		
+		
+		const auto &dt = data.datatable[ob.datatable];
+		
+		unsigned int sett;
+		
+		switch(dt.type){
+			case POP:	sett = ob.sett_i;	break;
+			case TRANS:	sett = ob.sett_f; break;	
+			default: emsg("Onlty 'population' and 'transition' datatables can be used"); break;
+		}
+		
+		auto i = 0u; while(i < obs_slice.size() && obs_slice[i].sett != sett) i++;
+		if(i == obs_slice.size()){
+			ObsSlice os; os.sett = sett; os.obs_type = OBS_APPROX;// OBS_EXACT;
+			obs_slice.push_back(os);
+		}
+		obs_slice[i].obs_ref.push_back(o);
+	}
+
+	sort(obs_slice.begin(),obs_slice.end(),OS_ord);     
+	
+	return obs_slice;
 }

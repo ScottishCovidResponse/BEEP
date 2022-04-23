@@ -388,6 +388,8 @@ function get_colourbar(vis)
 		}
 	}
 
+	//axymin = 0.8; axymax = 1.2;
+
 	if(axymin == axymax){
 		if(axymin == 0) axymax = 1;
 		else{ axymin *= 0.9; axymax *= 1.1;} 
@@ -1071,7 +1073,8 @@ function drawmap(vis)
 				else val = vis.arraytrans[playtime][c];		
 				
 				var div = Math.floor(0.999999*col_map.div*(val-col_map.min)/(col_map.max-col_map.min));
-				cv.fillStyle = "rgb("+col_map.map[div].R+","+col_map.map[div].G+","+col_map.map[div].B+")";
+				if(div < 0 || div >= col_map.div) cv.fillStyle = "rgb(255,255,255)";
+				else cv.fillStyle = "rgb("+col_map.map[div].R+","+col_map.map[div].G+","+col_map.map[div].B+")";
 			}
 			cv.fill();
 		}

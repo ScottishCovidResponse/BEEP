@@ -42,6 +42,9 @@ void Data::raw()
 	//generate_tvcovar(); emsg("done");
 	//generate_level_effect(); emsg("done");
 	//reducesize_geojson("areas2.geojson"); emsg("done");
+	
+	//generate_age_mixing_perturb(); emsg("done");
+	//generate_geo_mixing_matrix(); emsg("done");
 }
 
 void Data::deaths_hospital_england()
@@ -1198,7 +1201,7 @@ void Data::generate_tvcovar()
 {
 	ofstream fout(details.output_directory+"/tvcovar.csv");
 	fout << "Date,Temperature" << endl;
-	auto mu = 20.0, sd = 1.0, lam = 0.1;
+	auto mu = 20.0, sd = 2.0, lam = 0.1;
 	auto T = mu;
 	for(auto t = 0u; t < details.period; t++){
 		T += -lam*(T-mu) + normal_sample(0,sd);
@@ -1427,3 +1430,116 @@ void Data::reducesize_geojson(const string file)
 	
 	//cout << jso.dump() << "dum\n";    
 }
+
+
+/// Generates simulated time variation in age mixing matrix 
+void Data::generate_age_mixing_perturb()
+{
+	auto file =  details.output_directory+"/amp.csv";
+
+	//vector <string> date = {"start","2020-02-26","2020-03-11","2020-03-23","2020-03-30","2020-04-08","2020-04-22","2020-05-06","2020-05-20","2020-06-03","2020-06-17","2020-07-01","2020-07-15","2020-07-29","2020-08-12","2020-08-26","2020-09-09","2020-09-23","2020-10-07","2020-10-21","2020-11-04","2020-11-18","2020-12-02","2020-12-16","2020-12-30","2021-01-06","2021-01-13","2021-01-27","2021-02-10","2021-02-24","2021-03-10","2021-03-24","2021-04-07","2021-04-21","2021-05-05","2021-05-19","end"};
+
+	vector <string> date = {"start","14","28","42","56","70","84","98","112","126","140","154","168","182","196","end"};
+
+	//vector <string> cat = {"0-4","5-9","10-14","15-19","20-24","25-29","30-34","35-39","40-44","45-49","50-54","55-59","60-64","65-69","70-74","75-79","80+","CH"};
+	
+	//vector <string> cat = {"0-19","20-39","40-59","60-79"};
+	vector <string> cat = {"0-19","20-39","40-59","60+"};
+	
+	ofstream op(file);
+	op << "bp";
+	for(auto j = 0u; j < cat.size(); j++) op << ",Par" << cat[j];
+	for(auto j = 0u; j < cat.size(); j++) op << ",Value" << cat[j];
+	op << endl;
+
+	vector <double> val(cat.size());
+	for(auto j = 0u; j < cat.size(); j++) val[j] = 0;
+
+	vector <double> frac(cat.size());
+	auto sum = 0.0;
+	for(auto j = 0u; j < cat.size(); j++){
+		frac[j] = area[0].pop_dp[j];
+		sum += frac[j];
+	}			
+	for(auto j = 0u; j < cat.size(); j++) frac[j] /= sum;
+			
+	auto step = 1;
+	
+	for(auto i = 0u; i < date.size(); i += step){
+		if(i < date.size()-step) op << date[i]; else op << "end";
+		
+		for(auto j = 0u; j <  cat.size(); j++) op << ",Mixing factor " << cat[j] << date[i];
+		
+		auto sum = 0.0;
+		vector <double> expval(cat.size());
+		for(auto j = 0u; j < cat.size(); j++){
+			expval[j] = exp(val[j]);
+			sum += expval[j]*frac[j];
+		}
+		
+		for(auto j = 0u; j < cat.size(); j++){
+			op << ",";
+			if(j < cat.size()-1) op << (expval[j]/sum);
+			else op << "*";
+		}
+		op << endl;
+	
+		for(auto j = 0u; j < cat.size(); j++) val[j] += normal_sample(0,0.1);
+	}
+		
+	cout << "age_mixing_perturb = [" << endl;
+	for(auto j = 0u; j < cat.size(); j++){
+		cout << "{ agecat='age" << cat[j] << "', bp='[bp:amp.csv]', param='[Par" << cat[j] << ":amp.csv]', value='[Value" << cat[j] << ":amp.csv]', prior='MDir(0.3)'" <<  ", smooth='0.1', smooth_type='log_smooth'}," << endl;
+	}
+	cout << "]" << endl;	
+}
+
+void Data::generate_geo_mixing_matrix()
+{
+	auto narea = 10u;
+	
+	vector <unsigned int> pop = {2000,1000,500,3000,2000,1000,4000,2000,1000,3000};
+	
+	vector < vector <double> > mat;
+	mat.resize(narea);
+	for(auto j = 0u; j < narea; j++){
+		mat[j].resize(narea);
+	}
+
+	for(auto j = 0u; j < narea; j++){
+		for(auto i = j+1; i < narea; i++){
+			mat[j][i] = 0.02+ran()*0.02;
+			mat[i][j] = mat[j][i]*pop[i]/pop[j];
+		}
+	}		
+	
+	for(auto j = 0u; j < narea; j++){
+		auto sum = 0.0;
+		for(auto i = 0u; i < narea; i++){
+			if(i != j) sum += mat[j][i];
+		}
+		mat[j][j] = 1-sum;
+	}
+	
+	ofstream fout(details.output_directory+"/mixing2.csv");
+
+	auto tot = 0.0;
+	for(auto j = 0u; j < narea; j++){
+		for(auto i = 0u; i < narea; i++){
+			tot += mat[j][i]/pop[j];
+		}
+	}
+	//auto fac = narea/tot;
+	
+	for(auto j = 0u; j < narea; j++){
+		auto sum = 0.0; for(auto i = 0u; i < narea; i++) sum += mat[j][i]/pop[j];
+		auto fac = 1.0/sum;
+		
+		for(auto i = 0u; i < narea; i++){
+			if(i > 0) fout << ",";
+			fout << fac*mat[j][i]/pop[j];
+		}
+		fout << endl;
+	}
+}
+

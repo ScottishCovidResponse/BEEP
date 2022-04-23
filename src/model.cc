@@ -11,6 +11,7 @@
 using namespace std;
 
 #include "model.hh"
+#include "matrix.hh"
 
 /// Initialises the model 
 Model::Model(Inputs &inputs, const Details &details, Data &data, Mpi &mpi) : details(details), data(data), inputs(inputs), mpi(mpi)
@@ -26,18 +27,23 @@ Model::Model(Inputs &inputs, const Details &details, Data &data, Mpi &mpi) : det
 	set_parameter_type();
 	
 	if(false) print_parameter_types();
+	
+	if(mpi.core == 0){
+		cout << "Number of  model parameters: " << param.size()-2 << endl; 
+		if(details.siminf == INFERENCE) cout << "Number of parameters to be inferred: " << param_not_fixed.size() << endl; 
+	}
 }
 
 
 /// Loads the model from the input file
 void Model::load_model()
 {
-	add_comps();                                                     // Adds compartments to the model
-
-	add_trans();                                                     // Adds transitions to the model
-
-	trans_check();                                                   // Checks transitions correctly specified 
-
+	inputs.load_compartmental_model(comp,trans,comp_name,data.democat,data.democatpos,details.mode);
+	
+	add_compartmental_model_parameters();                            // Adds compartmental model parameters
+	
+	compartmental_model_check();                                     // Checks model correctly specified
+	
 	setup_infectivity();                                             // Sets up infection transition
 	
 	add_splines();                                                   // Adds splines to the model
@@ -60,6 +66,43 @@ void Model::load_model()
 	
 	for(auto th = 0u; th < param.size(); th++){                      // Lists all parameters which are not fixed
 		if(param[th].priortype != FIXED_PRIOR) param_not_fixed.push_back(th);
+	}
+	
+	if(param_not_fixed.size() == 0 && details.siminf == INFERENCE){
+		emsg("For inference the model must contain unspecified parameters");
+	}
+	
+	if(false){                                                       // Print model parameters
+		for(auto th = 0u; th < param.size(); th++){      
+			cout <<th << " " << param[th].name << endl;
+		}
+		emsg("Model Parameters");
+	}
+}
+
+
+/// Adds parameters associated with the compartmental model
+void Model::add_compartmental_model_parameters()
+{
+	for(auto &co : comp){
+		if(co.mean_spec.size() > 0){
+			if(co.mean_spec.size() != data.ndemocatpos) emsgEC("Model",1);
+			
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				co.param_mean.push_back(add_parameter(co.mean_spec[dp],DISTVAL_PARAM));
+			}
+		}
+		co.infectivity_param = add_parameter(co.inf_spec,INF_PARAM);
+	}
+	
+	for(auto &tr : trans){
+		if(tr.prob_spec.size() > 0){                                       // Adds branching probabilties
+			if(tr.prob_spec.size() != data.ndemocatpos) emsgEC("Input Comps",3);
+			
+			for(auto dp = 0u; dp < data.ndemocatpos; dp++){
+				tr.param_prob.push_back(add_parameter(tr.prob_spec[dp],BRANCHPROB_PARAM));
+			}
+		}
 	}
 }
 
@@ -138,135 +181,6 @@ void Model::set_infected_uninfected()
 	}
 }
 
-	
-/// Adds comaprtments to the model
-void Model::add_comps()
-{
-	vector <string> name; 
-	vector <ParamSpec> inf;
-	vector < vector <ParamSpec> > mean_spec;
-	vector <unsigned int>	shape;
-	vector <string> mean_dep;
-	
-	inputs.find_compartments(name,mean_spec,mean_dep,shape,inf,data.democatpos,data.democat); 
-
-	for(auto c = 0u; c < name.size(); c++){
-		auto k = shape[c]; 
-		if(k == UNSET){
-			add_compartment(name[c],mean_spec[c],mean_dep[c],inf[c],UNSET,UNSET);	
-		}
-		else{
-			for(auto i = 0u; i < k; i++){
-				add_compartment(name[c],mean_spec[c],mean_dep[c],inf[c],i,k);	
-			}
-		}
-	}
-}
-
-	
-/// Adds a compartment to the model
-void Model::add_compartment(const string& name, const vector <ParamSpec> &mean_spec, const string &mean_dep, const ParamSpec &inf, const unsigned int num, const unsigned int shape)
-{
-	Compartment co;
-	co.name = name;
-	co.num = num;
-	co.name_num = name; if(num > 0) co.name_num += to_string(num);
-	co.shape = shape;
-	co.mean_dep = mean_dep;
-	co.infectivity_param = add_parameter(inf,INF_PARAM); 
-
-	if(mean_spec.size() > 0){
-		if(mean_spec.size() != data.ndemocatpos) emsgEC("Model",1);
-		
-		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-			co.param_mean.push_back(add_parameter(mean_spec[dp],DISTVAL_PARAM));
-		}
-	}	
-	
-	comp.push_back(co);	
-}
-
-
-/// Adds transitions to the model
-void Model::add_trans()
-{
-	vector <string> from, to;                            
-	vector < vector <ParamSpec> > prob_spec;
-	vector <string> prob_dep;
-	vector <TransInf> transinf;
-	
-	inputs.find_transitions(from,to,transinf,prob_spec,prob_dep,data.democatpos,data.democat);
-	
-	for(auto c = 0u; c < comp.size(); c++){                            // Adds internal Erlang transitions
-		const auto &co = comp[c];
-		if(co.shape != UNSET && co.num < co.shape - 1){
-			auto cc = 0u; while(cc < comp.size() && !(comp[cc].name == co.name && comp[cc].num == co.num+1)) cc++;
-			if(cc == comp.size()) emsgEC("Model",2);
-			add_internal_transition(c,cc);
-		}
-	}
-	
-	for(auto tr = 0u; tr < from.size(); tr++){                         // Adds transitions between compartments
-		add_transition(from[tr],to[tr],transinf[tr],prob_spec[tr],prob_dep[tr]);
-	}
-}
-
-/// Adds an internal transition to the model (for the Erlang distribution)
-void Model::add_internal_transition(const unsigned int c_from, const unsigned int c_to)
-{
-	Transition tr;
-	
-	string st =  comp[c_from].name; if(comp[c_from].num > 0) st += to_string(comp[c_from].num);
-	st += "->";
-	st += comp[c_to].name; if(comp[c_to].num > 0) st += to_string(comp[c_to].num);
-	tr.name = st;
-	tr.name_file = "";
-	tr.from = c_from;
-	tr.to = c_to;
-	tr.inf = TRANS_NOTINFECTION;	
-	tr.comptrans_ref = comp[tr.from].trans.size(); comp[tr.from].trans.push_back(trans.size());
-	tr.prob_dep = "";
-	
-	trans.push_back(tr);
-}
-
-
-/// Adds a transition to the model
-void Model::add_transition(const string &from, const string &to, const TransInf inf, const vector <ParamSpec> &prob_spec, const string prob_dep)
-{
-	Transition tr;
-	
-	//tr.name = from+"→"+to;
-	tr.name = from+"->"+to;
-	tr.name_file = from+"-"+to;
-	
-	tr.from = get_compartment(from,LAST);
-	if(tr.from == UNSET) emsgroot("In 'trans' cannot find the 'from' compartment '"+from+"' for the transition");
-
-	tr.inf = inf;
-	if(from == to) emsgroot("In 'trans' the 'from' and 'to' values cannot be the same");
-		
-	if(inf == TRANS_INFECTION) tr.comptrans_ref = UNSET;
-	else{
-		tr.comptrans_ref = comp[tr.from].trans.size(); comp[tr.from].trans.push_back(trans.size());
-	}
-	
-	tr.to = get_compartment(to,FIRST);
-	if(tr.to == UNSET) emsgroot("In 'trans' cannot find the 'to' compartment '"+to+"' for the transition");	
-	
-	if(prob_spec.size() > 0){                                       // Adds branching probabilties
-		if(prob_spec.size() != data.ndemocatpos) emsgEC("Model",3);
-		
-		for(auto dp = 0u; dp < data.ndemocatpos; dp++){
-			tr.param_prob.push_back(add_parameter(prob_spec[dp],BRANCHPROB_PARAM));
-		}
-	}
-	
-	tr.prob_dep = prob_dep;
-	
-	trans.push_back(tr);
-}
-
 
 /// Sets up infection transitions and which compartments cause infectivity
 void Model::setup_infectivity()
@@ -281,81 +195,6 @@ void Model::setup_infectivity()
 	if(infection_trans == UNSET) emsgroot("In 'trans' one transition must be set to 'infection=\"yes\"'");
 	
 	start_compartment = trans[infection_trans].from;                 // Determines the start compartment for individuals
-}
-
-
-/// Checks that transition have been correctly specified;
-void Model::trans_check() const
-{
-	for(const auto &co : comp){                                      // Checks if prob_dep is specified for all branches
-		for(auto tr : co.trans){
-			for(auto tr2 : co.trans){
-				auto tr_dep = trans[tr].prob_dep;
-				auto tr_dep2 = trans[tr2].prob_dep;
-				if(tr_dep != tr_dep2){
-					string em = "In 'trans' the transitions '"+trans[tr].name+"' and '"+trans[tr2].name+"' must have a consistent dependency. ";
-					em += "Here '"+trans[tr].name+"' ";
-					if(tr_dep == "") em += "has no dependency ";
-					else em += "is dependent on '"+tr_dep+"' ";
-					
-					em += "and '"+trans[tr2].name+"' ";
-					if(tr_dep2 == "") em += "has no dependency.";
-					else em += "is dependent on '"+tr_dep2+"'.";
-		
-					emsgroot(em);
-				}
-			}
-		}			
-	}	
-	
-	for(auto tr = 0u; tr < trans.size(); tr++){                      // Checks branching probabilities are correctly specified  
-		if(comp[trans[tr].from].trans.size() > 1){
-			if(trans[tr].param_prob.size() == 0){
-				emsgroot("In 'trans' transition '"+trans[tr].name+"' a value for 'prob' must be set.");
-			}
-		}
-		else{
-			if(trans[tr].param_prob.size() != 0){
-				emsgroot("In 'trans' transition '"+trans[tr].name+"' a value for 'prob' should not be set.");
-			}
-		}
-	}
-	
-	for(const auto &co : comp){                                      // Checks distributions are correctly identified
-		if(co.trans.size() > 0){
-			if(co.param_mean.size() == 0){
-				if(details.siminf == SIMULATE){
-					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' must be set.");
-				}
-				else{
-					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' must be set.");
-				}
-			}
-		}
-		else{
-			if(co.param_mean.size() != 0){
-				emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' should not be set.");
-			}
-			if(co.num != UNSET){
-				emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'dist' should not be set.");
-			}
-		}
-	}
-	
-	auto c = 0u;                                                     // Checks infectious states exist
-	while(c < comp.size() && param[comp[c].infectivity_param].name == "zero") c++;
-	if(c == comp.size()){
-		emsgroot("At least one compartment must have non-zero infectivity");
-	}
-	
-	vector <bool> flag(comp.size());                                 // Checks compartments are connected
-	for(auto co = 0u; co < comp.size(); co++) flag[co] = false;
-	for(auto tr : trans){ flag[tr.from] = true; flag[tr.to] = true;}
-	for(auto co = 0u; co < comp.size(); co++){
-		if(flag[co] == false){
-			emsgroot("The compartment '"+comp[co].name+"' is not connected to the other compartments by a transition.");
-		}	
-	}
 }
 
 
@@ -435,7 +274,8 @@ void Model::add_probreach()
 	for(auto i = 0u; i < name.size(); i++){
 		ProbReach pr;
 		pr.name = name[i];
-		pr.comp = get_compartment(comp[i],FIRST);		
+		emsg("TO DO");
+		//pr.comp = get_compartment(comp[i],FIRST);		
 		prob_reach.push_back(pr);
 	}
 }
@@ -512,6 +352,14 @@ void Model::set_parameter_type()
 	parameter_type.resize(PARAMTYPEMAX);
 	for(auto th = 0u; th < param.size(); th++){
 		if(param[th].priortype == FIXED_PRIOR) parameter_type[param[th].type].push_back(th);
+	}
+	
+	for(const auto &Rpl : Rspline_info){
+		const auto &spl = spline[Rpl.spline_ref];
+		for(const auto &po :spl.p){
+			auto th = po.param;
+			if(param[th].priortype != FIXED_PRIOR) add_vec(R_param,th);
+		}
 	}
 }
 
@@ -870,7 +718,9 @@ void Model::spline_sample(vector <double> &paramv) const
 				auto th1 = spli[0].param;
 
 				if(param[th1].priortype != FIXED_PRIOR && param[th1].priortype != UNIFORM_PRIOR){
-					emsgroot("For smoothed splines only 'Fixed' and 'Uniform' priors can be used.");
+					if(details.mode != ML_INF){ 
+						emsgroot("For smoothed splines only 'Fixed' and 'Uniform' priors can be used, otherwise the prior can't be sampled from.");
+					}
 				}
 				
 				paramv[th1] = param_prior_sample(th1,paramv);
@@ -882,8 +732,6 @@ void Model::spline_sample(vector <double> &paramv) const
 					auto th2 = spli[i+1].param;
 					
 					if(th1 != th2 && param[th2].priortype != FIXED_PRIOR){
-						auto min = param[th2].val1, max = param[th2].val2; 
-						
 						if(spli[i].t == spli[i+1].t){
 							paramv[th2] = param_prior_sample(th2,paramv);
 						}
@@ -910,7 +758,23 @@ void Model::spline_sample(vector <double> &paramv) const
 							default: emsgEC("Model",8);
 							}
 						
-							if(paramv[th2] <= min || paramv[th2] >= max) flag = false;
+							switch(param[th1].priortype){
+								case UNIFORM_PRIOR:
+									{
+										auto min = param[th2].val1, max = param[th2].val2; 
+							
+										if(paramv[th2] <= min || paramv[th2] >= max) flag = false;
+									}
+									break;
+
+								case MDIRICHLET_PRIOR:
+									if(paramv[th2] <= 0) flag = false;
+									break;
+							
+								default:
+									emsgroot("Prior not supported");
+									break;
+							}
 							
 							for(auto th : param[th2].greaterthan){
 								if(param_set[th] == true && paramv[th2] < paramv[th]) flag = false; 
@@ -1082,11 +946,47 @@ unsigned int Model::add_parameter(const ParamSpec ps, const ParamType type)
 	else{
 		if(param[th].priortype != par.priortype || param[th].val1 != par.val1 || param[th].val2 != par.val2 
      || param[th].value != par.value){
+			 if(param[th].value != par.value){
+				 if(mpi.core == 0){
+					cout << "'" << ps.name << "' is defined to have a value of both ";
+					cout << param[th].value << " and " <<  par.value << endl;
+				 }
+			 }
+			 else{
+				 if(param[th].priortype != par.priortype){
+					  if(mpi.core == 0) cout << "'" << ps.name << "' is defined to have two different prior types." << endl;
+				 }
+			 }
+				 
 			 emsgroot("Parameter '"+ps.name+"' has multiple definitions.");	
 		 }
 	}
 	
 	return th;
+}
+
+
+/// Returns the parameters used to simulate the data
+vector <double> Model::simulated_values() const
+{
+	vector <double> paramv(param.size());
+	for(auto th = 0u; th < param.size(); th++){
+		paramv[th] = param[th].value;
+	}	
+
+	for(const auto &dir : dirichlet){
+		if(dir.dirtype == DIR_MODIFIED){
+			for(auto par : dir.param) paramv[par.th] *= par.frac;
+		}
+	}		
+	
+	if(false){
+		for(auto th = 0u; th < param.size(); th++){
+			cout << param[th].name << " " << paramv[th] << " Parameter Value" << endl;
+		}
+	}
+	
+	return paramv;
 }
 
 
@@ -1445,28 +1345,19 @@ vector < vector < vector <double> > > Model::calculate_beta_from_R(const vector 
 	return beta;
 }
 
-
-/// Gets a comparment from it's name 
-unsigned int Model::get_compartment(const string compname, const ErlangPos pos) const
-{
-	for(auto c = 0u; c < comp.size(); c++){
-		if(compname == comp[c].name){
-			if(comp[c].num == UNSET || (pos == FIRST && comp[c].num == 0) || (pos == LAST && comp[c].num == comp[c].shape-1)){
-				return c;
-			}
-		}
-	}
-	return UNSET;
-}
-
  
 /// From a string gets the transition number
-unsigned int Model::get_transition(const string transname)
+vector <unsigned int> Model::get_transition(const string transname)
 {
+	vector <unsigned int> tr_list;
 	for(auto tr = 0u; tr < trans.size(); tr++){
-		if(transname == comp[trans[tr].from].name + "->" + comp[trans[tr].to].name) return tr;
+		if(transname == comp[trans[tr].from].name + "->" + comp[trans[tr].to].name){
+			tr_list.push_back(tr);
+		}
 	}
-	emsgroot("The transition '"+transname+"' is not recognised");
+	if(tr_list.size() == 0)	emsgroot("The transition '"+transname+"' is not recognised");
+	
+	return tr_list;
 }
 
 
@@ -1476,29 +1367,46 @@ void Model::complete_datatables()
 	for(auto d = 0u; d < data.datatable.size(); d++){
 		auto &dt = data.datatable[d];
 		
-		auto sp = split(dt.observation,',');
+		auto error_desc = "for file '"+dt.file+"'"; if(dt.optype == OUTPUT) error_desc = "in 'state_outputs'";
+		
+		auto obs = dt.observation;
+		auto sp = split(obs,',');
 		
 		for(auto &st : sp){
 			auto fl = false;
 			for(auto co = 0u; co < comp.size(); co++){
 				if(st == comp[co].name){
 					if(find_in(dt.complist,co) != UNSET){
-						emsg("The observation for file '"+dt.file+"' should not contain multiple instances of the same compartment.");
+						emsg("The observation '"+obs+"' "+error_desc+" should not contain multiple instances of the same compartment.");
 					}
 						
 					dt.complist.push_back(co);
 					if(dt.type != POP && dt.type != POPFRAC){
-						emsg("The observation for file '"+dt.file+"' should not contain compartmental population data");
+						emsg("The observation '"+obs+"' "+error_desc+" should not contain compartmental population data");
 					}
 					fl = true;
 				}
 			}
 			
 			if(fl == false){
-				dt.translist.push_back(get_transition(st));
-				if(dt.type != TRANS && dt.type != MARGINAL){
-					emsg("In 'data_tables' the file '"+dt.file+"' should not contain compartmental transition data in 'observation'");
-				}		
+				for(auto tr = 0u; tr < trans.size(); tr++){
+					if(st == comp[trans[tr].from].name + "->" + comp[trans[tr].to].name){
+						if(find_in(dt.translist,tr) != UNSET){
+							emsg("The observation '"+obs+"' "+error_desc+" should not contain multiple instances of the same transition.");
+						}
+						
+						dt.translist.push_back(tr);
+						
+						if(dt.type != TRANS && dt.type != MARGINAL){
+							emsg("The observation '"+obs+"' "+error_desc+" should not contain compartmental transition data in 'observation'");
+						}		
+						fl = true;
+					}
+				}
+			}
+			
+			if(fl == false){
+				emsgroot("The observation '"+st+"' "+error_desc+" is not a compartment or a transition");
 			}
 		}
 		
@@ -1577,12 +1485,14 @@ void Model::setup_modification()
 		switch(cf.type){
 			case CF_TRANS_RATE:
 				{
-					auto tr = get_transition(cf.trans_str);
+					auto tr_list = get_transition(cf.trans_str);
 				
-					for(auto sett = start; sett < end; sett++){					
-						for(auto c : cf.area){
-							for(auto dp : cf.dp_sel){
-								modelmod.transmean_mult[sett][c][tr][dp] *= fac;
+					for(auto tr : tr_list){
+						for(auto sett = start; sett < end; sett++){					
+							for(auto c : cf.area){
+								for(auto dp : cf.dp_sel){
+									modelmod.transmean_mult[sett][c][tr][dp] *= fac;
+								}
 							}
 						}
 					}
@@ -1691,14 +1601,25 @@ double Model::prior(const vector<double> &paramv) const
 					auto val = paramv[th];
 					auto alpha = get_val1(th,paramv);
 					auto beta = get_val2(th,paramv);
-					Pr += gamma_probability(val,alpha,beta);
+					if(details.mode == ML_INF){
+						if(beta != 1) emsgEC("Model",54);
+						if(alpha != 1){
+							Pr += (alpha-1)*log(val);
+							//cout << param[th].name << " " << alpha << " "<< beta << " " << val << " hh\n";
+						}
+					}
+					else{
+						Pr += gamma_probability(val,alpha,beta);
+					}
 				}
 				break;
 				
 			case DIRICHLET_FLAT_PRIOR:
 				{
-					auto val = paramv[th];
-					Pr += -val;
+					if(details.mode != ML_INF){
+						auto val = paramv[th];
+						Pr += -val;
+					}
 				}
 				break;
 				
@@ -1740,6 +1661,7 @@ double Model::spline_prior(const vector<double> &paramv) const
 									Pr += -(logx-mu)*(logx-mu)/(2*value*value) - logx; 
 								}
 								break;
+								
 							case SMOOTH:
 								{
 									double d = paramv[par1] - paramv[par2];
@@ -1770,7 +1692,8 @@ double Model::get_val1(const unsigned int th, const vector <double> &paramv) con
 double Model::get_val2(const unsigned int th, const vector <double> &paramv) const 
 {
 	auto val2 = param[th].val2; 
-	if(val2 == UNSET) val2 = paramv[param[th].val2_param]; if(val2 == UNSET) emsgEC("Model",16);
+	if(val2 == UNSET) val2 = paramv[param[th].val2_param]; 
+	if(val2 == UNSET) emsgEC("Model",16);
 	return val2;
 }
 
@@ -2211,6 +2134,7 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 		DerivedParam dp;
 		dp.name = "External Infections";
 		dp.desc = "Number of external infections";
+		dp.file = dp.name+".csv";
 		if(data.nstrain > 1){
 			auto name = data.strain[st].name;
 			dp.name += " "+name;
@@ -2399,9 +2323,9 @@ double Model::calculate_generation_time(const vector<double> &paramv_dir, const 
 
 	auto NGM = calculate_NGM(F,Vinv);
 	
-		for(auto j = 0u; j < NGM.size(); j++){
-			for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 2");
-		}
+	for(auto j = 0u; j < NGM.size(); j++){
+		for(auto i = 0u; i < NGM.size(); i++) if(NGM[i][j] < 0) emsg("NGM prob 2");
+	}
 	
 	vector <double> eigenvector;
 	largest_eigenvalue(NGM,eigenvector);
@@ -2784,7 +2708,8 @@ string Model::list_dir_param(const vector <DirichletParam> &list) const
 	string st;
 	bool flag = false;
 	for(const auto &par : list){
-		if(flag == true) st += ","; flag = true;
+		if(flag == true) st += ","; 
+		flag = true;
 		st += "'"+param[par.th].name+"' ";
 	}
 	return st;
@@ -3090,6 +3015,7 @@ void Model::set_dirichlet()
 							
 					if(nmdir == dir.param.size()){ // This applies a modified Dirichlet prior
 						auto kappa = param[dir.param[0].th].dir_mean;
+						// cout << kappa << "kappa\n";
 						auto beta = ((dir.param.size()-1)/(kappa*kappa))-1;
 						
 						for(auto i = 0u; i < dir.param.size(); i++){
@@ -3107,8 +3033,32 @@ void Model::set_dirichlet()
 			}
 		}	
 	}
+	
+	if(false){
+		for(const auto &dir : dirichlet){  
+			for(auto dp : dir.param){
+				cout << param[dp.th].name << ", ";
+			}
+			cout << " Dirichlet params\n";
+		}
+	}
 }
 
+
+/// If N-1 direchlet varaibles are set then this calculates the last missing value
+void Model::calculate_dirichlet_missing(vector <double> &param) const
+{
+	for(const auto &dir : dirichlet){                       // Fills in dependent diriclet values
+		auto sum = 0.0;				
+		for(auto j = 1u; j < dir.param.size(); j++){
+			sum += param[dir.param[j].th];
+		}
+		
+		if(sum > 1) emsg("Dirichlet varaibles out of range");
+		param[dir.param[0].th] = 1-sum;
+	}
+}
+	
 
 /// This checks the prior by sampling from it and 
 void Model::check_prior() const 
@@ -3139,6 +3089,112 @@ void Model::check_prior() const
 	}	
 
 	emsg("Done");	
+}
+
+
+/// Provides a normal approximation to the prior
+NormalApprox Model::prior_normal_approx(unsigned int th) const 
+{
+	NormalApprox na;
+	const auto &pa = param[th];
+	
+	switch(pa.priortype){
+		case FIXED_PRIOR:
+			if(pa.val1 != UNSET){
+				if(pa.fixed == TOBESET) na.mean = pa.val1;
+				else na.mean = pa.fixed;
+			}
+			else{
+				na = prior_normal_approx(pa.val1_param);
+			}
+			na.var = 0;
+			break;			
+		
+		case UNIFORM_PRIOR: 
+			{
+				auto val1 = pa.val1;
+				if(val1 == UNSET){ auto naa = prior_normal_approx(pa.val1_param); val1 = naa.mean;}
+				
+				auto val2 = pa.val2;
+				if(val2 == UNSET){ auto naa = prior_normal_approx(pa.val2_param); val2 = naa.mean;}
+				
+				na.mean = (val1 + val2)/2;
+				na.var = (val2 - val1)*(val2 - val1)/4;
+			}
+			break;
+	
+		case DIRICHLET_PRIOR: case DIRICHLET_ALPHA_PRIOR: case MDIRICHLET_PRIOR:
+			{
+				auto val1 = pa.val1;
+				if(val1 == UNSET){ auto naa = prior_normal_approx(pa.val1_param); val1 = naa.mean;}
+				
+				auto val2 = pa.val2;
+				if(val2 == UNSET){ auto naa = prior_normal_approx(pa.val2_param); val2 = naa.mean;}
+					
+				auto alpha = val1;
+				auto beta = val2;
+				na.mean = alpha/beta;
+				na.var = alpha/(beta*beta);
+						
+				if(details.mode == ML_INF){                 // This account for the fact that diricehlets are defined differently
+					auto inside = false;
+					for(const auto &dir : dirichlet){	
+						for(auto j = 0u; j < dir.param.size(); j++){
+							if(dir.param[j].th == th) inside = true;
+						}
+						if(inside == true){
+							auto mean_sum = 0.0;
+							for(auto j = 0u; j < dir.param.size(); j++){
+								const auto &pa2 = param[dir.param[j].th];
+								
+								auto val1 = pa2.val1;
+								if(val1 == UNSET){ auto naa = prior_normal_approx(pa2.val1_param); val1 = naa.mean;}
+				
+								auto val2 = pa2.val2;
+								if(val2 == UNSET){ auto naa = prior_normal_approx(pa2.val2_param); val2 = naa.mean;}
+		
+								mean_sum += val1/val2;
+							}
+							
+							na.mean /= mean_sum;
+							na.var /= (mean_sum*mean_sum);
+							break;
+						}
+					}
+					if(inside == false) emsgEC("Model",45);
+				}
+			}
+			break;
+			
+		case EXP_PRIOR:
+			{
+				auto val1 = pa.val1;
+				if(val1 == UNSET){ auto naa = prior_normal_approx(pa.val1_param); val1 = naa.mean;}
+				
+				na.mean = 1.0/val1; na.var = 1.0/(val1*val1);
+			}
+			break;
+			
+		case NORMAL_PRIOR:
+			{
+				auto val1 = pa.val1;
+				if(val1 == UNSET){ auto naa = prior_normal_approx(pa.val1_param); val1 = naa.mean;}
+				
+				auto val2 = pa.val2;
+				if(val2 == UNSET){ auto naa = prior_normal_approx(pa.val2_param); val2 = naa.mean;}
+				
+				na.mean = val1; na.var = val2*val2;
+			}
+			break;
+		
+		case DIRICHLET_FLAT_PRIOR:
+			na.mean = 1; na.var = 1;
+			break;
+	
+		default: emsg("Not done yet"); break;
+	}
+	
+	return na;
 }
 
 
@@ -3272,7 +3328,11 @@ string Model::print() const
 	ss << endl;
 		
 	ss << "Compartments:" << endl; 
+	auto num = 0u;
 	for(const auto &co : comp){
+		ss << num << "  "; num++;
+		for(auto tr : co.trans) ss << tr << ","; ss << "   ";
+			
 		ss << "  " << co.name;
 		if(co.num != UNSET && co.num > 0) ss << co.num;
 		if(co.shape != UNSET){
@@ -3296,8 +3356,15 @@ string Model::print() const
 	ss << endl;
 	
 	ss << "Transitions:" << endl; 
+	auto num2 = 0u;
 	for(const auto &tr : trans){
-		ss << "  " << tr.name;
+		ss << num2 << "   " << tr.from << "->" << tr.to << "   "; num2++;
+		const auto &coi = comp[tr.from];
+		const auto &cof = comp[tr.to];
+		
+		ss << "  " << coi.name; if(coi.num != UNSET && coi.num != 0) ss << coi.num;
+		ss << "->" << cof.name; if(cof.num != UNSET && cof.num != 0) ss << cof.num;
+		
 		if(tr.inf == TRANS_INFECTION) ss << " Infection";
 		
 		if(tr.param_prob.size() > 0){
@@ -3389,7 +3456,8 @@ void Model::eignevector_compare_models(const vector <double> &susceptibility, co
 		for(auto a = 0u; a < nage; a++) sus[a] /= sum;
 		sus[nage-1] = 1.8;
 	}
-	for(auto val : sus) cout << val << endl; cout << " relative susceptibility" << endl;	
+	for(auto val : sus) cout << val << endl; 
+	 cout << " relative susceptibility" << endl;	
 	
 	vector <double> v(nage);
 	for(auto a = 0u; a < nage; a++) v[a] = 1;
@@ -3424,7 +3492,128 @@ void Model::eignevector_compare_models(const vector <double> &susceptibility, co
 		for(auto a = 0u; a < nage; a++) v[a] /= sum;
 		v[nage-1] = 1.6;
 	}
-	for(auto val : v) cout << val << " "; cout << " age contact factors" << endl;	
+	for(auto val : v) cout << val << " "; 
+	cout << " age contact factors" << endl;	
 
 	emsg("done");
+}
+
+
+/// Divides compartments in the model based on a transition and returns the comparmtents in a given direction 
+vector <unsigned int> Model::trans_comp_divide(unsigned int tr, unsigned int dir) const 
+{
+	vector <unsigned int> map(comp.size());
+	for(auto c = 0u; c < comp.size(); c++) map[c] = UNSET;
+	
+	map[trans[tr].from] = 0; map[trans[tr].to] = 1;
+	
+	bool flag;
+	do{
+		flag = false;
+		for(const auto &tra : trans){
+			auto from = map[tra.from], to = map[tra.to];
+			auto num = 0u;
+			if(from == UNSET) num++; if(to == UNSET) num++;
+			switch(num){
+			case 0:
+				if(from != to && !(tra.from == trans[tr].from && tra.to == trans[tr].to)){
+					emsgroot("Under this inference scheme transitions cannot merge into the same comparment");
+				}
+				break;
+				
+			case 1:
+				if(from == UNSET) map[tra.from] = to;
+				else map[tra.to] = from;
+				flag = true;
+				break;
+			}
+		}
+	}while(flag == true);
+	
+	if(false){
+		cout << trans[tr].name << ":   ";
+		for(auto c = 0u; c < comp.size(); c++) cout << comp[c].name << ":" << map[c] << ", ";
+		cout << "\n"; 
+	}
+	
+	vector <unsigned int> clist;
+	for(auto c = 0u; c < comp.size(); c++){
+		if(map[c] == dir) clist.push_back(c);
+	}
+	
+	return clist;
+}
+
+/// Checks that transition have been correctly specified;
+void Model::compartmental_model_check() const
+{
+	for(const auto &co : comp){                                      // Checks if prob_dep is specified for all branches
+		for(auto tr : co.trans){
+			for(auto tr2 : co.trans){
+				auto tr_dep = trans[tr].prob_dep;
+				auto tr_dep2 = trans[tr2].prob_dep;
+				if(tr_dep != tr_dep2){
+					string em = "In 'trans' the transitions '"+trans[tr].name+"' and '"+trans[tr2].name+"' must have a consistent dependency. ";
+					em += "Here '"+trans[tr].name+"' ";
+					if(tr_dep == "") em += "has no dependency ";
+					else em += "is dependent on '"+tr_dep+"' ";
+					
+					em += "and '"+trans[tr2].name+"' ";
+					if(tr_dep2 == "") em += "has no dependency.";
+					else em += "is dependent on '"+tr_dep2+"'.";
+		
+					emsgroot(em);
+				}
+			}
+		}			
+	}	
+	
+	for(auto tr = 0u; tr < trans.size(); tr++){                      // Checks branching probabilities are correctly specified  
+		if(comp[trans[tr].from].trans.size() > 1){
+			if(trans[tr].param_prob.size() == 0){
+				emsgroot("In 'trans' transition '"+trans[tr].name+"' a value for 'prob' must be set.");
+			}
+		}
+		else{
+			if(trans[tr].param_prob.size() != 0){
+				emsgroot("In 'trans' transition '"+trans[tr].name+"' a value for 'prob' should not be set.");
+			}
+		}
+	}
+	
+	for(const auto &co : comp){                                      // Checks distributions are correctly identified
+		if(co.trans.size() > 0){
+			if(co.param_mean.size() == 0){
+				if(details.siminf == SIMULATE){
+					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' must be set.");
+				}
+				else{
+					emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' must be set.");
+				}
+			}
+		}
+		else{
+			if(co.param_mean.size() != 0){
+				emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'mean_value' or 'mean_prior' should not be set.");
+			}
+			if(co.num != UNSET){
+				emsgroot("In 'comps' for compartment '"+co.name+"' a value for 'dist' should not be set.");
+			}
+		}
+	}
+	
+	auto c = 0u;                                                     // Checks infectious states exist
+	while(c < comp.size() && param[comp[c].infectivity_param].name == "zero") c++;
+	if(c == comp.size()){
+		emsgroot("At least one compartment must have non-zero infectivity");
+	}
+	
+	vector <bool> flag(comp.size());                                 // Checks compartments are connected
+	for(auto co = 0u; co < comp.size(); co++) flag[co] = false;
+	for(auto tr : trans){ flag[tr.from] = true; flag[tr.to] = true;}
+	for(auto co = 0u; co < comp.size(); co++){
+		if(flag[co] == false){
+			emsgroot("The compartment '"+comp[co].name+"' is not connected to the other compartments by a transition.");
+		}	
+	}
 }

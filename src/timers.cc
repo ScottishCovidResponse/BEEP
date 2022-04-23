@@ -40,11 +40,43 @@ void output_timers(string file, Mpi &mpi)
 		dia.precision(3);
 			
 		dia << endl << "Timings for different parts of the algorithm:" << endl;
+		if(time_av[TIME_LIKELIHOOD_APPROX] > 0) dia << per(time_av[TIME_LIKELIHOOD_APPROX]/time_av[TIME_ALG]) << " Likelihood" << endl;
+		if(time_av[TIME_OBS_APPROX] > 0) dia << per(time_av[TIME_OBS_APPROX]/time_av[TIME_ALG]) << " Obs approx" << endl;
+		
+		if(time_av[TIME_TEMP1] > 0) dia << per(time_av[TIME_TEMP1]/time_av[TIME_ALG]) << " Temp1" << endl;
+		if(time_av[TIME_TEMP2] > 0) dia << per(time_av[TIME_TEMP2]/time_av[TIME_ALG]) << " Temp2" << endl;
+		if(time_av[TIME_TEMP3] > 0) dia << per(time_av[TIME_TEMP3]/time_av[TIME_ALG]) << " Temp3" << endl;
+		if(time_av[TIME_TEMP4] > 0) dia << per(time_av[TIME_TEMP4]/time_av[TIME_ALG]) << " Temp4" << endl;
+			
+		if(time_av[TIME_INV_MATRIX] > 0) dia << per(time_av[TIME_INV_MATRIX]/time_av[TIME_ALG]) << " Invert matrix" << endl;
+	
+		if(time_av[TIME_DETERMINANT] > 0) dia << per(time_av[TIME_DETERMINANT]/time_av[TIME_ALG]) << " Finding determinant" << endl;
+		
+		if(time_av[TIME_LINEAR_EQ] > 0) dia << per(time_av[TIME_LINEAR_EQ]/time_av[TIME_ALG]) << " Invert matrix" << endl;
+	
+		if(time_av[TIME_MATRIX_MULT] > 0) dia << per(time_av[TIME_MATRIX_MULT]/time_av[TIME_ALG]) << " Matrix multiply" << endl;
+	
+		if(time_av[TIME_ADD_REMOVE_S] > 0) dia << per(time_av[TIME_ADD_REMOVE_S]/time_av[TIME_ALG]) << "Add remove S" << endl;
+	
+		if(time_av[TIME_FUTURE_OBS_APPROX] > 0) dia << per(time_av[TIME_FUTURE_OBS_APPROX]/time_av[TIME_ALG]) << " Obs approx" << endl;
+		
+		if(time_av[TIME_EF_CALCULATE] > 0) dia << per(time_av[TIME_EF_CALCULATE]/time_av[TIME_ALG]) << " EF calculate" << endl;
+		
+		if(time_av[TIME_COVAR] > 0) dia << per(time_av[TIME_COVAR]/time_av[TIME_ALG]) << " Covariance matrix update" << endl;
+		if(time_av[TIME_CORRECT] > 0) dia << per(time_av[TIME_CORRECT]/time_av[TIME_ALG]) << " Correct matrix" << endl;
+		if(time_av[TIME_GRAD] > 0) dia << per(time_av[TIME_GRAD]/time_av[TIME_ALG]) << " Transition gradients" << endl;
+		if(time_av[TIME_POSTERIOR_SAMPLE] > 0) dia << per(time_av[TIME_POSTERIOR_SAMPLE]/time_av[TIME_ALG]) << " Posterior sample" << endl;
+	
 		if(time_av[TIME_PMCMCLIKE] > 0) dia << per(time_av[TIME_PMCMCLIKE]/time_av[TIME_ALG]) << " PMCMC Likelihood" << endl;
 		if(time_av[TIME_BOOTSTRAP] > 0) dia << per(time_av[TIME_BOOTSTRAP]/time_av[TIME_ALG]) << " PMCMC Bootstrap" << endl;
 		if(time_av[TIME_PMCMCSWAP] > 0) dia << per(time_av[TIME_PMCMCSWAP]/time_av[TIME_ALG]) << " PMCMC Swapping state information"  << endl;
 		
-		if(time_av[TIME_MCMCPROP] > 0) dia << per(time_av[TIME_MCMCPROP]/time_av[TIME_ALG]) << " MCMC Proposals" << endl;
+		if(time_av[TIME_MCMCPROP] > 0) dia << per(time_av[TIME_MCMCPROP]/time_av[TIME_ALG]) << " Type I MBPs" << endl;
+		if(time_av[TIME_STATEPROP] > 0) dia << per(time_av[TIME_STATEPROP]/time_av[TIME_ALG]) << " Type II MBPs" << endl;
+		if(time_av[TIME_PARAMPROP] > 0) dia << per(time_av[TIME_PARAMPROP]/time_av[TIME_ALG]) << " Parameter Proposals" << endl;
+	
+		if(time_av[TIME_UPDATE] > 0) dia << per(time_av[TIME_UPDATE]/time_av[TIME_ALG]) << " MCMC Update" << endl;
+		
 		if(time_av[TIME_TRANSNUM] > 0) dia << per(time_av[TIME_TRANSNUM]/time_av[TIME_ALG]) << " Changes to transnum " << endl;
 		if(time_av[TIME_UPDATEPOP] > 0) dia << per(time_av[TIME_UPDATEPOP]/time_av[TIME_ALG]) << " Update populations" << endl;
 		if(time_av[TIME_UPDATEIMAP] > 0) dia << per(time_av[TIME_UPDATEIMAP]/time_av[TIME_ALG]) << " Update infection map" << endl;
@@ -76,13 +108,21 @@ void output_timers(string file, Mpi &mpi)
 			if(time_av[TIME_SLICETIME] > 0) dia << per(time_av[TIME_SLICETIME]/time_av[TIME_ALG]) << " Splice time" << endl;
 		}
 		 
-		if(all_diagnostics == true){
+		if(all_diagnostics == true || true){
 			dia << endl << "Timings for different subsections:" << endl;
 			if(time_av[TIME_MBP] > 0) dia << per(time_av[TIME_MBP]/time_av[TIME_ALG]) << " MBP " << endl;
 			if(time_av[TIME_MBPINIT] > 0) dia << per(time_av[TIME_MBPINIT]/time_av[TIME_ALG]) << " MBP initialisation " << endl;
 			if(time_av[TIME_GEN] > 0) dia << per(time_av[TIME_GEN]/time_av[TIME_ALG]) << " Gen" << endl;
 		}
 		
+		if(time_av[TIME_CUTOFF] > 0) dia << per(time_av[TIME_CUTOFF]/time_av[TIME_ALG]) << " Cutoff" << endl;
+		if(time_av[TIME_PROP] > 0) dia << per(time_av[TIME_PROP]/time_av[TIME_ALG]) << " Prop" << endl;
+		
+		if(time_av[TIME_MVNSETUP] > 0) dia << per(time_av[TIME_MVNSETUP]/time_av[TIME_ALG]) << " Mvn setup" << endl;
+	
+		if(time_av[TIME_MBPUPDATE] > 0) dia << per(time_av[TIME_MBPUPDATE]/time_av[TIME_ALG]) << " Mbp update" << endl;
+		if(time_av[TIME_UPDATEPROP] > 0) dia << per(time_av[TIME_UPDATEPROP]/time_av[TIME_ALG]) << " Update prop" << endl;
+	
 		dia << endl;
 	}
 }

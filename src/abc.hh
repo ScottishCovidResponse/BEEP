@@ -21,13 +21,11 @@ private:
 
 	double cutoff_frac;                      // Sets the acceptance fraction
 	
-	vector <unsigned int> ntr, nac;          // Gives the number of simulations tried and the number accepted 
+	unsigned int ntr, nac;                   // Gives the number of simulations tried and the number accepted 
 
 	unsigned int Ntot;                       // Sets the total number of samples that need to be generated
 	
-	unsigned int nrun;                       // The number of runs
-
-	double GRmax;                            // The maximum value for the Gelman-Rubin statistics
+	double cpu_time;                         // Sets the maximum CPU time for execution
 	
 	vector <Particle> particle_store;        // Stores the states
 

@@ -1,0 +1,5 @@
+bp,R,value,prior,smooth
+start,R_0,2,"Uniform(0.4,5)",0.3
+40,R_0,2,"Uniform(0.4,5)",0.3
+40,R_1,1.2,"Uniform(0.4,5)",0.3
+end,R_1,1.2,"Uniform(0.4,5)",0.3

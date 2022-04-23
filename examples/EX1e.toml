@@ -1,0 +1,50 @@
+# Simulation: ./beepmbp inputfile="examples/EX1e.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX1e.toml" mode="ml" algorithm="cmaes" nsample_final=200   posterior_particle=200 nparticle=200 ngeneration=40 invT=1000
+
+description = "The initial population is specified using a file (rather than assuming that all individuals start in the susceptible compartment). This analysis uses an SEIR model and assumes that the reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), with no external force of infection. The population is demographically stratified by sex. Data consists of the weekly number of E->I cases and weekly measurements on the total infected I and recovered R populations. The reproduction number and sex-stratified latent and infectious periods are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX1e"
+outputdir = "analysis/Output_EX1e"
+
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="Sex: 2 | 3", mean_prior="Uniform(1,4)"},
+{name="I", dist="Exp", mean_value="Sex: 4 | 5", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+democats = [{name="Sex", cats="Male | Female"}] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+#efoi_spline = [{ value="5"}]
+
+areas = "population.csv"
+
+init_pop = "init_pop.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="scale", democats_dep="Sex", file="E-I.csv"},
+{type="population", observation="I", timestep="7", obsmodel="scale", democats_dep="Sex", file="I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="scale", democats_dep="Sex", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

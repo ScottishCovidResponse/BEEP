@@ -137,6 +137,38 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 	}
 	
 	generate_visualisation(op,"vis_files/BEEPmbp_output.js");         // Generates a file used by the visualisation software
+	
+	if(1 == 0) EF_dist(psamp);                                        // This is used for the figure in the paper
+}
+
+
+/// Generates the distribution in error function
+void Output::EF_dist(const vector <ParamSample> &psamp) const
+{
+	const auto nbin = 100u;
+	
+	double EFmin = LARGE, EFmax = -LARGE;
+	for(const auto &ps : psamp){
+		if(ps.EF > EFmax) EFmax = ps.EF;
+		if(ps.EF < EFmin) EFmin = ps.EF;
+	}		
+	EFmin = 0;
+	
+	vector <double> bin(nbin);
+	for(auto b = 0u; b < nbin; b++) bin[b] = 0;
+	
+	for(const auto &ps : psamp){
+		auto b = int(0.999999*nbin*(ps.EF-EFmin)/(EFmax-EFmin));
+		bin[b]++;
+	}
+
+	cout << "Outputing distribution in error function" << endl;
+
+	auto file = details.output_directory+"/EF_dist.txt";
+	ofstream dist(file);
+	for(auto b = 0u; b < nbin; b++){
+		dist << EFmin+(EFmax-EFmin)*double(b)/nbin << "," << bin[b] << endl;
+	}
 }
 
 
@@ -147,16 +179,17 @@ void Output::generate_pdf(const string file, const string desc) const
 	stringstream ss; ss << "gnuplot '" << opdir << "/gnuplot.txt'" << endl;
 	system(ss.str().c_str());
 		
-	stringstream ss2; ss2 << "ps2pdf " << opdir << "/" << file << ".ps " << opdir << "/" << file << ".pdf" << endl;
+	stringstream ss2;
+	ss2 << "ps2pdf '" << opdir << "/" << file << ".ps' '" << opdir << "/" << file << ".pdf'" << endl;
 	system(ss2.str().c_str());
 
-	stringstream ss3; ss3 << "rm -f " << opdir << "/" << file << ".ps" << endl; 
+	stringstream ss3; ss3 << "rm -f '" << opdir << "/" << file << ".ps'" << endl; 
 	system(ss3.str().c_str());
 		
-	stringstream ss4; ss4 << "rm -f " << opdir << "/gnuplot.txt" << endl;
-	//system(ss4.str().c_str());
+	stringstream ss4; ss4 << "rm -f '" << opdir << "/gnuplot.txt'" << endl;
+	system(ss4.str().c_str());
 
-	stringstream ss5; ss5 << "rm -f " << opdir << "/line.csv" << endl;
+	stringstream ss5; ss5 << "rm -f '" << opdir << "/line.csv'" << endl;
 	system(ss5.str().c_str());
 
 	cout << desc << " are placed into '" << opdir << "/" << file << ".pdf'" << endl;
@@ -266,19 +299,16 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 	cout << "Generating visualisation..." <<  endl;
 	
 	auto opdir = details.output_directory;
+	
 	ensure_directory(opdir+"/vis_files");              // Copies the output 
-	stringstream ss; ss << "cp ./vis_files/* " << opdir << "/vis_files/" << endl;
+	stringstream ss; ss << "cp ./vis_files/* '" << opdir << "/vis_files/'" << endl;
 	system(ss.str().c_str());
-	stringstream ss2; ss2 << "cp ./visBEEPmbp.html " << opdir << "/" << endl;
+	stringstream ss2; ss2 << "cp ./visBEEPmbp.html '" << opdir << "/'" << endl;
 	system(ss2.str().c_str());
 	
-	auto file = details.output_directory+"/"+grfile;
+	stringstream vis;
+	vis << fixed;
 
-	ofstream vis(file);
-	if(!vis) emsg("Cannot open the file '"+file+"'");
-	
-	vis << "var jsonstr = '";
-	
 	vis << "{";
 
 	vis << "\"time_labels\" : [";
@@ -298,7 +328,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 		vis << "{\"name\" : \"" << tp.name << "\",\"time\" : " << tp.time << "}";
 	}
 	vis << "]";
-	
+
 	vis << ",\"plots\" : [";
 	for(auto i = 0u; i < op.size(); i++){
 		auto opi = op[i];
@@ -575,7 +605,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 							file_loaded = file;
 						}
 					}
-					
+				
 					vis << "\"name\":\"" << li.name << "\"";
 			
 					if(opi.type == OP_MARGINAL || opi.type == OP_GRAPH_MARGINAL){
@@ -724,8 +754,20 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 	
 	vis << "}";
 	
-	vis << "';";
-	vis << endl;
+	auto str = vis.str();
+	
+	for(auto i = 1u; i < str.length(); i++){                    // Ensures that ' character has \ before it
+		if(str.substr(i,1) == "'" && str.substr(i-1,1) != "\\"){
+			str.insert(i,"\\"); i++;
+		}
+	}
+	
+	auto file = details.output_directory+"/"+grfile;
+
+	ofstream visout(file);
+	if(!visout) emsg("Cannot open the file '"+file+"'");
+		
+	visout << "var jsonstr = '" << str << "';" << endl;
 	
 	cout << "Use the '" << opdir << "/visBEEPmbp.html' tool to visualise the results." << endl << endl;
 }
@@ -851,7 +893,8 @@ void Output::spatial_R_map(const vector <Sample> &opsamp, vector <OutputPlot> &o
 		
 		ofstream Rmapout(filefull.c_str());
 		if(!Rmapout) emsg("Cannot open the file '"+filefull+"'");
-
+		Rmapout << fixed;
+		
 		Rmapout << details.time_format_str; for(auto c = 0u; c < data.narea; c++) Rmapout << "," << data.area[c].code; Rmapout << endl;
 		for(auto t = 0u; t < details.period; t++){
 			Rmapout << details.getdate(t); 
@@ -894,7 +937,8 @@ void Output::spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op
 		auto filefull = details.output_directory+"/"+file;
 		ofstream tout(filefull.c_str());
 		if(!tout) emsg("Cannot open the file '"+filefull+"'");
-	
+		tout << fixed;
+		
 		if(suppress_output == false) cout << "'" << file << "' gives the time variation in "+name+"." << endl;
 
 		bool plot_sim = false;
@@ -973,7 +1017,9 @@ void Output::datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &
 			ofstream resultout(filefull);
 			if(!resultout) emsg("Cannot open the file '"+file+"'");
 	
-			resultout << "Date";
+			resultout << fixed;
+			
+			resultout << details.time_format_str;
 			for(auto c = 0u; c < data.narea; c++) resultout << "," << data.area[c].code;
 			resultout << endl;
 			
@@ -994,7 +1040,7 @@ void Output::datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &
 				auto file_data = post_dir+"/state/map_data_"+dt.file;
 			
 				vector <string> cols;
-				cols.push_back("date"); for(auto c = 0u; c < data.narea; c++) cols.push_back(data.area[c].code);
+				cols.push_back(details.time_format_str); for(auto c = 0u; c < data.narea; c++) cols.push_back(data.area[c].code);
 							
 				data.generate_file_from_table(file_data,dt.file,cols);
 				
@@ -1056,7 +1102,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 
 		ofstream stateout(file.c_str());
 		if(!stateout) emsg("Cannot open the file '"+file+"'");
-		
+		stateout << fixed;
+			
 		switch(gr.type){
 			case GRAPH_TIMESERIES: stateout << "Time"; break;
 			case GRAPH_MARGINAL: stateout << "Ref. Num.,Demographic state"; break;
@@ -1098,7 +1145,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 					for(const auto &opsa : opsamp){
 						auto val = opsa.graph_state[gr_num][i]; 
 						stateout << "," << val; 
-						if(val > max) max = val; if(val < min) min = val;	
+						if(val > max) max = val; 
+						if(val < min) min = val;	
 					}
 					stateout << endl;
 					break;
@@ -1113,6 +1161,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 	
 			ofstream dataout(file_data.c_str());
 			if(!dataout) emsg("Cannot open the file '"+file_data+"'");
+			dataout << fixed;
 			
 			if(gr.type == GRAPH_MARGINAL){
 				dataout << "Ref. Num,Demographic state,Data";
@@ -1135,6 +1184,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				if(thresh_flag == true){
 					datathreshout.open(file_data_thresh.c_str());
 					if(!datathreshout) emsg("Cannot open the file '"+file_data_thresh+"'");
+					datathreshout << fixed;
+			
 					datathreshout << "Time,Data" << endl;
 				}
 			}
@@ -1218,7 +1269,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				}
 								
 				if(val != THRESH && val != UNKNOWN){
-					if(val > max) max = val; if(val < min) min = val;
+					if(val > max) max = val; 
+					if(val < min) min = val;
 				}
 			}
 		}
@@ -1414,7 +1466,7 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 	ofstream paramout(filefull.c_str());
 	if(!paramout) emsg("Cannot open the file '"+filefull+"'");
 	
-	paramout << setprecision(3);
+	paramout << fixed << setprecision(3);
 	
 	if(suppress_output == false) cout << "'" << file << "' gives the model parameters." << endl;
 	
@@ -1453,6 +1505,10 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 				break;
 			}
 			paramout << endl; 
+			
+			if(false){ // Outputs estimates to terminal 
+				cout << model.param[p].name << "  " << stat.mean << "," <<  stat.CImin << "," << stat.CImax << "endl\n"; 
+			}
 		}
 	}
 	
@@ -1523,6 +1579,7 @@ void Output::susceptibility_distributions(const vector <ParamSample> &psamp, vec
 			auto filefull = details.output_directory+"/"+post_dir+"/susceptibility/"+file;
 			ofstream distout(filefull.c_str());
 			if(!distout) emsg("Cannot open the file '"+filefull+"'");
+			distout << fixed;
 			
 			if(suppress_output == false) cout << "'" << file << "' gives stratified susceptibility for " << type << "." << endl;
 			
@@ -1691,7 +1748,8 @@ void Output::branch_prob_distributions(const vector <ParamSample> &psamp, vector
 		
 			ofstream distout(filefull.c_str());
 			if(!distout) emsg("Cannot open the file '"+filefull+"'");
-	
+			distout << fixed;
+			
 			if(suppress_output == false) cout << "'" << file << "' gives stratified branching probability for transition '" << tr.name << "'." << endl;
 	
 			distout << "# Stratified branching probability for transition '" << tr.name << "'." << endl;
@@ -1768,7 +1826,8 @@ void Output::age_mixing_perturb_distributions(const vector <ParamSample> &psamp,
 	
 		ofstream distout(filefull.c_str());
 		if(!distout) emsg("Cannot open the file '"+filefull+"'");
-
+		distout << fixed;
+			
 		if(suppress_output == false) cout << "'" << file << "' gives stratified age mixing modification on day " << d << "." << endl;
 
 		distout << "# Stratified age mixing modification on day " << d << "." << endl;
@@ -1842,7 +1901,8 @@ void Output::level_effect_distributions(const vector <ParamSample> &psamp, vecto
 		
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot open the file '"+filefull+"'");
-	
+	distout << fixed;
+			
 	if(suppress_output == false) cout << "'" << file << "' gives level effects." << endl;
 
 	distout << "# Level effects." << endl;
@@ -1900,7 +1960,8 @@ void Output::area_effect_distributions(const vector <ParamSample> &psamp, vector
 		
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot open the file '"+filefull+"'");
-	
+	distout << fixed;
+			
 	if(suppress_output == false) cout << "'" << file << "' gives area effects." << endl;
 
 	distout << "# Area effects." << endl;
@@ -1970,9 +2031,11 @@ void Output::derived_parameter_distributions(const vector <Sample> &opsamp, vect
 			const auto &derpar = derived_param[dp];
 			
 			string file = derpar.file;
+			cout << derpar.file << " " << derpar.name <<  " " << derpar.desc << "\n";
 			string filefull = details.output_directory+"/"+post_dir+"/parameter/"+file;
 			ofstream distout(filefull.c_str());
 			if(!distout) emsg("Cannot open the file '"+filefull+"'");
+			distout << fixed;
 			
 			if(suppress_output == false){
 				cout << "'" << file << "' gives the probability distributions for the "+ derpar.desc+"." << endl;
@@ -2006,16 +2069,18 @@ void Output::posterior_parameter_distributions(const vector <ParamSample> &psamp
 	auto filefull = details.output_directory+"/"+post_dir+"/parameter/"+file;
 	ofstream distout(filefull.c_str());
 	if(!distout) emsg("Cannot open the file '"+filefull+"'");
-	
+	distout << fixed;
+			
 	if(suppress_output == false) cout << "'" << file << "' gives the probability distributions for parameters." << endl;
 	
-  distout << "# " << details.analysis_type << " probability distributions for model parameters." << endl;
+	distout << "# " << details.analysis_type << " probability distributions for model parameters." << endl;
 	
 	vector <unsigned int> pvary;
 	
 	vector <Distribution> paramdist(model.param.size());
 	for(auto p = 0u; p < model.param.size(); p++){
 		vector <double> vec; for(const auto &psa : psamp) vec.push_back(psa.paramval[p]);
+		
 		double priormin = UNSET, priormax = UNSET;
 		if(model.param[p].priortype == UNIFORM_PRIOR){ priormin = model.param[p].val1; priormax = model.param[p].val2;}
 		paramdist[p] = get_distribution(vec,priormin,priormax);
@@ -2065,26 +2130,29 @@ void Output::posterior_parameter_distributions(const vector <ParamSample> &psamp
 /// Adds the plots which show how quantities change as a function of generation number (ABC-SMC / ABC-MBP)
 void Output::add_generation_plots(vector <OutputPlot> &op) const
 {
-	if(details.mode != ABC_SMC && details.mode != ABC_MBP && details.mode != PAIS_INF) return;
-	
 	string title, fulldesc, label, tab3, tab4;
 	bool EF_flag = false;
 	unsigned int col;
+	
 	switch(details.mode){
-		case ABC_MBP: case ABC_SMC: 
+		case ABC_MBP: case ABC_SMC: case ABC_DA: case ABC_CONT:
 			EF_flag = true; label = "log(EF cut-off)"; tab3 = "Error function"; tab4 = "Cut-off"; col = 4;
 			break;
 		
-		case PAIS_INF:
+		case PAIS_INF: 
 			label = "log(invT)"; tab3 = "Inverse temperature"; tab4 = "Value"; col = 6;
 			break;
 		
-		default: emsgEC("Output",2); break;
+		case ML_INF:
+			EF_flag = true; label = "log(Average EF)"; tab3 = "Error function"; tab4 = "Mean"; col = 4;
+			break;
+			
+		default: return;
 	}
 		
 	auto file = details.output_directory+"/Diagnostics/Generation.csv";
 	
-	{
+	if(label != ""){
 		title = label+" as a function of generation";
 		
 		if(EF_flag == true){
@@ -2159,7 +2227,7 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 		op.push_back(oppl);
 	}
 	
-	{
+	if(label != "" && details.mode != ML_INF){
 		title = "Model evidence as a function of "+label;
 		fulldesc = "Model Evidence: This graph shows the model evidence (ME) as a function of ";
 		if(EF_flag == true) fulldesc += "the error function cut-off";
@@ -2258,7 +2326,8 @@ void Output::add_democat_change(vector <OutputPlot> &op) const
 		
 		ofstream lout(filefull.c_str());
 		if(!lout) emsg("Cannot open the file '"+filefull+"'");
-	
+		lout << fixed;
+			
 		lout << "# " << desc << endl;
 		lout << "Time";
 		for(auto v = 0u; v < data.democat[d].value.size(); v++) lout << "," << data.democat[d].value[v]; 
@@ -2334,7 +2403,7 @@ void Output::covar_data(vector <OutputPlot> &op) const
 					auto file_data = post_dir+"/covar/map_data_"+cv.file;
 			
 					vector <string> cols;
-					cols.push_back("date"); for(auto c = 0u; c < data.narea; c++) cols.push_back(data.area[c].code);
+					cols.push_back(details.time_format_str); for(auto c = 0u; c < data.narea; c++) cols.push_back(data.area[c].code);
 							
 					data.generate_file_from_table(file_data,cv.file,cols);
 
@@ -2374,7 +2443,7 @@ void Output::level_data(vector <OutputPlot> &op) const
 	ofstream fout(filefull);
 	if(!fout) emsg("Cannot open the file '"+filefull+"'");
 	
-	fout << "date";
+	fout << details.time_format_str;
 	for(auto c = 0u; c < data.narea; c++) fout << "," << data.area[c].code;
 	fout << endl;
 	
@@ -2453,7 +2522,8 @@ void Output::age_mixing_matrix(const vector <Sample> &opsamp, vector <OutputPlot
 		
 	ofstream Nout(filefull.c_str());
 	if(!Nout) emsg("Cannot open the file '"+filefull+"'");
-	
+	Nout << fixed;
+			
 	auto Nsize = data.nage;
 	
 	Nout << "Age category";
@@ -2890,7 +2960,8 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 			
 			ofstream dataout(filefull);
 			if(!dataout) emsg("Cannot open the file '"+filefull+"'");
-
+			dataout << fixed;
+			
 			if(dt.type != POPFRAC && details.stochastic == true) dataout << std::fixed << std::setprecision(0);
 	
 			if(!dataout) emsg("Cannot open the file '"+filefull+"'");
@@ -3034,6 +3105,44 @@ Statistics Output::get_statistic(const vector <double> &vec) const
 }
 
 
+/// Calculates diagnostic statistics using 75% credible interval
+Statistics Output::get_statistic_75_percent(const vector <double> &vec) const                       
+{
+	Statistics stat;
+	
+	auto n = vec.size();
+
+	auto sum = 0.0, sum2 = 0.0; 	
+	for(auto v : vec){ sum += v; sum2 += v*v;}
+	
+	stat.mean = sum/n; 	
+	auto var = sum2/n - (sum/n)*(sum/n); if(var < VTINY) var = 0;
+	stat.sd = sqrt(var);
+	
+	if(n == 0){
+		stat.CImin = UNSET; stat.CImax = UNSET; 
+	}
+	else{ 
+		auto vec2 = vec;
+		sort(vec2.begin(),vec2.end());
+
+		if(n >= 2){
+			auto i = (unsigned int)((n-1)*0.25); auto f = (n-1)*0.25 - i;
+			stat.CImin = vec2[i]*(1-f) + vec2[i+1]*f;
+				
+			i = (unsigned int)((n-1)*0.75); f = (n-1)*0.75 - i;
+			stat.CImax = vec2[i]*(1-f) + vec2[i+1]*f;
+		}
+		else{
+			stat.CImin = vec2[0];
+			stat.CImax = vec2[0];
+		}
+	}
+	
+	return stat;
+}
+
+
 /// Calculate the effective sample size for a 
 vector <unsigned int> Output::get_effective_sample_size(const vector <ParamSample> &psamp) const
 {
@@ -3062,7 +3171,7 @@ vector <unsigned int> Output::get_effective_sample_size(const vector <ParamSampl
 				for(auto s = 0u; s < nsamp; s++) store[s] = (psamp_order[s].paramval[th]-mean)/sd;
 				
 				auto sum = 1.0;
-				for(auto d = 0u; d < nsamp/2; d++){
+				for(auto d = 1u; d < nsamp/2; d++){
 					auto a = 0.0; for(auto s = 0u; s < nsamp-d; s++) a += store[s]*store[s+d]; 
 					auto cor = a/(nsamp-d); if(cor < 0) break;
 					sum += 0.5*cor;			
@@ -3075,8 +3184,48 @@ vector <unsigned int> Output::get_effective_sample_size(const vector <ParamSampl
 	
 	return ESS;
 }
+
+
+/// Returns the correntation between two sets of samples		
+vector <double> Output::get_correlation(const vector <ParamSample> &before, const vector <ParamSample> &after) const
+{
+	auto nparam = model.param.size();
+	vector <double> cor(nparam);
+	
+	if(mpi.core == 0){
+		auto N = before.size();
 		
-			
+		if(N != after.size()) emsgEC("Output",13);
+		for(auto i = 0u; i < N; i++){
+			if(before[i].run != after[i].run) emsgEC("Output",14);
+		}
+		
+		for(auto th = 0u; th < nparam; th++){
+			if(model.param[th].priortype == FIXED_PRIOR){
+				cor[th] = UNSET;
+			}
+			else{
+				auto av_bef = 0.0, av_bef2 = 0.0, av_aft = 0.0, av_aft2 = 0.0, av_bef_aft = 0.0; 
+				for(auto i = 0u; i < N; i++){
+					auto val_bef = before[i].paramval[th];
+					auto val_aft = after[i].paramval[th];
+					av_bef += val_bef; av_bef2 += val_bef*val_bef;
+					av_aft += val_aft; av_aft2 += val_aft*val_aft;
+					av_bef_aft += val_bef*val_aft;
+				}
+				av_bef /= N; av_bef2 /= N; av_aft /= N; av_aft2 /= N; av_bef_aft /= N;
+				
+				cor[th] = (av_bef_aft - av_bef*av_aft + TINY)/(sqrt((av_bef2 - av_bef*av_bef + TINY)*(av_aft2 - av_aft*av_aft + TINY)));
+			}
+		}
+	}
+	
+	mpi.bcast(cor);
+	
+	return cor;
+}
+
+		
 /// Calculate the Gelman Rubin statistic for each of the model parameters based on weighted samples
 vector <double>	Output::get_Gelman_Rubin_statistic(const vector <ParamSample> &psamp, const vector <double> &w, const unsigned int nrun) const 
 {
@@ -3105,12 +3254,13 @@ vector <double>	Output::get_Gelman_Rubin_statistic(const vector <ParamSample> &p
 /// Calculate the Gelman Rubin statistic for each of the model parameters
 vector <double>	Output::get_Gelman_Rubin_statistic(const vector <ParamSample> &psamp) const 
 {
-	vector <double> GR;
+	//vector <double> GR;
 
 	vector < vector < vector <double> > > param_GR;
 	param_GR.resize(nrun);
 	for(const auto &ps : psamp){
-		param_GR[ps.run].push_back(ps.paramval);
+		auto ru = ps.run; if(ru == UNSET) ru = 0;
+		param_GR[ru].push_back(ps.paramval);
 	}
 
 	if(false){
@@ -3133,12 +3283,12 @@ vector <double> Output::get_Gelman_Rubin_statistic(const vector < vector < vecto
 		
 	auto nrun = param_GR.size(); if(nrun < 1) emsgEC("Output",6);
 	
-	/* // TO DO This has been temporarily turned off because of error 7
 	if(nrun > 1){
 		auto N = LARGE;
 		for(auto ru = 0u; ru < nrun; ru++){
 			if(param_GR[ru].size() < N) N = param_GR[ru].size();
 		}		
+		
 		if(N == 0) emsgEC("Output",7);
 		
 		for(auto th = 0u; th < nparam; th++){
@@ -3159,7 +3309,6 @@ vector <double> Output::get_Gelman_Rubin_statistic(const vector < vector < vecto
 			}
 		}
 	}
-	*/
 	
 	return GR;
 }
@@ -3245,6 +3394,17 @@ Distribution Output::get_distribution(const vector <double> &vec, const double p
 }
 
 
+/// Sets the time, in minutes, a generation is finished by
+void Output::set_generation_time(Generation &gen) const 
+{
+	timer[TIME_ALG].stop();
+	auto alg_time = mpi.sum(timer[TIME_ALG].val);
+	auto wait_time = mpi.sum(timer[TIME_WAIT].val);
+	gen.time = (alg_time - wait_time)/(60.0*CLOCKS_PER_SEC);
+	timer[TIME_ALG].start();
+}
+	
+	
 /// Outputs how the error function and posterior distributions change with generation number (ABC-SMC and ABC-MBP)
 void Output::generation_plot(const string file, const vector <Generation> &generation) const
 {
@@ -3253,24 +3413,25 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 	string filefull = details.output_directory+"/"+file;
 	ofstream genout(filefull.c_str());
 	if(!genout) emsg("Cannot open the file '"+filefull+"'");
-
+	genout << fixed;
+	
 	genout << "# This shows how the EF and infered posterior distribiutions vary with generation number" << endl;
 	genout << "Generation,CPU Time,EF cut-off,log(EF cut-off),InvT,log(InvT),Model evidence,Model evidence SD"; 
 	for(const auto &param : model.param) genout << "," << param.name << " (mean)," << param.name << " (95% CI min)," << param.name << " (95% CI max)";
 	genout << endl;
 	
-	long timestart = generation[0].time;
 	for(auto g = 1u; g < generation.size(); g++){
-		const Generation &gen=generation[g];
+		const Generation &gen = generation[g];
 		
-		genout << g << "," << mpi.ncore*(gen.time - timestart)/(60.0*CLOCKS_PER_SEC) << ",";
+		genout << g << "," << gen.time << ",";
 
 		switch(details.mode){
 			case PAIS_INF:
 				genout << gen.EFmax << "," << log(gen.EFmax) << "," << gen.invT << "," << log(gen.invT);
 				break;
 			default:
-				genout << gen.EFcut << "," << log(gen.EFcut) << ",UNSET,UNSET";
+				auto val = gen.EFcut; if(val < 0.001) val = 0.001;
+				genout << gen.EFcut << "," << log(val) << ",UNSET,UNSET";
 				break;
 		}
 		auto stat = get_statistic(gen.model_evidence);
@@ -3289,7 +3450,10 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 				pw.val = psamp[i].paramval[th];
 				switch(details.mode){
 					case ABC_SMC: pw.w = gen.w[i]; break;
-					case ABC_MBP: case PAIS_INF: case MC3_INF: case MCMC_MBP: pw.w = 1; break;
+					case ABC_MBP: case ABC_DA: case ABC_CONT: case PAIS_INF: case MC3_INF: case MCMC_MBP:
+					case ML_INF:
+						pw.w = 1;
+						break;
 					default: emsgEC("Output",9); break;
 				}
 				vec.push_back(pw);
@@ -3404,6 +3568,7 @@ void Output::print_model_specification() const
 /// Outputs the model evidence
 void Output::final_model_evidence(const vector <double> &ME_list, const double invT_final, const double cutoff_final) const
 {
+	cout << "output model evidence:\n" << flush;
 	cout << endl;
 	if(invT_final != UNSET) cout << "For invT = " << invT_final << " ";
 	else cout << "For EF cut-off " << cutoff_final << " ";
@@ -3422,6 +3587,7 @@ void Output::trace_plot_inititialise(string name, ofstream &trace) const
 	auto file = details.output_directory+"/Diagnostics/"+name+".csv";
 
 	trace.open(file);		
+	trace << fixed;
 	if(!trace) emsg("Cannot open the file '"+file+"'");
 	trace << "state";
 	for(const auto &par : model.param) trace << "," << par.name; 
@@ -3505,19 +3671,24 @@ void Output::readme() const
 void Output::generate_graphs(vector <Particle> &particle_store) const 
 {
 	timer[TIME_RESULTS].start();
-
-	if(mpi.core == 0) cout << endl << "Generating outputs..." << endl;
+	
+	mpi.barrier(); if(mpi.core == 0) cout << endl << "Generating outputs..." << endl << flush;
 			
 	State state(details,data,model,obsmodel);
-	
+
 	auto dir = details.output_directory+"/"+post_dir+"/samples/";
 	vector <ParamSample> psamp;
 	vector <Sample> opsamp;
-	if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering samples..." << endl;
+	
+	mpi.barrier(); if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering samples..." << endl << flush;
+		
 	mpi.gather_samples(psamp,opsamp,particle_store,state,dir);
-
+	mpi.barrier();
+	
+	if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering done..." << endl << flush;
+	
 	if(mpi.core == 0) generate_graphs(psamp,opsamp);
-
+	
 	timer[TIME_RESULTS].stop();
 }
 

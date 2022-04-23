@@ -29,46 +29,136 @@ Mbp::Mbp(ObsModelMode obsmodel_mode_, const Details &details, const Data &data, 
 	initialise_variables();                                // Initialises the variables in the class
 }
 
- 
+
 /// Updates a vector of particles using MBP proposals
-unsigned int Mbp::mcmc_updates(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_,ParamUpdate pup_, ParamProp &paramprop)
+unsigned int Mbp::mcmc_updates(vector <Particle> &part, const vector <ParamSample> &param_samp, double EFcut_, double invT_, ParamUpdate pup_, ParamProp &paramprop, const double cor_max)
 {
 	EFcut = EFcut_;
 	invT = invT_;
 	pup = pup_;
-
-	auto prop_list = paramprop.get_proposal_list(param_samp); 
 	
-	for(auto &pa : part) update_particle(pa,prop_list,paramprop);
+	timer[TIME_UPDATE].start();    
+	timer[TIME_MVNSETUP].start(); 
+	for(auto &mv : paramprop.mvn) mv.setup(param_samp);
+	timer[TIME_MVNSETUP].stop(); 
+	
+	auto nprop = 0u;   
+	auto psamp_before = mpi.gather_psamp(part);                          // Stores parameter samples
 
-	if(pup == NO_UPDATE) paramprop.update_proposals();
+	timer[TIME_MBPUPDATE].start();     
+	vector <double> cor;                                                 // Stores the correlation with initial samples
+	paramprop.zero_ntr_nac_state(); 
+	
+	paramprop.zero_ntr_nac();	
+	do{
+		//paramprop.zero_ntr_nac();	
+			
+		for(auto &pa : part) update_particle(pa,paramprop,nprop);
 
-	return prop_list.size();
+		mpi.barrier();
+		
+		timer[TIME_UPDATEPROP].start();
+		if(pup == COMBINE_DYNAMIC_UPDATE){      // For the first generation dynamically update during proposal
+			paramprop.combine_update_proposals();
+			paramprop.zero_ntr_nac();	
+		}
+		timer[TIME_UPDATEPROP].stop();
+		
+
+		timer[TIME_WAIT].start();
+		auto psamp_after = mpi.gather_psamp(part);
+	
+		cor = output.get_correlation(psamp_before,psamp_after);
+		
+		if(mpi.core == 0){
+			//cout << vec_max(cor)  << " " << cor_max << "cor\n";
+			//for(auto th = 0u; th < model.param.size(); th++){
+			//	cout << model.param[th].name << " " << cor[th] << " " << cor_max << " cor\n";
+			//}
+		}
+		
+		timer[TIME_WAIT].stop();
+	}while(nprop/part.size() < details.prop_max && vec_max(cor) > cor_max);  // Iterates until correlation less than threshold
+	timer[TIME_MBPUPDATE].stop(); 
+	
+	timer[TIME_UPDATEPROP].start();
+	if(pup == COMBINE_UPDATE) paramprop.combine_update_proposals();
+	timer[TIME_UPDATEPROP].stop();
+	
+	timer[TIME_UPDATEPROP].start();
+	if(pup != NO_UPDATE) paramprop.update_fixed_splice_proposals(pup);
+	timer[TIME_UPDATEPROP].stop();
+	
+	timer[TIME_UPDATE].stop();  
+			
+	return nprop/part.size();
 }
 
 
-/// Updates a vector of particles using MBP proposals
+/// Makes a standard update
+void Mbp::update_particle(Particle &pa, ParamProp &paramprop, unsigned int &nprop)
+{
+	initial->initialise_from_particle(pa);                           // Initialises mbp updates from a particle
+
+	timer[TIME_MCMCPROP].start();                                    // Type I MBPs
+	for(auto loop = 0u; loop < 3; loop++){ 
+		for(auto &mv : paramprop.mvn){
+			if(mv.type != PARAM_PROP){ mvn_proposal(mv); nprop++;}
+		}
+	}
+	timer[TIME_MCMCPROP].stop();
+
+	timer[TIME_PARAMPROP].start();                                   // Parameter proposals
+	auto Li = initial->likelihood();
+	copy_initial_to_propse();
+	
+	for(auto loop = 0u; loop < 3; loop++){ 
+		for(auto &mv : paramprop.mvn){
+			if(mv.type == PARAM_PROP){ parameter_proposal(mv,Li); nprop++;}
+		}
+	}
+	//for(auto loop = 0u; loop < 3; loop++){ parameter_proposal(paramprop.mvn[1],Li); nprop++;}
+	timer[TIME_PARAMPROP].stop();
+	
+	timer[TIME_STATEPROP].start();                                   // Type II MBPs
+	mbp_slicetime(paramprop.slicetime[int(ran()*paramprop.slicetime.size())]); nprop++;
+
+	if(paramprop.fixedtree.size() > 0){
+		mbp_fixedtree(paramprop.fixedtree[int(ran()*paramprop.fixedtree.size())]); nprop++;
+	}
+	timer[TIME_STATEPROP].stop();     
+	
+	pa = initial->create_particle(pa.run);
+	if(details.mode == ABC_MBP && pa.EF > EFcut) emsgEC("MBP",101);	
+}
+
+
+/// Updates a particle using MBP proposals
 unsigned int Mbp::mc3_mcmc_updates(Particle &part, const vector <ParamSample> &param_samp, const double invT_, const ParamUpdate pup_, ParamProp &paramprop)
 {
 	EFcut = UNSET;
 	invT = invT_;
 	pup = pup_;
+	
+	auto nprop = 0u;   
+	
+	timer[TIME_MVNSETUP].start(); 
+	for(auto &mv : paramprop.mvn) mv.setup(param_samp);
+	timer[TIME_MVNSETUP].stop(); 
+	
+	for(auto loop = 0u; loop < model.param.size(); loop++) update_particle(part,paramprop,nprop);
 
-	auto prop_list = paramprop.get_proposal_list(param_samp); 
-	if(mpi.core == 0 && diagnotic_output == true) cout << "# Proposals " << prop_list.size() << endl;
-	
-	update_particle(part,prop_list,paramprop);
-	
-	if(pup == NO_UPDATE) paramprop.update_proposals();
-	
-	return prop_list.size();
+	return nprop;
 }
 
 
+/*
 /// Updates a particle using various types of MBP (specified in a proposal list)
 void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, ParamProp &paramprop)
 {
 	initial->initialise_from_particle(pa);                           // Initialises mbp updates from a particle
+
+	auto param_prop_flag = false;
 
 	timer[TIME_MCMCPROP].start();
 	for(auto i = 0u; i < prop_list.size(); i++){
@@ -77,10 +167,12 @@ void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, Para
 		
 		switch(prop.type){
 			case MVN_PROP:
-				{
+				{ 
 					auto &mvn = paramprop.mvn[num];
 					switch(mvn.type){
 						case SIGMA_PARAM: sigma_reff_proposal(mvn); break;
+						case DIST_R_JOINT: dist_R_joint_proposal(mvn); break;
+						case PARAM_PROP: param_prop_flag = true; break;
 						default: mvn_proposal(mvn); break;
 					}
 				}
@@ -111,15 +203,40 @@ void Mbp::update_particle(Particle &pa, const vector <Proposal> &prop_list, Para
 				break;
 			
 			case SELF_PROP:
-				emsgEC("Abc",1);
+				emsgEC("MBP",1);
 				break;
 		}				
 		
 		if(checkon == true) initial->check(2);
 	}
 	timer[TIME_MCMCPROP].stop();
+	
+	timer[TIME_PARAMPROP].start();
+	if(param_prop_flag == true){
+		auto Li = initial->likelihood();
+		copy_initial_to_propse();
+		
+		for(auto i = 0u; i < prop_list.size(); i++){
+			auto &prop = prop_list[i];
+			auto num = prop.num;
+			
+			if(prop.type == MVN_PROP){
+				auto &mvn = paramprop.mvn[num];
+				if(mvn.type == PARAM_PROP){
+					parameter_proposal(mvn,Li); 
+				}
+				
+				if(false){
+					if(Li != initial->likelihood()) emsgEC("Mbp",43); 
+				}
+			}
+		}
+	}
+	timer[TIME_PARAMPROP].stop();
+		
 	pa = initial->create_particle(pa.run);                       // Places final state back into particle
-}         
+} 
+*/
 
 
 /// Swaps the initial and proposed states
@@ -237,6 +354,8 @@ double Mbp::get_al()
 		cout << al << " " << propose->EF << " " << initial->EF << " " <<  propose->Pr;
 		cout << " " << initial->Pr <<  "mbp al" << endl;
 	}
+	
+	if(al > 1) al = 1;
 
 	return al;
 }
@@ -324,6 +443,109 @@ void Mbp::mvn_proposal(MVN &mvn)
 		}
 	}
 	
+	
+	if(mvn.MH(al,pup) == SUCCESS){
+		if(mvn.type == R_NEIGH) mvn.add_prop_vec(initial->paramval,propose->paramval);
+		swap_initial_propose_state();
+	}
+	else{
+		if(mvn.type == R_NEIGH) mvn.add_prop_vec(initial->paramval,initial->paramval);
+	}
+	
+	timer[TIME_MVN].stop();
+}
+
+
+/// Looks to make changes to parameters with a fixed state 
+void Mbp::parameter_proposal(MVN &mvn, double &Li)
+{
+	if(checkon == true){
+		if(Li != initial->likelihood()) emsgEC("MBP",102);
+	}
+	
+	auto al = 0.0, Li_prop=0.0;
+	vector <double> param_prop;
+	double probif;
+	if(mvn.propose_langevin(param_prop,initial->paramval,probif,model) == SUCCESS){
+		propose->set_param(param_prop);   
+	
+		for(auto sett = 0u; sett < details.ndivision; sett++){   
+			for(auto c = 0u; c < data.narea; c++){ 
+				propose->set_transmean(sett,c);
+			}
+		}
+		
+		Li_prop = propose->likelihood();
+		propose->set_Pr();
+	
+		al = exp(Li_prop -  Li + propose->Pr - initial->Pr)*exp(mvn.get_probfi(initial->paramval,param_prop,model) - probif);
+	}
+
+	if(mvn.MH(al,pup) == SUCCESS){
+		propose->set_EF();
+		if(propose->EF < EFcut){
+			Li = Li_prop;
+			swap_initial_propose_state();
+		}
+	}
+}
+
+	
+/// Does a MVN proposals shifted by Langevin term to account for prior
+void Mbp::mvn_proposal_rev(MVN &mvn)  
+{
+	timer[TIME_MVN].start();
+
+	auto al = 0.0;
+	vector <double> param_prop;
+	double probif;
+	
+	//param_prop = initial->paramval;
+	//mbp_rev(param_prop);
+	
+	if(mvn.propose_langevin(param_prop,initial->paramval,probif,model) == SUCCESS){
+		if(mbp_rev(param_prop) == SUCCESS){	
+			al = get_al()*exp(mvn.get_probfi(initial->paramval,param_prop,model) - probif);
+		}
+	}
+	
+	if(mvn.MH(al,pup) == SUCCESS) swap_initial_propose_state();
+	
+	timer[TIME_MVN].stop();
+}
+
+
+/// Does a joint proposal on means/ branching probs and R
+void Mbp::dist_R_joint_proposal(MVN &mvn) 
+{
+	timer[TIME_MVN].start();
+	
+	InfUpdate inf_update = INF_DIF_UPDATE;
+	if(mvn.type == INF_PARAM) inf_update = INF_UPDATE;
+	
+	auto al = 0.0;
+	auto param_prop = mvn.propose(initial->paramval);
+	if(model.inbounds(param_prop) == true){ 	
+		auto fac = 1.0;                                      // This updates the value of R based on 
+		propose->set_param(param_prop);
+		
+		auto genT_st = propose->genT;
+		
+		auto genT_fac = propose->genT/initial->genT;
+		
+		for(auto th : model.R_param){
+			auto R = propose->paramval[th];
+			propose->paramval[th] = pow(R,genT_fac);
+			fac *= genT_fac*pow(R,genT_fac-1);
+		}
+		
+		if(mbp(param_prop,inf_update) == SUCCESS){	
+			if(propose->genT != genT_st) emsgEC("MBP",70);
+		
+			al = get_al()*fac;
+		}
+	}
+	
 	if(mvn.MH(al,pup) == SUCCESS) swap_initial_propose_state();
 	
 	timer[TIME_MVN].stop();
@@ -394,7 +616,7 @@ void Mbp::neighbour_proposal(Neighbour &rn)
 void Mbp::joint_proposal(Joint &rn)
 {
 	timer[TIME_JOINT].start();
-			
+	
 	auto al = 0.0;
 	vector <double> param_prop;
 	if(rn.propose(param_prop,initial->paramval,model) == SUCCESS){
@@ -445,11 +667,15 @@ void Mbp::mbp_fixedtree(FixedTree &ft)
 	auto al = 0.0; 
 	if(mbp(initial->paramval,INF_DIF_UPDATE) == SUCCESS) al = get_al();			
 
-	ft.ntr++;
-	if(ran() < al){
-		ft.nac++;
-		swap_initial_propose_state();
+	if(details.mode == MC3_INF || details.mode == MCMC_MBP){                          // Dynamically updates simulation fraction
+		if(al > 1) al = 1;
+		if(pup == FAST_UPDATE) update(ft.sim_frac,al,eta_fast);
+		if(pup == SLOW_UPDATE) update(ft.sim_frac,al,eta);
+		if(ft.sim_frac > 1) ft.sim_frac = 1; 
 	}
+	
+	ft.ntr++; ft.nac+= al;
+	if(ran() < al) swap_initial_propose_state();
 	
 	simu_or_mbp_reset();
 	
@@ -474,13 +700,122 @@ void Mbp::mbp_slicetime(SliceTime &st)
 		al = get_al();			
 	}
 
-	st.ntr++;
-	if(ran() < al){
-		st.nac++;
-		swap_initial_propose_state();
+	if(details.mode == MC3_INF || details.mode == MCMC_MBP){                          // Dynamically updates simulation fraction
+		if(al > 1) al = 1;
+		if(pup == FAST_UPDATE) update(st.sim_frac,al,eta_fast);
+		if(pup == SLOW_UPDATE) update(st.sim_frac,al,eta);
+		if(st.sim_frac > 1) st.sim_frac = 1; 
 	}
+	
+	st.ntr++; st.nac += al;
+	if(ran() < al) swap_initial_propose_state();
 	
 	simu_or_mbp_reset();
 	
 	timer[TIME_SLICETIME].stop();
+}
+
+
+/// Performs a reverse model-based proposal (MBP)
+/// This was found not to work because it was difficult to get back to the initial starting state 
+Status Mbp::mbp_rev(const vector<double> &paramv)
+{	
+	if(model.inbounds(paramv) == false) return FAIL;            // Checks parameters are within the prior bounds
+
+	propose->set_param(paramv);                                 // Sets quantities derived from parameters (if not possible fails)
+
+	timer[TIME_MBP].start();
+	
+	timer[TIME_MBPINIT].start();
+	mbp_initialise();                                           // Prepares for the proposal
+	timer[TIME_MBPINIT].stop();
+
+	auto probif = 0.0, probfi = 0.0;	
+	propose->Imap = initial->Imap;
+	propose->Idiag = initial->Idiag;
+	propose->transmean = initial->transmean;
+	propose->transnum = initial->transnum;
+	propose->pop = initial->pop;
+	
+	int sett_start = 100;
+	
+	for(auto sett = sett_start; sett >= 0; sett--){  
+		cout << sett << " " << details.ndivision << " sett\n";
+		//propose->democat_change_pop_adjust(sett);  TO DO
+	
+		propose->set_Imap_using_dI(sett,initial,dImap,dIdiag);
+	
+		timer[TIME_TRANSNUM].start();
+		double rate_i, rate_p;
+		int num_i, num_p=0;
+	
+		for(auto c = 0u; c < data.narea; c++){                    // Performs simulation / MBPs on the transitions
+			propose->set_transmean(sett,c);
+			
+			auto &init_tnum = initial->transnum[sett][c];
+			auto &prop_tnum = propose->transnum[sett][c];
+			auto &init_tmean = initial->transmean[sett][c];
+			auto &prop_tmean = propose->transmean[sett][c];
+			
+			for(auto tr = 0u; tr < model.trans.size(); tr++){
+				for(auto dp = 0u; dp < data.ndemocatpos; dp++){	 
+					num_i = init_tnum[tr][dp];
+					rate_p = prop_tmean[tr][dp];
+				
+					rate_i = init_tmean[tr][dp];	
+					if(tr == 1) cout << rate_p << " " << rate_i << "dtrate\n";
+					if(rate_p > rate_i){
+						num_p = num_i + poisson_sample(rate_p-rate_i);
+						probif += poisson_probability(num_p-num_i,rate_p-rate_i);
+						probfi += binomial_probability(num_i,rate_i/rate_p,num_p);
+					} 
+					else{
+						if(rate_p == rate_i) num_p = num_i;
+						else{
+							num_p = binomial_sample(rate_p/rate_i,num_i);
+							probif += binomial_probability(num_p,rate_p/rate_i,num_i);
+							probfi += poisson_probability(num_i-num_p,rate_i-rate_p);			
+						}		
+					} 
+								
+					auto num_diff = num_p - num_i;
+					dtransnum[c][tr][dp] = -num_diff;
+					prop_tnum[tr][dp] = num_p;		
+				}
+			}
+		}
+		timer[TIME_TRANSNUM].stop();
+			
+		
+		timer[TIME_UPDATEPOP].start();
+		propose->update_pop_rev(sett);
+		timer[TIME_UPDATEPOP].stop();
+		
+		timer[TIME_UPDATEIMAP].start();
+		propose->update_I_from_transnum(dImap,dIdiag,dtransnum);
+		timer[TIME_UPDATEIMAP].stop();
+		
+		for(auto c = 0u; c < model.comp.size(); c++) cout << initial->pop[sett][0][c][0] << "," << propose->pop[sett][0][c][0]  << "   ";
+		cout << " pop\n";
+	}
+	propose->EF = -2*obsmodel.calculate(propose);
+	propose->Pr = model.prior(propose->paramval);
+	 
+	propose->check(0);
+	
+	//auto Li_initial = initial->likelihood();
+	//auto Li_propose = propose->likelihood();
+	
+	timer[TIME_MBP].stop();
+
+	return SUCCESS;
+}
+
+
+/// Copies the initial state to the proposed state (used in parameter proposals)
+void Mbp::copy_initial_to_propse()
+{
+	propose->transnum = initial->transnum; propose->pop = initial->pop;
+	propose->Imap = initial->Imap; propose->Idiag = initial->Idiag; 
+	//propose->EF = initial->EF; propose->transmean = initial->transmean;
 }

@@ -1,0 +1,17 @@
+bp,Par0-19,Par20-39,Par40-59,Par60+,Value0-19,Value20-39,Value40-59,Value60+
+start,Mixing factor 0-19start,Mixing factor 20-39start,Mixing factor 40-59start,Mixing factor 60+start,1,1,1,*
+14,Mixing factor 0-1914,Mixing factor 20-3914,Mixing factor 40-5914,Mixing factor 60+14,0.971985,1.0536,0.987192,*
+28,Mixing factor 0-1928,Mixing factor 20-3928,Mixing factor 40-5928,Mixing factor 60+28,0.927773,1.18753,0.996405,*
+42,Mixing factor 0-1942,Mixing factor 20-3942,Mixing factor 40-5942,Mixing factor 60+42,0.963454,1.20291,1.02591,*
+56,Mixing factor 0-1956,Mixing factor 20-3956,Mixing factor 40-5956,Mixing factor 60+56,0.899207,1.20529,1.03941,*
+70,Mixing factor 0-1970,Mixing factor 20-3970,Mixing factor 40-5970,Mixing factor 60+70,0.984033,1.10862,1.11597,*
+84,Mixing factor 0-1984,Mixing factor 20-3984,Mixing factor 40-5984,Mixing factor 60+84,0.862925,1.05772,1.31936,*
+98,Mixing factor 0-1998,Mixing factor 20-3998,Mixing factor 40-5998,Mixing factor 60+98,0.825859,0.974429,1.49842,*
+112,Mixing factor 0-19112,Mixing factor 20-39112,Mixing factor 40-59112,Mixing factor 60+112,0.783018,1.04788,1.48003,*
+126,Mixing factor 0-19126,Mixing factor 20-39126,Mixing factor 40-59126,Mixing factor 60+126,0.86043,0.892081,1.59802,*
+140,Mixing factor 0-19140,Mixing factor 20-39140,Mixing factor 40-59140,Mixing factor 60+140,0.833446,0.943681,1.58403,*
+154,Mixing factor 0-19154,Mixing factor 20-39154,Mixing factor 40-59154,Mixing factor 60+154,0.7953,1.02141,1.55607,*
+168,Mixing factor 0-19168,Mixing factor 20-39168,Mixing factor 40-59168,Mixing factor 60+168,0.834248,1.06497,1.37263,*
+182,Mixing factor 0-19182,Mixing factor 20-39182,Mixing factor 40-59182,Mixing factor 60+182,0.876701,1.18474,1.27038,*
+196,Mixing factor 0-19196,Mixing factor 20-39196,Mixing factor 40-59196,Mixing factor 60+196,0.970724,1.05735,1.35646,*
+end,Mixing factor 0-19end,Mixing factor 20-39end,Mixing factor 40-59end,Mixing factor 60+end,0.947452,1.06566,1.37067,*

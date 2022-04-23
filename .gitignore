@@ -7,3 +7,5 @@ gitversion.hh
 /run
 /build
 /regression_test_results
+/analysis
+/COVID-19

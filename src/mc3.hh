@@ -22,9 +22,14 @@ private:
 	void set_invT(const unsigned int samp);
 	void model_evidence() const;
 	bool terminate(const unsigned int samp);
+	void find_EF_range();
+	void find_nchain_optimum() const;
 		
 	unsigned int nsample;                    // The number of MCMC samples
-	double GRmax;                            // The maximum value for the Gelman-Rubin statistics
+	
+	double ESSmin;                            // The minimum effective sample size
+
+	double cpu_time;                         // Maximum cpu for execution
 
 	unsigned int nburnin;                    // The number of MCMC burnin steps
 	

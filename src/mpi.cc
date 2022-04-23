@@ -382,6 +382,7 @@ Particle Mpi::particle_sample(const unsigned int ru, const vector < vector <unsi
 		p = backpart[sec][p];
 	}
 	
+//	particle_sample
 	timer[TIME_STATESAMPLE].stop();
 	
 	return particle[0].create_particle(ru);
@@ -391,12 +392,39 @@ Particle Mpi::particle_sample(const unsigned int ru, const vector < vector <unsi
 /// Gathers a double vector across all cores and returns the combined vector to core 0
 vector <double> Mpi::gather(const vector <double> &vec)
 {
-	vector <double> vectot;
-	vectot.resize(vec.size()*ncore);
+	vector <double> vectot(vec.size()*ncore);
 	
 	MPI_Gather(&vec[0],vec.size(),MPI_DOUBLE,&vectot[0],vec.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
 	
 	return vectot;
+}
+
+
+/// Gathers a 2D array of doubles across all cores and returns the combined vector to core 0
+vector < vector <double> > Mpi::gather(const vector < vector <double> > &array)
+{
+	auto Y = array.size();
+	auto X = array[0].size();
+	vector <double> vectrans;
+	vector <double> vectot(Y*X*ncore);
+
+	for(auto j = 0u; j < Y; j++){
+		for(auto i = 0u; i < X; i++) vectrans.push_back(array[j][i]);
+	}
+	
+	MPI_Gather(&vectrans[0],vectrans.size(),MPI_DOUBLE,&vectot[0],vectrans.size(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+	
+	vector < vector <double> > arraytot;	
+
+	if(core == 0){
+		for(auto j = 0u; j < Y*ncore; j++){
+			vector <double> vec(X);
+			for(auto i = 0u; i < X; i++) vec[i] = vectot[j*X+i];
+			arraytot.push_back(vec);
+		}
+	}
+		
+	return arraytot;
 }
 
 
@@ -490,7 +518,7 @@ vector <double> Mpi::average(const vector <double> &val)
 
 
 /// Gets the acceptance rate across all mpi processes
-double Mpi::get_acrate(const unsigned int nac, const unsigned int ntr)
+double Mpi::get_acrate(const double nac, const double ntr)
 {
 	return average(nac)/(average(ntr)+0.01);
 }
@@ -504,7 +532,7 @@ double Mpi::get_ratio(const double nac, const double ntr)
 
 
 /// Gets a vector of acceptance rates across all mpi processes
-vector <double> Mpi::get_acrate(const vector <unsigned int> &nac, const vector <unsigned int> &ntr)
+vector <double> Mpi::get_acrate(const vector <double> &nac, const vector <double> &ntr)
 {
 	vector <double> result;
 	for(auto i = 0u; i < nac.size(); i++) result.push_back(get_acrate(nac[i],ntr[i]));
@@ -546,6 +574,15 @@ void Mpi::bcast(vector <double> &vec)
 }
 
 
+/// Copies a matrix in core 0 to all the other cores
+void Mpi::bcast(vector < vector <double> > &M)
+{
+	auto n = (unsigned int)(M.size());
+	bcast(n);
+	for(auto j = 0u; j < n; j++) bcast(M[j]);
+}
+
+
 /// Copies proposals from core 0 to all the other cores
 void Mpi::bcast(vector <Proposal> &vec)
 {	
@@ -569,7 +606,28 @@ void Mpi::bcast(vector <Proposal> &vec)
 	}
 }
 
-	
+
+/*
+/// This checks that all cores get to a check point with a specified number at the same time
+void Mpi::check(unsigned int num)
+{
+	if(core == 0) cout << num << "start" << endl << flush;
+	barrier();
+	vector <double> vec(1);
+	vec[0] = num;
+	auto vectot = gather(vec);
+	if(core == 0){
+		for(auto i = 0u; i < vectot.size(); i++) cout << vectot[i] << ",";
+		cout << " check list" << endl << flush;
+		
+		for(auto i = 0u; i < vectot.size(); i++){
+			if( vectot[i] !=  vectot[0]) emsg("Problem");
+		}
+	}
+	barrier();
+}
+*/
+
 /// Calculates the time taken for other cores to finish what they are doing
 void Mpi::barrier()
 {
@@ -615,10 +673,12 @@ vector <double> Mpi::combine(const vector <double> &vec)
 	return vecout;
 }	
 	
-	
+
 /// Gathers together results from particles from all the cores and makes parameter and state samples on core 0
 void Mpi::gather_samples(vector <ParamSample> &psamp, vector <Sample> &opsamp, const vector <Particle> &part, State &state, const string dir)
 {
+	barrier();
+	
 	if(core == 0){
 		for(const auto &pa : part){
 			state.initialise_from_particle(pa);
@@ -629,16 +689,20 @@ void Mpi::gather_samples(vector <ParamSample> &psamp, vector <Sample> &opsamp, c
 
 		for(auto co = 1u; co < ncore; co++){
 			unsigned int N;
-			pack_recv(co);
+			
+			pack_recv(co);	
 			unpack(N);
+			
 			for(auto i = 0u; i < N; i++){
 				Particle part;
 				unpack(part);
 				state.initialise_from_particle(part);
+				
 				if(details.siminf == INFERENCE) state.save(dir+"sample"+to_string(psamp.size()));
 				psamp.push_back(state.create_param_sample(part.run));
 				opsamp.push_back(state.create_sample());
 			}
+			
 			unpack_check();
 		}
 
@@ -1045,6 +1109,7 @@ void Mpi::pack_item(const Area &area)
 {
 	pack_item(area.code);
 	pack_item(area.pop_init);
+	pack_item(area.pop_dp);
 	pack_item(area.total_pop);
 }
 
@@ -1273,6 +1338,7 @@ void Mpi::unpack_item(Area &area)
 {
 	unpack_item(area.code);
 	unpack_item(area.pop_init);
+	unpack_item(area.pop_dp);
 	unpack_item(area.total_pop);
 }
 

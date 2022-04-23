@@ -1,0 +1,42 @@
+# Simulation: ./beepmbp inputfile="examples/EX1a.toml" mode="sim" 
+# Inference: mpirun -n 20 ./beepmbp inputfile="examples/EX1a.toml" mode="ml" algorithm="cmaes" nsample_final=200   posterior_particle=200 nparticle=200 ngeneration=20 invT=1000
+
+description = "This analysis uses an SIR model and assumes that the reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. Data consists of the weekly number of infections and recoveries. The reproduction number and infectious period are inferred from this data." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX1a"
+outputdir = "analysis/Output_EX1a"
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="scale", file="S-I.csv"},
+{type="transition", observation="I->R", timestep="7", obsmodel="scale", file="I-R.csv"}
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

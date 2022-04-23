@@ -19,6 +19,7 @@ private:
 	void initialise_variables();
 	void update_burnin(const unsigned int samp);
 	bool terminate(const unsigned int samp);
+	void calculate_start_invT();
 	
 	void get_proposals();
 	void mcmc_updates();
@@ -31,6 +32,7 @@ private:
 	void neighbour_proposal(Neighbour &nei);
 	void mean_time_proposal(MeanTime& mt);
 	void covar_area_proposal(CovarArea &ca);
+	void get_EF_dist() const; 
 
 	double invT;                               // This inverse temperature is used to smooth the likelihood function
 	
@@ -55,7 +57,10 @@ private:
 	unsigned int core;                         // The number of the core
 	
 	unsigned int nsample;                      // The number of MCMC samples
-	double GRmax;                              // The maximum value for the Gelman-Rubin statistics
+
+	double ESSmin;                             // The minimum value for the effective sample size
+
+	double cpu_time;                           // Maximum cpu for execution
 
 	unsigned int nburnin;                      // The number of MCMC burnin steps
 	
@@ -65,6 +70,8 @@ private:
 	unsigned int Ntot;                         // The total number of particles
 
 	unsigned int nrun;                         // The number of runs
+	
+	double sd_init;                            // This stardard deviation used to set invT when testing algorithm
 	
 	vector <Proposal> prop_list;               // A list of MCMC proposals
 		

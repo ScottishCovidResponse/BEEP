@@ -13,13 +13,18 @@ public:
 	
 private:
 	void EF_cutoff(Generation &gen, vector<Particle> &part, vector <unsigned int> &partcopy);
-	void param_GR_clear();
-	bool terminate();
+	bool terminate_generation(unsigned int g, double EFcut) const;
 	void store_sample(Generation &gen);
 	void model_evidence(vector <Generation> &generation);
 	void print_generation(const Generation &gen, const unsigned int g) const;
+	void set_time(Generation &gen);
+
+	double cor_max;                          // The maximum correlation  
+	double cor_max_last;                     // The maximum correlation in the last generation
 
 	unsigned int G;                          // The total number of generations 
+
+	double cpu_time;                         // Maximum cpu for execution
 
 	double cutoff_final;                     // The final error function
 
@@ -30,9 +35,6 @@ private:
 	
 	unsigned int npart;                      // The number of particles 
 	unsigned int nrun;                       // The number of runs
-	
-	unsigned int nupdate;                    // Sets the number of updates per generation
-	double GRmax;                            // The maximum value for the Gelman-Rubin statistics
 	
 	vector <Particle> part;		    	         // These particles store the state
 	vector <unsigned int> partcopy;          // Store which particle to copy
@@ -46,7 +48,7 @@ private:
 	
 	ParamProp paramprop;                     // Stores information about parameter proposals
  	
-	vector <ParamSample> psamp_GR;           // Parameter samples used by Gelman Rubin statistics
+	//vector <ParamSample> psamp_GR;           // Parameter samples used by Gelman Rubin statistics
 	
 	const Details &details;
 	const Data &data;
