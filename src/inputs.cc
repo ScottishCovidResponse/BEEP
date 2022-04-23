@@ -41,7 +41,7 @@ Inputs::Inputs(int argc, char** argv)
 	
 	
 	auto tomlkeys = basedata->keys();
-	check_for_undefined_parameters(definedparams, tomlkeys, "in " + inputfilename);
+	check_for_undefined_parameters(definedparams, tomlkeys, "in input TOML file");
 	
 	for(const auto &cmd : cmdlineparams){
 		if(find_in(tomlkeys,cmd.first)) tomlkeys.push_back(cmd.first);
@@ -229,7 +229,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"ml", ML_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -249,6 +249,26 @@ SimInf Inputs::get_siminf()
 }
 	
 	
+/// Returns the maximum timestep used in data_tables (used in PMCMC to split up observations
+unsigned int Inputs::find_maximum_timestep()
+{
+	auto max = 1u;
+	if(basedata->contains("data_tables")) {
+		const auto datatables = basedata->open("data_tables",used);
+		
+		for(auto j = 0u; j < datatables.size(); j++){
+			auto td = datatables[j];
+			auto timestep = td.stringfield("timestep","");
+			if(timestep != ""){
+				auto val = get_int(timestep,"In 'data_tables'");
+				if(val > max) max = val;
+			}
+		}
+	}
+	
+	return max;
+}
+
 /// Finds information about datatables
 vector <DataTable> Inputs::find_datatable(const Details &details)
 {
@@ -277,6 +297,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			}
 			
 			datatab.file = td.stringfield("file","In 'data_tables'");
+			check_filename(datatab.file);
 			
 			datatab.threshold = UNSET;
 			auto thresh = td.stringfield("threshold","");
@@ -544,6 +565,8 @@ vector <DemocatChange> Inputs::find_democat_change()
 			DemocatChange dcc;
 			dcc.name = td.stringfield("name","In 'data_tables'");
 			dcc.file = td.stringfield("file","In 'data_tables'");
+			check_filename(dcc.file);
+			
 			dcc.democats_filt = td.stringfield_allowcomma("democats_filt",""); 
 			dcc.geo_filt = td.stringfield_allowcomma("geo_filt","");
 			dcc.shift = 0;
@@ -700,6 +723,7 @@ LevelEffect Inputs::find_level_effect()
 		auto lin = basedata->open("level_effect",used); lin.set_used();
 	
 		le.file = lin.stringfield("file","In 'level_effect'");
+		check_filename(le.file);
 	
 		auto param = lin.stringfield("param","In 'level_effect'");
 		auto spl = split(param,'|'); 
@@ -723,6 +747,7 @@ vector <Covariate> Inputs::find_covariates()
 		const auto covars = basedata->open("area_covars",used);
 		
 		Covariate cov; cov.type = AREA_COVAR; cov.file = find_string("areas","UNSET");
+		check_filename(cov.file);
 		for(auto j = 0u; j < covars.size(); j++){
 			auto covar = covars[j]; covar.set_used();
 			
@@ -755,6 +780,7 @@ vector <Covariate> Inputs::find_covariates()
 			auto covar = covars[j]; covar.set_used();
 			
 			cov.file = covar.stringfield("file","In 'tv_covars'");
+			check_filename(cov.file);
 			
 			cov.name = covar.stringfield("name","In 'tv_covars'");
 			cov.timevary = true;
@@ -785,6 +811,7 @@ vector <Covariate> Inputs::find_covariates()
 			auto covar = covars[j]; covar.set_used();
 			
 			cov.file = covar.stringfield("file","In 'area_tv_covars'");
+			check_filename(cov.file);
 			
 			cov.name = covar.stringfield("name","In 'area_tv_covars'");
 			
@@ -1090,13 +1117,21 @@ vector <ParamSpec> Inputs::get_paramspec(InputNode &it, const string root, const
 	
 	switch(get_siminf()){
 		case SIMULATE:
-			if(value_string == "") emsgroot("In '"+root+"' a value for '"+value+"' must be set.");
+			if(value_string == ""){
+				if(root == "trans"){
+					emsgroot("In '"+root+"' a value for '"+value+"' must be set for the transition "+it.stringfield("from","")+" -> "+it.stringfield("to",""));	
+				}
+				else{
+					emsgroot("In '"+root+"' a value for '"+value+"' must be set.");
+				}
+			}
 			break;
 		
 		case INFERENCE: case DATAVIEW:
 			if(prior_string == "" && value_string == "") emsgroot("In '"+root+"' either '"+prior+"' or '"+value+"' must be set");
 			break;
 	}
+	
 	
 	auto na = split_string(name_string,'|',si);
 	auto val = split_string(value_string,'|',si);
@@ -1133,150 +1168,6 @@ void Inputs::print_paramspec(const vector <ParamSpec> &ps) const
 }
 
 
-/// Returns a list of compartment names along with the susceptible compartment (used for reading 'init_pop' file)
-vector <string> Inputs::find_compartments()
-{
-	vector <string> name;
-	if(basedata->contains("comps")) {
-		auto compsin = basedata->open("comps",used);
-		for(auto j = 0u; j < compsin.size(); j++){
-			auto comps = compsin[j];
-			auto na = comps.stringfield("name","In 'comps'");
-			name.push_back(na);	
-			
-			if(comps.stringfield("dist","") == "Erlang"){
-				auto k_str = comps.stringfield("k","");
-				auto k_temp = get_int(k_str,"In 'comps' compartment '"+na+"' the integer 'k'");
-				for(auto i = 1u; i < k_temp; i++) name.push_back(na+"_intermediary");	
-			}
-		}
-	}		
-	else{ emsgroot("The input file must contain compartment definitions through 'comps'");}
-	
-	return name;
-}
-
-
-/// Finds the susceptible compartment
-unsigned int Inputs::find_susceptible_compartment()
-{
-	if(basedata->contains("trans")){
-		const auto transin = basedata->open("trans",used);
-		for(auto j = 0u; j < transin.size(); j++){
-			auto trans = transin[j];
-			auto inf = trans.stringfield("infection","");
-			if(inf != ""){
-				auto comps = find_compartments();
-				return find_in(comps,trans.stringfield("from","In 'trans'"));
-			}
-		}
-	}
-	else emsgroot("The input file must contain transition definitions through 'trans'.");
-		
-	emsgroot("In 'trans' could not find 'infection' set");
-}
-
-
-/// Finds 'comps'
-void Inputs::find_compartments(vector <string> &name, vector < vector <ParamSpec> > &mean_spec, vector <string> &mean_dep, vector <unsigned int> &k, vector <ParamSpec> &infectivity, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat)
-{
-	if(basedata->contains("comps")) {
-		auto compsin = basedata->open("comps",used);
-		for(auto j = 0u; j < compsin.size(); j++){
-			auto comps = compsin[j]; comps.set_used();
-
-			auto nam = comps.stringfield("name","In 'comps'");
-
-			auto root = "comps' name='"+nam;
-			
-			auto par = comps.stringfield("mean_param","");
-			
-			auto dep = get_dep(comps,root,"mean_param","mean_value","mean_prior");
-
-			auto k_temp = UNSET;
-			
-			auto dist = comps.stringfield("dist","");
-			if(dist != ""){
-				if(dist == "Exp") k_temp = 1;
-				else{
-					if(dist == "Erlang"){
-						auto k_str = comps.stringfield("k","");
-						
-						if(k_str == "") emsgroot("In 'comps' compartment '"+nam+"' an integer shape parameter 'k' must be set.");
-						k_temp = get_int(k_str,"In 'comps' compartment '"+nam+"' the integer 'k'");
-					}
-					else{
-						emsgroot("In 'comps' for the '"+nam+"' compartment the value 'dist="+dist+"' is not recognised.");
-					}
-				}
-			}
-			
-			auto meansp = find_ct_param_spec(comps,root,"mean_param","mean_value","mean_prior",dep,democatpos,democat,nam+" mean occupancy");
-			
-			auto inf = ps_zero();
-			string inf_tr = "";
-			
-			if(comps.contains("inf_param") || comps.contains("inf_value") || comps.contains("inf_prior")){		
-				auto infvec = get_paramspec(comps,"comps","inf_param","inf_value","inf_prior","","",1,false);
-				
-				if(param_not_set(infvec)) infvec[0].name = nam+" Infectivity";    // Sets parameter name (if uninitialised)
-				inf = infvec[0];
-			}
-	
-			name.push_back(nam);
-			mean_spec.push_back(meansp);
-			mean_dep.push_back(dep);
-			k.push_back(k_temp);
-			infectivity.push_back(inf);
-			
-			comps.check_used("comps");
-		}
-	}
-	else{ emsgroot("The input file must contain compartment definitions through 'comps'");}
-}
-
-
-/// Finds 'trans'
-void Inputs::find_transitions(vector <string> &from, vector <string> &to, vector <TransInf> &transinf, vector < vector <ParamSpec> > &prob_spec, vector <string> &prob_dep, const vector < vector<unsigned int> > &democatpos, const vector <DemographicCategory> &democat)
-{
-	if(basedata->contains("trans")){
-		const auto transin = basedata->open("trans",used);
-		for(auto j = 0u; j < transin.size(); j++){
-			auto trans = transin[j]; trans.set_used();
-			
-			auto dep = get_dep(trans,"trans","prob_param","prob_value","prob_prior");
-			                  
-			auto fr_temp = trans.stringfield("from","In 'trans'");
-			auto to_temp = trans.stringfield("to","In 'trans'");
-			//auto name = fr_temp+"→"+to_temp;
-			auto name = fr_temp+"->"+to_temp;
-			
-			vector <ParamSpec> probsp;
-			if(trans.contains("prob_param") || trans.contains("prob_value") || trans.contains("prob_prior")){
-				probsp = find_ct_param_spec(trans,"trans","prob_param","prob_value","prob_prior",dep,democatpos,democat,name+" branch prob.");
-			}
-				
-			TransInf tinf = TRANS_NOTINFECTION; 
-			auto inf = trans.stringfield("infection","");
-			if(inf != ""){
-				if(inf=="yes") tinf = TRANS_INFECTION;
-				else{
-					if(inf != "no") emsgroot("In 'comps' the value of 'infection' can either be 'yes' or 'no' or omitted.");
-				}
-			}
-			
-			from.push_back(fr_temp); 
-			to.push_back(to_temp);
-			transinf.push_back(tinf);
-			prob_spec.push_back(probsp);
-			prob_dep.push_back(dep);
-			trans.check_used("trans");
-		}
-	}
-	else emsgroot("The input file must contain transition definitions through 'trans'.");
-}
-
-
 /// Given a string this works out a list of states consistent with that
 vector <vector <unsigned int > > Inputs::find_demo_ref(const string dep_str, const vector <DemographicCategory> &democat, vector <unsigned int> &dep) const
 {
@@ -1294,7 +1185,7 @@ vector <vector <unsigned int > > Inputs::find_demo_ref(const string dep_str, con
 		auto spl = split(dep_str,',');
 
 		auto ndep = spl.size();
-
+		
 		dep.resize(ndep);
 		for(auto i = 0u; i < ndep; i++){
 			auto k = 0u; while(k < ndemocat && democat[k].name != spl[i]) k++;
@@ -1458,7 +1349,8 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 					if(geo_filt != "") par_name += " "+geo_filt;
 					if(strain_name != "") par_name += " "+strain_name;
 					
-					ps_list[i].name = par_name+" t="+to_string(bp[i]);
+					if(bp.size() > 2) par_name += " t="+to_string(bp[i]);
+					ps_list[i].name = par_name;
 				}
 			}
 	
@@ -1503,6 +1395,30 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			}
 		}
 	}
+	else{
+		if(name == "efoi_spline"){          // If no external foi specified then set to zero
+			name_vec.push_back("");
+			
+			vector <ParamSpec> ps_list; ps_list.push_back(ps_zero()); ps_list.push_back(ps_zero());
+			ps_vec.push_back(ps_list);
+			factor_param_vec.push_back(ps_one());
+			
+			auto bp_str = "start|end";
+			auto bp = get_breakpoints(bp_str,details,"In '"+name+"'");
+			bp_vec.push_back(bp);
+			
+			auto st = find_smoothtype("",name);
+			smooth_type_vec.push_back(st);
+			
+			strain.push_back("");
+			area.push_back("");
+			
+			unsigned int nage = agedist.size();
+			vector <double> ad(nage);
+			for(auto a = 0u; a < nage; a++) ad[a] = 1;
+			efoi_agedist_vec.push_back(ad);
+		}
+	}
 }
 
 
@@ -1516,6 +1432,7 @@ void Inputs::check_from_table(string &s)
 		if(spl.size() != 2) emsgroot("The expression '"+s+"' does not use the format '[column:file.csv]'");
 		auto head = spl[0];
 		auto file = spl[1];
+		check_filename(file);
 		
 		auto end = file.substr(file.length()-4,4);
 		if(end != ".txt" && end != ".csv") emsgroot("The expression '"+s+"' does not use the format '[column:file.csv]'");
@@ -1625,22 +1542,44 @@ void Inputs::find_generation(unsigned int &G)
 
 
 /// Finds the number of gnerations used or final invT (PAIS algorithm) 
-void Inputs::find_generation_or_invT_final(unsigned int &G, double &invT_final)
+void Inputs::find_generation_or_invT_final_or_cpu_time(unsigned int &G, double &invT_final, double &cpu_time)
 {
-	G = find_positive_integer("ngeneration",UNSET)+1;
+	G = find_positive_integer("ngeneration",UNSET);
 	invT_final = find_double("invT_final",UNSET);  
-	if(G == UNSET && invT_final == UNSET) emsgroot("A value for 'ngeneration' or 'invT_final' must be set");
-	if(G != UNSET && invT_final != UNSET) emsgroot("'ngeneration' and 'invT_final' cannot both be set");
+	cpu_time = find_double("cpu_time",UNSET); 
+
+	auto num = 0u;
+	if(G != UNSET) num++;
+	if(invT_final != UNSET) num++;
+	if(cpu_time != UNSET) num++;
+	
+	if(num == 0) emsgroot("A value for 'ngeneration', 'invT_final', or 'cpu_time' must be set");
+	if(num > 1) emsgroot("A value for either 'ngeneration', 'invT_final', or 'cpu_time' must be set");
+	if(G != UNSET) G++;
+}
+
+
+/// Finds the cpu time limit
+void Inputs::find_cpu_time(double &cpu_time)
+{
+	cpu_time = find_double("cpu_time",UNSET); 
 }
 
 
 /// Finds the number of gnerations used or final invT (ABC-MBP algorithm) 
-void Inputs::find_generation_or_cutoff_final(unsigned int &G, double &cutoff_final)
+void Inputs::find_generation_or_cutoff_final_or_cpu_time(unsigned int &G, double &cutoff_final, double &cpu_time)
 {
 	G = find_positive_integer("ngeneration",UNSET);
-	cutoff_final = find_double("cutoff_final",UNSET);  
-	if(G == UNSET && cutoff_final == UNSET) emsgroot("A value for 'ngeneration' or 'cutoff_final' must be set");
-	if(G != UNSET && cutoff_final != UNSET) emsgroot("'ngeneration' and 'cutoff_final' cannot both be set");
+	cutoff_final = find_double("cutoff_final",UNSET); 
+	cpu_time = find_double("cpu_time",UNSET); 
+
+	auto num = 0u;
+	if(G != UNSET) num++;
+	if(cutoff_final != UNSET) num++;
+	if(cpu_time != UNSET) num++;
+	
+	if(num == 0) emsgroot("A value for 'ngeneration', 'cutoff_final', or 'cpu_time' must be set");
+	if(num > 1) emsgroot("A value for either 'ngeneration', 'cutoff_final', or 'cpu_time' must be set");
 	if(G != UNSET) G++;
 }
 
@@ -1665,7 +1604,7 @@ void Inputs::find_Tpower(double &Tpower)
 /// Finds the invT used (MCMCMBP algorithm) 
 void Inputs::find_invT(double &invT)
 {
-	invT = find_double("invT",0);  
+	invT = find_double("invT",UNSET);  
 	if(invT == UNSET) emsgroot("A value for 'invT' must be set");
 }
 
@@ -1679,6 +1618,75 @@ void Inputs::find_nrun(unsigned int &nrun)
 }
 
 
+/// Checks if a filename is valid or not 
+void Inputs::check_filename(const string &str) const
+{
+	string invalid = "#£%&{}\\/$!'\":+`|=<>*?@";
+	
+	for(auto i = 0u; i < str.length(); i++){
+		for(auto j = 0u; j < invalid.length(); j++){
+			if(str.substr(i,1) == invalid.substr(j,1)){
+				emsgroot("The filename '"+str+"' is not valid because of the '"+invalid.substr(j,1)+"' character.");
+			}
+		}
+	}
+}
+
+
+/// Finds the algorithm type for maximum likelihood approaches
+void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample_final, const unsigned int core, const unsigned int ncore, const unsigned int nvar)
+{
+	string val = toLower(find_string("algorithm","GD"));
+
+	if(val == "gd") algorithm = ML_GD;
+	else{
+		if(val == "cmaes") algorithm = ML_CMAES;
+		else emsgroot("The value for 'algorithm' is not recognised");
+	}
+	
+	npart = UNSET;
+	G = UNSET;
+	cpu_time = UNSET;
+	P = UNSET;
+	if(algorithm == ML_CMAES){
+		G = find_positive_integer("ngeneration",UNSET);
+		cpu_time = find_double("cpu_time",UNSET); 
+		if(G == UNSET && cpu_time == UNSET) emsgroot("For 'cmaes' either 'ngeneration' or 'cpu_time' must be set");
+		if(G != UNSET && cpu_time != UNSET) emsgroot("For 'cmaes' the quantities 'ngeneration' and 'cpu_time' cannot both be set");
+		
+		npart = find_positive_integer("nparticle",UNSET);
+		if(npart == UNSET){
+			npart = 4+int(3*log(nvar)); 
+			npart = int((npart+ncore-1)/ncore)*ncore;
+			if(core == 0) cout << "By default 'nparticle' set to " << npart << "." << endl;
+		}
+	
+		P = find_positive_integer("posterior_particle",UNSET);
+		if(P == UNSET){
+			P = 200;
+			if(core == 0) cout << "By default 'posterior_particle' is set to " << P << "." << endl;
+			//emsgroot("'posterior_particle' must be set to a positive integer. This determines the number of particles used when generating the final posterior samples (this would typically be over 100).");
+		}
+		
+		nsample_final = find_positive_integer("nsample_final",UNSET);
+		if(nsample_final == UNSET){
+			nsample_final = (int((400+ncore-1)/(ncore)))*ncore;
+			if(core == 0) cout << "By default 'nsample_final' is set to " << nsample_final << "." << endl;
+		}
+		else{
+			if(nsample_final%ncore != 0) emsgroot("'nsample_final' must be a multiple of the number of cores");
+		}
+	}		
+}
+
+
+/// Finds the standard deviation (used for testing PMCMC)
+void Inputs::find_sd(double &sd)
+{
+	sd = find_double("sd",0.5);
+}
+
+
 /// Finds how uncertainty in 
 void Inputs::find_stateuncer(StateUncertainty &stateuncer)
 {
@@ -1689,6 +1697,21 @@ void Inputs::find_stateuncer(StateUncertainty &stateuncer)
 		if(val == "curves") stateuncer = CURVES;
 		else emsgroot("The value for 'state_uncertainty' is not recognised");
 	}
+}
+
+
+/// Finds the maximum correlations (used in ABCMBP / PAIS / ABCDA)
+void Inputs::find_cor_max(double &cor_max, double &cor_max_last)
+{
+	cor_max = find_double("cor_max",0.8);
+	cor_max_last = find_double("cor_max_last",cor_max);
+}
+
+
+/// Finds the the maximum number of proposals before an error is generated (used in ABCMBP / PAIS)
+void Inputs::find_prop_max(unsigned &prop_max)
+{
+	prop_max = find_positive_integer("prop_max",10000);
 }
 
 
@@ -1732,45 +1755,35 @@ void Inputs::find_nchain(unsigned int &nchain, unsigned int &Ntot, unsigned int 
 
 
 /// Finds the number of samples
-void Inputs::find_nsample(unsigned int &nsample)
+void Inputs::find_nsample(unsigned int &nsample, unsigned int min)
 {
 	nsample = find_positive_integer("nsample",UNSET);
 	if(nsample == UNSET) emsgroot("A value for 'nsample' must be set");
-	if(nsample < 10) emsgroot("'nsample' must be at least 10.");
-}
-
-
-/// Finds the cut-off for the Gelman Rubin statistic
-void Inputs::find_GRmax(double &GRmax, const unsigned int nrun)
-{
-	GRmax = find_double("GR_max",UNSET);
-	if(GRmax == UNSET) emsgroot("A value for 'GR_max' must be set");
-	if(nrun == 1) emsgroot("'nrun' must be larger than 1");
-}
-
-
-/// Finds the cut-off for the Gelman Rubin statistic or the number of updates
-void Inputs::find_GRmax_nupdate(double &GRmax, const unsigned int nrun, unsigned int &nupdate)
-{
-	GRmax = find_double("GR_max",UNSET);
-	nupdate = find_positive_integer("nupdate",UNSET);
-	
-	if(GRmax != UNSET && nrun == 1) emsgroot("'nrun' must be larger than 1");
-	if(GRmax != UNSET && nupdate != UNSET) emsgroot("Cannot set both 'GR_max' and 'nupdate'.");
-	if(GRmax == UNSET && nupdate == UNSET) nupdate = 1;
+	if(nsample < min) emsgroot("'nsample' must be at least 10.");
 }
 
 
 /// Finds the number of samples
-void Inputs::find_nsample_GRmax(unsigned int &nsample, double &GRmax, const unsigned int nrun)
+void Inputs::find_nsample_final(unsigned int &nsample_final,unsigned int &nsample)
+{
+	nsample_final = find_positive_integer("nsample_final",nsample);
+}
+
+
+/// Finds the number of samples
+void Inputs::find_nsample_or_ESSmin_or_cpu_time(unsigned int &nsample, double &ESSmin, double &cpu_time)
 {
 	nsample = find_positive_integer("nsample",UNSET);
-	GRmax = find_double("GR_max",UNSET);
-	if(nsample == UNSET && GRmax == UNSET) emsgroot("Either 'nsample' or 'GR_max' must be set");
-	if(nsample != UNSET && GRmax != UNSET) emsgroot("'nsample' and 'GR_max' cannot both be set");
-	if(nsample != UNSET && nsample < 10) emsgroot("'nsample' must be at least 10.");
+	ESSmin = find_double("ESS_min",UNSET);
+	cpu_time = find_double("cpu_time",UNSET);
+			
+	auto num = 0u;
+	if(nsample != UNSET) num++;
+	if(ESSmin != UNSET) num++;
+	if(cpu_time != UNSET) num++;
 	
-	if(GRmax != UNSET && nrun == 1) emsgroot("'nrun' must be larger than 1");
+	if(num == 0) emsgroot("A value for 'nsample', 'ESS_min', or 'cpu_time' must be set");
+	if(num > 1) emsgroot("Either 'nsample', 'ESS_min', or 'cpu_time' must be set");
 }
 
 
@@ -1778,7 +1791,8 @@ void Inputs::find_nsample_GRmax(unsigned int &nsample, double &GRmax, const unsi
 void Inputs::find_nburnin(unsigned int &nburnin, const unsigned int &nsample)
 {
 	nburnin = find_positive_integer("nburnin",UNSET);           // Sets the total number of mcmc particles
-	if(nburnin == UNSET && nsample != UNSET) nburnin = nsample/4;
+	//if(nburnin == UNSET && nsample != UNSET) nburnin = nsample/4;
+	if(nburnin == UNSET && nsample != UNSET) nburnin = nsample/2; // TO DO
 	if(nburnin >= nsample && nsample != UNSET) emsgroot("'nburnin' must be less than 'nsample'");
 	if(nburnin == UNSET) emsgroot("'nburnin' must be set");
 }
@@ -1787,7 +1801,13 @@ void Inputs::find_nburnin(unsigned int &nburnin, const unsigned int &nsample)
 /// Finds the thinning of samples when using PMCMC or MC3
 void Inputs::find_nthin(unsigned int &nthin, const unsigned int nsample)
 {
-	nthin = find_positive_integer("nthin",1);
+	auto def = 1u;
+	if(nsample != UNSET){
+		def = (unsigned int)(nsample/1000.0);
+		if(def == 0) def = 1;
+	}
+		
+	nthin = find_positive_integer("nthin",def);
 	if(nthin >= nsample/10) emsgroot("'nthin' is too large");
 	if(nthin < 1) emsgroot("'nthin' must be 1 or above");
 }
@@ -1830,18 +1850,19 @@ void Inputs::find_propsize(double &propsize)
 
 
 /// Finds the fraction of samples accepted per generation (for ABCSMC)
-void Inputs::find_cutoff_frac(double &cutoff_frac)
+void Inputs::find_cutoff_frac(double &cutoff_frac, double &cutoff_frac_init)
 {
-	cutoff_frac = find_double("cutoff_frac",0.5);	
+	cutoff_frac = find_double("cutoff_frac",0.3);	
 	if(cutoff_frac <= 0) emsgroot("'cutoff_frac' must be positive");
 	if(cutoff_frac > 1) emsgroot("'cutoff_frac' must be less than one.");
+	cutoff_frac_init = find_double("cutoff_frac_init",cutoff_frac);	
 }
 
 
 /// Finds the quenching factor for the PAIC algorithm
 void Inputs::find_quench_factor(double &quench_factor)
 {
-	quench_factor = find_double("quench_factor",0.5);
+	quench_factor = find_double("quench_factor",1.0);
 }
 
 
@@ -1977,6 +1998,7 @@ void Inputs::find_mcmc_update(MCMCUpdate &mcmc_update)
 	mcmc_update.full_mvn = false;
 	mcmc_update.mvn = false;
 	mcmc_update.single = true;
+	mcmc_update.dist_R_joint = true;
 	mcmc_update.demo_spec = true;
 	mcmc_update.mean_time = true;
 	mcmc_update.neighbour = true;
@@ -1989,6 +2011,7 @@ void Inputs::find_mcmc_update(MCMCUpdate &mcmc_update)
 		mcmc_update.full_mvn = get_bool(mup.stringfield("full_mvn",""),"In 'mcmc_update'");
 		mcmc_update.mvn = get_bool(mup.stringfield("mvn",""),"In 'mcmc_update'");
 		mcmc_update.single = get_bool(mup.stringfield("single",""),"In 'mcmc_update'");
+		mcmc_update.dist_R_joint = get_bool(mup.stringfield("dist_R_joint",""),"In 'mcmc_update'");
 		mcmc_update.demo_spec = get_bool(mup.stringfield("demo_spec",""),"In 'mcmc_update'");
 		mcmc_update.mean_time = get_bool(mup.stringfield("mean_time",""),"In 'mcmc_update'");
 		mcmc_update.neighbour = get_bool(mup.stringfield("neighbour",""),"In 'mcmc_update'");
