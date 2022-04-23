@@ -1,6 +1,7 @@
 CXX := mpicxx
-
-CXXFLAGS := -g -O3 -W -Wall -std=c++11 -fmax-errors=3
+#-mavx2
+CXXFLAGS := -g  -mfma -O3 -W -Wall -std=c++11 -fmax-errors=3
+#CXXFLAGS := -O3 -W -Wall -std=c++11 -fmax-errors=3
 #CXXFLAGS := -g -W -Wall -std=c++11
 # -B flag forces compilation of all files
 BUILD_DIR := ./build
@@ -44,10 +45,18 @@ endif
  #
  
 srcs := \
+ src/inputs_comps.cc \
+ src/utils.cc \
+ src/matrix.cc \
+ src/model.cc \
+ src/inputs.cc \
+ src/ml.cc \
+ src/abccont.cc \
+ src/abcda.cc \
+ src/importance.cc \
  src/output.cc \
  src/state.cc \
- src/inputs.cc \
- src/model.cc \
+ src/state_mvn_approx.cc \
  src/model_JSON.cc \
  src/abc.cc \
  src/abcmbp.cc \
@@ -59,7 +68,6 @@ srcs := \
  src/data_matrix.cc \
  src/data_raw.cc \
  src/details.cc \
- src/gitversion.cc \
  src/main.cc \
  src/mc3.cc \
  src/mpi.cc \
@@ -72,9 +80,9 @@ srcs := \
  src/simulate.cc \
  src/state_check.cc \
  src/timers.cc \
- src/tinyxml2.cc \
- src/utils.cc
+ src/tinyxml2.cc
 
+	#src/gitversion.cc \
 	
 objs := $(srcs:%=$(BUILD_DIR)/%.o)
 deps := $(objs:.o=.d)
@@ -96,7 +104,7 @@ TEST_EXEC_OBJS := $(TEST_EXEC_SRCS:%=$(BUILD_DIR)/%.o)
 $(exe): $(objs) $(exe_deps)
 	$(CXX)  $(objs) $(LDFLAGS) -o $@
 
-$(BUILD_DIR)/%.cc.o: %.cc | gitversion
+$(BUILD_DIR)/%.cc.o: %.cc  #| gitversion
 	@$(MKDIR_P) $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
@@ -107,10 +115,10 @@ $(TEST_EXEC): $(BUILD_DIR)/% : $(TEST_EXEC_OBJS)
 
 # $(TARGET_ARCH)
 
-.PHONY : gitversion
-gitversion:
-	@$(MKDIR_P) $(BUILD_DIR)
-	bash ./gitversion.sh $(BUILD_DIR)/gitversion.hh
+#.PHONY : gitversion
+#gitversion:
+#	@$(MKDIR_P) $(BUILD_DIR)
+#	bash ./gitversion.sh $(BUILD_DIR)/gitversion.hh
 
 .PHONY : all
 all: $(exe)
