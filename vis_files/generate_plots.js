@@ -388,7 +388,7 @@ function get_colourbar(vis)
 		}
 	}
 
-	axymin = 0.8; axymax = 1.2;
+	//axymin = 0.8; axymax = 1.2;
 
 	if(axymin == axymax){
 		if(axymin == 0) axymax = 1;
