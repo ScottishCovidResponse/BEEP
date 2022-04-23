@@ -15,6 +15,8 @@ class ObservationModel
 		vector <double> get_EF_datatable(const State *state) const;
 		vector <double> get_obs_value(const State *state) const;
 		vector < vector <double> > get_graph_state(const State *state) const;
+		vector <ObsSlice> generate_obs_slice() const;
+		double mean_percentage_error(const double invT) const;
 				
 		unsigned int nsection;                                     // The sections the obsevations are split into 
 		vector <unsigned int> section_ti;             
