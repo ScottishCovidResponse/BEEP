@@ -2,6 +2,7 @@
 #define BEEPMBP__MPI_HH
 
 #include "struct.hh"
+#include <fstream>
 
 struct Mpi {
 	Mpi(const Details &details);

@@ -3,221 +3,46 @@ name: CI
 on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-18.04
-    defaults:
-      run:
-        shell: bash
-        # This doesn't work:
-        # /bin/bash --noprofile --norc -e -o pipefail -o nounset {0}
-    
+  build_ubuntu:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: true
-    
+
     - name: Install packages
-      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha clang-tools-10 gcovr
+      run: sudo apt-get update && sudo apt-get install -y git build-essential mpich aha clang-tools-10 gcovr ghostscript
 
     - name: Compile
       run: |
-        make -j 4 --output-sync COVERAGE=1
-
-    - name: Run code tests
-      run: |
-        make COVERAGE=1 codetest
-
-    - name: Compute code test coverage
-      run: |
-        make GCOVRFLAGS=--delete coverage
-
-    - name: Run regression tests
-      run: |
-        make test
-
-    - name: Compute regression test coverage
-      run: |
-        make GCOVRFLAGS=--delete coverage
+        cmake -Bbuild
+        cmake --build build -j 4
 
     - name: Run example simulation
       run: |
-        ./beepmbp inputfile="examples/sim.toml" 
+        ./bin/build/BEEPmbp inputfile="examples/EX.toml" mode="sim"
 
     - name: Run example inference
       run: |
-        mpirun -n 2 ./beepmbp inputfile="examples/inf.toml" nchain=2 nsamp=10
-
-    - name: Run Clang Static Analyzer
-      run: |
-        scan-build-10 --use-c++ mpicxx -o buildhtml make -B -e -j 4 --output-sync CPPFLAGS_EXTRA="-I/usr/include/mpich"
-
-
-  analyse:
-    needs: build
-    if: ${{ always() }}
-    runs-on: ubuntu-18.04
+        mpirun -n 5 ./build/bin/BEEPmbp inputfile="examples/EX.toml" mode="abcmbp" nparticle=200 ngeneration=10 nrun=4
+  build_MacOS:
+    runs-on: macOS-latest
+    strategy:
+      fail-fast: false
     steps:
     - uses: actions/checkout@v2
-    - name: Download log
+      with:
+        submodules: true
+
+    - name: Install packages
       run: |
-        echo "Job info:"
-        echo "{{ needs.build }}"
-
-        echo "Jobs:"
-        curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}/jobs
-
-        cat jobs.json
-
-        build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
-
-        echo "build_job_id = $build_job_id"
-
-        function download()
-        {
-          curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${@}"
-        }
-
-        # TODO: add error checking
-        download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}/logs"
-        download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}"
-        download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}"
-
-    - name: Report warnings
+        brew install cmake
+        brew install open-mpi
+        brew install ghostscript
+    - name: Compile
       run: |
-        if grep ' warning: ' buildlog.txt >warnings.txt; then
-
-          cat warnings.txt
-
-          while read ts flc msg; do
-            if [[ $flc =~ (.*):(.*):(.*) ]]; then
-              f=${BASH_REMATCH[1]}
-              l=${BASH_REMATCH[2]}
-              c=${BASH_REMATCH[3]}
-              echo "::warning file=${f},line=${l},col=${c}::${msg}"
-            else
-              echo "Failed to match flc \"$flc\""
-            fi
-          done < warnings.txt
-        fi
-
-  # upload:
-  #   needs: build
-  #   if: ${{ always() }}
-  #   runs-on: ubuntu-18.04
-
-  #   steps:
-  #   - uses: actions/checkout@v2
-
-  #   - name: Set up ssh agent
-  #     uses: webfactory/ssh-agent@v0.2.0
-  #     with:
-  #       ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-  #   - name: Add host public key
-  #     run: |
-  #       echo "projectdata.scrc.uk ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCedi8BdVnymEHtXQ6u7WBi0UAcQdsOEub25kzzCRDMmOOFsicdW30G+wePmw1DbV7HdHONqSo8S5+GmH0Et546TW/8HqaklnOe+1It18XIcvA58Bh8cPv/0r02OJAkmwk7Qja+dOg5iXZSWceTvW6dN/2TuJEXdYGBY1cI9847v8hGGbmH+SZ6wIWrDX/aMgND449ikstfguOckEuBAL1OdOyRm1Li8CtHtQNRefGPZpvtpeKzDB2rkFo+G/nBmBdPJ+kCXiblIMoKK2UhZbz5VYxBmbOUcG4Xq+9EnyxgUcX7VSKfuzIMhJK7OVFbpOs0JTawMhZQzExh9SCKFLavo2arL4WL1EvGKEbZFWedU+lW4vtsaUz2uTg5x6NV7aX+kbSo3Aq2cbxhbAhmt2aw/tFDNil+bUBb0NMWrYbzp5oFCBSw0KpBwGQx/Rc7H+gI0wVGFw24G4Dud1O3JAjv8bBRzihX/m10QsnRm56xVu/JTUuUasaG0Ocyv3uOqfM=" >> ~/.ssh/known_hosts
-
-  #   - name: Download log
-  #     run: |
-  #       echo "Job info:"
-  #       echo "{{ needs.build }}"
-
-  #       echo "Jobs:"
-  #       curl -o jobs.json -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}/jobs
-
-  #       cat jobs.json
-
-  #       build_job_id=$(jq '.jobs[] | select(.name=="build")| .id' < jobs.json)
-
-  #       echo "build_job_id = $build_job_id"
-
-  #       function download()
-  #       {
-  #         curl -L -H "Accept: application/vnd.github.v3+json" -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${@}"
-  #       }
-
-  #       # TODO: add error checking
-  #       download -o buildlog.txt "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}/logs"
-  #       download -o build.json   "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/jobs/${build_job_id}"
-  #       download -o run.json     "https://api.github.com/repos/ScottishCovidResponse/BEEPmbp/actions/runs/${GITHUB_RUN_ID}"
-
-  #   - name: Write summary page
-  #     run: |
-  #       conclusion="$(jq -r < log/build.json '.conclusion')"
-
-  #       function escape_html()
-  #       {
-  #         sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g'
-  #       }
-
-  #       commit_id="$(jq -r < log/run.json '.head_commit.id')"
-  #       commit_message="$(jq -r < log/run.json '.head_commit.message'|head -n 1|escape_html)"
-  #       commit_timestamp="$(jq -r < log/run.json '.head_commit.timestamp')"
-  #       commit_author="$(jq -r < log/run.json '.head_commit.author.name')"
-  #       commit_url="https://github.com/ScottishCovidResponse/BEEPmbp/commit/${commit_id}"
-
-  #       warnings=$(grep "warning:" compile-log/compile-log.txt | wc -l)
-  #       title="BEEPmbp build and test run $(basename $GITHUB_REF)/$GITHUB_RUN_NUMBER"
-
-
-  #       cat >summary.html <<EOF
-  #       <!DOCTYPE html>
-  #       <html lang="en">
-  #       <head>
-  #       <meta charset="utf-8">
-  #       <title>$title</title>
-  #       <link rel="stylesheet" href="style.css">
-  #       <!-- <script src="script.js"></script> -->
-  #       </head>
-  #       <body>
-  #       <h1>$title</h1>
-
-  #       <p>Run status: ${conclusion}</p>
-  #       <p>No. of compilation warnings: <a href="compile-log.html">${warnings}</a></p>
-
-  #       <ul>
-  #         <li>Git commit -- the version tested in this run:
-  #           <ul>
-  #             <li><a href="${commit_url}">${commit_message}</a></li>
-  #             <li>$commit_author, $commit_timestamp</li>
-  #           </ul>
-  #         </li>
-  #         <li><a href="buildlog.txt">Run log</a> -- The log of the whole build and test run</li>
-  #         <li><a href="compile-log.html">Compilation log</a> -- The log of the compilation showing all warnings</li>
-  #         <li>Simulation:
-  #           <ul>
-  #             <li><a href="Simulation/simulation-log.txt">Simulation log</a> -- The log of the simulation run</li>
-  #             <li><a href="Simulation">Simulation output</a> -- The output data of the initial test simulation</li>
-  #           </ul>
-  #         </li>
-  #         <li>Inference:
-  #           <ul>
-  #             <li><a href="Output/inference-log.txt">Inference log</a> -- The log of the inference run</li>
-  #             <li><a href="Output">Inference output</a> -- The output data of the inference run</li>
-  #           </ul>
-  #         </li>
-  #         <li><a href="https://github.com/ScottishCovidResponse/BEEPmbp/actions">GitHub Actions runs</a> -- Build and test runs for all branches</li>
-  #       </ul>
-  #       </body>
-  #       </html>
-  #       EOF
-
-  #   - name: Upload results to website
-  #     run: |
-  #       path=branches/$(basename $GITHUB_REF)/workflows/$GITHUB_WORKFLOW/$GITHUB_RUN_NUMBER
-  #       mkdir -p $path
-  #       # These must always be present, or there is a problem with the CI system
-  #       cp -a summary.html .github/workflows/style.css $path
-  #       # These might not be present if the code hasn't worked
-  #       cp -a $PWD/{Simulation,Output} log/build.json log/buildlog.txt compile-log/compile-log.* $path || true
-  #       echo "ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest"
-  #       ln -s $GITHUB_RUN_NUMBER $(dirname $path)/latest
-  #       echo "find:"
-  #       find branches
-  #       echo "ls -R"
-  #       ls -R
-  #       # rsync --relative -avz --no-implied-dirs $path/ ian@projectdata.scrc.uk:
-  #       rsync -avz branches ian@projectdata.scrc.uk: # goes into ~/www/coronapmcmc on server
-  #       url=https://projectdata.scrc.uk/$path
-  #       echo "::warning ::Build output available at $url" >&2
-
+        cmake -Bbuild
+        cmake --build build -j 4
