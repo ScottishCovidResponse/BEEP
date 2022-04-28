@@ -23,11 +23,11 @@ jobs:
 
     - name: Run example simulation
       run: |
-        ./bin/build/BEEPmbp inputfile="examples/EX.toml" mode="sim"
+        ./bin/BEEPmbp inputfile="examples/EX.toml" mode="sim"
 
     - name: Run example inference
       run: |
-        mpirun -n 5 ./build/bin/BEEPmbp inputfile="examples/EX.toml" mode="abcmbp" nparticle=200 ngeneration=10 nrun=4
+        mpirun -n 5 ./build/BEEPmbp inputfile="examples/EX.toml" mode="abcmbp" nparticle=20 ngeneration=2 nrun=2
   build_MacOS:
     runs-on: macOS-latest
     strategy:
