@@ -63,8 +63,6 @@ Details::Details(Inputs &inputs)
 		}
 	}
 	
-	efoi_factor = inputs.find_positive_integer("efoi_factor",100000);   // External force of infection factor
-	 
 	string startstr = inputs.find_string("start","UNSET");              // Beginning and ending times
 	if(startstr == "UNSET") emsgroot("A value for 'start' must be set"); 
 	start = gettime(startstr,"In 'start'");
@@ -106,7 +104,7 @@ Details::Details(Inputs &inputs)
 		if(time_format == TIME_FORMAT_NUM) division_time[s] += start;
 	}
 	
-	trans_combine = inputs.find_double("trans_combine",20);            // Determines if trans data is combined
+	trans_combine = inputs.find_double("trans_combine",UNSET);            // Determines if trans data is combined
 	
 	if(mode == PMCMC_INF){                                             // This defines when particle filtering is performed 
 		obs_section = true;

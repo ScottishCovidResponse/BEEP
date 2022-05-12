@@ -39,13 +39,15 @@ Output::Output(const Details &details, const Data &data, const Model &model, Inp
 	
 
 /// Generates the output files along with the final pdf report that gives graphical outputs
-void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp) const
+void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp, const double invT) const
 { 
-	cout << "Generating graphs..." << endl;
-
+	if(mpi.core == 0){
+		cout << endl << "Generating outputs in directory '" << details.output_directory;
+		cout << "'..." << endl;
+	}	
+	
 	for(auto &psa : psamp) psa.paramval = model.dirichlet_correct(psa.paramval);
 	
-	cout << endl;
 	if(suppress_output == false && details.siminf != DATAVIEW){
 		if(details.siminf == SIMULATE) cout << "Outputs in directory '" << details.output_directory << "':" << endl;
 		else cout << details.analysis_type << " outputs in directory '" << details.output_directory << "':" << endl;
@@ -64,7 +66,7 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 		
 		datatable_maps(opsamp,op);
 		
-		graph_plots(opsamp,op); 
+		graph_plots(opsamp,op,invT); 
 		
 		add_democat_change(op);
 	}
@@ -83,7 +85,7 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 			
 		datatable_maps(opsamp,op);
 			
-		graph_plots(opsamp,op); 
+		graph_plots(opsamp,op,invT); 
 		
 		add_democat_change(op);
 		
@@ -107,12 +109,16 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 			
 		set_labelon(op);                                                  // Determines if labels put in description
 		
-		auto grfile = "Graphs";
-		generate_gnuplot_file(op,grfile);                                 // Generates the gnuplot file
+		set_graph_source(op);                                             // Sets source files
 		
-		generate_pdf(grfile,"Output graphs");                             // Runs gnuplot and generates pdf 
+		if(false){
+			auto grfile = "Graphs";
+			generate_gnuplot_file(op,grfile);                                 // Generates the gnuplot file
 		
-		generate_pdf_description(op,grfile);                              // Generates a text descrition of the pdf file
+			generate_pdf(grfile,"Output graphs");                             // Runs gnuplot and generates pdf 
+		
+			generate_pdf_description(op,grfile);                              // Generates a text descrition of the pdf file
+		}
 	}
 	
 	if(details.siminf == INFERENCE){
@@ -124,7 +130,9 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 		
 		set_labelon(op_diag);                                           // Determines if labels put in description
 		
-		if(op_diag.size() > 0){
+		set_graph_source(op);                                           // Sets source files
+		
+		if(false && op_diag.size() > 0){
 			auto grfile = "Diagnostic_Graphs";
 			generate_gnuplot_file(op_diag,grfile);                        // Generates the gnuplot file
 		
@@ -196,16 +204,9 @@ void Output::generate_pdf(const string file, const string desc) const
 }
 
 
-/// Generates a text description of the pdf file
-void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfile) const
+/// Sets the source files for the plots
+void Output::set_graph_source(vector <OutputPlot> &op) const
 {
-	auto file = details.output_directory+"/"+grfile+"_description.txt";
-	ofstream desc(file);
-	if(!desc) emsg("Cannot open the file '"+file+"'");
-	
-	desc << "This file provides a description of the source files used to generate the graphs in '";
-	desc << details.output_directory << "/" << file << ".pdf'" << endl << endl;
-	
 	for(auto i = 0u; i < op.size(); i++){   // Sets the source files
 		const auto &oppl = op[i];
 	
@@ -257,6 +258,18 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 
 		op[i].source = ss.str();
 	}
+}
+	
+	
+/// Generates a text description of the pdf file
+void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfile) const
+{
+	auto file = details.output_directory+"/"+grfile+"_description.txt";
+	ofstream desc(file);
+	if(!desc) emsg("Cannot open the file '"+file+"'");
+	
+	desc << "This file provides a description of the source files used to generate the graphs in '";
+	desc << details.output_directory << "/" << file << ".pdf'" << endl << endl;
 	
 	auto page = 1u;
 	for(auto i = 0u; i < op.size(); i++){
@@ -296,8 +309,6 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 /// Generates a text description of the pdf file
 void Output::generate_visualisation(const vector <OutputPlot> &op, const string grfile) const
 {
-	cout << "Generating visualisation..." <<  endl;
-	
 	auto opdir = details.output_directory;
 	
 	ensure_directory(opdir+"/vis_files");              // Copies the output 
@@ -574,7 +585,9 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 				
 			case OP_PRIOR_TABLE:
 				{
-					vector <unsigned int> cols; cols.push_back(0); cols.push_back(6);
+					vector <unsigned int> cols; 
+					cols.push_back(0);
+					if(details.mode == ML_INF) cols.push_back(4); else cols.push_back(6);
 					vis << ",\"param_table\":" << data.get_table_cols_JSON(opi.title,details.output_directory,cols);
 				}
 				break;
@@ -769,7 +782,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 		
 	visout << "var jsonstr = '" << str << "';" << endl;
 	
-	cout << "Use the '" << opdir << "/visBEEPmbp.html' tool to visualise the results." << endl << endl;
+	cout << "  Open 'visBEEPmbp.html' to visualise results." << endl;
 }
 
 
@@ -1056,48 +1069,21 @@ void Output::datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &
 
 
 /// Plots a graph giving time variation in transition rate or population or marginal distributions
-void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op) const
+void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op, const double invT) const
 {
 	if(opsamp.size() == 0) return;
 	
 	auto ngraph = data.graph.size();
 	
-	vector <bool> EBflag(ngraph);                                                     // This sets error bars from observation model
-	auto EBnum = LARGE;
-	
-	for(auto gr_num = 0u; gr_num < data.graph.size(); gr_num++){
-		EBflag[gr_num] = false;
-		 
-		auto gr = data.graph[gr_num];
-		const auto &dt = data.datatable[gr.datatable];
-					
-		if(plot_obs_model == true && details.siminf == INFERENCE){	
-			if(dt.obsmodel == POWER_OBSMODEL) EBflag[gr_num] = true; 
-
-			if(dt.obsmodel == SCALE_OBSMODEL){
-				EBflag[gr_num] = true;		
-				auto max = 0.0;
-				auto imax = 0u;
-				for(auto i = 0u; i < gr.point.size(); i++){
-					auto val = data.obs[gr.point[i].obs].value;
-					if(val > max){ max = val; imax = i;}
-				}
-				
-				if(max > 0){
-					const auto &ob = data.obs[gr.point[imax].obs];
-					auto num = 0.2*ob.w*ob.weight;
-					if(num < EBnum) EBnum = num; 
-				}
-			}
-		}
-	}
+	auto EBflag = false;                          // Sets if error bars are used for the obs model
+	if(details.siminf == INFERENCE && invT != UNSET) EBflag = true;
 	
 	vector <GraphMultiPlot> graph_plot;
 	
 	for(auto gr_num = 0u; gr_num < ngraph; gr_num++){
 		auto gr = data.graph[gr_num];
 		const auto &dt = data.datatable[gr.datatable];
-			
+
 		auto file = details.output_directory+"/"+post_dir+"/state/"+gr.file;
 
 		ofstream stateout(file.c_str());
@@ -1169,7 +1155,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			else{
 				dataout << "Time,Data";
 			}
-			if(EBflag[gr_num] == true) dataout << ",EB min,EB max";
+			
+			if(EBflag == true) dataout << ",EB min,EB max";
 	
 			dataout << endl;
 			
@@ -1197,13 +1184,17 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				auto val = ob.value;
 				
 				auto EBmin = 0.0, EBmax = 0.0;
-				if(EBflag[gr_num] == true){
-					if(dt.obsmodel == POWER_OBSMODEL){	EBmin = val - ob.sd; EBmax = val + ob.sd;}
-					if(dt.obsmodel == SCALE_OBSMODEL){
-						EBmin = (ob.value+ob.epsilon)*exp(-EBnum/(ob.w*ob.weight)) - ob.epsilon;
-						EBmax = (ob.value+ob.epsilon)*exp(EBnum/(ob.w*ob.weight)) - ob.epsilon;
-						if(EBmax > ob.value*4) EBmax = ob.value*4;
+				if(EBflag == true){
+					auto sd = 0.0;
+					
+					switch(dt.obsmodel){
+						case NORMAL_OBSMODEL: sd = ob.sd; break;
+						case NORMAL_PERCENT_OBSMODEL: sd = ob.sd; break;
+						case POISSON_OBSMODEL: sd = sqrt(val); break;	
+						case NEGBINO_OBSMODEL: sd = sqrt(val + val*val/ob.shape); break; 
 					}
+					
+					EBmin = val - sd/sqrt(invT); EBmax = val + sd/sqrt(invT); 
 				}
 				
 				if(dt.type == TRANS && val != UNKNOWN && val != THRESH){
@@ -1214,7 +1205,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				auto shift = 0.0; if(details.time_format == TIME_FORMAT_NUM) shift = details.start;
 				
 				string EBstr = "";
-				if(EBflag[gr_num] == true) EBstr = ","+to_string(EBmin)+","+to_string(EBmax);
+				if(EBflag == true) EBstr = ","+to_string(EBmin)+","+to_string(EBmax);
 			
 				switch(dt.type){
 					case MARGINAL:
@@ -1293,7 +1284,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 				
 				if(file_data != ""){
 					gp.file_data.push_back(file_data);
-					gp.file_data_EB.push_back(EBflag[gr_num]);
+					gp.file_data_EB.push_back(EBflag);
 					if(thresh_flag == true)	gp.file_data_thresh.push_back(file_data_thresh);
 				}
 				new_plot = false;
@@ -1313,7 +1304,7 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 			gp.max = max;
 			if(file_data != ""){
 				gp.file_data.push_back(file_data);
-				gp.file_data_EB.push_back(EBflag[gr_num]);
+				gp.file_data_EB.push_back(EBflag);
 				if(thresh_flag == true) gp.file_data_thresh.push_back(file_data_thresh);
 			}
 			graph_plot.push_back(gp);
@@ -1363,8 +1354,8 @@ void Output::graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op)
 						if(gp.file_data_EB[i] == true){
 							//oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID,3);
 							oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID);
-							oppl.addline("Obs. Model",gp.file_data[i],1,3,BLACK_DASHED);
-							oppl.addline("Obs. Model",gp.file_data[i],1,4,BLACK_DASHED);
+							oppl.addline("Obs Model",gp.file_data[i],1,3,BLACK_DASHED);
+							oppl.addline("Obs Model",gp.file_data[i],1,4,BLACK_DASHED);
 						}
 						else oppl.addline("Data",gp.file_data[i],1,2,BLACK_SOLID);
 					}
@@ -1472,7 +1463,11 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 	
 	switch(details.siminf){
 	case SIMULATE: paramout << "Name,Value" << endl; break;
-	case INFERENCE: paramout << "Name,Mean,95% CI,SD,ESS,GRS,Prior" << endl; break;
+	case INFERENCE: 
+		paramout << "Name,Mean,95% CI,SD";
+		if(details.mode != ML_INF) paramout << ",ESS,GRS";
+		paramout << ",Prior" << endl;
+		break;
 	case DATAVIEW: paramout << "Name" << endl; break;
 	}
 	
@@ -1493,10 +1488,13 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 				
 			case INFERENCE:
 				paramout << replace(model.param[p].name,"→","->")  << "," << stat.mean;
-				paramout << "," << stat.CImin << " --- "<< stat.CImax << "," << stat.sd << ",";
-				if(ESS[p] == UNSET) paramout << "---"; else paramout << ESS[p];
-				paramout << ",";
-				if(GR[p] == UNSET) paramout << "---"; else paramout << GR[p];
+				paramout << "," << stat.CImin << " --- "<< stat.CImax << "," << stat.sd;
+				if(details.mode != ML_INF){
+					paramout << ",";
+					if(ESS[p] == UNSET) paramout << "---"; else paramout << ESS[p];
+					paramout << ",";
+					if(GR[p] == UNSET) paramout << "---"; else paramout << GR[p];
+				}
 				paramout << "," << replace(model.print_prior(p),",","|");
 				break;
 				
@@ -1514,10 +1512,10 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 	
 	switch(details.siminf){
 	case SIMULATE:
-		cout << "Parameter values are given in '" << filefull << "'" << endl << endl; 
+		cout << "  Parameter values given in '" << file << "'" << endl; 
 		break;
 	case INFERENCE:
-		cout << details.analysis_type+" parameter estimates are given in '" << filefull << "'" << endl << endl;
+		cout << "  " << details.analysis_type+" parameter estimates given in '" << file << "'" << endl;
 		break;
 	case DATAVIEW:
 		break;
@@ -1543,7 +1541,13 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 			OutputPlot oppl_pr(OP_PRIOR_TABLE,file,fulldesc,"Prior","","","","","",UNSET,UNSET);
 			op.push_back(oppl_pr);
 		
-			fulldesc = "Posterior parameter estimates: This table provides posterior estimates for each of the model parameters. The first column gives the parameter name followed by the posterior mean, 95% credible interval and standard deviation.  The effective samples size (ESS) provides an estimate of the number of independent posterior samples generated (exceeding 200 implies convergence) and the Gelman-Rubin statistic (GRS) measures how well independent runs map out the same posterior distribution (less than around 1.05 usually implies convergence). Note, ESS and GRS are not available for all inference methods. Finally a column shows the prior (as defined in the TOML file) for comparison.";
+			fulldesc = "Posterior parameter estimates: This table provides posterior estimates for each of the model parameters. The first column gives the parameter name followed by the posterior mean, 95% credible interval and standard deviation.";
+
+			if(details.mode != ML_INF){
+				fulldesc += " The effective sample size (ESS) provides an estimate of the number of independent posterior samples generated (exceeding 200 implies convergence) and the Gelman-Rubin statistic (GRS) measures how well independent runs map out the same posterior distribution (less than around 1.05 usually implies convergence). Note, ESS and GRS are not available for all inference methods.";
+			}
+			fulldesc += " Finally a column shows the prior (as defined in the TOML file) for comparison.";
+		
 			fulldesc += "  Click on the parameter names (in blue) to link to where they appear in the model.";
 			
 			OutputPlot oppl(OP_PARAM_TABLE,file,fulldesc,details.analysis_type,"Parameters","Table","","","",UNSET,UNSET);
@@ -1654,9 +1658,11 @@ vector <DemoDep> Output::get_demodep(const string dep) const
 /// Outputs a bar chart giving compartmental means split by demographic group
 void Output::mean_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const 
 {
+	vector <string> previous_plots;
+	
 	for(const auto &co : model.comp){
 		auto dep = co.mean_dep;
-		if(co.num == 0 && dep != ""){ 
+		if(co.num == 0 && dep != "" && find_in(previous_plots,co.name) == UNSET){ 
 			auto demodep = get_demodep(dep);
 			
 			auto plot_sim_param = plot_param_values;
@@ -1714,6 +1720,9 @@ void Output::mean_distributions(const vector <ParamSample> &psamp, vector <Outpu
 				
 					if(plot_sim_param == true) fulldesc += "  The horizontal black lines show the true values used to simulate the data. ";
 				}
+				
+				// This prevents the same plot multiple times
+				previous_plots.push_back(co.name);
 				
 				OutputPlot oppl(OP_MARGINAL,"Compartment "+co.name+" mean residency time",fulldesc,details.analysis_type,"Compartmental model","Residency time",co.name,dep,"Residency time",UNSET,UNSET);
 				oppl.label = label; 
@@ -2019,6 +2028,7 @@ void Output::area_effect_distributions(const vector <ParamSample> &psamp, vector
 /// Outputs the probability distributions for derived quantities (generation time, external infections etc..)
 void Output::derived_parameter_distributions(const vector <Sample> &opsamp, vector <OutputPlot> &op) const
 {
+	if(details.siminf == SIMULATE) return;
 	if(opsamp.size() == 0) return;
 	
 	const auto &derived_param = opsamp[0].derived_param;
@@ -2031,7 +2041,7 @@ void Output::derived_parameter_distributions(const vector <Sample> &opsamp, vect
 			const auto &derpar = derived_param[dp];
 			
 			string file = derpar.file;
-			cout << derpar.file << " " << derpar.name <<  " " << derpar.desc << "\n";
+			
 			string filefull = details.output_directory+"/"+post_dir+"/parameter/"+file;
 			ofstream distout(filefull.c_str());
 			if(!distout) emsg("Cannot open the file '"+filefull+"'");
@@ -2156,7 +2166,12 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 		title = label+" as a function of generation";
 		
 		if(EF_flag == true){
-			fulldesc = "Error function reduction: This graph shows how the cut-off in the error function reduces as a function of generation number. A smaller error function implies a closer match between the states generated by the model and the actual data.";
+			if(details.mode == ML_INF){
+				fulldesc = "Error function reduction: The error function is defined as -2 times the log of the posterior (i.e. the sum of the logs of the likelihood and prior). Minimisation of this quantitiy gives the maximum &a& &posterior& (MAP) estimate. This graph shows how the average error function reduces as a function of generation number as CMA-ES proceeds. Convergence is indicated by the curve plateauing to a minimum value.";
+			}
+			else{
+				fulldesc = "Error function reduction: This graph shows how the cut-off in the error function reduces as a function of generation number. A smaller error function implies a closer match between the states generated by the model and the actual data.";
+			}
 		}
 		else{
 			fulldesc = "Inverse temperature increase: This graph shows how the increases as a function of generation number. A larger inverse temperature implies a closer match between the states generated by the model and the actual data.";
@@ -2179,8 +2194,15 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 			
 			auto name = replace(model.param[p].name,":","=");
 			auto title = details.analysis_type+" estimate for "+name+" as a function of generation";
-			string fulldesc = "Parameter convergence: This shows the convergence of the posterior estimate for the model parameter *"+name+"* as a function of the number of generations.";
+			string fulldesc;
 
+			if(details.mode == ML_INF){
+				fulldesc = "Parameter convergence: This shows the convergence of the posterior estimate for the model parameter *"+name+"* onto a maximim &a& &posterior& (MAP) estimate as a function of the number of generations. Note, here the dashed lines DO NOT represent credible intervals. Under CMAES the MAP estimate is first generated and then credible intervals are calculated using the local curvature of the posterior near to the estimate (using an approximation to the inverse Hessian matrix)."; 
+			}
+			else{
+				fulldesc= "Parameter convergence: This shows the convergence of the posterior estimate for the model parameter *"+name+"* as a function of the number of generations.";
+			}
+			
 			if(plot_sim_param == true) fulldesc += "  The horizontal dashed line shows the true parameter value used to generate the data.";
 			
 			OutputPlot oppl(OP_GENERATION,title,fulldesc,"Posterior","Diagnostics","Convergence",model.param[p].name,"Generation",model.param[p].name,min,max);
@@ -2191,22 +2213,21 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 			op.push_back(oppl);
 		}
 	}
+				
+	auto fileDT = details.output_directory+"/Diagnostics/EF_datatable.csv";
+	string ylab;
+	if(EF_flag == true){
+		title = "Contribution to EF from different data sources";
+		fulldesc = "Stratified error function: This graph shows the error function (EF) contributions from each of the different data sources as a function of generation number. The lines with the highest EF indicate which data sources the model finds hardest to generate from the model.";
+		ylab = "log(EF contribution)";
+	}
+	else{
+		title = "Contribution to observation model from different data sources";
+		fulldesc = "Stratified observation model: This graph shows the observation model contributions from each of the different data sources as a function of generation number. The lines with the highest value indicate which data sources the model finds hardest to generate from the model.";
+		ylab = "log(Obs. model contribution)";
+	}
 	
-	auto num = 0u; for(auto i = 0u; i < data.datatable.size(); i++){ if(data.datatable[i].weight != 0) num++;}			
-	if(num > 1){
-		auto fileDT = details.output_directory+"/Diagnostics/EF_datatable.csv";
-		string ylab;
-		if(EF_flag == true){
-			title = "Contribution to EF from different data sources";
-			fulldesc = "Stratified error function: This graph shows the error function (EF) contributions from each of the different data sources as a function of generation number. The lines with the highest EF indicate which data sources the model finds hardest to generate from the model.";
-			ylab = "log(EF contribution)";
-		}
-		else{
-			title = "Contribution to observation model from different data sources";
-			fulldesc = "Stratified observation model: This graph shows the observation model contributions from each of the different data sources as a function of generation number. The lines with the highest value indicate which data sources the model finds hardest to generate from the model.";
-			ylab = "log(Obs. model contribution)";
-		}
-		
+	if(false){
 		OutputPlot opplDT(OP_LOG_GENERATION,title,fulldesc,"Posterior","Diagnostics",tab3,"By data source","Generation",ylab,UNSET,UNSET);
 		auto c = 2u;
 		for(auto i = 0u; i < data.datatable.size(); i++){
@@ -2215,11 +2236,11 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 				c++;
 			}
 		}
-	
+
 		op.push_back(opplDT);
 	}
-
-	{
+	
+	if(details.mode != ML_INF){
 		auto fulldesc = "CPU time: This graph shows the CPU time required to achieve a given cut-off in the error function. This graph can be used to compare the efficiency of the different inference algorithms.";
 		
 		OutputPlot oppl(OP_CPU,"CPU time as a function of EF",fulldesc,"Posterior","Diagnostics","Error function","CPU time","EF cut-off","CPU time (minutes)",UNSET,UNSET);
@@ -2356,14 +2377,12 @@ void Output::add_democat_change(vector <OutputPlot> &op) const
 /// Outputs the compartmental model
 void Output::compartmental_model(vector <OutputPlot> &op) const
 {
-	string fulldesc = "Compartmental model: This shows the compartmental model used to";
-	if(details.siminf == SIMULATE) fulldesc += " generate the data. ";
-	else fulldesc += " perform inference on the data. ";
-	fulldesc += "The force of infection &λ& gives the probability per unit time of an individual becoming infected. The occupancy time within a compartment (assuming an onwards transition) can either be exponentially distributed (denoted Exp(&m&) where &m& is a mean time) or Erlang distributed (denoted Γ(&m&,&k&) where &m& is a mean time and &k& is an integer shape parameter). The probability an individual goes down one branch or another is determined by &b&. The quantities &λ&, &m& and &b& may depend on the demographic classification &d& of an individual.  Clicking on the distributions or branching probabilities shows how they are set by the underlying model parameters."; 
+	string fulldesc = "Compartmental model: ";
+	fulldesc += "The force of infection &λ_t& gives the probability per unit time of an individual becoming infected. The occupancy time within a compartment (assuming an onwards transition) can either be exponentially distributed (denoted Exp(&m&) where &m& is a mean time) or Erlang distributed (denoted Γ(&m&,&k&) where &m& is a mean time and &k& is an integer shape parameter). The probability an individual goes down one branch or another is determined by &b&. The quantities &λ_t&, &m& and &b& may depend on the demographic classification &d& of an individual.  Clicking on the distributions or branching probabilities shows how they are set by the underlying model parameters."; 
 	OutputPlot oppl(OP_COMP_MODEL,"The input TOML file",fulldesc,"Model","Compartments","","","","",UNSET,UNSET);
 	op.push_back(oppl);
 	
-	fulldesc = "The force of infection: This gives the probability per unit time of a susceptible individual becoming infected. This quantity will vary with time and may also depend on the area the individual resides in, their demographic group, or the strain of the virus.  Click on the terms highlighted in blue to see how model parameters inform them (details of the dependency are given in the manual)."; 
+	fulldesc = "The force of infection: This gives the probability per unit time of a susceptible individual becoming infected. This quantity may vary with time, depend on the area the individual resides in, their demographic group, or the strain of the virus.  Click on the terms highlighted in blue to see how model parameters inform them (details of the dependency are given in the manual)."; 
 	OutputPlot oppl2(OP_FOI_MODEL,"The input TOML file",fulldesc,"Model","Force of infection","","","","",UNSET,UNSET);
 	op.push_back(oppl2);
 	
@@ -2972,7 +2991,7 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 						dataout << details.time_format_str;
 						for(auto i : dt.graph_ref){
 							dataout << sep << data.graph[i].colname;
-							if(dt.obsmodel == LOADSD_OBSMODEL) dataout << sep << data.graph[i].colname << " SD";
+							if(dt.load_sd == true) dataout << sep << data.graph[i].colname << " SD";
 						}
 						dataout << endl;
 
@@ -2984,7 +3003,8 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 							for(auto i : dt.graph_ref){
 								dataout << sep;
 								
-								auto val = obs_value[data.graph[i].point[row].obs];
+								auto ob = data.graph[i].point[row].obs;
+								auto val = obs_value[ob];
 								if(dt.threshold != UNSET && val <= dt.threshold){
 									dataout << data.threshold_str;
 								}
@@ -2993,10 +3013,8 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 									dataout	<< val;
 								}
 								
-								if(dt.obsmodel == LOADSD_OBSMODEL){
-									auto SD = 0.1*val;
-									if(SD < 5) SD = 5;
-									dataout << sep << " " << SD;
+								if(dt.load_sd == true){
+									dataout << sep << data.obs[ob].sd;
 								}
 							}
 							dataout << endl;
@@ -3568,7 +3586,6 @@ void Output::print_model_specification() const
 /// Outputs the model evidence
 void Output::final_model_evidence(const vector <double> &ME_list, const double invT_final, const double cutoff_final) const
 {
-	cout << "output model evidence:\n" << flush;
 	cout << endl;
 	if(invT_final != UNSET) cout << "For invT = " << invT_final << " ";
 	else cout << "For EF cut-off " << cutoff_final << " ";
@@ -3668,12 +3685,10 @@ void Output::readme() const
 
 
 /// This takes a vector of particle sample from each mpi core and combines them
-void Output::generate_graphs(vector <Particle> &particle_store) const 
+void Output::generate_graphs(vector <Particle> &particle_store, const double invT) const 
 {
 	timer[TIME_RESULTS].start();
-	
-	mpi.barrier(); if(mpi.core == 0) cout << endl << "Generating outputs..." << endl << flush;
-			
+				
 	State state(details,data,model,obsmodel);
 
 	auto dir = details.output_directory+"/"+post_dir+"/samples/";
@@ -3685,9 +3700,7 @@ void Output::generate_graphs(vector <Particle> &particle_store) const
 	mpi.gather_samples(psamp,opsamp,particle_store,state,dir);
 	mpi.barrier();
 	
-	if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering done..." << endl << flush;
-	
-	if(mpi.core == 0) generate_graphs(psamp,opsamp);
+	if(mpi.core == 0) generate_graphs(psamp,opsamp,invT);
 	
 	timer[TIME_RESULTS].stop();
 }

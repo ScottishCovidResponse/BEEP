@@ -229,7 +229,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"ml", ML_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"map", ML_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -403,42 +403,77 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			datatab.plot_name = td.stringfield("plot_name","");
 					
 			datatab.line_colour = get_line_colour(td.stringfield("line_colour",""));
-			
-			auto wei = 1.0;
-			auto weight = td.stringfield("weight","");
-			if(weight != "") wei = get_double_positive(weight,"In 'data_tables'");
-			datatab.weight = wei;
-
-			datatab.invT = 1;	
-			auto invT_str = td.stringfield("invT","");
-			if(invT_str != "") datatab.invT = get_double_positive(invT_str,"In 'data_tables' for 'invT'");
 	
-			datatab.obsmodel = SCALE_OBSMODEL;
+			datatab.percent = UNSET;
+			datatab.epsilon_factor = 0.05;
+			auto epsilon_factor = td.stringfield("epsilon_factor","");
+			if(epsilon_factor != "") datatab.epsilon_factor = get_double_positive(epsilon_factor,"In 'data_tables' for 'epsilon_factor'");
+	
+			datatab.load_sd = false;
 			auto obsmodel = td.stringfield("obsmodel","");
 			if(obsmodel != ""){
-				if(obsmodel == "loadSD") datatab.obsmodel = LOADSD_OBSMODEL;
-				else{
-					if(obsmodel == "power") datatab.obsmodel = POWER_OBSMODEL;
-					else{
-						if(obsmodel == "normal") datatab.obsmodel = NORMAL_OBSMODEL;
+				auto spl = split(obsmodel,' ');
+				if(spl.size() > 2){
+					emsgroot("In 'data_tables' the value '"+obsmodel+"' for 'obsmodel' is invalid.");
+				}
+				
+				auto type = toLower(spl[0]);
+				if(type == "normal"){
+					datatab.obsmodel = NORMAL_OBSMODEL;
+					datatab.percent = UNSET;
+				
+					if(spl.size() == 2){
+						auto value = toLower(spl[1]);
+						
+						if(value == "load"){
+							datatab.load_sd = true;
+						}
 						else{
-							if(obsmodel == "poisson") datatab.obsmodel = POISSON_OBSMODEL;
-							else{
-								if(obsmodel == "negbin"){ 
-									datatab.obsmodel = NEGBINO_OBSMODEL; 
-									auto shape = td.stringfield("shape","In 'data_tables'");
-									datatab.shape = get_double_positive(shape,"In 'data_tables' for 'shape'");
-								}
-								else{
-									if(obsmodel == "scale") datatab.obsmodel = SCALE_OBSMODEL;
-									else emsgroot("In 'data_tables' the value 'obsmodel="+obsmodel+"' is not recognised (it should be 'normal', 'poisson', 'negbin' or 'scale').");
+							if(value.substr(value.length()-1,1) == "%"){
+								datatab.obsmodel = NORMAL_PERCENT_OBSMODEL;
+								auto num = value.substr(0,value.length()-1);
+								if(num != ""){
+									datatab.percent = get_double(num,"In 'obsmodel'");
 								}
 							}
-						}			
+							else{
+								if(value != ""){
+									datatab.sd = get_double(value,"In 'obsmodel'");
+									cout << datatab.sd << " sd\n";
+								}
+							}
+						}
+					}
+				}					
+				else{
+					if(obsmodel == "poisson"){
+						datatab.obsmodel = POISSON_OBSMODEL;
+						if(spl.size() > 1){
+							emsgroot("In 'data_tables' the value '"+obsmodel+"' for 'obsmodel' is invalid.");
+						}
+					}
+					else{
+						if(obsmodel == "negbin"){ 
+							datatab.obsmodel = NEGBINO_OBSMODEL; 
+							
+							if(spl.size() != 2){
+								emsgroot("In 'data_tables' the value '"+obsmodel+"' for 'obsmodel' must contain a definition for the shape parameter");	
+							}
+							
+							auto shape = spl[1];
+						
+							datatab.shape = get_double_positive(shape,"In 'data_tables' for 'shape'");
+						}
+						else{
+							emsgroot("In 'data_tables' the value 'obsmodel="+obsmodel+"' is not recognised (it should be '.%', 'normal', 'poisson', 'negbin' or 'scale').");
+						}
 					}
 				}
 			}
-		
+			else{
+				emsgroot("In 'data_tables' a value for 'obsmodel' must be set.");
+			}
+			
 			td.check_used("datatable");
 			datatable.push_back(datatab);
 		}
@@ -493,9 +528,6 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			
 			if(td.contains("file")) emsgroot("In 'state_outputs' the value 'file' should not be set.");
 			datatab.file = "";
-
-			if(td.contains("weight")) emsgroot("In 'state_outputs' the value 'weight' should not be set.");
-			datatab.weight = 1;
 		
 			if(td.contains("timestep")) emsgroot("In 'state_outputs' a value for 'timestep' should not be set.");
 			if(td.contains("shift")) emsgroot("In 'state_outputs' the value 'shift' should not be set.");
@@ -1340,11 +1372,11 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 		
 			auto ps_list = get_paramspec(besp,name,"param","value","prior","smooth","factor",bp.size(),false);
 			
-			if(name == "efoi_spline"){ for(auto &ps : ps_list) ps.factor /= details.efoi_factor;}
-			
 			if(param_not_set(ps_list)){                                  // Sets the parameter name (if not intialised)
 				for(auto i = 0u; i < bp.size(); i++){
 					auto par_name = replace(name,"_","-");
+				
+					if(name == "obs_spline") par_name = name_vec[name_vec.size()-1];
 					
 					if(geo_filt != "") par_name += " "+geo_filt;
 					if(strain_name != "") par_name += " "+strain_name;
@@ -1636,7 +1668,7 @@ void Inputs::check_filename(const string &str) const
 /// Finds the algorithm type for maximum likelihood approaches
 void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample_final, const unsigned int core, const unsigned int ncore, const unsigned int nvar)
 {
-	string val = toLower(find_string("algorithm","GD"));
+	string val = toLower(find_string("algorithm","cmaes"));
 
 	if(val == "gd") algorithm = ML_GD;
 	else{
@@ -1651,19 +1683,25 @@ void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int 
 	if(algorithm == ML_CMAES){
 		G = find_positive_integer("ngeneration",UNSET);
 		cpu_time = find_double("cpu_time",UNSET); 
-		if(G == UNSET && cpu_time == UNSET) emsgroot("For 'cmaes' either 'ngeneration' or 'cpu_time' must be set");
 		if(G != UNSET && cpu_time != UNSET) emsgroot("For 'cmaes' the quantities 'ngeneration' and 'cpu_time' cannot both be set");
+		
+		
+		if(G == UNSET && cpu_time == UNSET){
+			G = ITERATE_GENERATION; 
+			if(core == 0) cout << "By default generations are iterated until convergence." << endl;
+		}
 		
 		npart = find_positive_integer("nparticle",UNSET);
 		if(npart == UNSET){
-			npart = 4+int(3*log(nvar)); 
+			npart = 4+int(5*log(nvar)); 
 			npart = int((npart+ncore-1)/ncore)*ncore;
 			if(core == 0) cout << "By default 'nparticle' set to " << npart << "." << endl;
 		}
 	
 		P = find_positive_integer("posterior_particle",UNSET);
 		if(P == UNSET){
-			P = 200;
+			P = 100;
+			//WP = 20;
 			if(core == 0) cout << "By default 'posterior_particle' is set to " << P << "." << endl;
 			//emsgroot("'posterior_particle' must be set to a positive integer. This determines the number of particles used when generating the final posterior samples (this would typically be over 100).");
 		}

@@ -4,7 +4,7 @@ Load mpi: module load mpi/openmpi-x86_64
 Compile using: make
 
 This lists a possible set of ways to run BEEPmbp. 
-Note, the optiont "-n 20" can be replace by the number of CPU nodes available.
+Note, the option "-n 20" can be replace by the number of CPU nodes availabl4e.
 
 Simulation:                 
 ./beepmbp inputfile="examples/EX1.toml" mode="sim" 
@@ -16,6 +16,10 @@ OPTIONS: nsimulation
 Prediction (uses posterior samples from inference to predict the future, with potential model modificiations):                 
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="prediction" 
 OPTIONS: prediction_start, prediction_end, modification, nsim_per_sample
+
+MAP inference:
+mpirun -n 20 ./beepmbp inputfile="examples/EX1a.toml" mode="map"
+OPTIONS: nparticle, ngeneration / cpu_time, nsample_final, posterior_particle
 
 ABC-MBP inference:
 mpirun -n 20 ./beepmbp inputfile="examples/EX1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
@@ -131,7 +135,6 @@ int main(int argc, char** argv)
 	Details details(inputs);                                    // Loads up various details of the model
 	
 	Mpi mpi(details);                                           // Stores mpi information (core and ncore)
-	if(mpi.core == 0) cout << mpi.ncore << " Number of cores\n";
 	
 	bool verbose = (mpi.core == 0);                             // Parameter which ensures that only core 0 outputs results
 	
@@ -274,7 +277,7 @@ int main(int argc, char** argv)
 			State state(details,data,model,obsmodel);
 			state.simulate(param);
 			particle_store.push_back(state.create_particle(0));
-			output.generate_graphs(particle_store); 
+			output.generate_graphs(particle_store,1); 
 		}
 		break;
 		
@@ -287,7 +290,7 @@ int main(int argc, char** argv)
 		output_timers(details.output_directory+"/Diagnostics/CPU_timings.txt",mpi);
 	}
 	
-	//auto time_av = mpi.average(timer[TIME_TOTAL].val);
+	auto time_av = mpi.average(timer[TIME_TOTAL].val);
 	auto time_sum = mpi.sum(timer[TIME_TOTAL].val);
 	auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
 	auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
@@ -295,10 +298,14 @@ int main(int argc, char** argv)
 	if(verbose){
 		inputs.print_commands_not_used();
 		
-		//cout <<  "Total time: " << prec(double(time_av)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
-		cout <<  "Total time: " << prec(double(time_sum)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
-		cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
-		cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+		if(true){
+			cout <<  "Total time: " << prec(double(time_av)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
+		}
+		else{
+			cout <<  "Total time: " << prec(double(time_sum)/(60.0*CLOCKS_PER_SEC),3) << " minutes." << endl;
+			cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+			cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
+		}
 	}
 	
 #ifdef USE_Data_PIPELINE

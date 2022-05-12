@@ -80,7 +80,7 @@ void PAIS::run()
 	if(mpi.core == 0) model_evidence(generation);             // Calculates the model evidence 
 
 	output.generation_results(generation);                    // Generates pdf of graphs
-	output.generate_graphs(part);	
+	output.generate_graphs(part,generation[g-1].invT);	
 	paramprop.diagnostics();                                  // Outputs diagnostic information
 }
  
@@ -180,7 +180,7 @@ void PAIS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned i
 				if(num[j] > 1){ for(auto k = 1u; k < num[j]; k++) list.push_back(ru*npart+j);}
 			}
 		
-			if(true) cout << npart - list.size() << " / "<< npart << " Particles kept" << endl;
+			if(false) cout << npart - list.size() << " / "<< npart << " Particles kept" << endl;
 			 
 			for(auto j = 0u; j < npart; j++){  
 				if(num[j] > 0) partcopy[ru*npart + j] = UNSET;

@@ -328,11 +328,13 @@ struct DataTable {                         // Stores tables of data provided by 
 	vector <unsigned int> complist;          // The compartments relating to the data
 	
 	vector <unsigned int> graph_ref;         // A list of all the graphs plotted
-	double weight;                           // The weight attached to the observation model
 	
 	ObsModelFunc obsmodel;                   // Determines what observaion model is used
 	double shape;                            // The shape parameter
-	double invT;                             // Scaling done to observation model
+	double percent;                          // This stores percentage error
+	double sd;                               // This stores sd of error 
+	double epsilon_factor;                   // Stores the factor which multiplies epislon
+	bool load_sd;                            // Loads the standard deviation from a file
 };
 
 struct Observation {                       // A single observation made on the system
@@ -340,16 +342,12 @@ struct Observation {                       // A single observation made on the s
 	unsigned int datatable;                  // The data table the observation belongs to
 	unsigned int graph;                      // The primary graph the observation belongs to
 	double value;                            // The value of the observation
-	double sd;                               // This is the standard deviation (loaded in the "loadSD" observation model)
+	double sd;                               // This is the standard deviation 
 	double factor;                           // The factor which multiplies it (used for POPFRAC)
-	double epsilon;                          // The small value limit (used for SCALE obsmodel)
-	double weight;                           // Weight given to observation (used for SCALE obsmodel)
 	unsigned int sett_i;                     // The start time
 	unsigned int sett_f;                     // The end time
 	vector <unsigned int> area;              // The areas involved
 	vector <unsigned int> dp_sel;            // The deomgraphic possibilities selected  	
-	double w;                                // The weight used when calculating the error
-	double invT;                             // Parameter used to scale observation model
 	ObsModelFunc obsmodel;                   // The observation model used
 	double shape;                            // Shape paremeter (used for negative binomial).
 	double var_approx;                       // The variance used when doing a normal approimation (for approximate methods)
@@ -358,14 +356,6 @@ struct Observation {                       // A single observation made on the s
 struct ObsSlice {                          // Gives all the observations at a particular point in time
 	unsigned int sett;                       // The time of the slice
 	vector <unsigned int> obs_ref;           // The observations at that time
-	ObsType obs_type;                        // The type of observation (exact or approximate)
-	
-	
-	//vector < vector <double> > Minv;         // The inverse covariance matrix from the observations
-	//vector <double> Minv_mu;                 // The inverse matrix multiplied by mean
-	//double mu_Minv_mu;                       // The mean times the inverse matrix multiplied by mean 
-	//vector <double> mu;                      // The value of the mean
-	//double log_factor;                       // The factor which norlaises the distribution
 };
 
 struct GraphPoint {                        // Details of a point on a graph

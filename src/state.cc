@@ -410,7 +410,7 @@ void State::set_transmean(const unsigned int sett, const unsigned int c)
 		be *= areafactor[sett/details.division_per_time][c];
 		
 		auto efoi_info = model.efoispline_info[model.efoi_spl_ref[st][c]];
-		auto et = disc_spline[efoi_info.spline_ref][sett];
+		auto et = disc_spline[efoi_info.spline_ref][sett]/data.popsize;
 		
 		if(details.mode == PREDICTION) et *= model.modelmod.efoi_mult[sett][c][st];      // Potential model changes
 		
@@ -427,6 +427,12 @@ void State::set_transmean(const unsigned int sett, const unsigned int c)
 				auto a = data.democatpos[dp][0];
 				tmean[tr][dpp] = dt*popu*susceptibility[dpp]*(be*NMI[a] + eta_age[a]);
 				if(std::isnan(tmean[tr][dpp])){
+					for(auto th = 0u; th < model.param.size(); th++){
+						
+						cout << model.param[th].name << " " << paramval[th] << " param\n";
+						if(paramval[th]  <= 0) cout << "  HHHHHHHHH\n";
+					}
+					
 					cout << popu << " " << susceptibility[dpp] << be << " " << NMI[a] << " " << eta_age[a] << " jj\n";
 					emsgEC("State",4);
 				}

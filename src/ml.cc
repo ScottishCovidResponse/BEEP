@@ -22,7 +22,7 @@ ML::ML(const Details &details, const Data &data, const Model &model, Inputs &inp
 	
 	inputs.find_algorithm(algorithm,npart,G,cpu_time,P,nsample_final,mpi.core,mpi.ncore,nvar);
 	
-	inputs.find_invT(invT);
+	invT = inputs.find_double("invT",1);  
 	
 	if(algorithm == ML_CMAES){
 		if(npart%mpi.ncore != 0) emsgroot("'nparticle' must be a multiple of the number of cores.");
@@ -31,7 +31,7 @@ ML::ML(const Details &details, const Data &data, const Model &model, Inputs &inp
 	
 	param_per_core = (unsigned int)((nvar+mpi.ncore)/mpi.ncore);
 	
-	if(mpi.core == 0){
+	if(mpi.core == 0 && false){
 		auto per_error = obsmodel.mean_percentage_error(invT);
 		cout << "For invT='" << invT << "', the mean percentage error in the observations is " <<  prec(per_error,3) << "%." << endl;
 	}
@@ -93,7 +93,7 @@ void ML::gradient_decent()
 	
 	auto loop = 0u;
 	do{
-		if(mpi.core == 0) cout << "Iteration: " << loop << "  Likelihood: " << pi.value << "  Jump size: " << eta << "\n";
+		if(mpi.core == 0) cout << "Iteration: " << loop << "  Likelihood: " << pi.value << "  Jump size: " << eta << endl;
 			
 		auto pi_store = pi;
 		auto param_store = param;
@@ -137,7 +137,7 @@ void ML::gradient_decent()
 		particle_store.push_back(state.create_particle(UNSET));
 	}
 	
-	output.generate_graphs(particle_store);		           // Outputs the results
+	output.generate_graphs(particle_store,invT);		           // Outputs the results
 }
 
 
@@ -191,7 +191,9 @@ void ML::cmaes()
 
 	vector <ParamSample> ps_per_core(npart_per_core);
 		
-	if(mpi.core == 0) cout << "Start Inference..." << endl;
+	if(mpi.core == 0) cout << endl << "Start Inference..." << endl;
+	
+	vector <double> EFbest_store;
 	
 	auto g = 0u;
 	do{
@@ -202,10 +204,13 @@ void ML::cmaes()
 		Generation gen;
 	
 		/* Samples parameters */
+		timer[TIME_GENERATE_SAMPLES].start();
 		generate_samples(ps_per_core,mean,C,sigma,gen);
-
+		timer[TIME_GENERATE_SAMPLES].stop();
+		
+		timer[TIME_CMAES].start();
 		auto ps = mpi.gather_psamp(ps_per_core);
-	
+
 		if(mpi.core == 0){
 			sort(ps.begin(),ps.end(),ParamSample_ord);   
 				
@@ -213,7 +218,11 @@ void ML::cmaes()
 	
 			//auto Prav = 0.0; for(auto i = 0u; i < mu; i++) Prav += w[i]*model.prior(ps[i].paramval);
 	
-			cout << "Generation " << g << " - EF best: " << ps[0].EF << "    EF average: " << EFav << "   Sigma: " << sigma << endl;
+			cout << "Generation " << g << " - Best log(Posterior prob): " << -0.5*ps[0].EF <<  "   Sigma: " << sigma << endl;
+			//cout << "Generation " << g << " - EF: " << ps[0].EF << "    EF average: " << EFav << "   Sigma: " << sigma << endl;
+			//cout << "Generation " << g << " - EF: " << ps[0].EF << endl;
+			
+			EFbest_store.push_back(ps[0].EF);
 			
 			gen.EFcut = EFav;
 		
@@ -290,9 +299,10 @@ void ML::cmaes()
 		
 			auto EN = sqrt(nvar)*(1-(1.0/(4*nvar)) + 1.0/(21*nvar*nvar));
 			
-			//cout << (p_sigma_mag/EN) << " " << 1 << " hh\n";
-			//EN *= 2;//zz 
-			sigma *= exp((c_sigma/d_sigma)*((p_sigma_mag/EN) - 1));
+			//EN *= 2;
+			auto fac = (c_sigma/d_sigma)*((p_sigma_mag/EN) - 1);
+			if(fac > 0.2) fac = 0.2;
+			sigma *= exp(fac);
 		}
 		
 		mpi.exchange_samples(gen);	                            // Exchanges parameter samples across MPI cores
@@ -300,9 +310,10 @@ void ML::cmaes()
 		output.set_generation_time(gen);                        // Sets the CPU time for the generation
 		
 		generation.push_back(gen);
+		timer[TIME_CMAES].stop();
 		
 		g++;
-	}while(terminate_generation(g) == false);
+	}while(terminate_generation(g,EFbest_store) == false);
 
 	if(mpi.core == 0) cout << "Generating posterior samples..." << endl;
 
@@ -313,11 +324,13 @@ void ML::cmaes()
 	mpi.bcast(mean);
 	mpi.bcast(C);
 
+	timer[TIME_SCALE_COVARIANCE].start();
 	//auto covar = calculate_covariance_martrix(mean);
-	
-	if(mpi.core == 0) cout << "Scale covariance.." << endl;
-	//sigma = scale_covariance_martrix(mean,C);
-	
+	if(mpi.core == 0) cout << "Scale covariance..." << endl;
+	sigma = scale_covariance_martrix(mean,C);
+	timer[TIME_SCALE_COVARIANCE].stop();
+			
+	if(mpi.core == 0) cout << "SMC sampler..." << endl;	
 	auto psamp = sample_param(mean,C,sigma,num_per_core);
 	for(auto i = 0u; i < num_per_core; i++){               // Generates the final posterior samples
 		if(details.stochastic == true){
@@ -329,12 +342,12 @@ void ML::cmaes()
 		}
 	}
 	timer[TIME_POSTERIOR_SAMPLE].stop();
-	
+
 	if(mpi.core == 0) cout << "Output results..." << endl;
 
 	output.generation_results(generation);                    // Generates pdf of graphs
 	
-	output.generate_graphs(particle_store);		  
+	output.generate_graphs(particle_store,invT);		  
 }
 
 
@@ -350,6 +363,7 @@ void ML::generate_samples(vector <ParamSample> &ps_per_core, const vector <doubl
 		
 		if(details.stochastic == true){
 			auto L = state.likelihood_approx(param,obs_slice,invT,ac);
+
 			auto Pr = model.prior(param);
 			ps_per_core[i].EF = -(L + Pr);
  			if(ps_per_core[i].EF < 0) emsgEC("ML",44);
@@ -371,7 +385,7 @@ vector < vector <double> > ML::sample_param(const vector <double> &mean, const v
 {
 	MVN mv("MVN",var,sigma,ALL_PARAM,MULTIPLE);
 	mv.set_covariance_matrix(C);
-
+	
 	auto nparam = model.param.size();
 	
 	vector < vector <double> > psamp;
@@ -448,15 +462,38 @@ vector < vector <double> > ML::sample_param(const vector <double> &mean, const v
 
 
 /// Determines when generations are stopped
-bool ML::terminate_generation(unsigned int g) const 
+bool ML::terminate_generation(unsigned int g, const vector <double> &EFbest_store) const 
 {
-	if(g == G) return true;
+	if(g == G) return true;  // Iterate until specifies generation
 	
-	auto time_av = mpi.average((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC));
+	if(cpu_time != UNSET){ 	 // Iterate until time limit
+		auto time_av = mpi.average((clock() - details.time_start)/(60.0*CLOCKS_PER_SEC));
  
-	if(time_av > cpu_time){
-		if(mpi.core == 0)	cout << "Maximum execution time reached." << endl << flush;
-		return true;
+		if(time_av > cpu_time){
+			if(mpi.core == 0)	cout << "Maximum execution time reached." << endl << flush;
+			return true;
+		}
+	}
+	
+	if(G == ITERATE_GENERATION){          // Iterate until termination conidition 
+		auto term = false;
+		if(mpi.core == 0){
+			auto ng = EFbest_store.size();
+			if(ng >= ML_GENERATION_TERM_COND){
+				auto av = 0.0;
+				for(auto i = ng-ML_GENERATION_TERM_COND; i < ng; i++) av += EFbest_store.size();
+				av /= ML_GENERATION_TERM_COND;
+				
+				auto tol = av/1000;
+				auto value = EFbest_store[ng-1];
+				auto i = ng-ML_GENERATION_TERM_COND; 
+				while(i < ng && EFbest_store[i] > value-tol && EFbest_store[i] < value+tol) i++;
+				if(i == ng) term = true;
+			}
+		}
+		mpi.bcast(term);
+		
+		return term;
 	}
 	
 	return false;
@@ -502,18 +539,8 @@ PointInfo ML::calculate_point_info(vector <double> param)
 		}
 	}
 	
-	//for(auto v: val) cout << v << ", "; cout << "val\n"; 
 	auto val_tot = mpi.gather(val);
 	auto dif_tot = mpi.gather(dif);
-	
-	/*
-	if(mpi.core == 0){
-		cout << nvar << "notf\n";
-		for(auto j = 0u; j < val_tot.size(); j++){
-			cout << j<< " " << val_tot[j] << " " << dif_tot[j] << " jj\n";
-		}
-	}
-	*/
 	
 	PointInfo pi;
 	if(mpi.core == 0){
@@ -536,11 +563,11 @@ void ML::calculate_mimimum()
 		auto time = clock();
 		EF = -0.5*state.likelihood_approx(param,obs_slice,invT,ac);
 		cout.precision(10);		
-		cout << EF << " " << double(clock()-time)/CLOCKS_PER_SEC << "tim\n";
-		cout << double(timer[TIME_DETERMINANT].val)/CLOCKS_PER_SEC << " j\n";
-		cout << double(timer[TIME_TEMP1].val)/CLOCKS_PER_SEC << " j\n";
-		cout << double(timer[TIME_TEMP2].val)/CLOCKS_PER_SEC << " j\n";
-		cout << double(timer[TIME_TEMP3].val)/CLOCKS_PER_SEC << " j\n";
+		cout << EF << " " << double(clock()-time)/CLOCKS_PER_SEC << "time" << endl;
+		cout << double(timer[TIME_DETERMINANT].val)/CLOCKS_PER_SEC << " j" << endl;
+		cout << double(timer[TIME_TEMP1].val)/CLOCKS_PER_SEC << " j" << endl;
+		cout << double(timer[TIME_TEMP2].val)/CLOCKS_PER_SEC << " j" << endl;
+		cout << double(timer[TIME_TEMP3].val)/CLOCKS_PER_SEC << " j" << endl;
 		emsg("d");
 	}
 	else{
@@ -556,7 +583,7 @@ void ML::calculate_mimimum()
 		particle_store.push_back(state.create_particle(UNSET));
 	}
 	
-	output.generate_graphs(particle_store);		           // Outputs the results
+	output.generate_graphs(particle_store,invT);		           // Outputs the results
 }
 	
 
@@ -566,22 +593,13 @@ void ML::calculate_heatmap()
 	auto th1 = 2, th2 = 3;
 
 	auto param = model.simulated_values();
-	//param[th1] = 6; param[th2] = 2;
-				
-//param[th1] = 4.555;  param[th2] = 3.70455;
-	//auto Li2 = state.likelihood_approx(param,obs_slice,invT);
-	//emsg("p");
-	
-	//emsg("P");	
-		
+
 	if(mpi.core == 0){
-		for(auto th = 0u; th < model.param.size(); th++) cout << th << " " <<  model.param[th].name << " param\n";
+		for(auto th = 0u; th < model.param.size(); th++) cout << th << " " <<  model.param[th].name << " param " << endl;
 	}
-	
 	
 	auto min1 = 1.0, max1 = 10.0;
 	auto min2 = 0.5, max2 = 4.0;
-	//auto min2 = 0.0, max2 = 1.0;
 	auto MX = 100u, MY = 100u;
 	
 	auto M = MX*MY;
@@ -593,15 +611,6 @@ void ML::calculate_heatmap()
 		if(k < M){
 			param[th1] = min1+(k%MX + 0.5)*(max1-min1)/MX;
 			param[th2] = (k/MX + 0.5)*(max2-min2)/MY;
-			//auto GT = param[th1]*0.5; // Generation time
-			
-			//param[th2] = exp(((k/MX + 0.5)*(max2-min2)/MY)*GT);
-				
-			//if(param[th2] > 3.) param[th2] = 3.;
-			//param[th2] = GT*(k/MX + 0.5)*(max2-min2)/MY;
-			//param[th2] = GT*(k/MX + 0.5)*(max2-min2)/MY;
-			//param[th2] = ((k/MX + 0.5)*(max2-min2)/MY)/GT;
-			//cout << param[th1] << " " << param[th2] << "jj\n";
 			answer[i] = -(state.likelihood_approx(param,obs_slice,invT,ac) + 0*model.prior(param));
 		}
 	}
@@ -636,21 +645,20 @@ void ML::calculate_heatmap()
 		
 		auto Li = state.likelihood_approx(param,obs_slice,invT,ac);
 		
-			cout << model.param[th1].name << ": " << param[th1] << "  " << model.param[th2].name << ": " << param[th2] << " minimum\n";
+		cout << model.param[th1].name << ": " << param[th1] << "  "
+					<< model.param[th2].name << ": " << param[th2] << " minimum" << endl;;
 	
 	
 		param[th1] = 6; param[th2] = 2;
 		
-				
 		auto Li2 = state.likelihood_approx(param,obs_slice,invT,ac);
 		
-	cout << Li << " " << Li2 << " Li\n";
+		cout << Li << " " << Li2 << " Li" << endl;
 		
 		particle_store.push_back(state.create_particle(UNSET));
 	}
 	
-	output.generate_graphs(particle_store);		           // Outputs the results
-
+	output.generate_graphs(particle_store,invT);		           // Outputs the results
 
 	mpi.barrier();
 }
@@ -669,7 +677,7 @@ vector < vector <double> > ML::calculate_covariance_martrix(const vector <double
 double ML::scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &covar)
 {
 	auto H_diag = calculate_hessian(mean,DIAG);
-	
+
 	double ratio;
 	if(mpi.core == 0){
 		auto H = invert_matrix(covar);
@@ -679,7 +687,7 @@ double ML::scale_covariance_martrix(const vector <double> &mean, const vector < 
 			print_matrix("H_diag",H_diag);
 		
 			for(auto i = 0u; i < nvar; i++){
-				cout << H[i][i] << " " << H_diag[i][i] << " " << H_diag[i][i]/H[i][i] << " comp\n";
+				cout << H[i][i] << " " << H_diag[i][i] << " " << H_diag[i][i]/H[i][i] << " compare" << endl;
 			}
 		}
 		
@@ -755,7 +763,7 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 			ur.push_back(UNSET); dr.push_back(UNSET); ul.push_back(UNSET); dl.push_back(UNSET);
 		}
 	}
-	
+
 	auto ur_tot = mpi.gather(ur);
 	auto dr_tot = mpi.gather(dr);
 	auto ul_tot = mpi.gather(ul);
@@ -790,6 +798,6 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 	}		
 
 	mpi.bcast(H);
-	
+
 	return H;
 }

@@ -374,7 +374,7 @@ string Model::foi_model_JSON() const
 	
 	bool Nfl = false;                                      // Adds N
 	string N = "&N^c_{";
-	string Ndesc = " gives the give the number of individuals in &c&";
+	string Ndesc = " gives the number of individuals in compartment &c&";
 	if(data.narea > 1){
 		if(Nfl == true) N += ","; 
 		Nfl = true;
@@ -443,11 +443,11 @@ string Model::foi_model_JSON() const
 	
 	if(descfl == true) ss << ","; 
 	descfl = true;
-	ss << "\"&f& converts the external FOI such that it is per " << details.efoi_factor << " individuals.\"";
+	ss << "\"&N& is the total number of individuals.\"";
 	
 	if(eqfl == true) vis << ","; 
 	eqfl = true;
-	vis << "{\"text\":\"&f&\"}";
+	vis << "{\"text\":\"&N&\"}";
 	
 	if(eqfl == true) vis << ","; 
 	eqfl = true;              // Adds EFOI
