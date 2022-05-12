@@ -1,0 +1,50 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_B3.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_B3.toml" mode="map" 
+
+
+description = "Objective: Rather than assume a fixed standard deviation in observations (as in EX B2) here the standard deviations are explicitly loaded from a file. Specifically for each data column in the data file there is a second column, with “ SD” affixed to the heading, which provides the standard deviation in that data. For example, in the file “Data-EX-B3/S-I.csv” the column “Data” gives the weekly number of cases and “Data SD” gives the expected standard deviation in this quantity for the observation model.  Implementation: In ‘data-tables‘ the ‘obsmodel’ property is set to “normal load”.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_B3"
+outputdir = "examples/Output_EX_B3"
+
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="3", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="0.5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="normal load", file="E-I.csv"},
+{type="population", observation="I", timestep="7", obsmodel="normal load", file="I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="normal load", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

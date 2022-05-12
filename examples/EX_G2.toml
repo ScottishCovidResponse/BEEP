@@ -1,0 +1,88 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_G2.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_G2.toml" mode="map"
+
+description = "Objective: Introduce an age-structured model applicable to the sorts of publically available data sources for the 2020 Covid-19 pandemic.  Model: The population is stratified into 18 different age groups: 0-4, 5-9, 10-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44,45-49, 50-54, 55-59, 60-64, 65-69, 70-74, 75-79, 80+ and a group for care home residents. A realist compartmental model is needed to capture Covid-19. It contains the following compartments – S: Susceptible, E: Exposed, A: Asymptomatic, I: Infectious, T: PCR test-sensitive but non-infectious, C: Infected but non-infectious (due to self-isolation), H: Hospitalised (or potentially care home in the case of care home residents), R: Recovered, and D: Dead. A piecewise linear spline is used to represent time variation in the reproduction number R_t. The age contact matrix is derived from the BBC Pandemic survey.  Data: Age stratified weekly number of E→I cases, C→H hospital admissions, H→D deaths, PCR survey data (gives estimates for total infected population, i.e. the sum of those in A, I, C, T), and antibody survey data (gives estimates for total recovered population R). Note, this is simulated data using model parameters near to those found for the real data.  Inference: The time variation in the reproduction number R_t. Comparing for true curve with the inferred one we find excellent agreement. The only exception is at the beginning and end where the number of infected individuals is small (because of the lack of information with which to estimate reproduction number, the smoothing prior tends to smooth out fluctuations R_t). The age-structured time period in the test sensitive state (other time periods are set) and all branching probabilities."
+
+
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2021-06-09"
+
+datadir = "examples/Data_EX_G2"
+outputdir = "examples/Output_EX_G2"
+
+time_labels = [{name="Lockdown", time="2020-03-23"},{name="Schools reopen", time="2020-06-01"},{name="Lockdown restrictions eased", time="2020-08-14"},{name="Lockdown 2", time="2020-11-05"},{name="Alpha variant dominant", time="2020-12-20"},{name="Lockdown 3", time="2021-01-06"},{name="Schools reopen", time="2021-03-08"},{name="Delta variant dominant", time="2021-05-16"}]
+
+comps			= [{name="S"},
+						 {name="E", dist="Exp", mean_value="3.8"},
+						 {name="I", dist="Exp", mean_value="4.0", inf_value="1"},
+						 {name="C", dist="Exp", mean_value="3.1"},
+						 {name="A", dist="Exp", mean_value="4", inf_value="0.55"},
+						 {name="H", dist="Exp", mean_value="13.0"},
+						 
+						 {name="T", dist="Exp", mean_param="age: T mean occupancy 0-19 | T mean occupancy 0-19 | T mean occupancy 0-19 | T mean occupancy 0-19 | T mean occupancy 20-24 | T mean occupancy 25-29 | T mean occupancy 30-34 | T mean occupancy 35-39 | T mean occupancy 40-44 | T mean occupancy 45-49 | T mean occupancy 50-54 | T mean occupancy 55-59 | T mean occupancy 60-64 | T mean occupancy 65-69 | T mean occupancy 70-74 | T mean occupancy 75-79 | T mean occupancy 80+ | T mean occupancy 80+", mean_prior="age:Uniform(4,20)", mean_value="age: 19 | 19 | 19 | 19 | 25 | 16 | 18 | 20 | 19 | 14 | 20 | 16 | 25 | 16 | 18 | 20 | 19 | 19"},
+							
+						 {name="R"},
+						 {name="D"}
+							]
+
+trans   	=	[{from="S", to="E", infection="yes"},
+						
+						 {from="E", to="A", prob_param="age: E->A 0-4 | E->A 5-9 | E->A 10-14 | E->A 15-19 | E->A 20-24 | E->A 25-29 | E->A 30-34 | E->A 35-39 | E->A 40-44 | E->A 45-49 | E->A 50-54 | E->A 55-59 | E->A 60-64 | E->A 65-69 | E->A 70-74 | E->A 75-79 | E->A 80+ | E->A 80+", prob_value="age:*", prob_prior="age:Dir(*)"},	 
+						 
+						 {from="E", to="I", prob_param="age: E->I 0-4 | E->I 5-9 | E->I 10-14 | E->I 15-19 | E->I 20-24 | E->I 25-29 | E->I 30-34 | E->I 35-39 | E->I 40-44 | E->I 45-49 | E->I 50-54 | E->I 55-59 | E->I 60-64 | E->I 65-69 | E->I 70-74 | E->I 75-79 | E->I 80+ | E->I 80+", prob_value="age: 0.43", prob_prior="age:Dir(*)"},	 
+						 
+						 {from="I", to="T", prob_param="age: I->T 0-4 | I->T 5-9 | I->T 10-14 | I->T 15-19 | I->T 20-24 | I->T 25-29 | I->T 30-34 | I->T 35-39 | I->T 40-44 | I->T 45-49 | I->T 50-54 | I->T 55-59 | I->T 60-64 | I->T 65-69 | I->T 70-74 | I->T 75-79 | I->T 80+ | I->T 80+", prob_value="*", prob_prior="age:Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1) | Dir(1)"},
+						 
+						 {from="I", to="C", prob_param="age: I->C 0-4 | I->C 5-9 | I->C 10-14 | I->C 15-19 | I->C 20-24 | I->C 25-29 | I->C 30-34 | I->C 35-39 | I->C 40-44 | I->C 45-49 | I->C 50-54 | I->C 55-59 | I->C 60-64 | I->C 65-69 | I->C 70-74 | I->C 75-79 | I->C 80+ | I->C 80+", prob_value="0.2", prob_prior="age:Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.4) | Dir(0.6) | Dir(0.8) | Dir(1) | Dir(1)"},
+
+						 {from="C", to="H"},
+						
+						 {from="H", to="R", prob_param="age: H->R 0-4 | H->R 5-9 | H->R 10-14 | H->R 15-19 | H->R 20-24 | H->R 25-29 | H->R 30-34 | H->R 35-39 | H->R 40-44 | H->R 45-49 | H->R 50-54 | H->R 55-59 | H->R 60-64 | H->R 65-69 | H->R 70-74 | H->R 75-79 | H->R 80+ | H->R 80+", prob_value="age:*", prob_prior="age:Dir(1)"},
+						 
+						 {from="H", to="D", prob_param="age: H->D 0-4 | H->D 5-9 | H->D 10-14 | H->D 15-19 | H->D 20-24 | H->D 25-29 | H->D 30-34 | H->D 35-39 | H->D 40-44 | H->D 45-49 | H->D 50-54 | H->D 55-59 | H->D 60-64 | H->D 65-69 | H->D 70-74 | H->D 75-79 | H->D 80+ | H->D 80+", prob_value="age:0.3", prob_prior="age:Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.3) | Dir(0.4) | Dir(0.6) | Dir(0.8) | Dir(1) | Dir(1)"},
+						 
+						 {from="A", to="T"},
+						 {from="T", to="R"},
+						]
+
+ages = {cats="age0-4 | age5-9 | age10-14 | age15-19 | age20-24 | age25-29 | age30-34 | age35-39 | age40-44 | age45-49 | age50-54 | age55-59 | age60-64 | age65-69 | age70-74 | age75-79 | age80+ | CH"}
+
+age_mixing_matrix = "age_mixing_matrix.csv"
+	 
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
+
+areas = "population.csv"
+			
+data_tables = [
+
+{type="transition", observation="E->I", obsmodel="normal 10%", democats_dep="age", timestep="7", file="cases_AS.csv"},
+
+{type="transition", observation="H->D", obsmodel="normal 10%", democats_dep="age",  timestep="7", file="deaths_AS.csv"},
+
+{type="population", observation="I,C,A,T", obsmodel="normal 10%", democats_dep="age", timestep="7", file="covid19_inf_survey_AS.csv"},
+
+{type="transition", observation="C->H", obsmodel="normal 10%", democats_dep="age", timestep="7", file="admissions_AS.csv"},
+
+{type="population", observation="R", obsmodel="normal 10%", democats_dep="age", timestep="7", file="antibody_AS.csv"},
+
+{type="transition", observation="C->H", obsmodel="normal 10%", timestep="7", file="admissions.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="C", line_colour="cyan"},
+{plot_name="Dynamics", type="population", observation="A", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="R",line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+
+plot_param_values = "true"

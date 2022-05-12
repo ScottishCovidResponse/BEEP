@@ -1,0 +1,48 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_E3.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_E3.toml" mode="map"
+
+description = "Objective: Time variation in the external force of infection is added to the analysis. Note, due to confounding with the reproduction number it is usually not possible to infer this from the data. However, incorporating it, if known, leads to a more accurate estimate for the time variation in the reproduction number.  Implementation: ‘efoi-spline’ is used to define time variation in the external force of infection.  Model: An SIR model is assumed with a constant external force of infection. A piecewise linear spline is used to represent time variation in the reproduction number R_t.  Data: Weekly number of S→I cases and I→R recoveries.  Inference: The time variation in the reproduction number R_t and infectious period." 
+
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2021-06-09"
+
+time_labels = [{name="Lockdown", time="2020-03-23"},{name="Lockdown 2", time="2020-11-05"},{name="Lockdown 3", time="2021-01-06"}]
+
+datadir = "examples/Data_EX_E3"
+outputdir = "examples/Output_EX_E3"
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="10", inf_value="1", mean_prior="Uniform(5,15)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
+
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", file="S-I.csv"},
+{type="transition", observation="I->R", timestep="7", obsmodel="normal 10%", file="I-R.csv"}
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

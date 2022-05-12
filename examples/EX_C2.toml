@@ -1,0 +1,57 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_C2.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_C2.toml" mode="map"
+
+description = "Objective: On top of the model in EX C1, this analysis incorporates covariate effects, which relate properties of areas to the local disease transmission rate (in this case using population density and temperature).  Implementation: ‘area-covars’ is used to define covariates. Covariates appear in Eq.(4) and are related to the disease transmission rate through an exponential link function. The ‘func’ propery can be used to transform the raw data before treating it as a covariate. This can either be set to “linear” or “log”. In the case of “log”, the covariate becomes the power to which the quantities is raised (so when applied to the population density a value zero or one implies frequency or density dependent transmission, respectively).  Model: An SIRD branching spatial model with ten geographical areas (Region A-J). The infected individuals can either recover or die with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R measurements, separately for the different regions.  Inference: The covariate factors, the reproduction number R_t (with region-specific modifying factors), infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_C2"
+outputdir = "examples/Output_EX_C2"
+
+geo_mixing_matrix = "geo_mixing_matrix.csv"
+	 
+area_effect = {value="[area effect:population.csv]", prior="MDir(0.2)"}
+
+area_covars= [
+{name="density", value="0.3", prior="Uniform(-0.5,0.5)", func="log"},
+{name="temperature", value="0.02", prior="Uniform(-0.05,0.05)", func="linear"}
+]
+	 
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.8", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", geo_dep="area", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", geo_dep="area", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+
