@@ -777,7 +777,7 @@ function drawcorners(x,y,dx,dy,r,col)
 function drawlowerbar(x,y,dx,dy,r,col) 
 {
 	fillrect(x,y,dx,dy,"#a4a3e6");
-	centertext("© BEEPmbp 2021",x+dx/2,y+18,"bold 16px arial",WHITE);   
+	centertext("© BEEPmbp 2022",x+dx/2,y+18,"bold 16px arial",WHITE);   
 	
 	var th, i, nth = Math.floor(r/3);
 	if(nth < 1) nth = 1;

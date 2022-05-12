@@ -17,7 +17,8 @@ function generate_plots()
 		break;
 	case "OP_LEVEL_EFFECT": break;
 	case "OP_PARAM_TABLE": case "OP_PRIOR_TABLE": break;
-	case "OP_COMP_MODEL": case "OP_FOI_MODEL": break; case "OP_DESC": break;
+	case "OP_COMP_MODEL": case "OP_FOI_MODEL": break;
+	case "OP_DESC": break;
 	case "OP_CPU": get_logaxrange(vis); break;
 	default: get_axrange(vis); break;
 	}
@@ -154,9 +155,11 @@ function generate_plots()
 		else{
 			var list=[];
 			for(li = 0; li < vis.line.length; li++){
-				if(vis.line[li].name && vis.line[li].name != "" &&
-					 vis.line[li].name != "95% CI min"& vis.line[li].name != "95% CI max"){
-					list.push(li);
+				if(vis.line[li].name){
+					var name = vis.line[li].name;
+					if(name != "" && name != "95% CI min"& name != "95% CI max" && name != "Obs Model"){
+						list.push(li);
+					}
 				}
 			}
 			topline = sourcey - list.length*20-40;
@@ -166,7 +169,8 @@ function generate_plots()
 				for(i = 0; i < list.length; i++){
 					li = list[i];
 					if(vis.line[li].name){
-						addbutton(vis.line[li].name,x+20,y,wid,0,-1,KEYBUT,plot,li); y += 20;
+						var name = vis.line[li].name;
+						addbutton(name,x+20,y,wid,0,-1,KEYBUT,plot,li); y += 20;
 					}
 				}		
 			}
@@ -174,6 +178,17 @@ function generate_plots()
 		}
 		break;
 	}
+	
+	if(vis.type == "OP_GRAPH"){
+		topline -= 20;
+		var ww = Math.floor(wid/2)-5;
+		
+		var flag = false;
+		for(li = 0; li < vis.line.length; li++){
+			if(vis.line[li].name == "Obs Model") flag = true;
+		}
+		if(flag == true) addbutton("Show observation model",x+15,topline,17,17,CHECKBUT,CHECKBUT,-1,-1);
+	}	
 	
 	if(vis.popscale != null){
 		topline -= 50;
@@ -203,10 +218,14 @@ function generate_plots()
 
 	y = 30;
 	
-	var sp = vis.fulldesc.split(":");                          // Draws the title and description
-	addbutton(sp[0],x,y,wid,0,-1,TITLEBUT,-1,-1); y += 24;
+	var i = 0;                                    // Draws the title and description
+	while(i < vis.fulldesc.length && vis.fulldesc.substr(i,1) != ":") i++;
+	var title = vis.fulldesc.substr(0,i);
+	if(vis.fulldesc.substr(i,1) == ":") i++;
+	var desc = vis.fulldesc.substr(i);
 
-	var desc = sp[1];
+	addbutton(title,x,y,wid,0,-1,TITLEBUT,-1,-1); y += 24;
+
 	if(vis.popscale != null){
 		if(rateradio == "rate") desc += "  Note, this shows results per 100,000 individuals."; 
 		if(lowerhighlight == "on"){
@@ -220,10 +239,16 @@ function generate_plots()
 	dy = Math.floor(dy/lineheight)*lineheight;
 
 	var content = desc.substr(1).replace(/\*/g, "'");
+	
+	/*
+	if(vis.type == "OP_DESC"){
+		
+	}
+	*/
 	addbutton(content,x,y,wid,dy,-1,SLIDEPARAGRAPHBUT,-1,-1);
 
 	alignparagraph(desc.substr(1),wid);
-		
+	
 	nlines_disp = Math.floor(dy/lineheight);
 	slidefrac = nlines_disp/nlines; 
 	if(slidefrac < 1){	
@@ -828,7 +853,7 @@ function table(x,y,tab)
 			var w = textwidth_simp(ele[row][c],TABLEFONT);
 			if(w > wmax) wmax = w;
 		}		
-		wmax += 10;
+		wmax += 20;
 		xxst[c] = xx;
 		xx += wmax;
 	}
@@ -1314,42 +1339,44 @@ function drawlines(vis)
 	for(li = 0; li < vis.line.length; li++){
 		var visli = vis.line[li];
 
-		var xcol = visli.xcol;
+		if(!(visli.name == "Obs Model" && check == 0)){
+			var xcol = visli.xcol;
 
-		if(xcol){
-			var ycol = visli.ycol;
-		
-			cv.beginPath(); 
-			for(i = 0; i < xcol.length; i++){
-				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
-				y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
-				
-				if(xcol.length == 1){
-					 cv.moveTo(x+4,y+4); cv.lineTo(x-4,y-4);
-					 cv.moveTo(x+4,y-4); cv.lineTo(x-4,y+4);
-				}
-				else{
-					if(i == 0) cv.moveTo(x,y);
-					else cv.lineTo(x,y);
-				}
-			}	
-		}
-		else{
-			if(visli.true){
-				y = Math.floor(graphdy-graphdy*(visli.true-axymin)/(axymax-axymin));
+			if(xcol){
+				var ycol = visli.ycol;
+			
 				cv.beginPath(); 
-				cv.moveTo(0,y);
-				cv.lineTo(graphdx,y);
+				for(i = 0; i < xcol.length; i++){
+					x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
+					y = Math.floor(graphdy-graphdy*(ycol[i]-axymin)/(axymax-axymin));
+					
+					if(xcol.length == 1){
+						 cv.moveTo(x+4,y+4); cv.lineTo(x-4,y-4);
+						 cv.moveTo(x+4,y-4); cv.lineTo(x-4,y+4);
+					}
+					else{
+						if(i == 0) cv.moveTo(x,y);
+						else cv.lineTo(x,y);
+					}
+				}	
 			}
-			else alertp("Problem");
-		}
-		setstyle(visli.style);
-		cv.stroke();
-		
-		if(visli.errbarmin != null && xcol != null){
-			for(i = 0; i < xcol.length; i++){
-				x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
-				draw_errorbar(x,ycol[i],visli.errbarmin[i],visli.errbarmax[i],6);
+			else{
+				if(visli.true){
+					y = Math.floor(graphdy-graphdy*(visli.true-axymin)/(axymax-axymin));
+					cv.beginPath(); 
+					cv.moveTo(0,y);
+					cv.lineTo(graphdx,y);
+				}
+				else alertp("Problem");
+			}
+			setstyle(visli.style);
+			cv.stroke();
+			
+			if(visli.errbarmin != null && xcol != null){
+				for(i = 0; i < xcol.length; i++){
+					x = Math.floor(graphdx*(xcol[i]-axxmin)/(axxmax-axxmin));
+					draw_errorbar(x,ycol[i],visli.errbarmin[i],visli.errbarmax[i],6);
+				}
 			}
 		}
 	} 	

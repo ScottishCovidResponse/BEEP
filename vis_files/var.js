@@ -7,6 +7,8 @@ var initdone = 0;                                         // This is set to one 
 var rateradio = "rate";                                   // Radio button for if rate is displayed
 var lowerhighlight = "off";                               // Dertermines if a high is added
 
+var obsmodelradio = "on";                                 // Radio button for observation model
+
 var visjson;                                              // This object stores information about graphs
 
 var plottype;                                             // Sets the plot type
