@@ -1,6 +1,7 @@
 CXX := mpicxx
 #-mavx2
 CXXFLAGS := -g  -mfma -O3 -W -Wall -std=c++11 -fmax-errors=3
+#CXXFLAGS := -g   -W -Wall -std=c++11 -fmax-errors=3
 #CXXFLAGS := -O3 -W -Wall -std=c++11 -fmax-errors=3
 #CXXFLAGS := -g -W -Wall -std=c++11
 # -B flag forces compilation of all files

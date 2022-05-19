@@ -881,9 +881,22 @@ vector <unsigned int> Inputs::get_breakpoints(string st, const Details &details,
 	
 		auto t = details.gettime(bp[j],em+" for bp=\""+st+"\"");
 		
-		if(j == 0 && t != details.start) emsgroot(em+" 'bp' must start at 'start' and end at 'end'.");
+		if(j == 0 && t != details.start){
+			emsgroot(em+" 'bp' must start at 'start'.");
+		}
 		
-		if(j == bp.size()-1 && t-details.start != details.period) emsgroot(em+" 'bp' must start at 'start' and end at 'end'.");
+		if(j == bp.size()-1){
+			if(details.mode == PREDICTION){
+				if(t > details.pred_end){
+					emsgroot(em+" 'bp' must not exceed time for prediction.");
+				}
+			}
+			else{
+				if(t-details.start != details.period){
+					emsgroot(em+" 'bp' must end at 'end'.");
+				}
+			}
+		}
 		
 		if(t > details.end) emsgroot(em+" '"+bp[j]+"' in 'bp' is outside of the analysis time period.");
 		if(j > 0){
@@ -1367,11 +1380,16 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			area.push_back(geo_filt);
 	
 			auto bp_str = besp.stringfield("bp",""); if(bp_str == "") bp_str = "start|end";
+			
+			
 			auto bp = get_breakpoints(bp_str,details,"In '"+name+"'");
-			bp_vec.push_back(bp);
-		
+			
 			auto ps_list = get_paramspec(besp,name,"param","value","prior","smooth","factor",bp.size(),false);
 			
+			if(details.mode == PREDICTION) extend_spline_for_prediction(bp,ps_list,details);
+		
+			bp_vec.push_back(bp);
+		
 			if(param_not_set(ps_list)){                                  // Sets the parameter name (if not intialised)
 				for(auto i = 0u; i < bp.size(); i++){
 					auto par_name = replace(name,"_","-");
@@ -1449,6 +1467,29 @@ void Inputs::find_spline(const string name, vector <string> &name_vec, vector < 
 			vector <double> ad(nage);
 			for(auto a = 0u; a < nage; a++) ad[a] = 1;
 			efoi_agedist_vec.push_back(ad);
+		}
+	}
+}
+
+
+/// If in prediction mode then extends splines to match up with the predition time
+void Inputs::extend_spline_for_prediction(vector <unsigned int> &bp, vector <ParamSpec> &ps_list, const Details &details)
+{
+	if(bp[bp.size()-1] < details.pred_end){
+		auto flag = false;
+		if(bp.size() >= 2){
+			const auto &ps1 = ps_list[ps_list.size()-2];
+			const auto &ps2 = ps_list[ps_list.size()-1];
+			if(ps1.name == ps2.name && ps1.value == ps2.value && ps1.prior == ps2.prior
+				&& ps1.smooth == ps2.smooth && ps1.factor == ps2.factor){
+				flag = true;
+			}
+		}
+		
+		if(flag == true) bp[bp.size()-1] = details.pred_end;
+		else{
+			bp.push_back(details.pred_end);
+			ps_list.push_back(ps_list[ps_list.size()-1]);
 		}
 	}
 }

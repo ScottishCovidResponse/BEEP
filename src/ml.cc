@@ -218,7 +218,7 @@ void ML::cmaes()
 	
 			//auto Prav = 0.0; for(auto i = 0u; i < mu; i++) Prav += w[i]*model.prior(ps[i].paramval);
 	
-			cout << "Generation " << g << " - Best log(Posterior prob): " << -0.5*ps[0].EF <<  "   Sigma: " << sigma << endl;
+			cout << "Generation " << g << " - Best log(Post. prob.): " << -0.5*ps[0].EF <<  "   Sigma: " << sigma << endl;
 			//cout << "Generation " << g << " - EF: " << ps[0].EF << "    EF average: " << EFav << "   Sigma: " << sigma << endl;
 			//cout << "Generation " << g << " - EF: " << ps[0].EF << endl;
 			

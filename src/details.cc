@@ -20,6 +20,7 @@ Details::Details(Inputs &inputs)
 	analysis_type = "Posterior";
 	if(mode == SIM) analysis_type = "Simulation";
 	if(mode == MULTISIM) analysis_type = "Multisim";
+	if(mode == PREDICTION) analysis_type = "Prediction";
 	
 	description = inputs.find_string("description","UNSET",true); 
 	

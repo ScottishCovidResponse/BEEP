@@ -1476,7 +1476,8 @@ void Model::setup_modification()
 	
 	modelmod.pred_start = UNSET;
 	for(const auto &cf : data.modification){
-		if(modelmod.pred_start == UNSET || cf.start < modelmod.pred_start) modelmod.pred_start = cf.start;
+		if(modelmod.pred_start == UNSET) modelmod.pred_start = details.end;
+		if(cf.start < modelmod.pred_start) modelmod.pred_start = cf.start;
 		
 		auto start = cf.start*details.division_per_time;
 		auto end = cf.end*details.division_per_time;

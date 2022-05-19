@@ -761,18 +761,18 @@ void State::load(const string file, const unsigned int ndivision_post)
 	string line;
 	getline(inp,line);
 	getline(inp,line);
-	auto spl = split(line,','); if(spl.size() != 2) emsg("Problem loading the file '"+filefull+"'");
+	auto spl = split(line,','); if(spl.size() != 2) emsg("Problem loading the file '"+filefull+"'1");
 	part.EF = get_double(spl[1],"In loading '"+filefull+"'");
 	
 	part.paramval.resize(param.size());
 	for(auto th = 0u; th < param.size(); th++){
 		getline(inp,line);
-		auto spl = split(line,','); if(spl.size() != 2) emsg("Problem loading the file '"+filefull+"'");
+		auto spl = split(line,','); if(spl.size() != 2) emsg("Problem loading the file '"+filefull+"2'");
 	
-		if(spl[0] != model.param[th].name) emsg("Problem loading the file '"+filefull+"'");
+		if(spl[0] != model.param[th].name) emsg("Problem loading the file '"+filefull+"'3");
 		part.paramval[th] = get_double(spl[1],"In file '"+filefull+"'");
 	}
-	inp >> fr; if(!inp.eof()) emsg("Problem loading the file '"+file+"'");
+	inp >> fr; if(!inp.eof()) emsg("Problem loading the file '"+file+"'4");
 	
 	filefull = file+"_transition.csv";
 	ifstream inp_trans(filefull);
