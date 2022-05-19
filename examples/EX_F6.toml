@@ -1,0 +1,54 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_F5.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_F6.toml" mode="map"
+
+# Posterior predictive check: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_F6.toml" mode="prediction"
+
+
+description = "Objective: Posterior predictive checks are a way to check if simulating from the fitted model produces results similar to the observed data. They are helpful in assessing if a model gives valid predictions about reality - do they fit the observed data or not? (Note, they do not give a definitive answer on whether one model is better at fitting the data than another, however, they can help to check if a model makes sense.)  Implementation: First inference is performed on the data, e.g. using the 'map' mode, which generates posterior samples  (for both model parameters θ and state ξ) in the “Posterior/samples/” directory. Next the model can be simulated using the model parameter samples θ (disregarding the states ξ) using the 'prediction' mode. Here in the TOML file ‘prediction-start = '0'’ is set in to tell BEEPmbp to start simulating at the beginning of the analysis period. Opening “visBEEPmbp.html” and going to the “Prediction→State Output” tab on the menu we see the inherent variation in the number of weekly cases (here the red dashed lines bound 95% of simulated outcomes). Importantly we find the dataset (denoted by the solid black lines) lies within these bounds which tells us that the behaviour of the model is consistent with the real data. If this is not the case it implies that the model is not correctly capturing the true system dynamics. Note, the state bounds are bigger than in EX F4 because here we are taking into account uncertainty in parameter values, in addition to inherent stochasticity in the system.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  PPC: The variation is states over multiple simulations using posterior parameter samples." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+prediction_start = "0"
+
+datadir = "examples/Data_EX_F6"
+outputdir = "examples/Output_EX_F6"  
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="3", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="0.5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="normal 10%", file="E-I.csv"},
+{type="population", observation="I", timestep="7", obsmodel="normal 10%", file="I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="normal 10%", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

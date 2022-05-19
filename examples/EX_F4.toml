@@ -1,0 +1,53 @@
+# Simulation:
+# ./beepmbp inputfile="examples/EX_F4.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_F4.toml" mode="map"
+
+# Future prediction:
+# mpirun -n 20 ./beepmbp inputfile="examples/EX_F4.toml" mode="prediction"
+
+description = "Objective: “Scenario analyisis” is when we look at what affect a future intervention will have on future predictions. Here we predict the effect of increasing transmission rate at some point in the future (e.g. mimicking the effect of lifting lockdown restrictions).  Implementation: First inference is performed on the data, e.g. in 'map' mode, which generates posterior samples. Note, the time window for this inference is defined by ‘start’ and ‘end’ in the TOML file. Next using these posterior samples we simulate the model forward in time beyond ‘end’ using the 'prediction' mode. ‘prediction-end = '100'’ sets the time to make the future prediction until. ‘modification’ is set such that 10 days after the currently available data the rate of infected individuals is increased by a factor of two. Opening “visBEEPmbp.html” and going to the “Prediction→Data Table” tab on the menu we see the inherent variation in the number of weekly cases. Here the usual posterior distribution for states is showed until the ‘end’ time. Beyond the vertical dashed line with “Prediction start” are the future predictions from the model. The modification applied to the system is within the second vertical dashed line on day 80.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Scecnario: Predicts future system dynamics assuming a future modification to the transmission rate." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+modification = [{type="trans_rate_fac", start="40", trans="S->E", factor="0.3"}]
+	 
+datadir = "examples/Data_EX_F4"
+outputdir = "examples/Output_EX_F4"  
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="3", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="0.5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="1", obsmodel="normal 10%", file="E-I.csv"},
+{type="population", observation="I", timestep="1", obsmodel="normal 10%", file="I.csv"},
+{type="population", observation="R", timestep="1", obsmodel="normal 10%", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

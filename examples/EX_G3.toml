@@ -4,7 +4,7 @@
 # Inference using MAP estimate: 
 # mpirun -n 20 ./beepmbp inputfile="examples/EX_G3.toml" mode="map"
 
-# nohup mpirun -n 10 ./beepmbp inputfile="examples/EX_G3.toml" mode="map" ngeneration=8000 > opp.txt&
+# nohup mpirun -n 20 ./beepmbp inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp6.txt&
 # nohup mpirun -n 10 ./beepmbp inputfile="examples/EX_G3b.toml" mode="map" nparticle=200  ngeneration=2000 > oppb.txt&
 
 time_format = "year-month-day"
@@ -64,6 +64,8 @@ age_mixing_perturb = [
 { agecat='CH', bp='[bp:amp.csv]', param='[ParCH:amp.csv]', value='[ValueCH:amp.csv]', prior='MDir(0.3)', smooth='0.1', smooth_type='log_smooth'},
 ]
 
+
+#R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
 
 R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
 
