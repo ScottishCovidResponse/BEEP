@@ -24,7 +24,15 @@ SET( CMAKE_CXX_STANDARD 11 )
 SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # Set Compiler flag to add available instructions (for SIMD)
-set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g  -mfma -O3 -W -Wall -std=c++11 -fmax-errors=3" )
+set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g  -mfma -O3 -std=c++11 -fmax-errors=3" )
+
+if (MSVC)
+    # supres warnings
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /w")
+else()
+    # supress warnings
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -w")
+endif()
 
 # Require MPI
 find_package(MPI REQUIRED)
