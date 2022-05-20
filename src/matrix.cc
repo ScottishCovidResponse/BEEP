@@ -5,6 +5,7 @@
 using namespace std;
 
 #include "matrix.hh"
+#include <immintrin.h>
 
 unsigned int n_matrix_store;
 double **l, **linv, **u, **uinv, **mat2, **matres;

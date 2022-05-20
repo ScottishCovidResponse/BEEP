@@ -9,3 +9,5 @@ gitversion.hh
 /regression_test_results
 /analysis
 /COVID-19
+/Output*/
+.vscode
