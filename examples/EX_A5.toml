@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_A5.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_A5.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A5.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A5.toml" mode="map"
 
 description = "Objective: Define initial state rather than assuming all individuals are susceptible.  Implementation: This example has no external force of infection. Rather the epidemic is initiated by specifying infected individuals in the initial state of the system. The initial state is specified in the “init-pop.csv” file in the data directory, and this is incorporated into the TOML file through ‘init-pop’.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. The population is demographically stratified by sex.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations, stratified by sex. Inference: The reproduction number R_t and sex-stratified latent and infectious periods." 
 

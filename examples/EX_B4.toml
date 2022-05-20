@@ -1,14 +1,14 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_B4.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_B4.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_B4.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B4.toml" mode="map" 
 
 # Inference using ABC-MBP:  
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_B4.toml" mode="abcmbp" nparticle=100 ngeneration=40
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B4.toml" mode="abcmbp" nparticle=100 ngeneration=40
 
 # Inference using PAIS:  
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_B4.toml" mode="pais" nparticle=100 ngeneration=40
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B4.toml" mode="pais" nparticle=100 ngeneration=40
 
 
 description = "Objective: To apply a Poisson observation model, which assumes that the observed data values are Poisson distributed with mean given by the underlying value Yi. This model implies that the variance is equal to the mean, and so, compared to the normal model characterised by a percentage (as used in most of the examples), tends to give relatively smaller standard deviations for higher values, i.e. a “good fit” corresponds to getting the peaks of time series correct (and less consideration is given to the fit of other points). It should be noted, however, that caution is required when using the Poisson observation model simultaneously on different data sources. For example, if population numbers are large and case rates low, much more weight will be placed on getting a good fit with the former than the latter.  Implementation: In ‘data-tables‘ the ‘obsmodel’ property is set to “poisson”.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 

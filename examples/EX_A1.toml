@@ -1,31 +1,31 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_A1.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="sim" 
 
 # Below we show possible inference algorithms. MAP is found to be fastest and would be recommended
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="map"
 
 # Inference using ABC-MBP:  
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=200 ngeneration=10
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=200 ngeneration=10
 
 # Inference using PAIS:  
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="pais" nparticle=200 ngeneration=10
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="pais" nparticle=200 ngeneration=10
 
 # Inference using ABC:  
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.001 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.001 
 
 # Inference using ABC-SMC:
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=6 nsample=200
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=6 nsample=200
 
 # Inference using PMCMC:
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=100 nsample=1000
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=100 nsample=1000
 
 # Inference using MCMC-MBP:
-# mpirun -n 4 ./beepmbp inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=1 nsample=1000 nrun=4
+# mpirun -n 4 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=1 nsample=1000 nrun=4
 
 # Inference using MC3:
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=1 nsample=1000 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=1 nsample=1000 
 
 
 description = "Objective: Introduce a simple epidemiological model to illustrate simulation and inference.  Implementation: ‘comps’ defines the compartments in the model and ‘trans’ the transitions. ‘R-spline’ and ‘efoi-spline’ define the time variation in reproduction number R_t and external force of infection η_t (both of which are assumed to remain fixed in this example). ‘areas’ references a file giving information about the overall population (in this case 10,000 individuals intermixing in a single area). ‘data-tables’ references files giving the weekly number of infections and recoveries.  Model: This model contains three compartments: susceptible (S), infected (I) and recovered (R). Together they are known as the “SIR model”. The reproduction number R_t measures the number of secondary infections from an initially infected individual, in an otherwise susceptible population (note, the effective reproduction number also accounts for the reduction in the susceptible population over time, and this is a model output). The value of R_t is proportional to the rate at which individuals come into contact (with each contact allowing for the possibility of disease transmission). This model assumes that R_t remains constant, and hence the contact rate between individuals remains the same over time. Furthermore, a constant external force of infection is assumed.  Data: The weekly number of S->I infections and I->R recoveries.  Inference: The reproduction number R_t and infection period." 

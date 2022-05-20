@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_A2.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_A2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A2.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A2.toml" mode="map" 
 
 description = "Objective: Introduce an exposed compartment with a non-exponential residency time.  Implementation: ‘comps’ includes an exposed compartment with name “E”, which has an Erlang distribution with shape parameter 2 (which is equivalent to two sequential compartments each with an exponential residency time of half the total).  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E->I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
 

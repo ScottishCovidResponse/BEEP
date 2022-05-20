@@ -1,18 +1,18 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_G3.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_G3.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_G3.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_G3.toml" mode="map"
 
-# nohup mpirun -n 20 ./beepmbp inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp6.txt&
-# nohup mpirun -n 10 ./beepmbp inputfile="examples/EX_G3b.toml" mode="map" nparticle=200  ngeneration=2000 > oppb.txt&
+# nohup mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp11.txt&
+# nohup mpirun -n 10 build/bin/BEEPmbp inputfile="examples/EX_G3b.toml" mode="map" nparticle=200  ngeneration=2000 > oppb.txt&
 
 time_format = "year-month-day"
 start = "2020-01-01"
 end = "2021-06-09"
 
 datadir = "examples/Data_EX_G3"
-outputdir = "examples/Output_EX_G3"
+outputdir = "examples/Output_EX_G3b"
 
 time_labels = [{name="Lockdown", time="2020-03-23"}]
 
@@ -67,7 +67,7 @@ age_mixing_perturb = [
 
 #R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
 
-R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
 
 efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
 

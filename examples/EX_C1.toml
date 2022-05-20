@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_C1.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_C1.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_C1.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_C1.toml" mode="map"
 
 description = "Objective: This introduces a simple model for spatial stratification.  Implementation: ‘areas’ defines a file which provides information about the populations is four geographical regions. ‘geo-mixing-matrix’ defines a file which gives information about a 4×4 matrix that captures the relative mixing of individuals within and between regions (note, this matrix only needs to be specified up to a constant factor). Finally, ‘area-effect’ accounts for region-specific modifications to the disease transmission rate.  Model: An SIRD branching spatial model with four geographical areas: Region A, Region B, Region C, and Region D. The infected individuals can either recover or die, with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→D deaths, separately for each region.  Inference: The reproduction number R_t (with a region-specific modifying factors), infectious period and branching probabilities." 
 

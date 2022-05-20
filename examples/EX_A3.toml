@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_A3.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_A3.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_A3.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A3.toml" mode="map"
 
 description = "Objective: Introduce “branching”, which describes a situation in which two (or more) transitions leave the same compartment.  Implementation: ‘comps’ includes an infected I compartment and ‘trans’ incorporates two transitions leaving this compartment.  Model: An SIRD branching model is used, in which infected individuals can either recover R or die D with associated branching probabilities. The reproduction number R_t is taken to be constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R recoveries.  Inference: The reproduction number R_t, infectious period and branching probabilities." 
 

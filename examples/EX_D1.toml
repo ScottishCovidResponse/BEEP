@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_D1.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_D1.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_D1.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_D1.toml" mode="map"
 
 description = "Objective: The reproduction number is assumed to be modified by a factor, which on the log-scale has a linear dependency on a time-varying covariate (in this case temperature).  Implementation: ‘tv-covars’ is used to define time-varying covariates.  Model: An SIRD branching model in which infected individuals can either recover or di,e with associated branching probabilities. The base reproduction number R_t is taken to be constant, but disease transmission is modified to vary with a covariate (through an exponential dependency  with the covariate multiplied by a fixed effect) . A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths.  Inference: The fixed effect for the temperature covariate, reproduction number R_t, infectious period and branching probabilities." 
 

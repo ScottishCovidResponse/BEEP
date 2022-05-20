@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_B1.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_B1.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_B1.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B1.toml" mode="map"
 
 
 description = "Objective: This provides an example which makes use of the four different types of data available in BEEPmbp: transition data (here giving the weekly number of cases), population data (total population of infected individuals, measured weekly), marginal data (the total number of individuals which recover during a specified time window) and population fraction data (giving weekly estimates for the fraction of the population which are recovered).  Implementation: ‘data-table’ contains the four data source specifications with types “transition”, “population”, “marginal” and “population-fraction”.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection. The population is demographically stratified by sex.  Data: Weekly number of E→I cases, and measurements on the total infected I and population fraction of recovered individuals R, stratified by sex. Also the total recoveries I→R within a specified time window.  Inference: The reproduction number R_t and sex-stratified latent and infectious periods." 

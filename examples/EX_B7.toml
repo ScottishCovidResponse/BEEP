@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_B7.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_B7.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_B7.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B7.toml" mode="map" 
 
 
 description = "Objective: This replicates EX B6, but here time is represented by dates instead of numerically (e.g. the number of days). Dates can be used for defining the observation period, in data files or for defining spline breakpoints.  Implementation: ‘time-format‘ defines the time format used. In this case it is set to “year-month-day” (e.g. such that dates take the form “2020-01-01”), but other possibilities exist.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods and the estimated fraction of observed cases." 

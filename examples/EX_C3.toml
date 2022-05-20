@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_C3.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_C3.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_C3.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_C3.toml" mode="map"
 
 description = "Objective: This provides an example of demographic stratification.  Implementation: ‘democats’ is used to divide the population into males and females. Model properties can be dependent on this stratification, e.g. under simulation the mean infectious period is defined by “Sex: 6 | 4”, which here means that for males it is 6 days, whereas for females 4 days (note the order follow that defined in ‘democats’).  Model: An SIRD branching spatial model with the population demographically stratified into males and females. The infected individuals can either recover or die with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R measurements separately for the different sexes.  Inference: The reproduction number R_t and sex-stratified infectious period and branching probabilities." 
 

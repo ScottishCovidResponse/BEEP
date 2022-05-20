@@ -1,8 +1,8 @@
 # Simulation:
-# ./beepmbp inputfile="examples/EX_E2.toml" mode="sim" 
+# build/bin/BEEPmbp inputfile="examples/EX_E2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 ./beepmbp inputfile="examples/EX_E2.toml" mode="map"
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_E2.toml" mode="map"
 
 description = "Objective: This example looks at the case in which there is time variation in the relative mixing of different age groups.  Implementation: For each age group, the contact matrix is multiplied along the corresponding row and column by a time-varying 'age contact factor' represented by a spline.  Model: An SIRD branching model with the population demographically stratified into four age groups: 0-19, 20-39, 40-59, and 60+. A contact matrix is specified which gives the rate of effective contact between individuals within and between different age groups (note, this matrix only needs to be specified up to a constant factor). The infected individuals can either recover or die, with associated branching probabilities. The reproduction number R_t is approximated by a step function (i.e. it has a constant value before and after a putative lockdown event). A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths, separately for the different age groups.  Inference: The time-varying age contact factors, time variation in the reproduction number R_t and infectious period." 
 
