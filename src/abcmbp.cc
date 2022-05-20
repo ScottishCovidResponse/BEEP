@@ -87,7 +87,7 @@ void ABCMBP::run()
 
 	output.generation_results(generation);                    // Generates pdf of graphs
 
-	output.generate_graphs(part);	
+	output.generate_graphs(part,UNSET);	
 	
 	paramprop.diagnostics();                                  // Outputs diagnostic information
 }

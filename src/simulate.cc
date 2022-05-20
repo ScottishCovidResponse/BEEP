@@ -47,7 +47,7 @@ void Simulate::run()
 	output.simulated_data(obs_value,details.output_directory+"/Simulated_data"); // Outputs the simulated data files
 
 	particle_store.push_back(state.create_particle(0));                          // Generate the pdf output file
-	output.generate_graphs(particle_store); 
+	output.generate_graphs(particle_store,UNSET); 
 	
 	//state.save(details.output_directory+"/sample");
 }
@@ -69,7 +69,7 @@ void Simulate::multisim()
 		output.print_percentage((s+1)*mpi.ncore,nsim,percentage);
 	}	
 
-	output.generate_graphs(particle_store);         
+	output.generate_graphs(particle_store,UNSET);         
 }
 
 
@@ -161,5 +161,5 @@ void Simulate::model_modification()
 		output.print_percentage(s+1,nsamp_per_core,percentage);
 	}
 	
-	output.generate_graphs(particle_store);         
+	output.generate_graphs(particle_store,UNSET);         
 }

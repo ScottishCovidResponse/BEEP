@@ -78,9 +78,9 @@ void MC3::run()
 		auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
 		auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
 		
-		if(mpi.core == 0) cout << invT_final;
-		find_EF_range();
-		if(mpi.core == 0){
+		//if(mpi.core == 0) cout << invT_final;
+		if(false && mpi.core == 0){
+			find_EF_range();
 			auto samp_fac = double(samp-nburnin)/samp;
 			cout << "," << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " RESULT" << endl;
 			cout << endl;
@@ -89,7 +89,7 @@ void MC3::run()
 	
 	model_evidence();                                         // Calculates the model evidence
 
-	output.generate_graphs(part_plot);	                      // Draws the final pdf
+	output.generate_graphs(part_plot,invT_final);	            // Draws the final pdf
 
 	diagnostics();                                            // Outputs diagnostic information
 }

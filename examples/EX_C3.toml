@@ -1,0 +1,50 @@
+# Simulation:
+# build/bin/BEEPmbp inputfile="examples/EX_C3.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_C3.toml" mode="map"
+
+description = "Objective: This provides an example of demographic stratification.  Implementation: ‘democats’ is used to divide the population into males and females. Model properties can be dependent on this stratification, e.g. under simulation the mean infectious period is defined by “Sex: 6 | 4”, which here means that for males it is 6 days, whereas for females 4 days (note the order follow that defined in ‘democats’).  Model: An SIRD branching spatial model with the population demographically stratified into males and females. The infected individuals can either recover or die with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R measurements separately for the different sexes.  Inference: The reproduction number R_t and sex-stratified infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_C3"
+outputdir = "examples/Output_EX_C3"
+
+democats = [{name="Sex", cats="Male | Female"}] 
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="Sex: 6 | 4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="Sex: 0.8 | 0.7", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="Sex: *", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", democats_dep="Sex", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", democats_dep="Sex", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

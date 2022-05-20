@@ -1065,14 +1065,10 @@ void Mpi::pack(const Observation &ob)
 	pack(ob.value);
 	pack(ob.sd);
 	pack(ob.factor);
-	pack(ob.epsilon);
-	pack(ob.weight);
 	pack(ob.sett_i);
 	pack(ob.sett_f);
 	pack(ob.area);	
 	pack(ob.dp_sel);	
-	pack(ob.w);
-	pack(ob.invT);
 	pack((unsigned int) ob.obsmodel);
 	pack(ob.shape);
 }
@@ -1293,14 +1289,10 @@ void Mpi::unpack(Observation &ob)
 	unpack(ob.value);
 	unpack(ob.sd);
 	unpack(ob.factor);
-	unpack(ob.epsilon);
-	unpack(ob.weight);
 	unpack(ob.sett_i);
 	unpack(ob.sett_f);
 	unpack(ob.area);	
 	unpack(ob.dp_sel);
-	unpack(ob.w);
-	unpack(ob.invT);
 	unsigned int num; unpack(num); ob.obsmodel = ObsModelFunc (num);
 	unpack(ob.shape);
 }

@@ -135,7 +135,7 @@ class Data
 		vector <GeographicMap> create_geomap(const Table &tab, const string geo) const;
 		vector <unsigned int> create_dp_sel(const string dp_str, const string em) const;
 		vector <unsigned int> create_area_sel(const Table &tabarea, const string str, const string em) const;
-		void set_datatable_weights();
+		void set_obs_sd();
 		bool vector_contains(const vector <unsigned int> &vec, const unsigned int num) const;
 		bool vector_contains(const vector <string> &vec, const string num) const;
 		void vector_remove(vector <unsigned int> &vec, const unsigned int num) const;

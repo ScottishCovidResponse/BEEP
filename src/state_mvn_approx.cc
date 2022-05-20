@@ -33,17 +33,18 @@ double State::likelihood_approx(const vector <double> &paramval, vector <ObsSlic
  	
 	auto o = 0u;
 	for(auto sett = 0u; sett <= details.ndivision; sett++){
-		//cout << sett << " sett" << endl;
-	
+		//cout << sett << " "<< L << " sett" << endl;
+		
 		if(o < obs_slice.size()){
 			auto &os = obs_slice[o];
 			if(sett == os.sett && 1 == 1){ // Incorporate an observation
 				timer[TIME_OBS_APPROX].start();
 				if(sett > 0){
-					switch(os.obs_type){
-						case OBS_APPROX: L += apply_observation_fast(os,covar,invT,ac); break;	
-						case OBS_EXACT: L += apply_exact_observation(os,covar); break;
-					}
+					auto dL = apply_observation_fast(os,covar,invT,ac);
+					if(dL == -LARGE) return -LARGE;
+					
+					L += dL;
+					//apply_exact_observation(os,covar); break;
 				}
 				timer[TIME_OBS_APPROX].stop();
 				o++;
@@ -80,7 +81,7 @@ double State::likelihood_approx(const vector <double> &paramval, vector <ObsSlic
 		
 		update_pop(sett);
 	}
-
+	
 	if(std::isnan(L)) emsgEC("State Approx",38);
 	if(o != obs_slice.size()) emsgEC("State Approx",39);
 		
@@ -119,10 +120,7 @@ void State::future_obs_approx(vector <ObsSlice> &obs_slice, const double invT, c
 			if(sett == int(os.sett)){ // Incorporate an observation
 				timer[TIME_OBS_APPROX].start();
 				if(sett > 0){
-					switch(os.obs_type){
-						case OBS_APPROX: apply_observation(os,covar,invT); break;
-						case OBS_EXACT: apply_exact_observation(os,covar); break;
-					}
+					apply_observation(os,covar,invT); 
 					pop_positive(sett);
 				}
 				timer[TIME_OBS_APPROX].stop();
@@ -184,8 +182,6 @@ Particle State::posterior_particle_sample(const vector <double> &paramval, vecto
 		if(tf > details.ndivision) emsgroot("Observation out of range");
 
 		if(tf != 0){
-			if(os.obs_type == OBS_EXACT) emsgroot("Observations cannot be exact");
-			
 			for(auto p = 0u; p < P; p++){	
 				if(ti > 0) pop[ti] = part[back[o-1][p]].pop_end;			
 				
@@ -208,7 +204,7 @@ Particle State::posterior_particle_sample(const vector <double> &paramval, vecto
 					auto var = ob.var_approx/invT;
 					
 					switch(dt.type){
-						case POP:
+						case POP: case POPFRAC:
 							{
 								for(auto ca : obs_clist[i]){
 									const auto &cap = comp_approx[ca];
@@ -217,14 +213,13 @@ Particle State::posterior_particle_sample(const vector <double> &paramval, vecto
 							}
 							break;
 							
-						case TRANS:
+						case TRANS: case MARGINAL:
 							{
 								auto sett = ob.sett_i;
 								
 								auto pp = p, oo = o;
 								
 								while(oo > 0 && sett < obs_slice[oo-1].sett){
-									//emsg("check working");
 									oo--; pp = back[oo][pp];
 								}
 					
@@ -234,13 +229,18 @@ Particle State::posterior_particle_sample(const vector <double> &paramval, vecto
 								}
 							}
 							break;
-							
-						case POPFRAC: emsgroot("'popfrac' not currently supported"); break;
-						
-						case MARGINAL: emsgroot("'marginal' cannot be used with maximum likelihood approaches."); break;	
 					}
 					
 					auto value = ob.value;
+			
+					auto factor = ob.factor;
+					auto spl = ob.factor_spline;
+					if(spl != UNSET){
+						auto tt = tf; if(tt == details.ndivision) tt--;
+						factor *= disc_spline[spl][tt];
+					}
+					value /= factor; var /= factor*factor;
+
 					L += -0.5*(val-value)*(val-value)/var;
 				}	
 	
@@ -699,7 +699,7 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 	
 	auto det1 = 0.0;
 	auto Minv = invert_determinant_SIMD(M1,det1,ac);
-	//auto Minv = invert_matrix_SIMD(M1,ac);
+	// auto Minv = invert_matrix_SIMD(M1,ac);
 
 	/*
 	vector < vector <double> > Minv;
@@ -725,7 +725,7 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 		}
 		loop++;
 	}while(loop < loopmax && pos_def == false);
-	cout << loop << " loop\n";
+
 	if(loop == loopmax) emsgEC("State approx",54);
 	*/
 	
@@ -740,7 +740,14 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 		const auto &ob = data.obs[ob_ref];
 		const auto &dt = data.datatable[ob.datatable];
 
-		double value = ob.value;
+		auto factor = ob.factor;
+		auto spl = ob.factor_spline;
+		if(spl != UNSET){
+			auto tt = sett; if(tt == details.ndivision) tt--;
+			factor *= disc_spline[spl][tt];
+		}
+		
+		double value = ob.value/factor;
 		
 		if(dt.type == TRANS){  // In the case of transitions we add the total population as the start of the observation
 			auto sett = ob.sett_i;
@@ -752,7 +759,7 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 				
 		const auto &clist_without_S = obs_clist_without_S[ob_ref];
 				
-		auto var = ob.var_approx/invT;
+		auto var = ob.var_approx/(invT*factor*factor);
 					
 		auto val = 1.0/var;
 			
@@ -775,17 +782,14 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 	
 	auto det = 0.0;
 	auto M = invert_determinant_SIMD(Minv,det,ac);
+	
+	
 	//auto M = invert_matrix_SIMD(Minv,ac);
-	
 	//auto M2 = invert_matrix_SIMD(Minv,DOUBLE);
-	//cout << determinant_fast(M) << " " << determinant_fast(M2) << " j\n";
-	//emsg("P");
-	
 	//invert_matrix_SIMD(const vector <vector <double> > &M_orig, Accuracy ac)   
 
-	
 	auto mu = matrix_mult(M,Minv_mu);
-	
+
 	auto mu_Minv_mu = vec_mult(mu,Minv_mu);
 	
 	const auto mu_Minv_mu1 = 0;
@@ -803,29 +807,9 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 	
 	put_p(sett,vec);
 	
-	/*
-	cout << determinant_fast(M1) << "fast\n";
-	cout << determinant_SIMD(M1) << "simd\n";
-emsg("p");
-	*/
-	//auto det1 = determinant_SIMD(M1);
-	//auto det2 = determinant_SIMD_float(M1);
-	//cout << det1 << " " << det2 <<" " << det1-det2 << "j\n";
-	// emsg("P");
+	auto dL = 0.5*(log_factor - det1 - det) - 0.5*(mu_Minv_mu1 + mu_Minv_mu2  - mu_Minv_mu);
+	if(std::isnan(dL)) return -LARGE;
 	
-	//auto dL = 0.5*(log_factor - determinant_SIMD(M1,ac) - determinant_SIMD(Minv,ac));
-  //dL -= 0.5*(mu_Minv_mu1 + mu_Minv_mu2  - mu_Minv_mu);
-	
-	auto dL = 0.5*(log_factor - det1 - det);
-  dL -= 0.5*(mu_Minv_mu1 + mu_Minv_mu2  - mu_Minv_mu);
-
-
-	
-	//cout << det << " " << determinant_SIMD(Minv,ac) << "K\n";
-	//cout << det1 << " " <<  determinant_SIMD(M1,ac) << "K1\n";
-//	cout << determinant_SIMD(M1,ac) << " " << det1 << " compar\n";
-	
-	//auto dL = 0.5*(log_factor - determinant_fast(M1) - determinant_fast(Minv)  - (mu_Minv_mu1 + mu_Minv_mu2  - mu_Minv_mu));
 	if(dL > 0) dL = 0;
 	
 	if(sett > 0){   // Works out what transitions numbers would have been need to get observed change in population
@@ -1241,7 +1225,7 @@ void State::set_transmean_gradients(const unsigned int sett)
 		be *= areafactor[sett/details.division_per_time][c];
 		
 		auto efoi_info = model.efoispline_info[model.efoi_spl_ref[st][c]];
-		auto et = disc_spline[efoi_info.spline_ref][sett];
+		auto et = disc_spline[efoi_info.spline_ref][sett]/data.popsize;
 		
 		vector <double> eta_age(data.nage);
 		const auto &agedist = efoi_info.efoi_agedist;
@@ -1459,9 +1443,11 @@ void State::initialise_approx()
 		vector <unsigned int> complist;
 		
 		switch(dt.type){
-			case POP: complist = dt.complist; break;
+			case POP: case POPFRAC:
+				complist = dt.complist; 
+				break;
 			
-			case TRANS:
+			case TRANS: case MARGINAL:
 				for(auto tr : dt.translist){
 					auto comp_after = model.trans_comp_divide(tr,1);
 					for(auto c : comp_after){

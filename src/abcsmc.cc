@@ -102,7 +102,7 @@ void ABCSMC::run()
 		
 		print_generation(generation,acrate);                               // Outputs statistics about generation
 		
-		if(true){
+		if(false){
 			auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
 			auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
 			if(mpi.core == 0){	
@@ -303,7 +303,7 @@ void ABCSMC::results()
 		}
 	}
 
-	output.generate_graphs(particle_plot);					                     // Outputs diagnostic information
+	output.generate_graphs(particle_plot,UNSET);					                     // Outputs diagnostic information
 }
 
 

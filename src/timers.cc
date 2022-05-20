@@ -43,6 +43,10 @@ void output_timers(string file, Mpi &mpi)
 		if(time_av[TIME_LIKELIHOOD_APPROX] > 0) dia << per(time_av[TIME_LIKELIHOOD_APPROX]/time_av[TIME_ALG]) << " Likelihood" << endl;
 		if(time_av[TIME_OBS_APPROX] > 0) dia << per(time_av[TIME_OBS_APPROX]/time_av[TIME_ALG]) << " Obs approx" << endl;
 		
+		if(time_av[TIME_CMAES] > 0) dia << per(time_av[TIME_CMAES]/time_av[TIME_ALG]) << " CMAES algorithm" << endl;
+		
+		if(time_av[TIME_GENERATE_SAMPLES] > 0) dia << per(time_av[TIME_GENERATE_SAMPLES]/time_av[TIME_ALG]) << " CMAES generate samples" << endl;
+		
 		if(time_av[TIME_TEMP1] > 0) dia << per(time_av[TIME_TEMP1]/time_av[TIME_ALG]) << " Temp1" << endl;
 		if(time_av[TIME_TEMP2] > 0) dia << per(time_av[TIME_TEMP2]/time_av[TIME_ALG]) << " Temp2" << endl;
 		if(time_av[TIME_TEMP3] > 0) dia << per(time_av[TIME_TEMP3]/time_av[TIME_ALG]) << " Temp3" << endl;
@@ -56,7 +60,8 @@ void output_timers(string file, Mpi &mpi)
 	
 		if(time_av[TIME_MATRIX_MULT] > 0) dia << per(time_av[TIME_MATRIX_MULT]/time_av[TIME_ALG]) << " Matrix multiply" << endl;
 	
-		if(time_av[TIME_ADD_REMOVE_S] > 0) dia << per(time_av[TIME_ADD_REMOVE_S]/time_av[TIME_ALG]) << "Add remove S" << endl;
+
+		if(time_av[TIME_ADD_REMOVE_S] > 0) dia << per(time_av[TIME_ADD_REMOVE_S]/time_av[TIME_ALG]) << " Add remove S" << endl;
 	
 		if(time_av[TIME_FUTURE_OBS_APPROX] > 0) dia << per(time_av[TIME_FUTURE_OBS_APPROX]/time_av[TIME_ALG]) << " Obs approx" << endl;
 		
@@ -65,7 +70,9 @@ void output_timers(string file, Mpi &mpi)
 		if(time_av[TIME_COVAR] > 0) dia << per(time_av[TIME_COVAR]/time_av[TIME_ALG]) << " Covariance matrix update" << endl;
 		if(time_av[TIME_CORRECT] > 0) dia << per(time_av[TIME_CORRECT]/time_av[TIME_ALG]) << " Correct matrix" << endl;
 		if(time_av[TIME_GRAD] > 0) dia << per(time_av[TIME_GRAD]/time_av[TIME_ALG]) << " Transition gradients" << endl;
-		if(time_av[TIME_POSTERIOR_SAMPLE] > 0) dia << per(time_av[TIME_POSTERIOR_SAMPLE]/time_av[TIME_ALG]) << " Posterior sample" << endl;
+		if(time_av[TIME_POSTERIOR_SAMPLE] > 0) dia << per(time_av[TIME_POSTERIOR_SAMPLE]/time_av[TIME_ALG]) << " Generate Posterior sample" << endl;
+	
+		if(time_av[TIME_SCALE_COVARIANCE] > 0) dia << per(time_av[TIME_SCALE_COVARIANCE]/time_av[TIME_ALG]) << " Scale covariance" << endl;
 	
 		if(time_av[TIME_PMCMCLIKE] > 0) dia << per(time_av[TIME_PMCMCLIKE]/time_av[TIME_ALG]) << " PMCMC Likelihood" << endl;
 		if(time_av[TIME_BOOTSTRAP] > 0) dia << per(time_av[TIME_BOOTSTRAP]/time_av[TIME_ALG]) << " PMCMC Bootstrap" << endl;

@@ -254,91 +254,48 @@ double ObservationModel::obs_prob(double value, const Observation& ob) const
 		if(thresh == UNSET) emsgEC("ObsModel",4);
 	
 		switch(ob.obsmodel){
-		case POWER_OBSMODEL:
-			{
-				auto var = ob.sd*ob.sd/(ob.w*ob.invT); if(var < 0.5) var = 0.5;
-				if(value < thresh) return 0; 
-				else return -0.5*(thresh-value)*(thresh-value)/var;
-			}
-			
-		case LOADSD_OBSMODEL:
-			{
-				if(ob.sd == 0) emsg("When using 'loadSD' the standard deviation cannot be set to zero.");
-				if(value < thresh) return ob.w*ob.invT*normal_probability(thresh,thresh,ob.sd*ob.sd); 
-				else return ob.w*ob.invT*normal_probability(thresh,value,ob.sd*ob.sd); 
-			}
-			
-		case NORMAL_OBSMODEL:
-			{
-				//if(value < thresh) return ob.w*ob.invT*normal_probability(thresh,thresh,thresh+0.5*ob.factor);
-				//else return ob.w*ob.invT*normal_probability(thresh,value,value+0.5*ob.factor);
-				if(value < thresh) return ob.w*ob.invT*normal_probability(thresh,thresh,1); 
-				else return ob.w*ob.invT*normal_probability(thresh,value,1); 
-			}
-			
-		case POISSON_OBSMODEL:
-			{
-				auto lam = value; if(lam < 1) lam = 1;
-				auto sum = 0.0; for(val = 0u; val <= thresh; val++) sum += exp(poisson_probability(val,lam));
-				return ob.w*ob.invT*log(sum);
-			}
-			
-		case NEGBINO_OBSMODEL:
-			{
-				auto m = value; if(m < 1) m = 1;
-				auto sum = 0.0; for(val = 0u; val <= thresh; val++) sum += exp(negative_binomial_probability(val,m,ob.shape));
-				return ob.w*ob.invT*log(sum);
-			}
-			
-		case SCALE_OBSMODEL:
-			{
-				auto offset = 0.5*ob.factor;
-				if(value > thresh){
-					auto d = log((value+offset)/(thresh+offset));
-					return -0.5*ob.invT*ob.w*d*d;
+			case NORMAL_OBSMODEL: case NORMAL_PERCENT_OBSMODEL:
+				{
+					if(value < thresh) return normal_probability(thresh,thresh,ob.sd*ob.sd); 
+					else return normal_probability(thresh,value,ob.sd*ob.sd); 
 				}
-				else return 0;
-			}
+				break;
+				
+			case POISSON_OBSMODEL:
+				{
+					auto lam = value; if(lam < 1) lam = 1;
+					auto sum = 0.0; for(val = 0u; val <= thresh; val++) sum += exp(poisson_probability(val,lam));
+					return log(sum);
+				}
+				break;
+				
+			case NEGBINO_OBSMODEL:
+				{
+					auto m = value; if(m < 1) m = 1;
+					auto sum = 0.0; for(val = 0u; val <= thresh; val++) sum += exp(negative_binomial_probability(val,m,ob.shape));
+					return log(sum);
+				}
+				break;
 		}
 	}
 	else{
 		switch(ob.obsmodel){
-		case POWER_OBSMODEL:
-			{
-				auto var = ob.sd*ob.sd/(ob.w*ob.invT); if(var < 0.5) var = 0.5;
-				return -0.5*(val-value)*(val-value)/var; 
-			}
-			
-		case LOADSD_OBSMODEL: 
-			{
-				return ob.w*ob.invT*normal_probability(val,value,ob.sd*ob.sd); 
-			}
-			
-		case NORMAL_OBSMODEL:
-			{
-				//return ob.w*ob.invT*normal_probability(val,value,value+0.5*ob.factor);
-				//cout << ob.datatable << " " << val << " " << value << " j\n";
-				return ob.w*ob.invT*normal_probability(val,value,1); 
-			}
-			
-		case POISSON_OBSMODEL:
-			{
-				auto lam = value; if(lam < 1) lam = 1;
-				return ob.w*ob.invT*poisson_probability(int(val+0.5),lam);
-			}
-			
-		case NEGBINO_OBSMODEL:
-			{
-				auto m = value; if(m < 1) m = 1;
-				return ob.w*ob.invT*negative_binomial_probability(int(val+0.5),m,ob.shape);
-			}
-			
-		case SCALE_OBSMODEL:
-			{
-				auto offset = ob.epsilon;
-				auto d = log((value+offset)/(val+offset));
-				return -0.5*ob.invT*ob.w*ob.weight*d*d;
-			}
+			case NORMAL_OBSMODEL: case NORMAL_PERCENT_OBSMODEL:
+				{
+					return normal_probability(val,value,ob.sd*ob.sd); 
+				}
+	
+			case POISSON_OBSMODEL:
+				{
+					auto lam = value; if(lam < 1) lam = 1;
+					return poisson_probability(int(val+0.5),lam);
+				}
+				
+			case NEGBINO_OBSMODEL:
+				{
+					auto m = value; if(m < 1) m = 1;
+					return negative_binomial_probability(int(val+0.5),m,ob.shape);
+				}
 		}
 	}
 
@@ -404,20 +361,20 @@ vector <ObsSlice> ObservationModel::generate_obs_slice() const
 	for(auto o = 0u; o < data.nobs; o++){
 		const auto &ob = data.obs[o];
 		
-		
 		const auto &dt = data.datatable[ob.datatable];
 		
-		unsigned int sett;
+		unsigned int sett = 0;
 		
 		switch(dt.type){
 			case POP:	sett = ob.sett_i;	break;
 			case TRANS:	sett = ob.sett_f; break;	
-			default: emsg("Onlty 'population' and 'transition' datatables can be used"); break;
+			case MARGINAL: sett = ob.sett_f; break;	
+			case POPFRAC: sett = ob.sett_i; break;
 		}
 		
 		auto i = 0u; while(i < obs_slice.size() && obs_slice[i].sett != sett) i++;
 		if(i == obs_slice.size()){
-			ObsSlice os; os.sett = sett; os.obs_type = OBS_APPROX;// OBS_EXACT;
+			ObsSlice os; os.sett = sett;
 			obs_slice.push_back(os);
 		}
 		obs_slice[i].obs_ref.push_back(o);

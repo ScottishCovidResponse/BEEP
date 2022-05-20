@@ -61,7 +61,7 @@ class Output
 	public:
 		Output(const Details &details, const Data &data, const Model &model, Inputs &inputs, const ObservationModel &obsmodel, Mpi &mpi);
 		
-		void generate_graphs(vector <Particle> &particle_store) const;
+		void generate_graphs(vector <Particle> &particle_store, const double invT) const;
 		void final_model_evidence(const vector <double> &ME_list, const double invT_final, const double cutoff_final) const;
 		void trace_plot_inititialise(const string name, ofstream &trace) const;
 		void trace_plot(const unsigned int samp, const double Li, const vector <double> &paramval, ofstream &trace) const;
@@ -80,15 +80,16 @@ class Output
 		
 	private:
 		void EF_datatable_plot(const string file, const vector <Generation> &generation) const;
-		void generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp) const;
+		void generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp, const double invT) const;
 		void generation_plot(const string file, const vector <Generation> &generation) const;
 		void EF_dist(const vector <ParamSample> &psamp) const;
+		void set_graph_source(vector <OutputPlot> &op) const;
 		void generate_pdf(const string file, const string desc) const;
 		void generate_visualisation(const vector <OutputPlot> &op, const string grfile) const;
 		void generate_pdf_description(vector <OutputPlot> &op, const string grfile) const;
 		void spline_plots(const vector <Sample> &opsamp, vector <OutputPlot> &opplot) const;
 		void datatable_maps(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
-		void graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op) const;
+		void graph_plots(const vector <Sample> &opsamp, vector <OutputPlot> &op, const double invT) const;
 		void get_line_colours(vector <LineColour> line_colour, vector <LineType> &lt, vector <LineType> &lt2) const;
 		void posterior_parameter_estimates(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;
 		void susceptibility_distributions(const vector <ParamSample> &psamp, vector <OutputPlot> &op) const;

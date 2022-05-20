@@ -1,0 +1,22 @@
+
+Age categories: 
+  age: population
+
+Demographic categories: 
+  strain: all
+
+Parameters:
+  I mean occupancy = 6
+  I Infectivity = 1
+  R-spline = 2
+  efoi-spline = 0.1
+
+Compartments:
+0       S
+1  1,     I   Exponential    mean = 'I mean occupancy'  Infectivity: I Infectivity
+2       R
+
+Transitions:
+0   0->1     S->I Infection
+1   1->2     I->R
+

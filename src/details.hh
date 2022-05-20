@@ -21,8 +21,6 @@ struct Details                                                     // Provides d
 	
 	string toml_file;                                                // The name of the TOML file
 	
-	unsigned int efoi_factor;                                        // Denominator when expressing external force of infection.
-
 	TimeFormat time_format;                                          // The time format (e.g. times or dates)
 	string time_format_str;                                          // A description of the time format ('time' or 'date').
 

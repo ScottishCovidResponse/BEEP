@@ -1,0 +1,52 @@
+# Simulation:
+# build/bin/BEEPmbp inputfile="examples/EX_F2.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_F2.toml" mode="map"
+
+# Future prediction:
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_F2.toml" mode="prediction"
+
+description = "Objective: As with EX F1, we assume data up to some point in time and want to predict what is going to happen next. This example looks at the case in which there is the additional complication of a time-varying spline.  Implementation: First inference is performed on the data, e.g. using the 'map' mode, which generates posterior samples (for both model parameters θ and state ξ) in the “Posterior/samples/” directory. Note, the time window for this inference is defined by ‘start’ and ‘end’ in the TOML file. Next, using these posterior samples we simulate the model forward in time beyond ‘end’ using the 'prediction' mode. ‘prediction-end = '450'’ sets the time to simulate until. Opening “visBEEPmbp.html” and going to the “Prediction→Data Table” tab on the menu we see the inherent variation in the number of weekly cases. Here the usual posterior distribution for states is showed until ‘end’. The vertical dashed line with “Prediction start” denotes the time beyond which future predictions from the model are made. The “Prediction→Transmission→R” tab shows the time-variation in the spline for the reproduction number. We see that prior to ‘end’ this curve has been inferred from the data. However, since no data as available between ‘end’ and ‘prediction_end’ BEEPmbp simply assumes the spline remains unchanged during this period (this is also generally true for any other spline defined in the model). In other words, predictions are produced under the implicit assumption that rates of contact in the population remain the same in the future as now (note, however, that changes in the susceptible fraction of the population are accounted for, as shown in the “Prediction→Transmission→R^eff” tab).  Model: An SIR model with a time-varying reproduction number and a constant external force of infection.  Data: Weekly number of S→I cases and I→R recoveries.  Prediction: Simulates system dynamics beyond available dataset assuming splines remain constant after ‘end’." 
+
+time_format = "number"
+start = "0"
+end = "364"
+
+prediction_end = "450"
+
+time_labels = [{name="Lockdown", time="30"},{name="Lockdown 2", time="252"},{name="Lockdown 3", time="336"}]
+
+datadir = "examples/Data_EX_F2"
+outputdir = "examples/Output_EX_F2"
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="14", inf_value="1", mean_prior="Uniform(10,20)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", file="S-I.csv"},
+{type="transition", observation="I->R", timestep="7", obsmodel="normal 10%", file="I-R.csv"}
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

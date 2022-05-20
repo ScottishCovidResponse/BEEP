@@ -1,0 +1,48 @@
+# Simulation:
+# build/bin/BEEPmbp inputfile="examples/EX_A2.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A2.toml" mode="map" 
+
+description = "Objective: Introduce an exposed compartment with a non-exponential residency time.  Implementation: ‘comps’ includes an exposed compartment with name “E”, which has an Erlang distribution with shape parameter 2 (which is equivalent to two sequential compartments each with an exponential residency time of half the total).  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E->I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_A2"
+outputdir = "examples/Output_EX_A2"  
+comps = [
+{name="S"},
+{name="E", dist="Erlang", k="2", mean_value="3", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"}
+]
+
+trans = [
+{from="S", to="E", infection="yes"},
+{from="E", to="I"},
+{from="I", to="R"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="0.5"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="normal 10%", file="E-I.csv"},
+{type="population", observation="I", timestep="7", obsmodel="normal 10%", file="I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="normal 10%", file="R.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
+]
+
+plot_param_values = "true"
+

@@ -1476,7 +1476,8 @@ void Model::setup_modification()
 	
 	modelmod.pred_start = UNSET;
 	for(const auto &cf : data.modification){
-		if(modelmod.pred_start == UNSET || cf.start < modelmod.pred_start) modelmod.pred_start = cf.start;
+		if(modelmod.pred_start == UNSET) modelmod.pred_start = details.end;
+		if(cf.start < modelmod.pred_start) modelmod.pred_start = cf.start;
 		
 		auto start = cf.start*details.division_per_time;
 		auto end = cf.end*details.division_per_time;
@@ -1877,7 +1878,7 @@ vector <double> Model::calculate_external_ninf(const vector<double> &paramv_dir)
 	vector < vector<double> > spline_val;
 	spline_val.resize(spline.size());
 	for(auto sp = 0u; sp < spline.size(); sp++) spline_val[sp] = create_disc_spline(sp,paramv_dir);
-	
+	 
 	auto susceptibility = create_susceptibility(paramv_dir);   
 	auto dt = double(details.period)/details.ndivision;
 	
@@ -1892,9 +1893,8 @@ vector <double> Model::calculate_external_ninf(const vector<double> &paramv_dir)
 				auto val = spline_val[sp_info.spline_ref][sett];
 		
 				for(auto dp = 0u; dp < dpmax; dp++){
-					auto popsum = 0u; for(auto co = 0u; co < comp.size(); co++) popsum += data.area[c].pop_init[co][dp];
 					auto a = data.democatpos[dp][0];
-					ninf[st] += susceptibility[st*dpmax + dp]*val*popsum*sp_info.efoi_agedist[a]*dt;
+					ninf[st] += susceptibility[st*dpmax + dp]*val*sp_info.efoi_agedist[a]*dt;
 				}
 			}
 		}
@@ -2015,16 +2015,14 @@ vector <SplineOutput> Model::get_spline_output(const vector <double> &paramv_dir
 		SplineOutput so;
 		so.name = spline[sp].name;
 		so.desc = spline[sp].desc;
-		so.fulldesc = "External force of infection: The external force of infection sets the average number of infections per unit time (for every "+to_string(details.efoi_factor)+" individuals) caused by contacts from outside the population under investigation.";
+		so.fulldesc = "External force of infection: The external force of infection sets the average number of infections per unit time caused by contacts from outside the population under investigation.";
 		so.tab = details.analysis_type; 
 		so.tab2 = "Transmission";
 		so.tab3 = "External FOI"; 
 		if(efoispline_info.size() > 1) so.tab4 = efoispline_info[i].name;
 				
 		so.splineval = create_disc_spline(sp,paramv_dir);
-		for(auto &val : so.splineval) val *= details.efoi_factor;
-		so.desc += " (per "+to_string(details.efoi_factor)+")";
-		
+			
 		so.spline_param_JSON = spline_param_JSON(sp);	
 		
 		splineout.push_back(so);		
@@ -2128,8 +2126,9 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 			derpar.push_back(dp);
 		}
 	}
-	
+
 	auto exf_ninf = calculate_external_ninf(paramv_dir);
+	
 	for(auto st = 0u; st < data.nstrain; st++){                       // The generation time
 		DerivedParam dp;
 		dp.name = "External Infections";

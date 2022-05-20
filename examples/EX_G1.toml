@@ -1,0 +1,78 @@
+# Simulation:
+# build/bin/BEEPmbp inputfile="examples/EX_G1.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_G1.toml" mode="map"
+
+description = "Objective: Illustrate a model applicable to the sorts of publically available data sources for the 2020 Covid-19 pandemic.  Model: A realist compartmental model is needed to capture Covid-19. It contains the following compartments – S: Susceptible, E: Exposed, A: Asymptomatic, I: Infectious, T: PCR test-sensitive but non-infectious, C: Infected but non-infectious (due to self-isolation), H: Hospitalised, R: Recovered, and D: Dead. A piecewise linear spline is used to represent time variation in the reproduction number R_t.  Data: Weekly number of E→I cases, C→H hospital admissions, H→D deaths, PCR survey data (gives estimates for total infected population, i.e. the sum of those in A, I, C, T), and antibody survey data (gives estimates for total recovered population R). Note, this is simulated data using model parameters near to those found for the real data. The time period in the test sensitive state (other time periods are set) and all branching probabilities.  Inference: The time variation in the reproduction number R_t. Comparing for true curve with the inferred one we find excellent agreement. The only exception is at the beginning and end where the number of infected individuals is small (because of the lack of information with which to estimate reproduction number, the smoothing prior tends to smooth out fluctuations R_t)."
+
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2021-06-09"
+
+datadir = "examples/Data_EX_G1"
+outputdir = "examples/Output_EX_G1"
+
+time_labels = [{name="Lockdown", time="2020-03-23"},{name="Schools reopen", time="2020-06-01"},{name="Lockdown restrictions eased", time="2020-08-14"},{name="Lockdown 2", time="2020-11-05"},{name="Alpha variant dominant", time="2020-12-20"},{name="Lockdown 3", time="2021-01-06"},{name="Schools reopen", time="2021-03-08"},{name="Delta variant dominant", time="2021-05-16"}]
+
+comps			= [{name="S"},
+						 {name="E", dist="Exp", mean_value="3.8"},
+						 {name="I", dist="Exp", mean_value="4.0", inf_value="1"},
+						 {name="C", dist="Exp", mean_value="3.1"},
+						 {name="A", dist="Exp", mean_value="4", inf_value="0.55"},
+						 {name="H", dist="Exp", mean_value="13.0"},
+						 {name="T", dist="Exp", mean_prior="Uniform(10,20)", mean_value="15"},
+						 {name="R"},
+						 {name="D"}
+							]
+
+trans   	=	[{from="S", to="E", infection="yes"},
+						
+						 {from="E", to="A", prob_value="*", prob_prior="Dir(*)"},	 
+						 
+						 {from="E", to="I", prob_value="0.43", prob_prior="Dir(*)"},	 
+						 
+						 {from="I", to="T", prob_value="*", prob_prior="Dir(1)"},
+						 
+						 {from="I", to="C", prob_value="0.2", prob_prior="Dir(1)"},
+
+						 {from="C", to="H"},
+						
+						 {from="H", to="R", prob_value="*", prob_prior="Dir(1)"},
+						 
+						 {from="H", to="D", prob_value="0.3", prob_prior="Dir(1)"},
+						 
+						 {from="A", to="T"},
+						 {from="T", to="R"},
+						]
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
+
+areas = "population.csv"
+			
+data_tables = [
+
+{type="transition", observation="E->I", shift="-4", obsmodel="normal 10%", timestep="1", file="cases.csv"},
+
+{type="transition", observation="H->D", obsmodel="normal 10%", shift="-6", timestep="7", file="deaths.csv"},
+
+{type="population", observation="I,C,A,T", obsmodel="normal 10%", file="covid19_inf_survey.csv"},
+
+{type="transition", observation="C->H", obsmodel="normal 10%", timestep="1", file="admissions.csv"},
+
+{type="population", observation="R", obsmodel="normal 10%",file="antibody.csv"}
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="C", line_colour="cyan"},
+{plot_name="Dynamics", type="population", observation="A", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="R",line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"

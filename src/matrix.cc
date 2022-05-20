@@ -32,8 +32,9 @@ vector < vector <double> > invert_determinant_SIMD(const vector < vector <double
 					
 					u[i][i] = 1;
 					for(auto j = i+1; j < n; j++){
-						if(li[i] == 0) emsgEC("Matrix",1);
-						u[j][i] = (M[i][j] - dot_SIMD(li,u[j],0,i))/li[i];
+						auto val = li[i]; if(val == 0) val = TINY;
+						//if(li[i] == 0) emsgEC("Matrix",1);
+						u[j][i] = (M[i][j] - dot_SIMD(li,u[j],0,i))/val;
 					}
 				}
 
@@ -1110,7 +1111,6 @@ vector < vector <double> > invert_matrix_square_root(const vector < vector <doub
 			for(auto i = 0u; i < n; i++){
 				auto d = Minv[j][i] - N[j][i];
 				if(d < -TINY || d > TINY){
-					cout << d << " d\n";
 					emsgEC("Matrix",23);
 				}
 			}

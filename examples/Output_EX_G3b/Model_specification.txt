@@ -1,0 +1,331 @@
+
+Age categories: 
+  age: age0-9, age10-19, age20-29, age30-39, age40-49, age50-59, age60-69, age70-79, age80+, CH
+
+Demographic categories: 
+  strain: all
+
+Priors:
+  zero = Fixed(0)
+  E mean occupancy = Fixed(3.8)
+  I mean occupancy = Fixed(4)
+  I Infectivity = Fixed(1)
+  C mean occupancy = Fixed(3.1)
+  A mean occupancy = Fixed(4)
+  A Infectivity = Fixed(0.55)
+  H mean occupancy = Fixed(13)
+  T mean occupancy = Fixed(15)
+  E->A branch prob. = Dir(*)
+  E->I branch prob. = Dir(*)
+  I->T branch prob. = Dir(*)
+  I->C branch prob. = Dir(*)
+  H->R branch prob. = Dir(*)
+  H->D branch prob. = Dir(*)
+  R_0 = Fixed(4.13)
+  R_1 = Fixed(2.52)
+  R_2 = Fixed(1.67)
+  R_3 = Fixed(0.669)
+  R_4 = Fixed(0.582)
+  R_5 = Fixed(0.69)
+  R_6 = Fixed(0.841)
+  R_7 = Fixed(0.886)
+  R_8 = Fixed(0.853)
+  R_9 = Fixed(0.845)
+  R_10 = Fixed(0.892)
+  R_11 = Fixed(1.03)
+  R_12 = Fixed(1.23)
+  R_13 = Fixed(1.45)
+  R_14 = Fixed(1.62)
+  R_15 = Fixed(1.74)
+  R_16 = Fixed(1.77)
+  R_17 = Fixed(1.4)
+  R_18 = Fixed(1.34)
+  R_19 = Fixed(1.23)
+  R_20 = Fixed(0.965)
+  R_21 = Fixed(1.46)
+  R_22 = Fixed(1.86)
+  R_23 = Fixed(1.54)
+  R_24 = Fixed(1.22)
+  R_25 = Fixed(1.03)
+  R_26 = Fixed(0.986)
+  R_27 = Fixed(1.01)
+  R_28 = Fixed(1.06)
+  R_29 = Fixed(1.23)
+  R_30 = Fixed(1.14)
+  R_31 = Fixed(1.1)
+  R_32 = Fixed(1.28)
+  R_33 = Fixed(1.57)
+  R_34 = Fixed(1.99)
+  R_35 = Fixed(2.16)
+  one = Fixed(1)
+  efoi = Fixed(400)
+  Mixing factor 0-9start = MDir(0.2)
+  Mixing factor 0-92020-02-26 = MDir(0.2)
+  Mixing factor 0-92020-03-11 = MDir(0.2)
+  Mixing factor 0-92020-03-23 = MDir(0.2)
+  Mixing factor 0-92020-04-08 = MDir(0.2)
+  Mixing factor 0-92020-05-06 = MDir(0.2)
+  Mixing factor 0-92020-06-03 = MDir(0.2)
+  Mixing factor 0-92020-07-01 = MDir(0.2)
+  Mixing factor 0-92020-07-29 = MDir(0.2)
+  Mixing factor 0-92020-08-26 = MDir(0.2)
+  Mixing factor 0-92020-09-23 = MDir(0.2)
+  Mixing factor 0-92020-10-21 = MDir(0.2)
+  Mixing factor 0-92020-11-18 = MDir(0.2)
+  Mixing factor 0-92020-12-16 = MDir(0.2)
+  Mixing factor 0-92021-01-06 = MDir(0.2)
+  Mixing factor 0-92021-01-27 = MDir(0.2)
+  Mixing factor 0-92021-02-24 = MDir(0.2)
+  Mixing factor 0-92021-03-24 = MDir(0.2)
+  Mixing factor 0-92021-04-21 = MDir(0.2)
+  Mixing factor 0-92021-05-19 = MDir(0.2)
+  Mixing factor 0-9end = MDir(0.2)
+  Mixing factor 10-19start = MDir(0.2)
+  Mixing factor 10-192020-02-26 = MDir(0.2)
+  Mixing factor 10-192020-03-11 = MDir(0.2)
+  Mixing factor 10-192020-03-23 = MDir(0.2)
+  Mixing factor 10-192020-04-08 = MDir(0.2)
+  Mixing factor 10-192020-05-06 = MDir(0.2)
+  Mixing factor 10-192020-06-03 = MDir(0.2)
+  Mixing factor 10-192020-07-01 = MDir(0.2)
+  Mixing factor 10-192020-07-29 = MDir(0.2)
+  Mixing factor 10-192020-08-26 = MDir(0.2)
+  Mixing factor 10-192020-09-23 = MDir(0.2)
+  Mixing factor 10-192020-10-21 = MDir(0.2)
+  Mixing factor 10-192020-11-18 = MDir(0.2)
+  Mixing factor 10-192020-12-16 = MDir(0.2)
+  Mixing factor 10-192021-01-06 = MDir(0.2)
+  Mixing factor 10-192021-01-27 = MDir(0.2)
+  Mixing factor 10-192021-02-24 = MDir(0.2)
+  Mixing factor 10-192021-03-24 = MDir(0.2)
+  Mixing factor 10-192021-04-21 = MDir(0.2)
+  Mixing factor 10-192021-05-19 = MDir(0.2)
+  Mixing factor 10-19end = MDir(0.2)
+  Mixing factor 20-29start = MDir(0.2)
+  Mixing factor 20-292020-02-26 = MDir(0.2)
+  Mixing factor 20-292020-03-11 = MDir(0.2)
+  Mixing factor 20-292020-03-23 = MDir(0.2)
+  Mixing factor 20-292020-04-08 = MDir(0.2)
+  Mixing factor 20-292020-05-06 = MDir(0.2)
+  Mixing factor 20-292020-06-03 = MDir(0.2)
+  Mixing factor 20-292020-07-01 = MDir(0.2)
+  Mixing factor 20-292020-07-29 = MDir(0.2)
+  Mixing factor 20-292020-08-26 = MDir(0.2)
+  Mixing factor 20-292020-09-23 = MDir(0.2)
+  Mixing factor 20-292020-10-21 = MDir(0.2)
+  Mixing factor 20-292020-11-18 = MDir(0.2)
+  Mixing factor 20-292020-12-16 = MDir(0.2)
+  Mixing factor 20-292021-01-06 = MDir(0.2)
+  Mixing factor 20-292021-01-27 = MDir(0.2)
+  Mixing factor 20-292021-02-24 = MDir(0.2)
+  Mixing factor 20-292021-03-24 = MDir(0.2)
+  Mixing factor 20-292021-04-21 = MDir(0.2)
+  Mixing factor 20-292021-05-19 = MDir(0.2)
+  Mixing factor 20-29end = MDir(0.2)
+  Mixing factor 30-39start = MDir(0.2)
+  Mixing factor 30-392020-02-26 = MDir(0.2)
+  Mixing factor 30-392020-03-11 = MDir(0.2)
+  Mixing factor 30-392020-03-23 = MDir(0.2)
+  Mixing factor 30-392020-04-08 = MDir(0.2)
+  Mixing factor 30-392020-05-06 = MDir(0.2)
+  Mixing factor 30-392020-06-03 = MDir(0.2)
+  Mixing factor 30-392020-07-01 = MDir(0.2)
+  Mixing factor 30-392020-07-29 = MDir(0.2)
+  Mixing factor 30-392020-08-26 = MDir(0.2)
+  Mixing factor 30-392020-09-23 = MDir(0.2)
+  Mixing factor 30-392020-10-21 = MDir(0.2)
+  Mixing factor 30-392020-11-18 = MDir(0.2)
+  Mixing factor 30-392020-12-16 = MDir(0.2)
+  Mixing factor 30-392021-01-06 = MDir(0.2)
+  Mixing factor 30-392021-01-27 = MDir(0.2)
+  Mixing factor 30-392021-02-24 = MDir(0.2)
+  Mixing factor 30-392021-03-24 = MDir(0.2)
+  Mixing factor 30-392021-04-21 = MDir(0.2)
+  Mixing factor 30-392021-05-19 = MDir(0.2)
+  Mixing factor 30-39end = MDir(0.2)
+  Mixing factor 40-49start = MDir(0.2)
+  Mixing factor 40-492020-02-26 = MDir(0.2)
+  Mixing factor 40-492020-03-11 = MDir(0.2)
+  Mixing factor 40-492020-03-23 = MDir(0.2)
+  Mixing factor 40-492020-04-08 = MDir(0.2)
+  Mixing factor 40-492020-05-06 = MDir(0.2)
+  Mixing factor 40-492020-06-03 = MDir(0.2)
+  Mixing factor 40-492020-07-01 = MDir(0.2)
+  Mixing factor 40-492020-07-29 = MDir(0.2)
+  Mixing factor 40-492020-08-26 = MDir(0.2)
+  Mixing factor 40-492020-09-23 = MDir(0.2)
+  Mixing factor 40-492020-10-21 = MDir(0.2)
+  Mixing factor 40-492020-11-18 = MDir(0.2)
+  Mixing factor 40-492020-12-16 = MDir(0.2)
+  Mixing factor 40-492021-01-06 = MDir(0.2)
+  Mixing factor 40-492021-01-27 = MDir(0.2)
+  Mixing factor 40-492021-02-24 = MDir(0.2)
+  Mixing factor 40-492021-03-24 = MDir(0.2)
+  Mixing factor 40-492021-04-21 = MDir(0.2)
+  Mixing factor 40-492021-05-19 = MDir(0.2)
+  Mixing factor 40-49end = MDir(0.2)
+  Mixing factor 50-59start = MDir(0.2)
+  Mixing factor 50-592020-02-26 = MDir(0.2)
+  Mixing factor 50-592020-03-11 = MDir(0.2)
+  Mixing factor 50-592020-03-23 = MDir(0.2)
+  Mixing factor 50-592020-04-08 = MDir(0.2)
+  Mixing factor 50-592020-05-06 = MDir(0.2)
+  Mixing factor 50-592020-06-03 = MDir(0.2)
+  Mixing factor 50-592020-07-01 = MDir(0.2)
+  Mixing factor 50-592020-07-29 = MDir(0.2)
+  Mixing factor 50-592020-08-26 = MDir(0.2)
+  Mixing factor 50-592020-09-23 = MDir(0.2)
+  Mixing factor 50-592020-10-21 = MDir(0.2)
+  Mixing factor 50-592020-11-18 = MDir(0.2)
+  Mixing factor 50-592020-12-16 = MDir(0.2)
+  Mixing factor 50-592021-01-06 = MDir(0.2)
+  Mixing factor 50-592021-01-27 = MDir(0.2)
+  Mixing factor 50-592021-02-24 = MDir(0.2)
+  Mixing factor 50-592021-03-24 = MDir(0.2)
+  Mixing factor 50-592021-04-21 = MDir(0.2)
+  Mixing factor 50-592021-05-19 = MDir(0.2)
+  Mixing factor 50-59end = MDir(0.2)
+  Mixing factor 60-69start = MDir(0.2)
+  Mixing factor 60-692020-02-26 = MDir(0.2)
+  Mixing factor 60-692020-03-11 = MDir(0.2)
+  Mixing factor 60-692020-03-23 = MDir(0.2)
+  Mixing factor 60-692020-04-08 = MDir(0.2)
+  Mixing factor 60-692020-05-06 = MDir(0.2)
+  Mixing factor 60-692020-06-03 = MDir(0.2)
+  Mixing factor 60-692020-07-01 = MDir(0.2)
+  Mixing factor 60-692020-07-29 = MDir(0.2)
+  Mixing factor 60-692020-08-26 = MDir(0.2)
+  Mixing factor 60-692020-09-23 = MDir(0.2)
+  Mixing factor 60-692020-10-21 = MDir(0.2)
+  Mixing factor 60-692020-11-18 = MDir(0.2)
+  Mixing factor 60-692020-12-16 = MDir(0.2)
+  Mixing factor 60-692021-01-06 = MDir(0.2)
+  Mixing factor 60-692021-01-27 = MDir(0.2)
+  Mixing factor 60-692021-02-24 = MDir(0.2)
+  Mixing factor 60-692021-03-24 = MDir(0.2)
+  Mixing factor 60-692021-04-21 = MDir(0.2)
+  Mixing factor 60-692021-05-19 = MDir(0.2)
+  Mixing factor 60-69end = MDir(0.2)
+  Mixing factor 70-79start = MDir(0.2)
+  Mixing factor 70-792020-02-26 = MDir(0.2)
+  Mixing factor 70-792020-03-11 = MDir(0.2)
+  Mixing factor 70-792020-03-23 = MDir(0.2)
+  Mixing factor 70-792020-04-08 = MDir(0.2)
+  Mixing factor 70-792020-05-06 = MDir(0.2)
+  Mixing factor 70-792020-06-03 = MDir(0.2)
+  Mixing factor 70-792020-07-01 = MDir(0.2)
+  Mixing factor 70-792020-07-29 = MDir(0.2)
+  Mixing factor 70-792020-08-26 = MDir(0.2)
+  Mixing factor 70-792020-09-23 = MDir(0.2)
+  Mixing factor 70-792020-10-21 = MDir(0.2)
+  Mixing factor 70-792020-11-18 = MDir(0.2)
+  Mixing factor 70-792020-12-16 = MDir(0.2)
+  Mixing factor 70-792021-01-06 = MDir(0.2)
+  Mixing factor 70-792021-01-27 = MDir(0.2)
+  Mixing factor 70-792021-02-24 = MDir(0.2)
+  Mixing factor 70-792021-03-24 = MDir(0.2)
+  Mixing factor 70-792021-04-21 = MDir(0.2)
+  Mixing factor 70-792021-05-19 = MDir(0.2)
+  Mixing factor 70-79end = MDir(0.2)
+  Mixing factor 80+start = MDir(0.3)
+  Mixing factor 80+2020-02-26 = MDir(0.3)
+  Mixing factor 80+2020-03-11 = MDir(0.3)
+  Mixing factor 80+2020-03-23 = MDir(0.3)
+  Mixing factor 80+2020-04-08 = MDir(0.3)
+  Mixing factor 80+2020-05-06 = MDir(0.3)
+  Mixing factor 80+2020-06-03 = MDir(0.3)
+  Mixing factor 80+2020-07-01 = MDir(0.3)
+  Mixing factor 80+2020-07-29 = MDir(0.3)
+  Mixing factor 80+2020-08-26 = MDir(0.3)
+  Mixing factor 80+2020-09-23 = MDir(0.3)
+  Mixing factor 80+2020-10-21 = MDir(0.3)
+  Mixing factor 80+2020-11-18 = MDir(0.3)
+  Mixing factor 80+2020-12-16 = MDir(0.3)
+  Mixing factor 80+2021-01-06 = MDir(0.3)
+  Mixing factor 80+2021-01-27 = MDir(0.3)
+  Mixing factor 80+2021-02-24 = MDir(0.3)
+  Mixing factor 80+2021-03-24 = MDir(0.3)
+  Mixing factor 80+2021-04-21 = MDir(0.3)
+  Mixing factor 80+2021-05-19 = MDir(0.3)
+  Mixing factor 80+end = MDir(0.3)
+  Mixing factor CHstart = MDir(0.3)
+  Mixing factor CH2020-02-26 = MDir(0.3)
+  Mixing factor CH2020-03-11 = MDir(0.3)
+  Mixing factor CH2020-03-23 = MDir(0.3)
+  Mixing factor CH2020-04-08 = MDir(0.3)
+  Mixing factor CH2020-05-06 = MDir(0.3)
+  Mixing factor CH2020-06-03 = MDir(0.3)
+  Mixing factor CH2020-07-01 = MDir(0.3)
+  Mixing factor CH2020-07-29 = MDir(0.3)
+  Mixing factor CH2020-08-26 = MDir(0.3)
+  Mixing factor CH2020-09-23 = MDir(0.3)
+  Mixing factor CH2020-10-21 = MDir(0.3)
+  Mixing factor CH2020-11-18 = MDir(0.3)
+  Mixing factor CH2020-12-16 = MDir(0.3)
+  Mixing factor CH2021-01-06 = MDir(0.3)
+  Mixing factor CH2021-01-27 = MDir(0.3)
+  Mixing factor CH2021-02-24 = MDir(0.3)
+  Mixing factor CH2021-03-24 = MDir(0.3)
+  Mixing factor CH2021-04-21 = MDir(0.3)
+  Mixing factor CH2021-05-19 = MDir(0.3)
+  Mixing factor CHend = MDir(0.3)
+
+Dirichlet distributions:
+  Mixing factor 0-9start 0.118357   Mixing factor 10-19start 0.114964   Mixing factor 20-29start 0.128106   Mixing factor 30-39start 0.133236   Mixing factor 40-49start 0.125158   Mixing factor 50-59start 0.135897   Mixing factor 60-69start 0.107151   Mixing factor 70-79start 0.0845486   Mixing factor 80+start 0.0451586   Mixing factor CHstart 0.00742402   
+  Mixing factor 0-92020-02-26 0.118357   Mixing factor 10-192020-02-26 0.114964   Mixing factor 20-292020-02-26 0.128106   Mixing factor 30-392020-02-26 0.133236   Mixing factor 40-492020-02-26 0.125158   Mixing factor 50-592020-02-26 0.135897   Mixing factor 60-692020-02-26 0.107151   Mixing factor 70-792020-02-26 0.0845486   Mixing factor 80+2020-02-26 0.0451586   Mixing factor CH2020-02-26 0.00742402   
+  Mixing factor 0-92020-03-11 0.118357   Mixing factor 10-192020-03-11 0.114964   Mixing factor 20-292020-03-11 0.128106   Mixing factor 30-392020-03-11 0.133236   Mixing factor 40-492020-03-11 0.125158   Mixing factor 50-592020-03-11 0.135897   Mixing factor 60-692020-03-11 0.107151   Mixing factor 70-792020-03-11 0.0845486   Mixing factor 80+2020-03-11 0.0451586   Mixing factor CH2020-03-11 0.00742402   
+  Mixing factor 0-92020-03-23 0.118357   Mixing factor 10-192020-03-23 0.114964   Mixing factor 20-292020-03-23 0.128106   Mixing factor 30-392020-03-23 0.133236   Mixing factor 40-492020-03-23 0.125158   Mixing factor 50-592020-03-23 0.135897   Mixing factor 60-692020-03-23 0.107151   Mixing factor 70-792020-03-23 0.0845486   Mixing factor 80+2020-03-23 0.0451586   Mixing factor CH2020-03-23 0.00742402   
+  Mixing factor 0-92020-04-08 0.118357   Mixing factor 10-192020-04-08 0.114964   Mixing factor 20-292020-04-08 0.128106   Mixing factor 30-392020-04-08 0.133236   Mixing factor 40-492020-04-08 0.125158   Mixing factor 50-592020-04-08 0.135897   Mixing factor 60-692020-04-08 0.107151   Mixing factor 70-792020-04-08 0.0845486   Mixing factor 80+2020-04-08 0.0451586   Mixing factor CH2020-04-08 0.00742402   
+  Mixing factor 0-92020-05-06 0.118357   Mixing factor 10-192020-05-06 0.114964   Mixing factor 20-292020-05-06 0.128106   Mixing factor 30-392020-05-06 0.133236   Mixing factor 40-492020-05-06 0.125158   Mixing factor 50-592020-05-06 0.135897   Mixing factor 60-692020-05-06 0.107151   Mixing factor 70-792020-05-06 0.0845486   Mixing factor 80+2020-05-06 0.0451586   Mixing factor CH2020-05-06 0.00742402   
+  Mixing factor 0-92020-06-03 0.118357   Mixing factor 10-192020-06-03 0.114964   Mixing factor 20-292020-06-03 0.128106   Mixing factor 30-392020-06-03 0.133236   Mixing factor 40-492020-06-03 0.125158   Mixing factor 50-592020-06-03 0.135897   Mixing factor 60-692020-06-03 0.107151   Mixing factor 70-792020-06-03 0.0845486   Mixing factor 80+2020-06-03 0.0451586   Mixing factor CH2020-06-03 0.00742402   
+  Mixing factor 0-92020-07-01 0.118357   Mixing factor 10-192020-07-01 0.114964   Mixing factor 20-292020-07-01 0.128106   Mixing factor 30-392020-07-01 0.133236   Mixing factor 40-492020-07-01 0.125158   Mixing factor 50-592020-07-01 0.135897   Mixing factor 60-692020-07-01 0.107151   Mixing factor 70-792020-07-01 0.0845486   Mixing factor 80+2020-07-01 0.0451586   Mixing factor CH2020-07-01 0.00742402   
+  Mixing factor 0-92020-07-29 0.118357   Mixing factor 10-192020-07-29 0.114964   Mixing factor 20-292020-07-29 0.128106   Mixing factor 30-392020-07-29 0.133236   Mixing factor 40-492020-07-29 0.125158   Mixing factor 50-592020-07-29 0.135897   Mixing factor 60-692020-07-29 0.107151   Mixing factor 70-792020-07-29 0.0845486   Mixing factor 80+2020-07-29 0.0451586   Mixing factor CH2020-07-29 0.00742402   
+  Mixing factor 0-92020-08-26 0.118357   Mixing factor 10-192020-08-26 0.114964   Mixing factor 20-292020-08-26 0.128106   Mixing factor 30-392020-08-26 0.133236   Mixing factor 40-492020-08-26 0.125158   Mixing factor 50-592020-08-26 0.135897   Mixing factor 60-692020-08-26 0.107151   Mixing factor 70-792020-08-26 0.0845486   Mixing factor 80+2020-08-26 0.0451586   Mixing factor CH2020-08-26 0.00742402   
+  Mixing factor 0-92020-09-23 0.118357   Mixing factor 10-192020-09-23 0.114964   Mixing factor 20-292020-09-23 0.128106   Mixing factor 30-392020-09-23 0.133236   Mixing factor 40-492020-09-23 0.125158   Mixing factor 50-592020-09-23 0.135897   Mixing factor 60-692020-09-23 0.107151   Mixing factor 70-792020-09-23 0.0845486   Mixing factor 80+2020-09-23 0.0451586   Mixing factor CH2020-09-23 0.00742402   
+  Mixing factor 0-92020-10-21 0.118357   Mixing factor 10-192020-10-21 0.114964   Mixing factor 20-292020-10-21 0.128106   Mixing factor 30-392020-10-21 0.133236   Mixing factor 40-492020-10-21 0.125158   Mixing factor 50-592020-10-21 0.135897   Mixing factor 60-692020-10-21 0.107151   Mixing factor 70-792020-10-21 0.0845486   Mixing factor 80+2020-10-21 0.0451586   Mixing factor CH2020-10-21 0.00742402   
+  Mixing factor 0-92020-11-18 0.118357   Mixing factor 10-192020-11-18 0.114964   Mixing factor 20-292020-11-18 0.128106   Mixing factor 30-392020-11-18 0.133236   Mixing factor 40-492020-11-18 0.125158   Mixing factor 50-592020-11-18 0.135897   Mixing factor 60-692020-11-18 0.107151   Mixing factor 70-792020-11-18 0.0845486   Mixing factor 80+2020-11-18 0.0451586   Mixing factor CH2020-11-18 0.00742402   
+  Mixing factor 0-92020-12-16 0.118357   Mixing factor 10-192020-12-16 0.114964   Mixing factor 20-292020-12-16 0.128106   Mixing factor 30-392020-12-16 0.133236   Mixing factor 40-492020-12-16 0.125158   Mixing factor 50-592020-12-16 0.135897   Mixing factor 60-692020-12-16 0.107151   Mixing factor 70-792020-12-16 0.0845486   Mixing factor 80+2020-12-16 0.0451586   Mixing factor CH2020-12-16 0.00742402   
+  Mixing factor 0-92021-01-06 0.118357   Mixing factor 10-192021-01-06 0.114964   Mixing factor 20-292021-01-06 0.128106   Mixing factor 30-392021-01-06 0.133236   Mixing factor 40-492021-01-06 0.125158   Mixing factor 50-592021-01-06 0.135897   Mixing factor 60-692021-01-06 0.107151   Mixing factor 70-792021-01-06 0.0845486   Mixing factor 80+2021-01-06 0.0451586   Mixing factor CH2021-01-06 0.00742402   
+  Mixing factor 0-92021-01-27 0.118357   Mixing factor 10-192021-01-27 0.114964   Mixing factor 20-292021-01-27 0.128106   Mixing factor 30-392021-01-27 0.133236   Mixing factor 40-492021-01-27 0.125158   Mixing factor 50-592021-01-27 0.135897   Mixing factor 60-692021-01-27 0.107151   Mixing factor 70-792021-01-27 0.0845486   Mixing factor 80+2021-01-27 0.0451586   Mixing factor CH2021-01-27 0.00742402   
+  Mixing factor 0-92021-02-24 0.118357   Mixing factor 10-192021-02-24 0.114964   Mixing factor 20-292021-02-24 0.128106   Mixing factor 30-392021-02-24 0.133236   Mixing factor 40-492021-02-24 0.125158   Mixing factor 50-592021-02-24 0.135897   Mixing factor 60-692021-02-24 0.107151   Mixing factor 70-792021-02-24 0.0845486   Mixing factor 80+2021-02-24 0.0451586   Mixing factor CH2021-02-24 0.00742402   
+  Mixing factor 0-92021-03-24 0.118357   Mixing factor 10-192021-03-24 0.114964   Mixing factor 20-292021-03-24 0.128106   Mixing factor 30-392021-03-24 0.133236   Mixing factor 40-492021-03-24 0.125158   Mixing factor 50-592021-03-24 0.135897   Mixing factor 60-692021-03-24 0.107151   Mixing factor 70-792021-03-24 0.0845486   Mixing factor 80+2021-03-24 0.0451586   Mixing factor CH2021-03-24 0.00742402   
+  Mixing factor 0-92021-04-21 0.118357   Mixing factor 10-192021-04-21 0.114964   Mixing factor 20-292021-04-21 0.128106   Mixing factor 30-392021-04-21 0.133236   Mixing factor 40-492021-04-21 0.125158   Mixing factor 50-592021-04-21 0.135897   Mixing factor 60-692021-04-21 0.107151   Mixing factor 70-792021-04-21 0.0845486   Mixing factor 80+2021-04-21 0.0451586   Mixing factor CH2021-04-21 0.00742402   
+  Mixing factor 0-92021-05-19 0.118357   Mixing factor 10-192021-05-19 0.114964   Mixing factor 20-292021-05-19 0.128106   Mixing factor 30-392021-05-19 0.133236   Mixing factor 40-492021-05-19 0.125158   Mixing factor 50-592021-05-19 0.135897   Mixing factor 60-692021-05-19 0.107151   Mixing factor 70-792021-05-19 0.0845486   Mixing factor 80+2021-05-19 0.0451586   Mixing factor CH2021-05-19 0.00742402   
+  Mixing factor 0-9end 0.118357   Mixing factor 10-19end 0.114964   Mixing factor 20-29end 0.128106   Mixing factor 30-39end 0.133236   Mixing factor 40-49end 0.125158   Mixing factor 50-59end 0.135897   Mixing factor 60-69end 0.107151   Mixing factor 70-79end 0.0845486   Mixing factor 80+end 0.0451586   Mixing factor CHend 0.00742402   
+  E->A branch prob. 1   E->I branch prob. 1   
+  I->T branch prob. 1   I->C branch prob. 1   
+  H->R branch prob. 1   H->D branch prob. 1   
+
+Compartments:
+0       S
+1  1,2,     E   Exponential    mean = 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy' | 'E mean occupancy'
+2  3,4,     I   Exponential    mean = 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy' | 'I mean occupancy'  Infectivity: I Infectivity
+3  5,     C   Exponential    mean = 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy' | 'C mean occupancy'
+4  8,     A   Exponential    mean = 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy' | 'A mean occupancy'  Infectivity: A Infectivity
+5  6,7,     H   Exponential    mean = 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy' | 'H mean occupancy'
+6  9,     T   Exponential    mean = 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy'
+7       R
+8       D
+9  10,     T   Exponential    mean = 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy' | 'T mean occupancy'
+10       R
+11       R
+
+Transitions:
+0   0->1     S->E Infection
+1   1->4     E->A with probability 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.' | 'E->A branch prob.'
+
+2   1->2     E->I with probability 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.' | 'E->I branch prob.'
+
+3   2->6     I->T with probability 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.' | 'I->T branch prob.'
+
+4   2->3     I->C with probability 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.' | 'I->C branch prob.'
+
+5   3->5     C->H
+6   5->7     H->R with probability 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.' | 'H->R branch prob.'
+
+7   5->8     H->D with probability 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.' | 'H->D branch prob.'
+
+8   4->9     A->T
+9   6->11     T->R
+10   9->10     T->R
+

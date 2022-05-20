@@ -20,12 +20,10 @@ const bool checkon = false;                            // Checks algorithm is pe
 const bool all_diagnostics = false;                    // Set to true to show all disgnostic information (for testing) 
 
 const bool plot_sim_param_global = true;               // Determines if simulated parameter values are put on plots
-
-const bool plot_obs_model = false;                      // This is set to true if we want error bars to indicate the error function
  
 const double power_obsmodel = 0.7;                     // The power used in the power observation model
 
-const double pmcmc_start_param = true;                 // Set to true if pmcmc starts on true parameter value
+const double pmcmc_start_param = false;                // Set to true if pmcmc starts on true parameter value
 
 const double cor_update_num = 0.8;                     // The value of cor used to make changes to num_updates  
 const double num_updates_max = 10;                     // The maximum number for num_updates
@@ -41,13 +39,13 @@ enum TransInf { TRANS_INFECTION, TRANS_NOTINFECTION};  // Determines if the tran
 
 enum ErlangPos { FIRST, LAST};                          // Position in Erland distribution
 
-enum ObsModelFunc { NORMAL_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL, SCALE_OBSMODEL, LOADSD_OBSMODEL, POWER_OBSMODEL}; 
+enum ObsModelFunc { NORMAL_OBSMODEL, NORMAL_PERCENT_OBSMODEL, POISSON_OBSMODEL, NEGBINO_OBSMODEL}; 
 	
 enum ObsType { OBS_EXACT, OBS_APPROX };                // Approximate or exact observation (used in likelihood approx)
 	
 enum Dir { X,Y};                                       // Different directions areas sorted by
 
-enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_PARAMPROP, TIME_STATEPROP, TIME_UPDATE, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_COVAR_AREA, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIME_CUTOFF, TIME_PROP, TIME_MVNSETUP, TIME_MBPUPDATE, TIME_UPDATEPROP, TIME_LIKELIHOOD_APPROX, TIME_OBS_APPROX, TIME_FUTURE_OBS_APPROX, TIME_COVAR, TIME_CORRECT, TIME_GRAD, TIME_POSTERIOR_SAMPLE, TIME_EF_CALCULATE, TIME_TEMP1, TIME_TEMP2, TIME_TEMP3, TIME_TEMP4, TIME_INV_MATRIX, TIME_DETERMINANT, TIME_MATRIX_MULT, TIME_LINEAR_EQ, TIME_ADD_REMOVE_S, TIMERMAX};
+enum Timers { TIME_TOTAL, TIME_SELF, TIME_MBP, TIME_MBPINIT, TIME_TRANSNUM, TIME_UPDATEPOP, TIME_UPDATEIMAP, TIME_OBSMODEL, TIME_ALG, TIME_MCMCPROP, TIME_PARAMPROP, TIME_STATEPROP, TIME_UPDATE, TIME_WAIT, TIME_GEN, TIME_FIXEDTREE, TIME_SLICETIME, TIME_MEANTIME, TIME_NEIGHBOUR, TIME_JOINT, TIME_COVAR_AREA, TIME_SIGMA, TIME_MVN, TIME_RESULTS, TIME_OBSPROB, TIME_PMCMCLIKE, TIME_BOOTSTRAP, TIME_SIMULATE, TIME_PMCMCSWAP, TIME_STATESAMPLE, TIME_SETPARAM, TIME_TRANSMEAN, TIME_INITFROMPART, TIME_SWAP, TIME_CREATEN, TIME_BETA_FROM_R, TIME_CUTOFF, TIME_PROP, TIME_MVNSETUP, TIME_MBPUPDATE, TIME_UPDATEPROP, TIME_LIKELIHOOD_APPROX, TIME_OBS_APPROX, TIME_FUTURE_OBS_APPROX, TIME_COVAR, TIME_CORRECT, TIME_GRAD, TIME_POSTERIOR_SAMPLE, TIME_EF_CALCULATE, TIME_TEMP1, TIME_TEMP2, TIME_TEMP3, TIME_TEMP4, TIME_INV_MATRIX, TIME_DETERMINANT, TIME_MATRIX_MULT, TIME_LINEAR_EQ, TIME_ADD_REMOVE_S, TIME_GENERATE_SAMPLES, TIME_CMAES, TIME_SCALE_COVARIANCE, TIMERMAX};
 
 enum Accuracy {DOUBLE, FLOAT};                                  // Sets the level computation
 
@@ -157,15 +155,19 @@ const double VTINY = 0.000000000000001;                          // Used to repr
 const double TINY = 0.00000001;                                  // Used to represent a tiny number
 const double SMALL = 0.00001;                                    // Used to represent a small number
 const double LARGE = 1000000000;                                 // Used to represent a big number
+     
 const unsigned int UNSET = 999999999;                            // A large unsigned integer to represent "Unset"
 const unsigned int THRESH = 999999998;                           // Represents a number is under the threshold set
 const unsigned int UNKNOWN = 999999997;                          // Represents a number is unknown
 const unsigned int TOBESET = 999999996;                          // A large unsigned integer to represent "Unset"
+const unsigned int ITERATE_GENERATION = 999999995;               // In CMAES iterate generations
 
 const unsigned int initial_sample_try = 10000;                   // The number of tries to generate initial state before fail
 const unsigned int spline_sample_try = 100000;                   // The number of tries to generate parameters before fail
 const unsigned int sample_try = 10000;                           // The number of tries to generate spline before fail
 const unsigned int initialise_param_samp = 100;                  // Number of random parameter samples to initialise param_samp
+
+const unsigned int ML_GENERATION_TERM_COND = 10;                 // The number of generation used in termination (CMAES)
 
 const double map_ratio = 1.22;                                   // The ratio of the map (used when plotting
 

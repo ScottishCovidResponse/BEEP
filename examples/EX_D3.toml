@@ -1,0 +1,52 @@
+# Simulation:
+# build/bin/BEEPmbp inputfile="examples/EX_D3.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_D3.toml" mode="map"
+
+description = "Objective: The transmission rate in each area is assumed to be modified by a factor which gives the effect of a certain level applied to that area (where the level may change over time and is specified by the user), e.g. to mimic the effect of different levels of lock-down restrictions.  Implementation: ‘level-effect’ is used to define time-varying level effects.  Model: An SIRD branching model in which infected individuals can either recover or die, with associated branching probabilities. The base reproduction number R_t is taken to be constant but it is modified to vary by a factor for each level. A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths.  Inference: The level effects, reproduction number R_t, infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_D3"
+outputdir = "examples/Output_EX_D3"
+
+geo_mixing_matrix = "geo_mixing_matrix.csv"
+	 
+level_effect = { file="levels.csv", param="level1 | level2", value="0.7 | *", prior="MDir(0.5)"}
+	 
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.8", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", geo_dep="area", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", geo_dep="area", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+
