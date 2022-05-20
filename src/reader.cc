@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "utils.hh"
+#include "toml.hpp"
 
 // Suppress optimization to speed up compilation
 #if defined(__GNUC__) && __GNUC__ >=4
@@ -14,7 +15,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
-#include "../toml11/toml.hpp"
+#include <fstream>
 
 // Re-enable warnings
 #if defined(__GNUC__) && __GNUC__ < 5
