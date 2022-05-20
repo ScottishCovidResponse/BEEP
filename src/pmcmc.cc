@@ -80,7 +80,7 @@ void PMCMC::run()
 		if(samp%100000 == 0 && samp > 2*nburnin){
 			output.generate_graphs(particle_store,invT);
 			if(core == 0) get_EF_dist();
-			auto alg_time_sum = mpi.sum(timer[TIME_ALG].val+clock());
+			auto alg_time_sum = mpi.sum((long)(timer[TIME_ALG].val+clock()));
 			auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
 			cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
 			cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
