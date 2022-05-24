@@ -1577,7 +1577,15 @@ double Model::prior(const vector<double> &paramv) const
 	
 	for(auto th = 0u; th < param.size(); th++){
 		switch(param[th].priortype){
-			case FIXED_PRIOR: case UNIFORM_PRIOR:
+			case FIXED_PRIOR:
+				break;
+
+			case UNIFORM_PRIOR:
+				{
+					auto min = get_val1(th,paramv);
+					auto max = get_val2(th,paramv);
+					Pr += log(1.0/(max-min));
+				}
 				break;
 			
 			case EXP_PRIOR:

@@ -133,7 +133,7 @@ void ML::gradient_decent()
 	vector <Particle> particle_store; 
 	
 	if(mpi.core == 0){
-		state.EF = -0.5*state.likelihood_approx(param,obs_slice,invT,ac);		
+		state.EF = -2*state.likelihood_approx(param,obs_slice,invT,ac);		
 		particle_store.push_back(state.create_particle(UNSET));
 	}
 	
@@ -347,7 +347,9 @@ void ML::cmaes()
 
 	output.generation_results(generation);                    // Generates pdf of graphs
 	
-	output.generate_graphs(particle_store,invT);		  
+	output.generate_graphs(particle_store,invT);		
+
+	if(mpi.core == 0) model_evidence(mean,C,sigma);  
 }
 
 
@@ -363,9 +365,8 @@ void ML::generate_samples(vector <ParamSample> &ps_per_core, const vector <doubl
 		
 		if(details.stochastic == true){
 			auto L = state.likelihood_approx(param,obs_slice,invT,ac);
-
 			auto Pr = model.prior(param);
-			ps_per_core[i].EF = -(L + Pr);
+			ps_per_core[i].EF = -2*(L + Pr);
  			if(ps_per_core[i].EF < 0) emsgEC("ML",44);
 		}
 		else{
@@ -801,3 +802,22 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 
 	return H;
 }
+
+
+/// Calculates the model evidence using the Laplace approximation
+void ML::model_evidence(const vector <double> &mean, const vector < vector <double> > &C, const double sigma)
+{
+	auto psamp = sample_param(mean,C,0,1);
+	
+	auto L = state.likelihood_approx(psamp[0],obs_slice,invT,ac);
+	auto Pr = model.prior(psamp[0]);
+	
+	auto det = nvar*log(sigma) + determinant_SIMD(C,ac);
+
+	auto nvar = C.size();
+	auto occum_factor = 0.5*nvar*log(2*M_PI) - 0.5*det;
+	
+	auto ME = L + Pr + occum_factor;
+	
+	cout << endl << "The log of the model evidence is " << ME << endl;
+}	

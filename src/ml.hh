@@ -52,6 +52,7 @@ private:
 	double scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &covar);
 	vector < vector <double> > calculate_hessian(const vector <double> &mean, MatrixType mattype);
 	void calculate_heatmap();
+	void model_evidence(const vector <double> &mean, const vector < vector <double> > &C, const double sigma);
 	
 	const Details &details;
 	const Data &data;
