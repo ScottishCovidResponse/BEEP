@@ -32,7 +32,7 @@ struct Details                                                     // Provides d
 	unsigned int pred_start;                                         // The start time of prediction
 	unsigned int pred_end;                                           // The end time of prediction
 
-	unsigned int prop_max;                                           // The maximum number of proposals (ABCMBP/PAIS)
+	unsigned int prop_max;                                           // The maximum number of proposals (ABCMBP/PAS)
 
 	vector <TimePlot> timeplot;                                      // Descriptive times which can be used 
 	

@@ -35,8 +35,8 @@ ABC-CONT inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abccont" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
 
-PAIS inference:
-mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pais" nparticle=50 ngeneration=5 nrun=4
+PAS inference:
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / invT_final / cpu_time, GR_max, nrun
 
 Simple ABC inference:
@@ -93,7 +93,7 @@ mpirun -n 20 build/bin/BEEP inputfile="analysis/England_da.toml" mode="ml" algor
 #include "abccont.hh"
 #include "abcsmc.hh"
 #include "mc3.hh"
-#include "pais.hh"
+#include "pas.hh"
 #include "pmcmc.hh"
 #include "importance.hh"
 #include "ml.hh"
@@ -244,10 +244,10 @@ int main(int argc, char** argv)
 		}
 		break;
 		
-	case PAIS_INF:                                              // Peforms inference using the PAIS algorithm
+	case PAS_INF:                                              // Peforms inference using the PAS algorithm
 		{	
-			PAIS pais(details,data,model,inputs,output,obsmodel,mpi);
-			pais.run();
+			PAS pas(details,data,model,inputs,output,obsmodel,mpi);
+			pas.run();
 		}
 		break;
 		

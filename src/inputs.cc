@@ -229,7 +229,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pais", PAIS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"map", ML_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pas", PAS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"map", ML_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -1615,7 +1615,7 @@ void Inputs::find_generation(unsigned int &G)
 }
 
 
-/// Finds the number of gnerations used or final invT (PAIS algorithm) 
+/// Finds the number of gnerations used or final invT (PAS algorithm) 
 void Inputs::find_generation_or_invT_final_or_cpu_time(unsigned int &G, double &invT_final, double &cpu_time)
 {
 	G = find_positive_integer("ngeneration",UNSET);
@@ -1658,7 +1658,7 @@ void Inputs::find_generation_or_cutoff_final_or_cpu_time(unsigned int &G, double
 }
 
 
-/// Finds the number of gnerations used or final invT (PAIS algorithm) 
+/// Finds the number of gnerations used or final invT (PAS algorithm) 
 void Inputs::find_invT_start_invT_final(double &invT_start, double &invT_final)
 {
 	invT_start = find_double("invT_start",0);  
@@ -1667,7 +1667,7 @@ void Inputs::find_invT_start_invT_final(double &invT_start, double &invT_final)
 }
 
 
-/// Finds the number of gnerations used or final invT (PAIS algorithm) 
+/// Finds the number of gnerations used or final invT (PAS algorithm) 
 void Inputs::find_Tpower(double &Tpower)
 {
 	Tpower = find_double("invT_power",4);  
@@ -1780,7 +1780,7 @@ void Inputs::find_stateuncer(StateUncertainty &stateuncer)
 }
 
 
-/// Finds the maximum correlations (used in ABCMBP / PAIS / ABCDA)
+/// Finds the maximum correlations (used in ABCMBP / PAS / ABCDA)
 void Inputs::find_cor_max(double &cor_max, double &cor_max_last)
 {
 	cor_max = find_double("cor_max",0.8);
@@ -1788,7 +1788,7 @@ void Inputs::find_cor_max(double &cor_max, double &cor_max_last)
 }
 
 
-/// Finds the the maximum number of proposals before an error is generated (used in ABCMBP / PAIS)
+/// Finds the the maximum number of proposals before an error is generated (used in ABCMBP / PAS)
 void Inputs::find_prop_max(unsigned &prop_max)
 {
 	prop_max = find_positive_integer("prop_max",10000);

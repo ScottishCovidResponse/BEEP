@@ -1,4 +1,4 @@
-/// Implements a particle version of annealed importance sampling (PAIS)
+/// Implements a particle version of annealed importance sampling (PAS)
 
 #include <iostream>
 #include <fstream>
@@ -9,12 +9,12 @@
 
 using namespace std;
 
-#include "pais.hh"
+#include "pas.hh"
 #include "inputs.hh"
 #include "output.hh"
 
-/// Initilaises the PAIS class
-PAIS::PAIS(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), mbp(INVT,details,data,model,obsmodel,output,mpi), paramprop(details,data,model,output,mpi), details(details), data(data), model(model), output(output), obsmodel(obsmodel),mpi(mpi)
+/// Initilaises the PAS class
+PAS::PAS(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), mbp(INVT,details,data,model,obsmodel,output,mpi), paramprop(details,data,model,output,mpi), details(details), data(data), model(model), output(output), obsmodel(obsmodel),mpi(mpi)
 {	
 	inputs.find_generation_or_invT_final_or_cpu_time(G,invT_final,cpu_time);
 	inputs.find_nrun(nrun);
@@ -29,7 +29,7 @@ PAIS::PAIS(const Details &details, const Data &data, const Model &model, Inputs 
 
 
 /// Runs the inference algorithm
-void PAIS::run()
+void PAS::run()
 {
 	timer[TIME_ALG].start();
 		
@@ -86,7 +86,7 @@ void PAIS::run()
  
 
 /// Determines when generations are stopped
-bool PAIS::terminate_generation(unsigned int g, double invT) const 
+bool PAS::terminate_generation(unsigned int g, double invT) const 
 {
 	if(invT == invT_final) return true;
 	
@@ -108,7 +108,7 @@ bool PAIS::terminate_generation(unsigned int g, double invT) const
 
  
 /// Stores a sample from each of the particles 
-void PAIS::store_sample(Generation &gen)
+void PAS::store_sample(Generation &gen)
 {
 	for(const auto &pa : part){
 		gen.param_samp.push_back(pa.create_param_samp());
@@ -124,7 +124,7 @@ bool PartEF_ord2 (PartEF p1,PartEF p2)
 
 
 /// Works out which particles should be copied and sets new inverse temperature
-void PAIS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned int> &partcopy, const double invT)
+void PAS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned int> &partcopy, const double invT)
 {
 	auto N = part.size();
 
@@ -171,7 +171,7 @@ void PAIS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned i
 			for(auto j = 0u; j < npart; j++){                       // Samples in proportion to particle weights
 				auto z = ran()*sum;
 				auto sel=0u; while(sel < npart && z > wsum[sel]) sel++;
-				if(sel == npart) emsgEC("PAIS",1);
+				if(sel == npart) emsgEC("PAS",1);
 				num[sel]++;
 			}
 		
@@ -185,12 +185,12 @@ void PAIS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned i
 			for(auto j = 0u; j < npart; j++){  
 				if(num[j] > 0) partcopy[ru*npart + j] = UNSET;
 				else{
-					if(list.size() == 0) emsgEC("PAIS",2);
+					if(list.size() == 0) emsgEC("PAS",2);
 					partcopy[ru*npart + j] = list[list.size()-1];
 					list.pop_back();
 				}
 			}
-			if(list.size() != 0) emsgEC("PAIS",3);
+			if(list.size() != 0) emsgEC("PAS",3);
 		}
 		
 		if(false){
@@ -210,7 +210,7 @@ void PAIS::bootstrap(Generation &gen, vector<Particle> &part, vector <unsigned i
 
 
 /// Calculates the log of the model evidence for each generation
-void PAIS::model_evidence(vector <Generation> &generation)
+void PAS::model_evidence(vector <Generation> &generation)
 {
 	vector <double> ME_final;
 	for(auto run = 0u; run < nrun; run++){
@@ -246,7 +246,7 @@ void PAIS::model_evidence(vector <Generation> &generation)
 
 
 /// Prints statistics from a generation
-void PAIS::print_generation(const Generation &gen, const unsigned int g) const
+void PAS::print_generation(const Generation &gen, const unsigned int g) const
 {
 	double timetaken = timer[TIME_ALG].val/(60.0*CLOCKS_PER_SEC);	
 	mpi.bcast(timetaken);

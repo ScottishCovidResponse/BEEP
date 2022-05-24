@@ -2149,7 +2149,7 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 			EF_flag = true; label = "log(EF cut-off)"; tab3 = "Error function"; tab4 = "Cut-off"; col = 4;
 			break;
 		
-		case PAIS_INF: 
+		case PAS_INF: 
 			label = "log(invT)"; tab3 = "Inverse temperature"; tab4 = "Value"; col = 6;
 			break;
 		
@@ -3450,7 +3450,7 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 		genout << g << "," << gen.time << ",";
 
 		switch(details.mode){
-			case PAIS_INF:
+			case PAS_INF:
 				genout << gen.EFmax << "," << log(gen.EFmax) << "," << gen.invT << "," << log(gen.invT);
 				break;
 			default:
@@ -3474,7 +3474,7 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 				pw.val = psamp[i].paramval[th];
 				switch(details.mode){
 					case ABC_SMC: pw.w = gen.w[i]; break;
-					case ABC_MBP: case ABC_DA: case ABC_CONT: case PAIS_INF: case MC3_INF: case MCMC_MBP:
+					case ABC_MBP: case ABC_DA: case ABC_CONT: case PAS_INF: case MC3_INF: case MCMC_MBP:
 					case ML_INF:
 						pw.w = 1;
 						break;

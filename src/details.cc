@@ -41,7 +41,7 @@ Details::Details(Inputs &inputs)
 		}
 	}
 		
-	if(stochastic == false && (mode == ABC_MBP || mode == MC3_INF || mode == MCMC_MBP || mode == PAIS_INF)){
+	if(stochastic == false && (mode == ABC_MBP || mode == MC3_INF || mode == MCMC_MBP || mode == PAS_INF)){
 		emsgroot("When running 'dynamics=\"determinstic\"', 'mode' can only use inference methods which do not rely on MPBs: 'abc', 'abcsmc' or 'pmcmc'"); 
 	}
 	

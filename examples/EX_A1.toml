@@ -9,8 +9,8 @@
 # Inference using ABC-MBP:  
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=200 ngeneration=10
 
-# Inference using PAIS:  
-# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pais" nparticle=200 ngeneration=10
+# Inference using PAS-MBP:  
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=200 ngeneration=10
 
 # Inference using ABC:  
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.001 
