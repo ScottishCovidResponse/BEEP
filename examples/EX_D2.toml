@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_D2.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_D2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_D2.toml" mode="map"
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_D2.toml" mode="map"
 
 description = "Objective: The disease transmission rate in each area is assumed to be modified by a factor, which on the log-scale has a linear dependency on a time-varying covariate within that area (in this case temperature).  Implementation: ‘area-tv-covars’ is used to define the values for time-varying covariates for each area.  Model: An SIRD branching model with ten geographical areas (Region A-J). In this infected individuals can either recover or die, with associated branching probabilities. The base reproduction number R_t is taken to be constant but disease transmission is modified to vary with the covariate (through an exponential dependency with the covariate multiplied by a fixed effect). A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths.  Inference: The fixed effect for the temperature covariate, reproduction number R_t, infectious period and branching probabilities." 
 

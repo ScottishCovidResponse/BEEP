@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_C2.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_C2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_C2.toml" mode="map"
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_C2.toml" mode="map"
 
 description = "Objective: On top of the model in EX C1, this analysis incorporates covariate effects, which relate properties of areas to the local disease transmission rate (in this case using population density and temperature).  Implementation: ‘area-covars’ is used to define covariates. Covariates appear in Eq.(4) and are related to the disease transmission rate through an exponential link function. The ‘func’ propery can be used to transform the raw data before treating it as a covariate. This can either be set to “linear” or “log”. In the case of “log”, the covariate becomes the power to which the quantities is raised (so when applied to the population density a value zero or one implies frequency or density dependent transmission, respectively).  Model: An SIRD branching spatial model with ten geographical areas (Region A-J). The infected individuals can either recover or die with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R measurements, separately for the different regions.  Inference: The covariate factors, the reproduction number R_t (with region-specific modifying factors), infectious period and branching probabilities." 
 

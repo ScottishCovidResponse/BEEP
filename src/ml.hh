@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__ML_HH
-#define BEEPMBP__ML_HH
+#ifndef BEEP__ML_HH
+#define BEEP__ML_HH
 
 #include "struct.hh"
 #include "state.hh"

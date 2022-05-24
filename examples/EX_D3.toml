@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_D3.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_D3.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_D3.toml" mode="map"
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_D3.toml" mode="map"
 
 description = "Objective: The transmission rate in each area is assumed to be modified by a factor which gives the effect of a certain level applied to that area (where the level may change over time and is specified by the user), e.g. to mimic the effect of different levels of lock-down restrictions.  Implementation: ‘level-effect’ is used to define time-varying level effects.  Model: An SIRD branching model in which infected individuals can either recover or die, with associated branching probabilities. The base reproduction number R_t is taken to be constant but it is modified to vary by a factor for each level. A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths.  Inference: The level effects, reproduction number R_t, infectious period and branching probabilities." 
 

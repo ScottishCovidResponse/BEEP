@@ -2,7 +2,7 @@
 function init()
 {
 	if(!jsonstr){
-		ById("loading").innerHTML = "visBEEPmbp must be loaded from the output directory of an analysis";
+		ById("loading").innerHTML = "visBEEP must be loaded from the output directory of an analysis";
 		return;
 	}
 	

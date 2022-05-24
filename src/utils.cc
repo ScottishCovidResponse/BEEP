@@ -308,7 +308,7 @@ void emsg(const string& msg)
 void emsgEC(const string &section, unsigned int ec)
 {
 	std::ostringstream oss;
-	oss << "Unfortunately BEEPmbp has generated an internal error. We are very sorry about this!" << endl;
+	oss << "Unfortunately BEEP has generated an internal error. We are very sorry about this!" << endl;
 	oss << "The error occurred in '" << section << "' with code '" << ec << "'";
 	emsg(oss.str());
 }

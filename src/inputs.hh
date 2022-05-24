@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__INPUTS_HH
-#define BEEPMBP__INPUTS_HH
+#ifndef BEEP__INPUTS_HH
+#define BEEP__INPUTS_HH
 
 #include <string>
 #include <map>

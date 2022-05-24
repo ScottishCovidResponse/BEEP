@@ -1,7 +1,7 @@
 /// This class takes a particle, performs a sequence of MBPs and returns a particle
 
-#ifndef BEEPMBP__MBP_HH
-#define BEEPMBP__MBP_HH
+#ifndef BEEP__MBP_HH
+#define BEEP__MBP_HH
 
 using namespace std;
 

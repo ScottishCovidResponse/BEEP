@@ -1005,6 +1005,7 @@ void Inputs::find_genQ(GenerateQ &genQ, const Details &details, const vector <st
 			if(param_not_set(matmod.ps)){                                  // Sets parameter name (if uninitialised)
 				for(auto i = 0u; i < matmod.bp.size(); i++) matmod.ps[i].name = matmod.name+" t="+to_string(matmod.bp[i]);
 			}
+			
 			genQ.nspline++;
 			genQ.matmod.push_back(matmod);
 			

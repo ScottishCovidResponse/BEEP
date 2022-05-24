@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__OBSModel_HH
-#define BEEPMBP__OBSModel_HH
+#ifndef BEEP__OBSModel_HH
+#define BEEP__OBSModel_HH
 
 using namespace std;
 

@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__DETAILS_HH
-#define BEEPMBP__DETAILS_HH
+#ifndef BEEP__DETAILS_HH
+#define BEEP__DETAILS_HH
 
 #include "struct.hh"
 #include "inputs.hh"

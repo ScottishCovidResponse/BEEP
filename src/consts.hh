@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__CONSTS_HH
-#define BEEPMBP__CONSTS_HH
+#ifndef BEEP__CONSTS_HH
+#define BEEP__CONSTS_HH
 
 #include <string>
 

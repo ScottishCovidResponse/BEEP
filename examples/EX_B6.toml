@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_B6.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_B6.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B6.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_B6.toml" mode="map" 
 
 
 description = "Objective: This example looks at the situation in which the fraction of observed cases varies with time. Specifically this fraction is assume to follow a piecewise linear spline (parameterised at five breakpoints times). The profile of this spline is inferred from the data.  Implementation: In ‘data-tables‘ the ‘factor-spline’ property is set to the name of the spline, as specified by the user (in this case “fraction”). This spline is then specified in ‘obs-spline’.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The time-varying estimated fraction of observed cases, the reproduction number R_t and latent and infectious periods." 

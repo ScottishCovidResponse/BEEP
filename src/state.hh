@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__StatisticsE_HH
-#define BEEPMBP__StatisticsE_HH
+#ifndef BEEP__StatisticsE_HH
+#define BEEP__StatisticsE_HH
 
 using namespace std;
 

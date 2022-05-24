@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_B3.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_B3.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B3.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_B3.toml" mode="map" 
 
 
 description = "Objective: Rather than assume a fixed standard deviation in observations (as in EX B2) here the standard deviations are explicitly loaded from a file. Specifically for each data column in the data file there is a second column, with “ SD” affixed to the heading, which provides the standard deviation in that data. For example, in the file “Data-EX-B3/S-I.csv” the column “Data” gives the weekly number of cases and “Data SD” gives the expected standard deviation in this quantity for the observation model.  Implementation: In ‘data-tables‘ the ‘obsmodel’ property is set to “normal load”.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 

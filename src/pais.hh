@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__PAIS_HH
-#define BEEPMBP__PAIS_HH
+#ifndef BEEP__PAIS_HH
+#define BEEP__PAIS_HH
 
 #include "struct.hh"
 #include "mbp.hh"
