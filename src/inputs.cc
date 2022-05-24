@@ -439,7 +439,6 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 							else{
 								if(value != ""){
 									datatab.sd = get_double(value,"In 'obsmodel'");
-									cout << datatab.sd << " sd\n";
 								}
 							}
 						}

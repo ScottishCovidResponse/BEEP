@@ -695,12 +695,9 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 	auto mu1 = remove_S(mu_start);
 	auto M1 = remove_S(covar);
 	
-	//auto Minv = invert_matrix(M1);
-	
 	auto det1 = 0.0;
 	auto Minv = invert_determinant_SIMD(M1,det1,ac);
-	// auto Minv = invert_matrix_SIMD(M1,ac);
-
+	
 	/*
 	vector < vector <double> > Minv;
 		
@@ -776,18 +773,10 @@ double State::apply_observation_fast(const ObsSlice &os, vector < vector <double
 	}
 
 	/* Combines	existing distribution with observation distribution */
-	
-	//auto M = invert_matrix(Minv);
-	//auto M = invert_matrix_SIMD(Minv,DOUBLE);
-	
+		
 	auto det = 0.0;
 	auto M = invert_determinant_SIMD(Minv,det,ac);
 	
-	
-	//auto M = invert_matrix_SIMD(Minv,ac);
-	//auto M2 = invert_matrix_SIMD(Minv,DOUBLE);
-	//invert_matrix_SIMD(const vector <vector <double> > &M_orig, Accuracy ac)   
-
 	auto mu = matrix_mult(M,Minv_mu);
 
 	auto mu_Minv_mu = vec_mult(mu,Minv_mu);
