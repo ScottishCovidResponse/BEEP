@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__OUTPUT_HH
-#define BEEPMBP__OUTPUT_HH
+#ifndef BEEP__OUTPUT_HH
+#define BEEP__OUTPUT_HH
 
 #include <fstream>
 

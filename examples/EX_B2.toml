@@ -1,11 +1,11 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_B2.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_B2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_B2.toml" mode="map" 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_B2.toml" mode="map" 
 
 
-description = "Objective: All the previous examples have used the “normal 10%” observation model, which assumes a normally distributed observation model with the standard deviation chosen to be a percentage of the measured value. Other possibilities exist within BEEPmbp. This example looks at the case when a fixed standard deviation is applied to all observations from a given data source. The observation model can be observed by clicking on the “Data” tab and checking the “show observation model” box (note, observation models are not explicitly shown for ABC approaches, although they are still important because they inform the relative contribution in error coming from different observations).  Implementation: In ‘data-tables‘ the ‘obsmodel’ property is set to “normal #” where # is the specified standard deviation in the observation model.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
+description = "Objective: All the previous examples have used the “normal 10%” observation model, which assumes a normally distributed observation model with the standard deviation chosen to be a percentage of the measured value. Other possibilities exist within BEEP. This example looks at the case when a fixed standard deviation is applied to all observations from a given data source. The observation model can be observed by clicking on the “Data” tab and checking the “show observation model” box (note, observation models are not explicitly shown for ABC approaches, although they are still important because they inform the relative contribution in error coming from different observations).  Implementation: In ‘data-tables‘ the ‘obsmodel’ property is set to “normal #” where # is the specified standard deviation in the observation model.  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
 
 time_format = "number"
 start = "0"

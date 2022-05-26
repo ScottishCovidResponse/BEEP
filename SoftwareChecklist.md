@@ -6,7 +6,7 @@ This checklist is part of ongoing work on a model scoresheet for SCRC models. It
 
 ### Model / software name
 
-> BEEPmbp
+> BEEP
 
 ### Date
 
@@ -58,7 +58,7 @@ Additionally, for each question please explain the situation and include any rel
 > -   [ ] Some work remaining or caveats
 > -   [X] Needs to be addressed
 > 
-> There is a regression test framework which catches inadvertent changes to the results. Coverage of the regression test framework is ~80%. We have a unit test framework. Both types of tests are run [regularly in CI](https://github.com/ScottishCovidResponse/BEEPmbp/actions?query=branch%3Adev).  The [README](README.md) describes how to run the tests.  However, there are minimal [unit tests](codetests), as the important parts of the code do not currently lend themselves to unit testing. This will require some refactoring to fix, and unit tests to be [added](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/556).
+> There is a regression test framework which catches inadvertent changes to the results. Coverage of the regression test framework is ~80%. We have a unit test framework. Both types of tests are run [regularly in CI](https://github.com/ScottishCovidResponse/BEEP/actions?query=branch%3Adev).  The [README](README.md) describes how to run the tests.  However, there are minimal [unit tests](codetests), as the important parts of the code do not currently lend themselves to unit testing. This will require some refactoring to fix, and unit tests to be [added](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/556).
 
 ### Are the scientific results of runs robust to different ways of running the code?
 
@@ -84,7 +84,7 @@ Additionally, for each question please explain the situation and include any rel
 > -   [X] Some work remaining or caveats
 > -   [ ] Needs to be addressed
 > 
-> We enable all compiler warnings with GCC and use Clang Static Analyzer. There are currently [no warnings](https://github.com/ScottishCovidResponse/BEEPmbp/actions/runs/190447662).  We have integrated CODACY and get a B grade. There are 126 total issues, 107 of which are for code style, 6 are "error prone" code patterns, 13 are for performance.  The "error-prone" warnings need to be [fixed](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/702).
+> We enable all compiler warnings with GCC and use Clang Static Analyzer. There are currently [no warnings](https://github.com/ScottishCovidResponse/BEEP/actions/runs/190447662).  We have integrated CODACY and get a B grade. There are 126 total issues, 107 of which are for code style, 6 are "error prone" code patterns, 13 are for performance.  The "error-prone" warnings need to be [fixed](https://github.com/ScottishCovidResponse/SCRCIssueTracking/issues/702).
 
 ### Is the code clean, generally understandable and readable and written according to good software engineering principles?
 

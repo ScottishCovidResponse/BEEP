@@ -1472,7 +1472,7 @@ void Data::generate_age_mixing_perturb()
 	for(auto i = 0u; i < date.size(); i += step){
 		if(i < date.size()-step) op << date[i]; else op << "end";
 		
-		for(auto j = 0u; j <  cat.size(); j++) op << ",Mixing factor " << cat[j] << date[i];
+		for(auto j = 0u; j <  cat.size(); j++) op << ",Mixing factor " << cat[j] << " " << date[i];
 		
 		auto sum = 0.0;
 		vector <double> expval(cat.size());

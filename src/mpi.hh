@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__MPI_HH
-#define BEEPMBP__MPI_HH
+#ifndef BEEP__MPI_HH
+#define BEEP__MPI_HH
 
 #include "struct.hh"
 #include <fstream>

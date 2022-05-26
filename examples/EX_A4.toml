@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_A4.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_A4.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A4.toml" mode="map"
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A4.toml" mode="map"
 
 description = "Objective: Introduce branching and merging (which is when two compartments have transitions which merge back into a single compartment).  Implementation: ‘trans’ denotes two transition leaving the exposed E compartment (corresponding to two levels of infectivity) and two transitions merging back to a final recovered R state.  Model: The SEIAR model contains an exposed E compartment which branches such that infected individuals can either become symptomatic I or asymptomatic A with associated branching probabilities and relative infectivity. Individuals finally pass to a recovered R state. The reproduction number R_t is taken to be constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E→I cases and the population in the R compartment.  Inference: The reproduction number R_t, the latent and infectious periods and symptomatic branching probabilities." 
 

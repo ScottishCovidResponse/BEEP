@@ -1,7 +1,7 @@
 /// This class takes a particle, performs a sequence of MBPs and returns a particle
 
-#ifndef BEEPMBP__MBP_HH
-#define BEEPMBP__MBP_HH
+#ifndef BEEP__MBP_HH
+#define BEEP__MBP_HH
 
 using namespace std;
 
@@ -53,7 +53,7 @@ class Mbp
 		
 		ObsModelMode obsmodel_mode;                                     // Determines if using invT or EFcut
 		
-		double invT;                                                    // The inverse temperature (used for MC3 and PAIS)
+		double invT;                                                    // The inverse temperature (used for MC3 and PAS)
 		double EFcut;                                                   // The error function cutoff (used for ABC methods)
 		
 		ParamUpdate pup;                                                // Determines how parameters are updated

@@ -1,5 +1,5 @@
 /// This contains code for indvidual-based model-based proposals
-/// These are not currently implemented into BEEPmbp
+/// These are not currently implemented into BEEP
 
 Status Mbp::mbp(const vector<double> &paramv, InfUpdate inf_update)
 {	

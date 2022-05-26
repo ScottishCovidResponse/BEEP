@@ -1,14 +1,14 @@
-#ifndef BEEPMBP__PAIS_HH
-#define BEEPMBP__PAIS_HH
+#ifndef BEEP__PAS_HH
+#define BEEP__PAS_HH
 
 #include "struct.hh"
 #include "mbp.hh"
 #include "param_prop.hh"
 
-class PAIS
+class PAS
 {
 public:	
-  PAIS(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi);	
+  PAS(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi);	
 	void run();
 	
 private:

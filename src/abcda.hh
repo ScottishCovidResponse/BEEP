@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__ABCDA_HH
-#define BEEPMBP__ABCDA_HH
+#ifndef BEEP__ABCDA_HH
+#define BEEP__ABCDA_HH
 
 #include "struct.hh"
 #include "mbp.hh"

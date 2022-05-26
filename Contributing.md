@@ -1,4 +1,4 @@
-# Contributing to BEEPmbp
+# Contributing to BEEP
 
 At present, contributions are limited to members of Scottish COVID-19
 Response Consortium (SCRC).  If you are a member, please read the
@@ -7,14 +7,14 @@ below on how best to make progress on this project.
 ## Pull Request Process
 
 1.  Please branch from the dev branch within
-   ScottishCovidResponse/BEEPmbp
+   ScottishCovidResponse/BEEP
 
 -   Please **don't** fork this repository to your own
      github.com/username or other organisation.
 
 2.  Read the issues and choose/be assigned an appropriate issue. This
    is likely to be either a `Starter issue` or one assigned by
-   chatting in `zulip/BEEPmbp`. You could also create an issue if
+   chatting in `zulip/BEEP`. You could also create an issue if
    there is something you want to work on that has not been mentioned.
 
 3.  Name the branch `username/featurename`
@@ -36,8 +36,8 @@ below on how best to make progress on this project.
 5.  Please run the tests (see [README.md](README.md)) before pushing.
 
 6.  When your feature is ready to merge into the `dev` branch
-   create a pull request against `ScottishCovidResponse/BEEPmbp#dev`
-   and assign `ScottishCovidResponse/beepmbp` as reviewers.
+   create a pull request against `ScottishCovidResponse/BEEP#dev`
+   and assign `ScottishCovidResponse/BEEP` as reviewers.
 
 7.  Semver will be handled in PRs from `dev` into `master`.
 

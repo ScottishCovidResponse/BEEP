@@ -1,7 +1,7 @@
 /// Stores comonly used data structures
 
-#ifndef BEEPMBP__STRUCT_HH
-#define BEEPMBP__STRUCT_HH
+#ifndef BEEP__STRUCT_HH
+#define BEEP__STRUCT_HH
 
 #include <vector>
 

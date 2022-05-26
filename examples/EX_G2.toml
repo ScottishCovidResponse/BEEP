@@ -1,8 +1,8 @@
 # Simulation:
-# build/bin/BEEPmbp inputfile="examples/EX_G2.toml" mode="sim" 
+# build/bin/BEEP inputfile="examples/EX_G2.toml" mode="sim" 
 
 # Inference using MAP estimate: 
-# mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_G2.toml" mode="map"
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G2.toml" mode="map"
 
 description = "Objective: Introduce an age-structured model applicable to the sorts of publically available data sources for the 2020 Covid-19 pandemic.  Model: The population is stratified into 18 different age groups: 0-4, 5-9, 10-14, 15-19, 20-24, 25-29, 30-34, 35-39, 40-44,45-49, 50-54, 55-59, 60-64, 65-69, 70-74, 75-79, 80+ and a group for care home residents. A realist compartmental model is needed to capture Covid-19. It contains the following compartments – S: Susceptible, E: Exposed, A: Asymptomatic, I: Infectious, T: PCR test-sensitive but non-infectious, C: Infected but non-infectious (due to self-isolation), H: Hospitalised (or potentially care home in the case of care home residents), R: Recovered, and D: Dead. A piecewise linear spline is used to represent time variation in the reproduction number R_t. The age contact matrix is derived from the BBC Pandemic survey.  Data: Age stratified weekly number of E→I cases, C→H hospital admissions, H→D deaths, PCR survey data (gives estimates for total infected population, i.e. the sum of those in A, I, C, T), and antibody survey data (gives estimates for total recovered population R). Note, this is simulated data using model parameters near to those found for the real data.  Inference: The time variation in the reproduction number R_t. Comparing for true curve with the inferred one we find excellent agreement. The only exception is at the beginning and end where the number of infected individuals is small (because of the lack of information with which to estimate reproduction number, the smoothing prior tends to smooth out fluctuations R_t). The age-structured time period in the test sensitive state (other time periods are set) and all branching probabilities."
 

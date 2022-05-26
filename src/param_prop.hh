@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__PARAMPROP_HH
-#define BEEPMBP__PARAMPROP_HH
+#ifndef BEEP__PARAMPROP_HH
+#define BEEP__PARAMPROP_HH
 
 using namespace std;
 

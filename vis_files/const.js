@@ -55,7 +55,7 @@ var collist = [GREEN,RED,BLUE,PURPLE,ORANGE,BROWN,DGREEN,DRED,DBLUE,DPURPLE,DORA
 var RADIORATE = 0, RADIOHIGH = 1;
 
 // Miscellaneous
-var menux = 180;
+var menux = 160;
 var tab = 20;
 
 var datacol=[0,110,220,320,390,460,540,655];              // The positions of columns

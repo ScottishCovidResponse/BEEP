@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__UTILS_HH
-#define BEEPMBP__UTILS_HH
+#ifndef BEEP__UTILS_HH
+#define BEEP__UTILS_HH
 
 #define USE_MPI 1
 

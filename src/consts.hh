@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__CONSTS_HH
-#define BEEPMBP__CONSTS_HH
+#ifndef BEEP__CONSTS_HH
+#define BEEP__CONSTS_HH
 
 #include <string>
 
@@ -30,7 +30,7 @@ const double num_updates_max = 10;                     // The maximum number for
 const double num_updates_min = 1;                      // The minimun number for num_updates
 
 enum Mode { SIM, MULTISIM, PREDICTION,                 // Different modes of operation 
-            ABC_SIMPLE, ABC_SMC, ABC_MBP, ABC_DA, ABC_CONT, MC3_INF, MCMC_MBP, PAIS_INF, PMCMC_INF, IMPORTANCE_INF, ML_INF,
+            ABC_SIMPLE, ABC_SMC, ABC_MBP, ABC_DA, ABC_CONT, MC3_INF, MCMC_MBP, PAS_INF, PMCMC_INF, IMPORTANCE_INF, ML_INF,
 						DATAONLY};       
 
 enum SimInf { SIMULATE, INFERENCE, DATAVIEW};          // Determines if simulation or inference is being performed

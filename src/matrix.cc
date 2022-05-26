@@ -5,7 +5,10 @@
 using namespace std;
 
 #include "matrix.hh"
-#include <immintrin.h>
+
+#if defined(__x86_64__) || defined(_M_X64)
+	#include <immintrin.h>
+#endif
 
 unsigned int n_matrix_store;
 double **l, **linv, **u, **uinv, **mat2, **matres;
@@ -384,6 +387,7 @@ double dot_SIMD(const double* vec1, const double* vec2, unsigned int n1, unsigne
 		while(k < kmin && k < n2){ val += vec1[k]*vec2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(n2-k >= si){
 		__m256d v1, v2;
 		__m256d summed = _mm256_set1_pd(0.0);
@@ -398,9 +402,10 @@ double dot_SIMD(const double* vec1, const double* vec2, unsigned int n1, unsigne
 		
 		for(auto i = 0u; i < si; i++) val += sum[i];
 	}
-	
-	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
+#endif
 
+	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
+	
 	return val;
 }
 
@@ -417,6 +422,7 @@ float dot_SIMD(const float* vec1, const float* vec2, unsigned int n1, unsigned i
 		while(k < kmin && k < n2){ val += vec1[k]*vec2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(n2-k >= si){
 		__m256 v1, v2;
 		__m256 summed = _mm256_set1_ps(0.0);
@@ -431,7 +437,8 @@ float dot_SIMD(const float* vec1, const float* vec2, unsigned int n1, unsigned i
 		
 		for(auto i = 0u; i < si; i++) val += sum[i];
 	}
-	
+#endif
+
 	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
 
 	return val;
@@ -768,6 +775,7 @@ void sub_row_SIMD(double *row1, const double *row2, double fac, unsigned int i1,
 		while(k < kmin){ row1[k] += fac*row2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(i2-k >= si){
 		__m256d v1, v2, res;
 		__m256d f = _mm256_set1_pd(fac);
@@ -780,6 +788,7 @@ void sub_row_SIMD(double *row1, const double *row2, double fac, unsigned int i1,
 			k += si;
 		}
 	}
+#endif
 	
 	while(k < i2){ row1[k] += fac*row2[k]; k++;} 
 }
@@ -796,6 +805,7 @@ void sub_row_SIMD(float *row1, const float *row2, float fac, unsigned int i1, un
 		while(k < kmin && k < i2){ row1[k] += fac*row2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(i2-k >= si){
 		__m256 v1, v2, res;
 		__m256 f = _mm256_set1_ps(fac);
@@ -808,6 +818,7 @@ void sub_row_SIMD(float *row1, const float *row2, float fac, unsigned int i1, un
 			k += si; 
 		}
 	}
+#endif
 
 	while(k < i2){ row1[k] += fac*row2[k]; k++;} 
 }

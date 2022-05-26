@@ -5,62 +5,62 @@ Build using: cmake -Bbuild
 Compile using: cmake --build build
 
 
-This lists a possible set of ways to run BEEPmbp. 
+This lists a possible set of ways to run BEEP. 
 Note, the option "-n 20" can be replace by the number of CPU nodes availabl4e.
 
 Simulation:                 
-build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="sim" 
+build/bin/BEEP inputfile="examples/EX_A1.toml" mode="sim" 
 	
 Multiple simulations:       
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="multisim" nsimulation=100
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="multisim" nsimulation=100
 OPTIONS: nsimulation
 
 Prediction (uses posterior samples from inference to predict the future, with potential model modificiations):                 
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="prediction" 
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="prediction" 
 OPTIONS: prediction_start, prediction_end, modification, nsim_per_sample
 
 MAP inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX1a.toml" mode="map"
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1toml" mode="map"
 OPTIONS: nparticle, ngeneration / cpu_time, nsample_final, posterior_particle
 
 ABC-MBP inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
 
 ABC-DA inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abcda" nparticle=50 ngeneration=5 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcda" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
 
 ABC-CONT inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abccont" nparticle=50 ngeneration=5 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abccont" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
 
-PAIS inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="pais" nparticle=50 ngeneration=5 nrun=4
+PAS inference:
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=50 ngeneration=5 nrun=4
 OPTIONS: nparticle, ngeneration / invT_final / cpu_time, GR_max, nrun
 
 Simple ABC inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.1 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.1 nrun=4
 OPTIONS: nsample / cputime, cutoff / cutoff_frac, nrun
 
 ABC-SMC inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=5 cutoff_frac=0.5 nsample=200 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=5 cutoff_frac=0.5 nsample=200 nrun=4
 OPTIONS: nsample, ngeneration / cutoff_final / cpu_time, cutoff_frac, nrun
 
 PMCMC inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=20 nsample=200
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=20 nsample=200
 OPTIONS: nparticle, nsample / GR_max / ESSmin, invT, nburnin, nthin, nrun
 
 MCMC-MBP inference:
-mpirun -n 4 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=303 nsample=200 nrun=4
+mpirun -n 4 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=303 nsample=200 nrun=4
 OPTIONS: nsample / GR_max, invT, nburnin, nthin, nrun
 
 MC3 inference:
-mpirun -n 20 build/bin/BEEPmbp inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
 OPTIONS: nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
 
 ML using cma-es
-mpirun -n 20 build/bin/BEEPmbp inputfile="analysis/England_da.toml" mode="ml" algorithm="cmaes"  nparticle="400" ngeneration="300"
+mpirun -n 20 build/bin/BEEP inputfile="analysis/England_da.toml" mode="ml" algorithm="cmaes"  nparticle="400" ngeneration="300"
 
 */
 
@@ -93,7 +93,7 @@ mpirun -n 20 build/bin/BEEPmbp inputfile="analysis/England_da.toml" mode="ml" al
 #include "abccont.hh"
 #include "abcsmc.hh"
 #include "mc3.hh"
-#include "pais.hh"
+#include "pas.hh"
 #include "pmcmc.hh"
 #include "importance.hh"
 #include "ml.hh"
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
   #endif
 
 	if(false){                                                 	// Outputs the git version
-		cout << "BEEPmbp version " << gitversion() << endl << endl; 
+		cout << "BEEP version " << gitversion() << endl << endl; 
 	}	
 
 	Inputs inputs(argc,argv);                                   // Loads command line arguments and TOML file into inputs
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
   pybind11::module::import("logging").attr("basicConfig")("level"_a="DEBUG", "format"_a="%(asctime)s %(filename)s:%(lineno)s %(levelname)s - %(message)s");
 
  	DataPipeline *dp = new DataPipeline(
-		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEPmbp",
+		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEP",
 		gitversion());
 
 	Data data(inputs,details,mpi,dp);   
@@ -244,10 +244,10 @@ int main(int argc, char** argv)
 		}
 		break;
 		
-	case PAIS_INF:                                              // Peforms inference using the PAIS algorithm
+	case PAS_INF:                                              // Peforms inference using the PAS algorithm
 		{	
-			PAIS pais(details,data,model,inputs,output,obsmodel,mpi);
-			pais.run();
+			PAS pas(details,data,model,inputs,output,obsmodel,mpi);
+			pas.run();
 		}
 		break;
 		

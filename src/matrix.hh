@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__MATRIX_HH
-#define BEEPMBP__MATRIX_HH
+#ifndef BEEP__MATRIX_HH
+#define BEEP__MATRIX_HH
 
 using namespace std;
 
