@@ -109,7 +109,7 @@ void PMCMC::run()
 	
 		cout << Ntot;
 		get_EF_dist();
-		cout << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << "\n";
+		cout << samp_fac*double(alg_time_sum-wait_time_sum)/(60.0*CLOCKS_PER_SEC) << endl;
 	}
 }
 
@@ -605,11 +605,11 @@ void PMCMC::calculate_start_invT()
 		if(fac > 2) fac = 2;
 		
 		invT *= exp(1*fac);
-		if(core == 0) cout << loop << " " << invT << " " <<  sd << " standard deviation\n";
+		if(core == 0) cout << loop << " " << invT << " " <<  sd << " standard deviation " << endl;
 		if(loop >= loopmax/2) invTav += invT/(loopmax/2);
 	}
 	invT = invTav;
-	if(core == 0) cout << invT << " invT estimate\n";
+	if(core == 0) cout << invT << " invT estimate" << endl;
 	
 	for(auto ru = 0u; ru < nrun; ru++){                              // Goes over all the runs
 		Li_run[ru] = obs_prob(Pi.paramval);       

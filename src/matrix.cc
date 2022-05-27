@@ -697,7 +697,7 @@ vector <double> linear_solve(vector <vector <double> > mat, vector <double> vec)
 	
 	return vec;
 }
-
+	
 
 /// Inverts a matrix
 vector < vector <double> > invert_matrix(vector <vector <double> > M)   
@@ -1217,6 +1217,17 @@ double largest_eigenvalue(const vector < vector <double> > &M, vector <double> &
 	}
 	
 	return ev;
+}
+
+
+/// Returns the dot product between two vectors  
+double vec_dot(const vector <double> &vec1, const vector <double> &vec2)
+{
+	if(vec1.size() != vec2.size()) emsgEC("Matrix",33);
+	auto sum = 0.0; 
+	for(auto i = 0u; i < vec1.size(); i++) sum += vec1[i]*vec2[i];
+	
+	return sum;
 }
 
 

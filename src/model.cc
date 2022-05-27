@@ -1574,7 +1574,7 @@ void Model::setup_modification()
 double Model::prior(const vector<double> &paramv) const 
 {
 	double Pr = 0;
-	
+
 	for(auto th = 0u; th < param.size(); th++){
 		switch(param[th].priortype){
 			case FIXED_PRIOR:
@@ -1614,7 +1614,6 @@ double Model::prior(const vector<double> &paramv) const
 						if(beta != 1) emsgEC("Model",54);
 						if(alpha != 1){
 							Pr += (alpha-1)*log(val);
-							//cout << param[th].name << " " << alpha << " "<< beta << " " << val << " hh\n";
 						}
 					}
 					else{
@@ -1647,6 +1646,8 @@ double Model::prior(const vector<double> &paramv) const
 /// Calculates the smoothing spline prior
 double Model::spline_prior(const vector<double> &paramv) const
 {
+	auto paramv_dir = dirichlet_correct(paramv);
+	
 	auto Pr = 0.0;
 	if(details.siminf == SIMULATE) return Pr;
 	
@@ -1661,19 +1662,19 @@ double Model::spline_prior(const vector<double> &paramv) const
 					if(param[par1].priortype != FIXED_PRIOR || param[par2].priortype != FIXED_PRIOR){
 						auto value = spli[i].smooth_value;
 						if(value == UNSET) emsgroot("For the spline '"+spl.name+"' a value for 'smooth' must be set");
-							
+						
 						switch(spl.smoothtype){
 							case LOGSMOOTH:                                    // This is the pdf for the log-normal distribution
 								{
-									double mu = log(paramv[par1]*spli[i].multfac);
-									double logx = log(paramv[par2]*spli[i+1].multfac);							
+									double mu = log(paramv_dir[par1]*spli[i].multfac);
+									double logx = log(paramv_dir[par2]*spli[i+1].multfac);							
 									Pr += -(logx-mu)*(logx-mu)/(2*value*value) - logx; 
 								}
 								break;
 								
 							case SMOOTH:
 								{
-									double d = paramv[par1] - paramv[par2];
+									double d = paramv_dir[par1] - paramv_dir[par2];
 									Pr += -d*d/(2*value*value); 
 								}
 								break;
@@ -3022,7 +3023,6 @@ void Model::set_dirichlet()
 							
 					if(nmdir == dir.param.size()){ // This applies a modified Dirichlet prior
 						auto kappa = param[dir.param[0].th].dir_mean;
-						// cout << kappa << "kappa\n";
 						auto beta = ((dir.param.size()-1)/(kappa*kappa))-1;
 						
 						for(auto i = 0u; i < dir.param.size(); i++){
@@ -3046,14 +3046,14 @@ void Model::set_dirichlet()
 			for(auto dp : dir.param){
 				cout << param[dp.th].name << ", ";
 			}
-			cout << " Dirichlet params\n";
+			cout << " Dirichlet params" << endl;
 		}
 	}
 }
 
 
 /// If N-1 direchlet varaibles are set then this calculates the last missing value
-void Model::calculate_dirichlet_missing(vector <double> &param) const
+void Model::calculate_dirichlet_missing(vector <double> &param, bool warning) const
 {
 	for(const auto &dir : dirichlet){                       // Fills in dependent diriclet values
 		auto sum = 0.0;				
@@ -3061,7 +3061,7 @@ void Model::calculate_dirichlet_missing(vector <double> &param) const
 			sum += param[dir.param[j].th];
 		}
 		
-		if(sum > 1) emsg("Dirichlet varaibles out of range");
+		if(sum > 1 && warning == true) emsg("Dirichlet varaibles out of range");
 		param[dir.param[0].th] = 1-sum;
 	}
 }
@@ -3291,7 +3291,7 @@ string Model::print_prior(const unsigned int p) const
 string Model::print() const
 {                      
 	stringstream ss;
-                
+ 
 	switch(details.siminf){
 		case SIMULATE:
 			ss << "Parameters:" << endl;
@@ -3335,11 +3335,7 @@ string Model::print() const
 	ss << endl;
 		
 	ss << "Compartments:" << endl; 
-	auto num = 0u;
-	for(const auto &co : comp){
-		ss << num << "  "; num++;
-		for(auto tr : co.trans) ss << tr << ","; ss << "   ";
-			
+	for(const auto &co : comp){	
 		ss << "  " << co.name;
 		if(co.num != UNSET && co.num > 0) ss << co.num;
 		if(co.shape != UNSET){
@@ -3356,16 +3352,14 @@ string Model::print() const
 		}
 		
 		auto th = co.infectivity_param;
-		if(param[th].name != "zero") ss << "  Infectivity: " << param[th].name;
+		if(param[th].name != "zero") ss << "  Infectivity: '" << param[th].name << "'";
 		if(co.mean_dep != "") ss << "  Dependency: " << co.mean_dep;
 		ss << endl; 		
 	}
 	ss << endl;
 	
 	ss << "Transitions:" << endl; 
-	auto num2 = 0u;
 	for(const auto &tr : trans){
-		ss << num2 << "   " << tr.from << "->" << tr.to << "   "; num2++;
 		const auto &coi = comp[tr.from];
 		const auto &cof = comp[tr.to];
 		
@@ -3540,7 +3534,7 @@ vector <unsigned int> Model::trans_comp_divide(unsigned int tr, unsigned int dir
 	if(false){
 		cout << trans[tr].name << ":   ";
 		for(auto c = 0u; c < comp.size(); c++) cout << comp[c].name << ":" << map[c] << ", ";
-		cout << "\n"; 
+		cout << endl; 
 	}
 	
 	vector <unsigned int> clist;

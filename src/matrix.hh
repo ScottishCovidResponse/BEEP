@@ -39,6 +39,7 @@ vector < vector <double> > invert_matrix2(const vector <vector <double> > &mat);
 vector < vector <double> > transpose(const vector < vector <double> > &M);
 vector < vector <double> > invert_matrix_square_root(const vector < vector <double> > &M);
 double largest_eigenvalue(const vector < vector <double> > &M, vector <double> &eigenvector);
+double vec_dot(const vector <double> &vec1, const vector <double> &vec2);
 void print_matrix(string name, const vector < vector <double> > &M);
 void print_vector(string name, const vector <double> &vec);
 

@@ -90,7 +90,7 @@ class Model                                             // Stores information ab
 		void set_strain();
 		string list_dir_param(const vector <DirichletParam> &list) const;
 		void set_dirichlet();
-		void calculate_dirichlet_missing(vector <double> &param) const;
+		void calculate_dirichlet_missing(vector <double> &param, bool warning = true) const;
 		string comparmtental_model_JSON() const;
 		void check_prior() const;
 		NormalApprox prior_normal_approx(unsigned int th) const;

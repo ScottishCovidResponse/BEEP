@@ -1505,7 +1505,7 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 			paramout << endl; 
 			
 			if(false){ // Outputs estimates to terminal 
-				cout << model.param[p].name << "  " << stat.mean << "," <<  stat.CImin << "," << stat.CImax << "endl\n"; 
+				cout << model.param[p].name << "  " << stat.mean << "," <<  stat.CImin << "," << stat.CImax << endl; 
 			}
 		}
 	}
@@ -2145,7 +2145,7 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 	unsigned int col;
 	
 	switch(details.mode){
-		case ABC_MBP: case ABC_SMC: case ABC_DA: case ABC_CONT:
+		case ABC_MBP: case ABC_SMC: case ABC_CONT:
 			EF_flag = true; label = "log(EF cut-off)"; tab3 = "Error function"; tab4 = "Cut-off"; col = 4;
 			break;
 		
@@ -3474,7 +3474,7 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 				pw.val = psamp[i].paramval[th];
 				switch(details.mode){
 					case ABC_SMC: pw.w = gen.w[i]; break;
-					case ABC_MBP: case ABC_DA: case ABC_CONT: case PAS_INF: case MC3_INF: case MCMC_MBP:
+					case ABC_MBP: case ABC_CONT: case PAS_INF: case MC3_INF: case MCMC_MBP:
 					case ML_INF:
 						pw.w = 1;
 						break;
@@ -3545,8 +3545,8 @@ void Output::generation_results(const vector <Generation> &generation) const
 void Output::ensure_directories()
 {
 	post_dir = "Posterior";
-	if(details.mode == SIM) post_dir = "Simulation_Results";
-	if(details.mode == MULTISIM) post_dir = "Multisim_Results";
+	if(details.mode == SIM) post_dir = "Simulation_results";
+	if(details.mode == MULTISIM) post_dir = "Multisim_results";
 		
 	ensure_directory(details.output_directory);
 	if(details.siminf != SIMULATE) ensure_directory(details.output_directory+"/Diagnostics");
@@ -3586,6 +3586,25 @@ void Output::print_model_specification() const
 	auto file = details.output_directory+"/Model_specification.txt";
 	ofstream modspec(file); 
 	if(!modspec) emsg("Cannot open the file '"+file+"'");
+	               
+	modspec << "Analysis type: ";
+	switch(details.mode){
+		case SIM: modspec << "Simulation"; break;
+		case MULTISIM: modspec << "Multiple simulations"; break;
+		case PREDICTION: modspec << "Prediction"; break;
+		case ABC_SIMPLE: modspec << "Inference using the ABC rejection-sampling algorithm"; break;
+		case ABC_SMC: modspec << "Inference using the ABC-SMC algorithm"; break;
+		case ABC_MBP: modspec << "Inference using the ABC-MBP algorithm"; break;
+		case ABC_CONT: modspec << "Inference using the ABC continuum algorithm"; break;
+		case MC3_INF: modspec << "Inference using the MCMCMC algorithm"; break;
+		case MCMC_MBP: modspec << "Inference using the MCMC-MBP algorithm"; break;
+		case PAS_INF: modspec << "Inference using the PAS-MBP algorithm"; break;
+		case PMCMC_INF: modspec << "Inference using the PMCMC algorithm"; break;
+		case ML_INF: modspec << "Inference via MAP using the CMA-ES algorithm"; break;
+		case DATAONLY: modspec << "Data only"; break;
+	}
+	modspec << endl;
+	
 	modspec << data.print();                             
 	modspec << model.print();
 }
@@ -3647,17 +3666,13 @@ void Output::readme() const
 			
 	read << "## Parameter_estimates.csv" << endl << endl;
 	
-	read << "If inference is performed, this file gives the posterior means and 95% credible intervals for each of the model parameters." << endl;
+	read << "If inference is performed, this file gives the posterior means, 95% credible intervals, standard deviation and priors for each of the model parameters." << endl;
 	
 	read << endl;
 	
-	read << "## Graphs.pdf" << endl << endl;
+	read << "## visBEEP.html" << endl << endl;
 	
-	read << "This visualises outputs from BEEP." << endl << endl;
-	
-	read << "## Graphs_description.txt" << endl << endl;
-	
-	read << "Provides information about the source data for the graphs." << endl << endl;
+	read << "This visualises outputs from BEEP and can be opened in a web browser." << endl << endl;
 			
 	read << "## Model_specification.txt" << endl << endl;
 	

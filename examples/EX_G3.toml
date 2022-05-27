@@ -5,14 +5,14 @@
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map"
 
 # nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp11.txt&
-# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" ngeneration=30000 > opp14.txt&
+# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" > analysis/opp16.txt&
 
 time_format = "year-month-day"
 start = "2020-01-01"
 end = "2021-06-09"
 
 datadir = "examples/Data_EX_G3"
-outputdir = "examples/Output_EX_G3c"
+outputdir = "examples/Output_EX_G3d"
 
 time_labels = [{name="Lockdown", time="2020-03-23"}]
 
