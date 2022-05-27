@@ -229,7 +229,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pas", PAS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"map", ML_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pas", PAS_INF}, {"pmcmc", PMCMC_INF}, {"map", ML_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -1741,8 +1741,7 @@ void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int 
 	
 		P = find_positive_integer("posterior_particle",UNSET);
 		if(P == UNSET){
-			P = 100;
-			//WP = 20;
+			P = 20;
 			if(core == 0) cout << "By default 'posterior_particle' is set to " << P << "." << endl;
 			//emsgroot("'posterior_particle' must be set to a positive integer. This determines the number of particles used when generating the final posterior samples (this would typically be over 100).");
 		}

@@ -1460,7 +1460,7 @@ void State::check()
 		if(dd*dd > TINY) emsgEC("State_check",2);
 	}
 	
-	auto dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > TINY){ cout << Pr << " " << model.prior(paramval) << " h\n"; emsgEC("State_check",59);}
+	auto dd = Pr - model.prior(paramval); if(sqrt(dd*dd) > TINY) emsgEC("State_check",59);
 	
 	auto af = model.create_areafactor(paramval);                      // Checks areafactor
 	for(auto c = 0u; c < data.narea; c++){

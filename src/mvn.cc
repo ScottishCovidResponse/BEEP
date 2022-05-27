@@ -339,7 +339,7 @@ Status MVN::MH_PMCMC(double al, const double self_ac, const ParamUpdate pup)
 	}
 	
 	ntr++; nac += al;
-	//cout << self_ac << " " << size << " " << al << "al\n";
+
 	if(ran() < al) return SUCCESS;
 	
 	return FAIL;

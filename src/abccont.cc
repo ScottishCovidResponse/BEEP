@@ -85,8 +85,6 @@ void ABCCONT::run()
 
 	if(mpi.core == 0) model_evidence(generation);             // Calculates the model evidence
 	
-	paramprop.output_prop_vec();
-
 	output.generation_results(generation);                    // Generates pdf of graphs
 
 	output.generate_graphs(part,UNSET);	
@@ -147,13 +145,6 @@ unsigned int ABCCONT::mcmc_updates(const vector <ParamSample> &param_samp, doubl
 		auto psamp_after = mpi.gather_psamp(part);
 	
 		cor = output.get_correlation(psamp_before,psamp_after);
-		
-		if(mpi.core == 0){
-			cout << vec_max(cor)  << " " << cor_max << "cor\n";
-			//for(auto th = 0u; th < model.param.size(); th++){
-			//	cout << model.param[th].name << " " << cor[th] << " " << cor_max << " cor\n";
-			//}
-		}
 		
 		timer[TIME_WAIT].stop();
 	}while(nprop/part.size() < details.prop_max && vec_max(cor) > cor_max);  // Iterates until correlation less than threshold
@@ -232,17 +223,6 @@ void ABCCONT::EF_cutoff(Generation &gen, vector <Particle> &part, vector <unsign
 		//}		
 
 		EFmin = partef[int(0.025*Ntot)].EF; EFmax = partef[int(0.975*Ntot)].EF;
-	
-	/*
-		for(i = 0; i < npart; i++) cout << EFtot[i] << ","; cout << "EFlist" << endl << flush;
-		
-		cout << EFcut << " EF cut\n";
-		auto num = 0u;
-		for(i = 0; i < npart; i++){
-				if(EFtot[i] < EFcut) num++;
-		}
-		cout << npart << " " << num << "  num\n";
-	*/
 	
 		if(true){   // Copies and particles
 			for(auto j = 0u; j < Ntot/2; j++){ 

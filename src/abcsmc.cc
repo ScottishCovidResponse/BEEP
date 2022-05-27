@@ -197,7 +197,6 @@ bool ABCSMC::terminate(const Generation &gen) const
 		auto N = Ntot;
 		if(gen.num == G-1) N = Ntot_final;
 		auto co = cutoff_frac; if(gen.num == 0) co = cutoff_frac_init;
-		//cout << Neff << " " << N/co << "Neff\n"; 
 		if(Neff >= N/co) term = true;
 	}
 	

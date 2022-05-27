@@ -18,7 +18,7 @@ ParamProp::ParamProp(const Details &details, const Data &data, const Model &mode
 		add_single();
 	}
 	else{
-		if(details.mode == ABC_DA || details.mode == ABC_CONT){
+		if(details.mode == ABC_CONT){
 			MVN mv("MBP type I MVN",model.param_not_fixed,0.3,ALL_PARAM,MULTIPLE);
 			mvn.push_back(mv);
 		}
@@ -942,7 +942,7 @@ void ParamProp::output_prop_vec()
 			if(mpi.core == 0){
 				ofstream fout(details.output_directory+"/"+replace(mv.name,":","")+".txt");
 				for(const auto &vec : vec_tot){
-					fout << vec[0] << " " << vec[1] << "\n";
+					fout << vec[0] << " " << vec[1] << endl;
 				}
 			}
 			
@@ -950,7 +950,7 @@ void ParamProp::output_prop_vec()
 			if(mpi.core == 0){
 				ofstream fout(details.output_directory+"/after_"+replace(mv.name,":","")+".txt");
 				for(const auto &vec : vec_tot){
-					fout << vec[0] << " " << vec[1] << "\n";
+					fout << vec[0] << " " << vec[1] << endl;
 				}
 			}	
 		}

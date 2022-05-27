@@ -70,11 +70,11 @@ unsigned int Mbp::mcmc_updates(vector <Particle> &part, const vector <ParamSampl
 	
 		cor = output.get_correlation(psamp_before,psamp_after);
 		
-		if(mpi.core == 0){
-			//cout << vec_max(cor)  << " " << cor_max << "cor\n";
-			//for(auto th = 0u; th < model.param.size(); th++){
-			//	cout << model.param[th].name << " " << cor[th] << " " << cor_max << " cor\n";
-			//}
+		if(mpi.core == 0 && false){
+			cout << vec_max(cor)  << " " << cor_max << " correlation" << endl;
+			for(auto th = 0u; th < model.param.size(); th++){
+				cout << model.param[th].name << " " << cor[th] << " " << cor_max << " correlation" << endl;
+			}
 		}
 		
 		timer[TIME_WAIT].stop();
@@ -740,7 +740,7 @@ Status Mbp::mbp_rev(const vector<double> &paramv)
 	int sett_start = 100;
 	
 	for(auto sett = sett_start; sett >= 0; sett--){  
-		cout << sett << " " << details.ndivision << " sett\n";
+		cout << sett << " " << details.ndivision << " sett" << endl;
 		//propose->democat_change_pop_adjust(sett);  TO DO
 	
 		propose->set_Imap_using_dI(sett,initial,dImap,dIdiag);
@@ -763,7 +763,7 @@ Status Mbp::mbp_rev(const vector<double> &paramv)
 					rate_p = prop_tmean[tr][dp];
 				
 					rate_i = init_tmean[tr][dp];	
-					if(tr == 1) cout << rate_p << " " << rate_i << "dtrate\n";
+					
 					if(rate_p > rate_i){
 						num_p = num_i + poisson_sample(rate_p-rate_i);
 						probif += poisson_probability(num_p-num_i,rate_p-rate_i);
@@ -794,9 +794,6 @@ Status Mbp::mbp_rev(const vector<double> &paramv)
 		timer[TIME_UPDATEIMAP].start();
 		propose->update_I_from_transnum(dImap,dIdiag,dtransnum);
 		timer[TIME_UPDATEIMAP].stop();
-		
-		for(auto c = 0u; c < model.comp.size(); c++) cout << initial->pop[sett][0][c][0] << "," << propose->pop[sett][0][c][0]  << "   ";
-		cout << " pop\n";
 	}
 	propose->EF = -2*obsmodel.calculate(propose);
 	propose->Pr = model.prior(propose->paramval);
