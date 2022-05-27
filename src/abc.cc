@@ -46,7 +46,7 @@ void ABC::run()
 
 	diagnostic();                                        // Outputs diagnostic information
 
-	output.generate_graphs(particle_store);		           // Outputs the results
+	output.generate_graphs(particle_store,UNSET);		     // Outputs the results
 }
 
 

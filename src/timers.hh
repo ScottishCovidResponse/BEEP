@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__TIMERS_HH
-#define BEEPMBP__TIMERS_HH
+#ifndef BEEP__TIMERS_HH
+#define BEEP__TIMERS_HH
 
 #include <string>
 #include <iostream>

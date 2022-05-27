@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__ML_HH
-#define BEEPMBP__ML_HH
+#ifndef BEEP__ML_HH
+#define BEEP__ML_HH
 
 #include "struct.hh"
 #include "state.hh"
@@ -45,7 +45,7 @@ private:
 	void cmaes();
 	void generate_samples(vector <ParamSample> &ps_per_core, const vector <double> &mean, const vector < vector <double> > &C, const double sigma, Generation &gen);
 	vector < vector <double> > sample_param(const vector <double> &mean, const vector < vector <double> > &C, const double sigma, const unsigned int num) const;
-	bool terminate_generation(unsigned int g) const;
+	bool terminate_generation(unsigned int g, const vector <double> &EFbest_store) const;
 	PointInfo calculate_point_info(vector <double> param);
 	void calculate_mimimum();
 	vector < vector <double> > calculate_covariance_martrix(const vector <double> &mean);

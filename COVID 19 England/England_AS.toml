@@ -76,17 +76,17 @@ areas = "population.csv"
 			
 data_tables = [
 
-{type="transition", observation="E->I", shift="-4", obsmodel="scale", democats_dep="age", weight="1", timestep="1", file="cases_AS.csv"},
+{type="transition", observation="E->I", shift="-4", obsmodel="scale", democats_dep="age", timestep="1", file="cases_AS.csv"},
 
-{type="transition", observation="H->D", obsmodel="scale", democats_dep="age", weight="1", shift="-6", timestep="7", file="deaths_AS.csv"},
+{type="transition", observation="H->D", obsmodel="scale", democats_dep="age", shift="-6", timestep="7", file="deaths_AS.csv"},
 
-{type="population", observation="I,C,A,T", obsmodel="scale", democats_dep="age", weight="1", file="covid19_inf_survey_AS.csv"},
+{type="population", observation="I,C,A,T", obsmodel="scale", democats_dep="age", file="covid19_inf_survey_AS.csv"},
 
-{type="transition", observation="C->H", obsmodel="scale", democats_dep="age", weight="1", timestep="1", file="admissions_AS.csv"},
+{type="transition", observation="C->H", obsmodel="scale", democats_dep="age", timestep="1", file="admissions_AS.csv"},
 
-{type="population", observation="R", obsmodel="scale", democats_dep="age", weight="1", file="antibody_AS.csv"},
+{type="population", observation="R", obsmodel="scale", democats_dep="age", file="antibody_AS.csv"},
 
-{type="transition", observation="C->H", obsmodel="scale", democats_filt="age:age0-4 | age5-9 | age10-14 | age15-19 | age20-24 | age25-29 | age30-34 | age35-39 | age40-44 | age45-49 | age50-54 | age55-59 | age60-64 | age65-69 | age70-74 | age75-79 | age80+", weight="2", timestep="1", file="admissions.csv"},
+{type="transition", observation="C->H", obsmodel="scale", democats_filt="age:age0-4 | age5-9 | age10-14 | age15-19 | age20-24 | age25-29 | age30-34 | age35-39 | age40-44 | age45-49 | age50-54 | age55-59 | age60-64 | age65-69 | age70-74 | age75-79 | age80+", timestep="1", file="admissions.csv"},
 
 ]
 

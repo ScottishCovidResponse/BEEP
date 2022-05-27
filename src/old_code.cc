@@ -253,7 +253,7 @@ void ParamProp::complex_update_init()
 		covar_area_init();
 	}
 	
-	if(details.mode == ABC_MBP || details.mode == MC3_INF || details.mode == MCMC_MBP || details.mode == PAIS_INF){
+	if(details.mode == ABC_MBP || details.mode == MC3_INF || details.mode == MCMC_MBP || details.mode == PAS_INF){
 		FixedTree ft; ft.n = 0; ft.sim_frac = 1;
 		fixedtree.push_back(ft);
 	

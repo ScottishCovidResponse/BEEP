@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__DETAILS_HH
-#define BEEPMBP__DETAILS_HH
+#ifndef BEEP__DETAILS_HH
+#define BEEP__DETAILS_HH
 
 #include "struct.hh"
 #include "inputs.hh"
@@ -21,8 +21,6 @@ struct Details                                                     // Provides d
 	
 	string toml_file;                                                // The name of the TOML file
 	
-	unsigned int efoi_factor;                                        // Denominator when expressing external force of infection.
-
 	TimeFormat time_format;                                          // The time format (e.g. times or dates)
 	string time_format_str;                                          // A description of the time format ('time' or 'date').
 
@@ -34,7 +32,7 @@ struct Details                                                     // Provides d
 	unsigned int pred_start;                                         // The start time of prediction
 	unsigned int pred_end;                                           // The end time of prediction
 
-	unsigned int prop_max;                                           // The maximum number of proposals (ABCMBP/PAIS)
+	unsigned int prop_max;                                           // The maximum number of proposals (ABCMBP/PAS)
 
 	vector <TimePlot> timeplot;                                      // Descriptive times which can be used 
 	

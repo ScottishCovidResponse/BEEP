@@ -5,14 +5,14 @@ if(NOT DEFINED CPPDATAPIPELINEREF)
     SET(CPPDATAPIPELINEREF "heads/main")
 endif()
 
-project(BEEPmbp
+project(BEEP
     VERSION 0.1.0
-    DESCRIPTION "Bayesian Estimation of Epidemic Parameters using Model-Based Proposals"
-    HOMEPAGE_URL "https://github.com/ScottishCovidResponse/BEEPmbp"
+    DESCRIPTION "Bayesian Estimation of Epidemic Parameters"
+    HOMEPAGE_URL "https://github.com/ScottishCovidResponse/BEEP"
     LANGUAGES CXX C
 )
 
-set (BEEPMBP BEEPmbp)
+set (BEEPMBP BEEP)
 
 # Set Output Directories to avoid issues on multi release compilers
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

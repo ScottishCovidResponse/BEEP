@@ -5,7 +5,10 @@
 using namespace std;
 
 #include "matrix.hh"
-#include <immintrin.h>
+
+#if defined(__x86_64__) || defined(_M_X64)
+	#include <immintrin.h>
+#endif
 
 unsigned int n_matrix_store;
 double **l, **linv, **u, **uinv, **mat2, **matres;
@@ -32,8 +35,9 @@ vector < vector <double> > invert_determinant_SIMD(const vector < vector <double
 					
 					u[i][i] = 1;
 					for(auto j = i+1; j < n; j++){
-						if(li[i] == 0) emsgEC("Matrix",1);
-						u[j][i] = (M[i][j] - dot_SIMD(li,u[j],0,i))/li[i];
+						auto val = li[i]; if(val == 0) val = TINY;
+						//if(li[i] == 0) emsgEC("Matrix",1);
+						u[j][i] = (M[i][j] - dot_SIMD(li,u[j],0,i))/val;
 					}
 				}
 
@@ -383,6 +387,7 @@ double dot_SIMD(const double* vec1, const double* vec2, unsigned int n1, unsigne
 		while(k < kmin && k < n2){ val += vec1[k]*vec2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(n2-k >= si){
 		__m256d v1, v2;
 		__m256d summed = _mm256_set1_pd(0.0);
@@ -397,9 +402,10 @@ double dot_SIMD(const double* vec1, const double* vec2, unsigned int n1, unsigne
 		
 		for(auto i = 0u; i < si; i++) val += sum[i];
 	}
-	
-	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
+#endif
 
+	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
+	
 	return val;
 }
 
@@ -416,6 +422,7 @@ float dot_SIMD(const float* vec1, const float* vec2, unsigned int n1, unsigned i
 		while(k < kmin && k < n2){ val += vec1[k]*vec2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(n2-k >= si){
 		__m256 v1, v2;
 		__m256 summed = _mm256_set1_ps(0.0);
@@ -430,7 +437,8 @@ float dot_SIMD(const float* vec1, const float* vec2, unsigned int n1, unsigned i
 		
 		for(auto i = 0u; i < si; i++) val += sum[i];
 	}
-	
+#endif
+
 	while(k < n2){ val += vec1[k]*vec2[k]; k++;} 
 
 	return val;
@@ -767,6 +775,7 @@ void sub_row_SIMD(double *row1, const double *row2, double fac, unsigned int i1,
 		while(k < kmin){ row1[k] += fac*row2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(i2-k >= si){
 		__m256d v1, v2, res;
 		__m256d f = _mm256_set1_pd(fac);
@@ -779,6 +788,7 @@ void sub_row_SIMD(double *row1, const double *row2, double fac, unsigned int i1,
 			k += si;
 		}
 	}
+#endif
 	
 	while(k < i2){ row1[k] += fac*row2[k]; k++;} 
 }
@@ -795,6 +805,7 @@ void sub_row_SIMD(float *row1, const float *row2, float fac, unsigned int i1, un
 		while(k < kmin && k < i2){ row1[k] += fac*row2[k]; k++;} 
 	}
 	
+#if defined(__x86_64__) || defined(_M_X64)
 	if(i2-k >= si){
 		__m256 v1, v2, res;
 		__m256 f = _mm256_set1_ps(fac);
@@ -807,6 +818,7 @@ void sub_row_SIMD(float *row1, const float *row2, float fac, unsigned int i1, un
 			k += si; 
 		}
 	}
+#endif
 
 	while(k < i2){ row1[k] += fac*row2[k]; k++;} 
 }
@@ -1110,7 +1122,6 @@ vector < vector <double> > invert_matrix_square_root(const vector < vector <doub
 			for(auto i = 0u; i < n; i++){
 				auto d = Minv[j][i] - N[j][i];
 				if(d < -TINY || d > TINY){
-					cout << d << " d\n";
 					emsgEC("Matrix",23);
 				}
 			}

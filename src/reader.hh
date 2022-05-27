@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__READER_HH
-#define BEEPMBP__READER_HH
+#ifndef BEEP__READER_HH
+#define BEEP__READER_HH
 
 #include <vector>
 #include <memory>

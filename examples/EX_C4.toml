@@ -1,0 +1,52 @@
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX_C4.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_C4.toml" mode="map"
+
+description = "Objective: This incorporates age stratification.  Implementation: ‘ages’ is used to define different age groups, here taken to be 0-19, 20-39, 40-59, and 60+. A contact matrix is specified by ‘age-mixing-matrix’, which gives the rate of effective contact between individuals within and between different age groups (note, this matrix only needs to be specified up to a constant factor). Model properties can be dependent on this stratification, e.g. under simulation the mean infectious period is defined by “age: 6 | 4 | 5 | 7” which here gives values for the different age groups (as defined in ‘ages’).  Model: An SIRD branching spatial model with age stratification. The infected individuals can either recover or die with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→R measurements separately for the different ages.  Inference: The reproduction number R_t and age-stratified infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_C4"
+outputdir = "examples/Output_EX_C4"
+
+ages = {cats="age0-19 | age20-39 | age40-59 | age60+"}
+	 
+age_mixing_matrix = "age_mixing_matrix.csv"
+	 
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="age: 6 | 4 | 5 | 7", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="age: 0.8 | 0.7 | 0.55 | 0.6", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="age: *", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", democats_dep="age", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", democats_dep="age", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

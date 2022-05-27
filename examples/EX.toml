@@ -1,16 +1,21 @@
-description = "This analysis uses an SEIR model and assumes that the reproduction number R remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of intection." 
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX.toml" mode="sim" 
 
-time_format = "year-month-day"
-start = "2020-01-01"
-end = "2020-09-01"
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX.toml" mode="map" 
+
+description = "Objective: Introduce an exposed compartment with a non-exponential residency time.  Implementation: ‘comps’ includes an exposed compartment with name “E”, which has an Erlang distribution with shape parameter 2 (which is equivalent to two sequential compartments each with an exponential residency time of half the total).  Model: An SEIR model with constant reproduction number R_t (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of E->I cases and measurements on the total infected I and recovered R populations.  Inference: The reproduction number R_t and latent and infectious periods." 
+
+time_format = "number"
+start = "0"
+end = "140"
 
 datadir = "examples/Data_EX"
-outputdir = "Output_EX"
-
+outputdir = "examples/Output_EX"  
 comps = [
 {name="S"},
-{name="E", dist="Erlang", k="2", mean_value="4"},
-{name="I", dist="Exp", mean_value="4", inf_value="1"},
+{name="E", dist="Erlang", k="2", mean_value="3", mean_prior="Uniform(1,10)"},
+{name="I", dist="Exp", mean_value="4", inf_value="1", mean_prior="Uniform(1,10)"},
 {name="R"}
 ]
 
@@ -20,18 +25,27 @@ trans = [
 {from="I", to="R"}
 ] 
 
-R_spline = [{ value="2.0", prior="Uniform(0.4,4)"}]
-efoi_spline = [{ value="0.1"}]
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
 
-areas = "scotland.csv"
+efoi_spline = [{ value="0.5"}]
 
-data_tables = [{type="transition", observation="E->I", timestep="7", file="EI.csv"}]
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="E->I", timestep="7", obsmodel="normal 10%", file="E-I.csv"},
+{type="population", observation="R", timestep="7", obsmodel="normal 10%", file="R.csv"}
+]
 
 state_outputs = [
 {plot_name="Dynamics", type="population", observation="S", line_colour="green"},
-{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="magenta"},
 {plot_name="Dynamics", type="population", observation="I", line_colour="red"},
 {plot_name="Dynamics", type="population", observation="R", line_colour="blue"}
 ]
 
-modification = [{start="2020-04-01",type="beta_fac",factor="0.3"}]
+modification = [{start="45",type="beta_fac",factor="0.7"}]
+#prediction_start = "20"
+#prediction_end = "180"
+
+plot_param_values = "true"
+

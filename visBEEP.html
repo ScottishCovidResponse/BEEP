@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
+<!-- This opens the visualisation software used to view BEEP results -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="keywords" content="BioSS,The Roslin Institute,BEEP,Bayesian Estimation of Epidemic Parameters using Model-Based Proposals">
+		<meta name="description" content="BEEP (Bayesian Estimation of Epidemic Parameters using Model-Based Proposals) is a general-purpose software tool for simulating and performing inference on epidemiological compartmental models.">
+		<meta name="author" content="C M Pooley">
+	
+		<title>BEEP</title>
+		
+		<style>
+			.container {
+				height: 400px;
+				position: relative;
+				border: 0px;
+			}
+
+			.center {
+				margin: 0;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				text-align: center;
+				-ms-transform: translate(-50%, -50%);
+				transform: translate(-50%, -50%);
+			}
+		</style>
+
+		<script src="vis_files/const.js"></script> 
+		<script src="vis_files/var.js"></script>
+		<script src="vis_files/init.js"></script>
+		<script src="vis_files/button.js"></script>
+		<script src="vis_files/canbutton.js"></script>
+		<script src="vis_files/buttonplot.js"></script>
+		<script src="vis_files/mousemove.js"></script>
+		<script src="vis_files/mouseclick.js"></script>
+		<script src="vis_files/generate_plots.js"></script> 
+		<script src="vis_files/BEEP_output.js"></script>
+		
+		<script src="vis_files/export_graphs.js"></script>
+	</head>
+
+	<body id="bod" onresize="buttoninit();" onload="init()" style="margin:0px; padding:0px;">	
+		<div class="container" id ="container">
+			<div class="center" style="font-size:20px" >
+				<img style="width:400px" src="vis_files/logo.png"><br/>
+				<div id="loading">Loading...</div>
+			</div>
+		</div>
+	
+		<div id="main" style="visibility:hidden; background:#ddddff; height:0px; margin:0px; padding:0px;">
+				<canvas id="myCanvas" style="background:#ffffff; margin:0px; border:0px; padding:0px; margin-top:5px">
+				</canvas> 
+		</div>
+		
+		<!-- Turn this on to create graphs of of state space
+		<div id="createPNGButton">
+				<button onclick="putImage()">Save as Image</button>        
+		</div>
+		-->
+
+	</body>
+</html>

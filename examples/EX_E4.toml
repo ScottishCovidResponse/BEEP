@@ -1,0 +1,54 @@
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX_E4.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_E4.toml" mode="map"
+
+description = "Objective: This example looks at incorporating a factor (m_t in Eq.(8)) which affects the relative mixing between and within areas (specificially, mt = 0 corresponds to no mixing between areas and m_t = 1 corresponds to mixing as specified by ‘geo-mixing-matrix’). In this example m_t is approximated by a temporal curve (specified by the user, e.g. making use of transport data) multiplied by a factor which is estimated.  Implementation: ‘geo-mixing-modify’ sets the spline giving m_t. Spatial results are plotted on a map of Scotland using boundary data specified in ‘area-plot’ (this sort of boundary data can often be found for geographical and administrative boundaries).  Model: An SIRD branching model with the population stratified into 32 Scottish local authorities. A contact matrix is specified which gives the rate of effective contact between individuals within and between different groups (note, this matrix only needs to be specified up to a constant factor). In this case the matrix is estimated from census commuter data. The infected individuals can either recover or die, with associated branching probabilities. The reproduction number R_t remains constant (i.e. the contact rate between individuals remains the same over time), as well as a constant external force of infection.  Data: Weekly number of S→I cases and I→D deaths, separately for the different areas.  Inference: The constant multiplying factor used to generate the area mixing factor m_t, the reproduction number R_t, branching probabilities and infectious period." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_E4"
+outputdir = "examples/Output_EX_E4"
+
+geo_mixing_matrix = "M_Scotland_LA.csv"
+
+geo_mixing_modify	= [{param="mixing factor", value="1", prior="Uniform(0,2)", bp="[bp:m_t.csv]", factor="[factor:m_t.csv]"}]
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.8", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "Scotland_LA.csv"
+
+area_plot = { boundary="Scotland_areas.geojson", projection="equirectangular"}
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", geo_dep="area", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", geo_dep="area", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

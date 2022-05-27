@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__PMCMC_HH
-#define BEEPMBP__PMCMC_HH
+#ifndef BEEP__PMCMC_HH
+#define BEEP__PMCMC_HH
 
 #include "struct.hh"
 #include "param_prop.hh"

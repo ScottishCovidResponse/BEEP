@@ -19,7 +19,7 @@ PMCMC::PMCMC(const Details &details, const Data &data, const Model &model, Input
 	inputs.find_nparticle_pmcmc(Ntot,N,mpi.ncore);
 	inputs.find_nsample_or_ESSmin_or_cpu_time(nsample,ESSmin,cpu_time);
 	inputs.find_nburnin(nburnin,nsample);
-	if(nburnin < pmcmc_init_samp) emsg("'nburnin' must be at least "+to_string(2*pmcmc_init_samp));
+	if(nburnin < pmcmc_init_samp) emsgroot("'nburnin' must be at least "+to_string(2*pmcmc_init_samp));
 	inputs.find_nthin(thin,nsample);
 	invT = inputs.find_double("invT",UNSET); 
 	inputs.find_sd(sd_init);
@@ -42,7 +42,7 @@ void PMCMC::run()
 		}
 	}
 
-	if(pmcmc_start_param == true && true) calculate_start_invT();
+	if(pmcmc_start_param == true) calculate_start_invT();
 	
 	unsigned int get_prop_period = nburnin/20; if(get_prop_period == 0) get_prop_period = 1;
 	
@@ -78,7 +78,7 @@ void PMCMC::run()
 		}
 		
 		if(samp%100000 == 0 && samp > 2*nburnin){
-			output.generate_graphs(particle_store);
+			output.generate_graphs(particle_store,invT);
 			if(core == 0) get_EF_dist();
 			auto alg_time_sum = mpi.sum((long)(timer[TIME_ALG].val+clock()));
 			auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
@@ -92,14 +92,14 @@ void PMCMC::run()
 	}while(!terminate(samp));
 	timer[TIME_ALG].stop();
 	
-	output.generate_graphs(particle_store);		                               // Outputs the results
+	output.generate_graphs(particle_store,invT);		                         // Outputs the results
 	
 	paramprop.set_ac_rate();                                                 // Outputs diagnostic information about proposals
 	paramprop.diagnostics();
 	
 	auto alg_time_sum = mpi.sum(timer[TIME_ALG].val);
 	auto wait_time_sum = mpi.sum(timer[TIME_WAIT].val);
-	if(core == 0){
+	if(false && core == 0){
 		cout <<  "Algorithm time: " << double(alg_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
 		cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
 		auto samp_fac = double(samp-nburnin)/samp;

@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Default configuration options
-
-TEST_OUTPUT_SUBDIR=

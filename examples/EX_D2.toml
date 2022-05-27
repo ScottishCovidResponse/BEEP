@@ -1,0 +1,52 @@
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX_D2.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_D2.toml" mode="map"
+
+description = "Objective: The disease transmission rate in each area is assumed to be modified by a factor, which on the log-scale has a linear dependency on a time-varying covariate within that area (in this case temperature).  Implementation: ‘area-tv-covars’ is used to define the values for time-varying covariates for each area.  Model: An SIRD branching model with ten geographical areas (Region A-J). In this infected individuals can either recover or die, with associated branching probabilities. The base reproduction number R_t is taken to be constant but disease transmission is modified to vary with the covariate (through an exponential dependency with the covariate multiplied by a fixed effect). A constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths.  Inference: The fixed effect for the temperature covariate, reproduction number R_t, infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_D2"
+outputdir = "examples/Output_EX_D2"
+
+geo_mixing_matrix = "geo_mixing_matrix.csv"
+	 
+area_tv_covars = [{ name="Temperature", file="areatvcovar.csv", value="-0.05", prior="Uniform(-0.5,0.5)", func="linear"}]  
+	 
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="6", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.8", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", geo_dep="area", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", geo_dep="area", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

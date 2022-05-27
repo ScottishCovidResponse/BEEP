@@ -9,7 +9,7 @@ using namespace std;
 
 #include "importance.hh"
 
-/// Initilaises the PAIS class
+/// Initilaises the PAS class
 IMPORTANCE::IMPORTANCE(const Details &details, const Data &data, const Model &model, Inputs &inputs, const Output &output, const ObservationModel &obsmodel, Mpi &mpi) : state(details,data,model,obsmodel), details(details), data(data), model(model), output(output), obsmodel(obsmodel),mpi(mpi)
 {	
 	inputs.find_nsample(Ntot,1);

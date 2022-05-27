@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__INPUTS_HH
-#define BEEPMBP__INPUTS_HH
+#ifndef BEEP__INPUTS_HH
+#define BEEP__INPUTS_HH
 
 #include <string>
 #include <map>
@@ -92,6 +92,7 @@ class Inputs
 		vector <ParamSpec> get_paramspec(InputNode &it, const string root, const string name, const string value, const string prior, const string smooth, const string factor, const unsigned int si, const bool dep_expect);		
 		void print_paramspec(const vector <ParamSpec> &ps) const;
 		vector <unsigned int> get_breakpoints(string st, const Details &details, const string em);
+		void extend_spline_for_prediction(vector <unsigned int> &bp, vector <ParamSpec> &ps_list, const Details &details);
 		void check_from_table(string &s);
 		vector <string> split_string(string &s, const char delimiter, const unsigned int len);
 		vector <double> split_number(string &s, const char delimiter, const unsigned int len);

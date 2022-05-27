@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__IMPORTANCE_HH
-#define BEEPMBP__IMPORTANCE_HH
+#ifndef BEEP__IMPORTANCE_HH
+#define BEEP__IMPORTANCE_HH
 
 #include "struct.hh"
 #include "mbp.hh"

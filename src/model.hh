@@ -1,5 +1,5 @@
-#ifndef BEEPMBP__Model_HH
-#define BEEPMBP__Model_HH
+#ifndef BEEP__Model_HH
+#define BEEP__Model_HH
 
 #include <vector>
 

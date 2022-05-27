@@ -1,0 +1,115 @@
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX_G3.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map"
+
+# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp11.txt&
+# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" ngeneration=30000 > opp14.txt&
+
+time_format = "year-month-day"
+start = "2020-01-01"
+end = "2021-06-09"
+
+datadir = "examples/Data_EX_G3"
+outputdir = "examples/Output_EX_G3c"
+
+time_labels = [{name="Lockdown", time="2020-03-23"}]
+
+comps			= [{name="S"},
+						 {name="E", dist="Exp", mean_value="3.8"},
+						 {name="I", dist="Exp", mean_value="4.0", inf_value="1"},
+						 {name="C", dist="Exp", mean_value="3.1"},
+						 {name="A", dist="Exp", mean_value="4", inf_value="0.55"},
+						 {name="H", dist="Exp", mean_value="13.0"},
+						 {name="T", dist="Exp", mean_value="15.0"},
+						 {name="R"},
+						 {name="D"}
+							]
+
+trans   	=	[{from="S", to="E", infection="yes"},
+						
+						 {from="E", to="A", prob_value="*", prob_prior="Dir(*)"},	 
+						 
+						 {from="E", to="I", prob_value="0.43", prob_prior="Dir(*)"},	 
+						 
+						 {from="I", to="T", prob_value="*", prob_prior="Dir(*)"},
+						 
+						 {from="I", to="C", prob_value="0.2", prob_prior="Dir(*)"},
+
+						 {from="C", to="H"},
+						
+						 {from="H", to="R", prob_value="*", prob_prior="Dir(*)"},
+						 
+						 {from="H", to="D", prob_value="0.3", prob_prior="Dir(*)"},
+						 
+						 {from="A", to="T"},
+						 {from="T", to="R"},
+						]
+
+ages = {cats="age0-9 | age10-19 | age20-29 | age30-39 | age40-49 | age50-59 | age60-69 | age70-79 | age80+ | CH"}
+
+age_mixing_matrix = "age_mixing_matrix.csv"
+	 
+#age_mixing_perturb = [
+#{ agecat='age0-9', bp='[bp:amp.csv]', param='[Par0-9:amp.csv]', value='[Value0-9:amp.csv]', prior='MDir(0.2)', smooth='0.1', #smooth_type='log_smooth'},
+#{ agecat='age10-19', bp='[bp:amp.csv]', param='[Par10-19:amp.csv]', value='[Value10-19:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age20-29', bp='[bp:amp.csv]', param='[Par20-29:amp.csv]', value='[Value20-29:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age30-39', bp='[bp:amp.csv]', param='[Par30-39:amp.csv]', value='[Value30-39:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age40-49', bp='[bp:amp.csv]', param='[Par40-49:amp.csv]', value='[Value40-49:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age50-59', bp='[bp:amp.csv]', param='[Par50-59:amp.csv]', value='[Value50-59:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age60-69', bp='[bp:amp.csv]', param='[Par60-69:amp.csv]', value='[Value60-69:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age70-79', bp='[bp:amp.csv]', param='[Par70-79:amp.csv]', value='[Value70-79:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
+#{ agecat='age80+', bp='[bp:amp.csv]', param='[Par80+:amp.csv]', value='[Value80+:amp.csv]', prior='MDir(0.3)', smooth='0.1', #smooth_type='log_smooth'},
+#{ agecat='CH', bp='[bp:amp.csv]', param='[ParCH:amp.csv]', value='[ValueCH:amp.csv]', prior='MDir(0.3)', smooth='0.1', #smooth_type='log_smooth'},
+#]
+
+age_mixing_perturb = [
+{ agecat='age0-9', bp='[bp:amp.csv]', param='[Par0-9:amp.csv]', value='[Value0-9:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age10-19', bp='[bp:amp.csv]', param='[Par10-19:amp.csv]', value='[Value10-19:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age20-29', bp='[bp:amp.csv]', param='[Par20-29:amp.csv]', value='[Value20-29:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age30-39', bp='[bp:amp.csv]', param='[Par30-39:amp.csv]', value='[Value30-39:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age40-49', bp='[bp:amp.csv]', param='[Par40-49:amp.csv]', value='[Value40-49:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age50-59', bp='[bp:amp.csv]', param='[Par50-59:amp.csv]', value='[Value50-59:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age60-69', bp='[bp:amp.csv]', param='[Par60-69:amp.csv]', value='[Value60-69:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age70-79', bp='[bp:amp.csv]', param='[Par70-79:amp.csv]', value='[Value70-79:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='age80+', bp='[bp:amp.csv]', param='[Par80+:amp.csv]', value='[Value80+:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+{ agecat='CH', bp='[bp:amp.csv]', param='[ParCH:amp.csv]', value='[ValueCH:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
+]
+
+
+R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+#R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
+
+efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
+
+areas = "population.csv"
+			
+data_tables = [
+
+{type="transition", observation="E->I", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="cases_AS.csv"},
+
+{type="transition", observation="H->D", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age",  timestep="7", file="deaths_AS.csv"},
+
+{type="population", observation="I,C,A,T", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="covid19_inf_survey_AS.csv"},
+
+{type="transition", observation="C->H", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="admissions_AS.csv"},
+
+{type="population", observation="R", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="antibody_AS.csv"},
+
+{type="transition", observation="C->H", obsmodel="normal 5%", epsilon_factor="0.01", timestep="7", file="admissions.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="E", line_colour="yellow"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="C", line_colour="cyan"},
+{plot_name="Dynamics", type="population", observation="A", line_colour="magenta"},
+{plot_name="Dynamics", type="population", observation="R",line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+
+plot_param_values = "true"

@@ -133,10 +133,11 @@ void Data::read_data_files(Inputs &inputs, Mpi &mpi)
 	
 	if(mpi.ncore > 1) mpi.copy_data(narea,area,nobs,obs,genQ,modification,covar,level_effect,democat_change);
 
-	if(details.siminf == INFERENCE) set_datatable_weights();
+	if(details.siminf == INFERENCE){
+		set_obs_sd();
+		normal_approximation();
+	}
 	
-	if(details.siminf == INFERENCE) normal_approximation();
-
 	agedist.resize(nage); for(auto &aged : agedist) aged = 0;
 	democatpos_dist.resize(ndemocatpos_per_strain); for(auto &dpd : democatpos_dist) dpd = 0;
 	democat_dist.resize(ndemocat-1); 
@@ -767,6 +768,8 @@ string Data::get_table_cols_JSON(const string file, const string dir, const vect
 	ss << "{ \"heading\":[";
 	bool fl = false;
 	for(auto col : cols){
+		if(col >= tab.ncol) emsgEC("Data",34);
+		
 		if(fl == true) ss << ","; 
 		fl = true;
 		ss << "\"" << tab.heading[col] << "\"";
@@ -1082,44 +1085,23 @@ void Data::normal_approximation()
 		auto value = ob.value;
 		
 		switch(ob.obsmodel){
-		case POWER_OBSMODEL:
+		case NORMAL_OBSMODEL: case NORMAL_PERCENT_OBSMODEL:
 			{
-				auto var = ob.sd*ob.sd/(ob.w*ob.invT); if(var < 0.5) var = 0.5;
-				ob.var_approx = var;
+				ob.var_approx = ob.sd*ob.sd;
 			}
 			break;
-			
-		case LOADSD_OBSMODEL: 
-			{
-				ob.var_approx = 1.0/(ob.sd*ob.sd*ob.w*ob.invT);
-			}
-			break;
-			
-		case NORMAL_OBSMODEL:
-			{
-				//return ob.w*ob.invT*normal_probability(val,value,value+0.5*ob.factor);
-				ob.var_approx = 1.0/(ob.w*ob.invT*ob.w*ob.invT);
-			}
-			break;
-			
+		
 		case POISSON_OBSMODEL:
 			{
 				auto lam = value; if(lam < 1) lam = 1;
-				ob.var_approx = lam/(ob.w*ob.invT);
+				ob.var_approx = lam;
 				break;
 			}
 			
 		case NEGBINO_OBSMODEL:
 			{
 				auto m = value; if(m < 1) m = 1;
-				ob.var_approx = (m + m*m/ob.shape)/(ob.w*ob.invT);
-			}
-			break;
-			
-		case SCALE_OBSMODEL:
-			{
-				auto offset = ob.epsilon;
-				ob.var_approx = (value+offset)*(value+offset)/(ob.invT*ob.w*ob.weight);
+				ob.var_approx = m + m*m/ob.shape;
 			}
 			break;
 		}
@@ -1137,8 +1119,7 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 		
 	Observation ob;
 	ob.factor_spline = UNSET;
-	ob.w = UNSET;
-	ob.obsmodel = dt.obsmodel; ob.shape = dt.shape; ob.invT = dt.invT;
+	ob.obsmodel = dt.obsmodel; ob.shape = dt.shape;
 	ob.datatable = i;
 	
 	auto datafilter = get_datafilter(tabarea,dt.geo_dep,dt.democats_dep,dt.geo_filt,dt.democats_filt,dt.type,dt.observation,dt.file);
@@ -1168,7 +1149,8 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 			no_column.push_back(df.colname);
 		}
 		else{
-			auto colSD = UNSET; if(table_loaded == true && ob.obsmodel == LOADSD_OBSMODEL) colSD = find_column(tab,df.colname+" SD");
+			auto colSD = UNSET; 
+			if(table_loaded == true && dt.load_sd == true) colSD = find_column(tab,df.colname+" SD");
 	
 			ob.dp_sel = df.dp_sel;
 			
@@ -1270,12 +1252,8 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 						else ob.value = UNSET;
 						
 						ob.sd = UNSET; 
-						if(ob.obsmodel == LOADSD_OBSMODEL){							
+						if(dt.load_sd == true && colSD != UNSET){							
 							if(table_loaded == true) ob.sd = get_double(tab.ele[row][colSD],"In file '"+df.file+"'");
-						}
-					
-						if(ob.obsmodel == POWER_OBSMODEL){						
-							if(table_loaded == true) ob.sd = pow(ob.value,power_obsmodel);
 						}
 						
 						ob.sett_i = ti;
@@ -1306,7 +1284,7 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 							else val = UNSET;
 											
 							ob.sd = UNSET; 
-							if(ob.obsmodel == LOADSD_OBSMODEL){
+							if(dt.load_sd == true && colSD != UNSET){							
 								if(details.trans_combine != UNSET) emsg("'loadSD' cannot be used in conjuction with 'trans_combine'"); 
 								if(table_loaded == true) ob.sd = get_double(tab.ele[row][colSD],"In file '"+df.file+"'");
 							}
@@ -1333,10 +1311,6 @@ void Data::load_timeseries_datatable(const Table &tabarea, const unsigned int i,
 								ob.sett_i = ti;
 								ob.sett_f = tf;
 								ob.value = val;
-							
-								if(ob.obsmodel == POWER_OBSMODEL){						
-									if(table_loaded == true) ob.sd = pow(ob.value,power_obsmodel);
-								}
 							
 								obs.push_back(ob);
 								val = 0;
@@ -1395,8 +1369,7 @@ void Data::load_marginal_datatable(const Table &tabarea, const unsigned int i, c
 	Observation ob;
 	ob.factor_spline = UNSET;
 	ob.datatable = i;
-	ob.w = UNSET;
-	ob.obsmodel = dt.obsmodel; ob.shape = dt.shape; ob.invT = dt.invT; 
+	ob.obsmodel = dt.obsmodel; ob.shape = dt.shape;
 	ob.graph = graph.size();
 	ob.factor = dt.factor;
 	
@@ -1492,7 +1465,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 		case MARGINAL: desc = "Marginal"; break;
 	}
 	
-	file = desc+"_"+replace(observation,"→","-");
+	file = desc+"_"+replace(observation,"->","-");
 	name += observation;
 	desc += " in "+observation;
 	
@@ -1609,9 +1582,43 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 }
 
 
-/// Sets the weights used for all the observations
-void Data::set_datatable_weights()
+/// Sets the standard deviations used for the observations
+void Data::set_obs_sd()
 {
+	auto ngraph = 0u;
+	for(auto &ob : obs){ if(ob.graph > ngraph) ngraph = ob.graph;}
+	ngraph++;
+	
+	vector <double> graph_value_max(ngraph);
+	for(auto gr = 0u; gr < ngraph; gr++){
+		graph_value_max[gr] = 0;
+	}
+	
+	for(auto &ob : obs){		
+		auto val = ob.value;
+		auto gr = ob.graph;
+		if(val != UNKNOWN && val != THRESH){
+			if(val > graph_value_max[gr]) graph_value_max[gr] = val;
+		}
+	}
+	
+	for(auto &ob : obs){		
+		if(ob.sd == UNSET){
+			auto dt = ob.datatable;
+			auto gr = ob.graph;
+		
+			if(ob.obsmodel == NORMAL_OBSMODEL){
+				ob.sd = datatable[dt].sd;
+			}
+			
+			if(ob.obsmodel == NORMAL_PERCENT_OBSMODEL){
+				auto ef = datatable[dt].epsilon_factor;
+				ob.sd = (ob.value*(1-ef) + graph_value_max[gr]*ef)*0.01*datatable[dt].percent;
+			}
+		}			
+	}
+	
+	/*
 	vector <unsigned int> num_obs(datatable.size());
 	vector <unsigned int> num_obs_cut(datatable.size());
 	vector <double> value_max(datatable.size());
@@ -1660,77 +1667,46 @@ void Data::set_datatable_weights()
 		}
 	}
 	
-	for(auto &ob : obs){		
-		auto dt = ob.datatable;
-		auto gr = ob.graph;
-		if(gr >= ngraph) emsgEC("data",3);
+	
+	
+	if(false){  // Provides an reassignment of weights based on matching different data sources
+		// Accounts for many observations on some graphs compared to others
+		vector <double> graph_weightsum(ngraph);		
+		for(auto gr = 0u; gr < ngraph; gr++) graph_weightsum[gr] = 0;
+		for(auto &ob : obs) graph_weightsum[ob.graph] += ob.w;	
+		for(auto &ob : obs) ob.w /= graph_weightsum[ob.graph];
+	
+		// Accounts for the fact that some graphs within a datatable have fewer point (combining transition events)
+		vector <double> ngraph_point(ngraph);
+		for(auto gr = 0u; gr < ngraph; gr++) ngraph_point[gr] = 0;
+		for(auto &ob : obs) ngraph_point[ob.graph]++;
 		
-		//ob.w = datatable[dt].weight/num_obs[dt];  TO DO this is another possibility
-		if(ob.obsmodel == NORMAL_OBSMODEL){
-			//auto max = graph_value_max[gr]; 
-			auto max = value_max[dt];
-			if(max < 3) max = 3;
-			//ob.w = datatable[dt].weight/(num_obs[dt]*max*max);  
-			ob.w = datatable[dt].weight;     // This has been temporarily changed
-		}
-		else{
-			ob.w = datatable[dt].weight;
-		}
 		
-		if(ob.obsmodel == POWER_OBSMODEL){
-			//ob.sd *= 0.01*(graph_value_max[gr]/sd_max[gr])*sqrt(num_obs_cut[dt]); 
-			if(graph_value_max[gr] == 0){
-				emsgroot("For the 'power' observation model the graph '"+graph[gr].name+"' must have a non zero maximum"); 
-			}
-			
-			ob.sd *= 0.1*(graph_value_max[gr]/sd_max[gr])*sqrt(num_obs_graph_cut[gr]); 
-			if(std::isnan(ob.sd)) emsgEC("Data",4);
+		auto ndatatable = datatable.size();
+		vector <double> ndatatable_point(ndatatable);
+		for(auto dt = 0u; dt < ndatatable; dt++) ndatatable_point[dt] = 0;
+		
+		for(auto &ob : obs){
+			auto dt = ob.datatable;	
+			auto gr = ob.graph;
+			if(ngraph_point[gr] > ndatatable_point[dt]) ndatatable_point[dt] = ngraph_point[gr];
 		}
 		
-		if(ob.obsmodel == SCALE_OBSMODEL){
-			//auto fac = ob.value/graph_value_max[gr];
-			ob.weight = 1;// sqrt(fac);  THIS HAS BEEN CHANGED
-		
-			ob.epsilon = 0.02*graph_value_max[gr];
-		
+		for(auto &ob : obs){
+			auto dt = ob.datatable;	
+			auto gr = ob.graph;
+			auto fac = sqrt(ngraph_point[gr]/ndatatable_point[dt]);
+			ob.w *= fac;
 		}
 	}
 	
-	/// Accounts for many observations on some graphs compared to others
-	vector <double> graph_weightsum(ngraph);		
-	for(auto gr = 0u; gr < ngraph; gr++) graph_weightsum[gr] = 0;
-	for(auto &ob : obs) graph_weightsum[ob.graph] += ob.weight;	
-	for(auto &ob : obs) ob.weight /= graph_weightsum[ob.graph];
-
-	//. Accounts for the fact that some graphs within a datatable have fewer point (combining transition events)
-	vector <double> ngraph_point(ngraph);
-	for(auto gr = 0u; gr < ngraph; gr++) ngraph_point[gr] = 0;
-	for(auto &ob : obs) ngraph_point[ob.graph]++;
-	
-	
-	auto ndatatable = datatable.size();
-	vector <double> ndatatable_point(ndatatable);
-	for(auto dt = 0u; dt < ndatatable; dt++) ndatatable_point[dt] = 0;
-	
-	for(auto &ob : obs){
-		auto dt = ob.datatable;	
-		auto gr = ob.graph;
-		if(ngraph_point[gr] > ndatatable_point[dt]) ndatatable_point[dt] = ngraph_point[gr];
-	}
-	
-	for(auto &ob : obs){
-		auto dt = ob.datatable;	
-		auto gr = ob.graph;
-		auto fac = sqrt(ngraph_point[gr]/ndatatable_point[dt]);
-		ob.weight *= fac;
-	}
-
 	if(false){
 		for(auto &ob : obs){	
 			auto dt = ob.datatable;
-			cout << ob.value << " " << ob.sd << " " << ob.w << " " << datatable[dt].file << " weight" << endl;
+			cout << ob.value << " " << ob.sd << " " << datatable[dt].file << " weight" << endl;
 		}
 	}
+	*/
 }
 
 
@@ -2229,12 +2205,22 @@ string Data::observation_description(const DataType type, const string obs, cons
 			for(auto i = 0u; i < spl.size(); i++){
 				auto st = spl[i];
 				if(i > 0) ss << " plus from the ";
-				auto j = 0u; while(j < st.length()-2 && st.substr(j,2) != "->") j++;
-			
-				ss << st.substr(0,j) << " to the " <<  st.substr(j+2,st.length()-(j+2)) << " compartment";
+				
+				bool fl = false;
+				if(st.length() < 2) fl = true;
+				else{
+					auto j = 0u; while(j < st.length()-2 && st.substr(j,2) != "->") j++;
+					if(j < st.length()-2){
+						ss << st.substr(0,j) << " to the " <<  st.substr(j+2,st.length()-(j+2)) << " compartment";
+					}
+					else fl = true;
+				}
+				
+				if(fl == true){
+					emsgroot("In 'data_tables' the marginal observation '"+st+"' does not contain '->'");
+				}
 			}			
 			break;
-		
 	}
 	
 	return ss.str();
@@ -2305,7 +2291,6 @@ void Data::print_obs() const
 		cout << "Value: " << ob.value << "  ";
 		cout << "ti: " << ob.sett_i << "  ";
 		cout << "tf: " << ob.sett_f << "  ";
-		cout << "w: " << ob.w << "  ";
 		cout << "factor: " << ob.factor << "  ";
 		cout << "area: "; for(auto c : ob.area) cout <<c << ",  ";
 		cout << "dp_sel: "; for(auto dp : ob.dp_sel) cout << dp << ",  ";

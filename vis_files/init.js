@@ -2,7 +2,7 @@
 function init()
 {
 	if(!jsonstr){
-		ById("loading").innerHTML = "visBEEPmbp must be loaded from the output directory of an analysis";
+		ById("loading").innerHTML = "visBEEP must be loaded from the output directory of an analysis";
 		return;
 	}
 	
@@ -319,7 +319,8 @@ function init_spatial_map()
 	var mod=[];
 	var mod_line;
 	var i = 0;
-	while(i < visjson.plots.length && !(visjson.plots[i].tab3 == "Spatial Mixing" && visjson.plots[i].tab4 == "&m_{t}&")) i++;
+	
+	while(i < visjson.plots.length && !(visjson.plots[i].tab3 == "Time series" && visjson.plots[i].tab4 == "&m_{t}&")) i++;
 	if(i < visjson.plots.length){
 		var vis = visjson.plots[i];
 		mod_line = vis.line[0]; 
@@ -637,16 +638,42 @@ function checkKey(e)
 		playtime++; if(playtime > playtimemax-1) playtime = playtimemax-1;
 	}	
 	
-	var num = tree[page].child[ps].child[pss].child.length;
-	var val = pagesubsubsub[page][ps][pss];
-
+	var num_subsubsub = tree[page].child[ps].child[pss].child.length;
+	var num_subsub = tree[page].child[ps].child.length;
+	var num_sub = tree[page].child.length;
+	var num_main = tree.length;
+	
+	var menu_level_change;
+	if (e.keyCode == '38' || e.keyCode == '40'){ 
+		menu_level_change = "subsubsub";
+		if(num_subsubsub == 1){
+			menu_level_change = "subsub";
+			if(num_subsub == 1){
+				menu_level_change = "sub";
+				if(num_sub == 1){
+					menu_level_change = "main";
+				}
+			}
+		}		
+	}
+	
 	if (e.keyCode == '38'){  // Up arrow
-		if(val > 0) changepage(-1,-1,-1,val-1);
-		 e.preventDefault();
+		switch(menu_level_change){
+			case "subsubsub": if(psss > 0) changepage(-1,-1,-1,psss-1); break;
+			case "subsub": if(pss > 0) changepage(-1,-1,pss-1,-1); break;
+			case "sub": if(ps > 0) changepage(-1,ps-1,-1,-1); break;
+			case "main": if(page > 0) changepage(page-1,-1,-1,-1); break;
+		}	
+		e.preventDefault();
 	}
 	if (e.keyCode == '40'){  // Down arrow
-		if(val < num-1) changepage(-1,-1,-1,val+1);
-		 e.preventDefault();
+		switch(menu_level_change){
+			case "subsubsub": if(psss < num_subsubsub-1) changepage(-1,-1,-1,psss+1); break;
+			case "subsub": if(pss < num_subsub-1) changepage(-1,-1,pss+1,-1); break;
+			case "sub": if(ps < num_sub-1) changepage(-1,ps+1,-1,-1); break;
+			case "main": if(page < num_main-1) changepage(page+1,-1,-1,-1); break;
+		}	
+		e.preventDefault();
 	}
 	
 	plot_results();
@@ -666,6 +693,7 @@ function setsize(menubut)
 	width = Math.floor(menux+(height*aspect_ratio));
 	
 	if(width > w-40){
+		//width = w-40;
 		height = Math.floor(height*(w-40)/width); if(height < 400) height = 400;
 		width = Math.floor(menux+(height*aspect_ratio));
 	}
