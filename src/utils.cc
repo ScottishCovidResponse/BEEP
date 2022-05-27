@@ -17,7 +17,9 @@
 //#include "nmmintrin.h" // for SSE4.2
 //#include "immintrin.h" // for AV
 
-#include <immintrin.h>
+#if defined(__x86_64__) || defined(_M_X64)
+	#include <immintrin.h>
+#endif
 #include <stdio.h>
 
 using namespace std;
