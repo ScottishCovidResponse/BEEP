@@ -77,7 +77,7 @@ void Mpi::copy_data(unsigned int &narea, vector <Area> &area, unsigned int &nobs
 }
 
 
-/// Copies particles across MPI processes (ABC-MBP, ABC-MBP-GR, PAS)
+/// Copies particles across MPI processes (ABC-MBP, ABC-MBP, PAS)
 void Mpi::copy_particles(vector<Particle> &part, vector <unsigned int> &partcopy, const unsigned int N, const unsigned int Ntot)
 {
 	bcast(partcopy);

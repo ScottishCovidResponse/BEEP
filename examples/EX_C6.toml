@@ -1,0 +1,51 @@
+# Simulation:
+# build/bin/BEEP inputfile="examples/EX_C6.toml" mode="sim" 
+
+# Inference using MAP estimate: 
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_C6.toml" mode="map"
+
+description = "Objective: Model which incorporated different disease strains.  Implementation: The ‘strains’ command is used to define the properties of discrete strains.  Model: An SIRD branching model with two strains. Individuals are assumed to have a different susceptibility to these strains. The infected individuals can either recover or die, with associated branching probabilities. A baseline reproduction number R_t remains constant but it is modified by a strain-dependent factor. A small constant external force of infection is assumed.  Data: Weekly number of S→I cases and I→D deaths, separately for the different strains.  Inference: Strain-dependent susceptibility and factor increase in reproduction number, as well as the baseline R_t, infectious period and branching probabilities." 
+
+time_format = "number"
+start = "0"
+end = "140"
+
+datadir = "examples/Data_EX_C6"
+outputdir = "examples/Output_EX_C6"
+
+
+strains = {cats="s1 | s2", sus_value="0.7 | *", sus_prior="MDir(0.5)", Rfactor_value="1.0 | 1.4", Rfactor_prior="Fixed(1) | Uniform(0.5,2)"}
+
+comps = [
+{name="S"},
+{name="I", dist="Exp", mean_value="5", inf_value="1", mean_prior="Uniform(1,10)"},
+{name="R"},
+{name="D"}
+]
+
+trans = [
+{from="S", to="I", infection="yes"},
+{from="I", to="R", prob_value="0.7", prob_prior="Dir(1)"},
+{from="I", to="D", prob_value="*", prob_prior="Dir(1)"}
+] 
+
+R_spline = [{ value="1.3", prior="Uniform(0.5,4)"}]
+
+efoi_spline = [{ value="1"}]
+
+areas = "population.csv"
+
+data_tables = [
+{type="transition", observation="S->I", timestep="7", obsmodel="normal 10%", democats_dep="strain", file="S-I.csv"},
+{type="transition", observation="I->D", timestep="7", obsmodel="normal 10%", democats_dep="strain", file="I-D.csv"},
+]
+
+state_outputs = [
+{plot_name="Dynamics", type="population", observation="S", line_colour="green"},
+{plot_name="Dynamics", type="population", observation="I", line_colour="red"},
+{plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
+{plot_name="Dynamics", type="population", observation="D", line_colour="black"}
+]
+
+plot_param_values = "true"
+

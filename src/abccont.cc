@@ -85,7 +85,7 @@ void ABCCONT::run()
 
 	if(mpi.core == 0) model_evidence(generation);             // Calculates the model evidence
 	
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generates visualisation
 
 	output.generate_graphs(part,UNSET);	
 	

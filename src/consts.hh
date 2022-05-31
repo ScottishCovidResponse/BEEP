@@ -169,6 +169,14 @@ const unsigned int initialise_param_samp = 100;                  // Number of ra
 
 const unsigned int ML_GENERATION_TERM_COND = 10;                 // The number of generation used in termination (CMAES)
 
+const unsigned int POST_PARAM_SAMPLE = 2000;                     // Number of parameter samples for CMAES
+
+const unsigned int POST_STATE_SAMPLE = 200;                      // Default number of state samples for CMAES
+
+const unsigned int POST_PARTICLE = 40;                           // Default number of particles (CMAES)
+
+const double EPISILON_FACTOR = 0.01;                             // The factor used for percent normal obsmodel
+
 const double map_ratio = 1.22;                                   // The ratio of the map (used when plotting
 
 #endif

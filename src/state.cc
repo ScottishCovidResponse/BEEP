@@ -672,7 +672,7 @@ string State::print_populations(const unsigned int sett) const
 }
 
 
-/// Creates a sample from the current state (these are used to create the final pdf)
+/// Creates a sample from the current state (these are used to create the final visualisations)
 Sample State::create_sample() const 
 {
 	Sample sample;

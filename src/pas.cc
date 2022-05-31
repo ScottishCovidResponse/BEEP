@@ -79,7 +79,7 @@ void PAS::run()
 		
 	if(mpi.core == 0) model_evidence(generation);             // Calculates the model evidence 
 
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generates visualisation
 	output.generate_graphs(part,generation[g-1].invT);	
 	paramprop.diagnostics();                                  // Outputs diagnostic information
 }

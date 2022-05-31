@@ -33,7 +33,7 @@ private:
 	
 	unsigned int P;                          // The nunber of particles used to obtain the posterior samples
 	
-	unsigned int nsample_final;              // The numner of final posterior samples
+	unsigned int nsample;                    // The numner of final posterior samples
 	
 	unsigned int npart;                      // The number of particles used for CMAES
 	unsigned int npart_per_core;             // The number of particles per core 

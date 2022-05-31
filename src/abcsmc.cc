@@ -119,7 +119,7 @@ void ABCSMC::run()
 		
 	if(mpi.core == 0) print_model_evidence();                            // Prints the final model evidence
 
-	results();                                                           // Generates pdf of graphs
+	results();                                                           // Generates visualisation
 }
 
 /// Stores parameter and state sample 
@@ -283,7 +283,7 @@ void ABCSMC::normalise_particle_weights(Generation &gen)
 }
 
 	
-/// Generates pdf of graphs
+/// Generates visualisation
 void ABCSMC::results()
 {
 	output.generation_results(generation);   

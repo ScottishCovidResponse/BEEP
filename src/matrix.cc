@@ -1231,6 +1231,49 @@ double vec_dot(const vector <double> &vec1, const vector <double> &vec2)
 }
 
 
+/// Calculates the cholesky decomposition of a matrix
+vector < vector <double> > calculate_cholesky(const vector < vector <double> > &M)
+{
+	vector < vector <double> > CM;
+	auto nvar = M.size();
+	
+	CM.resize(nvar);
+	for(auto v1 = 0u; v1 < nvar; v1++) CM[v1].resize(nvar);
+			
+	for(auto i = 0u; i < nvar; i++) {
+		for(auto j = 0u; j <= i; j++) {
+			auto sum = 0.0; for(auto k = 0u; k < j; k++) sum += CM[i][k]*CM[j][k];
+
+			if (i == j){
+				auto val = M[i][i] - sum;
+				if(val < -TINY){ CM[0][0] = UNSET; return CM;}
+				else{
+					if(val < 0) val = 0;
+					CM[i][j] = sqrt(val);
+				}
+			}
+			else{
+				auto denom = CM[j][j];
+				if(denom == 0){ CM[0][0] = UNSET; return CM;}
+				CM[i][j] = ((1.0/denom)*(M[i][j] - sum));
+			}
+		}
+	}
+	
+	if(false){
+		for(auto j = 0u; j < nvar; j++){
+			for(auto i = 0u; i < nvar; i++){
+				auto sum = 0.0; for(auto k = 0u; k < nvar; k++) sum += CM[j][k]*CM[i][k];
+				cout << sum << " ";
+			}
+			cout << " Check "<< endl;
+		}
+	}
+	
+	return CM;
+}
+
+
 /// Prints a matrix
 void print_matrix(string name, const vector < vector <double> > &M)
 {
