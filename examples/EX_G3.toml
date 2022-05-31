@@ -4,15 +4,14 @@
 # Inference using MAP estimate: 
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map"
 
-# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" ngeneration=15000 > opp11.txt&
-# nohup mpirun -n 20 build/bin/BEEP inputfile="examples/EX_G3.toml" mode="map" > analysis/opp16.txt&
+description = "Objective: Builds on EX G2 by allowing for time variation in the relative rates of mixing between individuals in the same and different age groups, e.g. this is important information which can be used to assess the effect of school closures and other government interventions.  Model: The population is stratified into 10 different age groups: 0-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69, 70-79, 80+ and a group for care home residents. A complex compartmental model is needed to capture Covid-19 which contains the following compartments – S: Susceptible, E: Exposed, A: Asymptomatic, I: Infectious, T: PCR test-sensitive but non-infectious, C: Infected but non-infectious (due to self-isolation), H: Hospitalised (or potentially care home in the case of care home residents), R: Recovered, and D: Dead. A piecewise linear spline is used to represent time variation in the reproduction number R_t. The age contact matrix is derived from the BBC Pandemic survey.  Data: Age stratified weekly number of E→I cases, C→H hospital admissions, H→D deaths, PCR survey data (gives estimates for total infected population, i.e. the sum of those in A, I, C, T), and antibody survey data (gives estimates for total recovered population R). Note, this is simulated data using model parameters near to those found for the real data.  Inference: The time variation in the relative rates of mixing between different age groups, the time variation in the reproduction number R_t and age-stratified branching probabilities."
 
 time_format = "year-month-day"
 start = "2020-01-01"
 end = "2021-06-09"
 
 datadir = "examples/Data_EX_G3"
-outputdir = "examples/Output_EX_G3d"
+outputdir = "examples/Output_EX_G3"
 
 time_labels = [{name="Lockdown", time="2020-03-23"}]
 
@@ -51,19 +50,6 @@ ages = {cats="age0-9 | age10-19 | age20-29 | age30-39 | age40-49 | age50-59 | ag
 
 age_mixing_matrix = "age_mixing_matrix.csv"
 	 
-#age_mixing_perturb = [
-#{ agecat='age0-9', bp='[bp:amp.csv]', param='[Par0-9:amp.csv]', value='[Value0-9:amp.csv]', prior='MDir(0.2)', smooth='0.1', #smooth_type='log_smooth'},
-#{ agecat='age10-19', bp='[bp:amp.csv]', param='[Par10-19:amp.csv]', value='[Value10-19:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age20-29', bp='[bp:amp.csv]', param='[Par20-29:amp.csv]', value='[Value20-29:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age30-39', bp='[bp:amp.csv]', param='[Par30-39:amp.csv]', value='[Value30-39:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age40-49', bp='[bp:amp.csv]', param='[Par40-49:amp.csv]', value='[Value40-49:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age50-59', bp='[bp:amp.csv]', param='[Par50-59:amp.csv]', value='[Value50-59:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age60-69', bp='[bp:amp.csv]', param='[Par60-69:amp.csv]', value='[Value60-69:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age70-79', bp='[bp:amp.csv]', param='[Par70-79:amp.csv]', value='[Value70-79:amp.csv]', prior='MDir(0.2)', #smooth='0.1', smooth_type='log_smooth'},
-#{ agecat='age80+', bp='[bp:amp.csv]', param='[Par80+:amp.csv]', value='[Value80+:amp.csv]', prior='MDir(0.3)', smooth='0.1', #smooth_type='log_smooth'},
-#{ agecat='CH', bp='[bp:amp.csv]', param='[ParCH:amp.csv]', value='[ValueCH:amp.csv]', prior='MDir(0.3)', smooth='0.1', #smooth_type='log_smooth'},
-#]
-
 age_mixing_perturb = [
 { agecat='age0-9', bp='[bp:amp.csv]', param='[Par0-9:amp.csv]', value='[Value0-9:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
 { agecat='age10-19', bp='[bp:amp.csv]', param='[Par10-19:amp.csv]', value='[Value10-19:amp.csv]', prior='MDir(0.2)', smooth='0.05', smooth_type='log_smooth'},
@@ -80,8 +66,6 @@ age_mixing_perturb = [
 
 R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", prior="[prior:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
 
-#R_spline = [{ param="[R:R_spline.csv]", value="[value:R_spline.csv]", bp="[bp:R_spline.csv]", smooth_type="log_smooth", smooth="[smooth:R_spline.csv]"}]
-
 efoi_spline	= [{ param="efoi", value="400", bp="[bp:efoi_spline.csv]", factor="[factor:efoi_spline.csv]"}]
 
 areas = "population.csv"
@@ -97,8 +81,6 @@ data_tables = [
 {type="transition", observation="C->H", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="admissions_AS.csv"},
 
 {type="population", observation="R", obsmodel="normal 5%", epsilon_factor="0.01", democats_dep="age", timestep="7", file="antibody_AS.csv"},
-
-{type="transition", observation="C->H", obsmodel="normal 5%", epsilon_factor="0.01", timestep="7", file="admissions.csv"},
 ]
 
 state_outputs = [

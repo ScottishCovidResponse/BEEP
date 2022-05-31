@@ -43,6 +43,6 @@ state_outputs = [
 {plot_name="Dynamics", type="population", observation="R", line_colour="blue"},
 {plot_name="Dynamics", type="population", observation="D", line_colour="black"}
 ]
-
+prob_reach=[{name="ifr",comp="D"}]
 plot_param_values = "true"
 

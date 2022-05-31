@@ -46,7 +46,7 @@ void Simulate::run()
 
 	output.simulated_data(obs_value,details.output_directory+"/Simulated_data"); // Outputs the simulated data files
 
-	particle_store.push_back(state.create_particle(0));                          // Generate the pdf output file
+	particle_store.push_back(state.create_particle(0));                          // Generate visualisation
 	output.generate_graphs(particle_store,UNSET); 
 	
 	//state.save(details.output_directory+"/sample");

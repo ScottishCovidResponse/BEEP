@@ -211,10 +211,10 @@ struct Generation                          // Stores inforamtion about a generat
 	vector <double> model_evidence;          // Sets the model evidence for each run
 };
 
-struct ProbReach                           // The probability of reachin a certain compartment
+struct ProbReach                           // The probability of reaching a certain compartment
 {
 	string name;                             // The name (shown in the output file)
-	unsigned int comp;                       // The compartment
+	vector <unsigned int> comps;             // The compartment(s)
 };
 
 struct TimePlot {                          // A label can be used for specific dates
