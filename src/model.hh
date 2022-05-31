@@ -129,6 +129,7 @@ class Model                                             // Stores information ab
 		void add_compartmental_model_parameters();
 		void set_infected_uninfected();
 		vector <unsigned int> get_transition(const string transname);
+		vector <unsigned int> get_compartments(string compname) const;
 		unsigned int find_param(string name, string em) const;
 		bool prior_order_correct(const vector <double> &paramv) const;
 		void prior_order();

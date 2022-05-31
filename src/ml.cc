@@ -20,7 +20,7 @@ ML::ML(const Details &details, const Data &data, const Model &model, Inputs &inp
 {
 	find_parameters();
 	
-	inputs.find_algorithm(algorithm,npart,G,cpu_time,P,nsample_final,mpi.core,mpi.ncore,nvar);
+	inputs.find_algorithm(algorithm,npart,G,cpu_time,P,nsample,mpi.core,mpi.ncore,nvar);
 	
 	invT = inputs.find_double("invT",1);  
 	
@@ -318,10 +318,7 @@ void ML::cmaes()
 
 	if(mpi.core == 0) cout << "Generating posterior samples..." << endl;
 
-	timer[TIME_POSTERIOR_SAMPLE].start();
-	vector <Particle> particle_store;
-	auto num_per_core = nsample_final/mpi.ncore;
-	
+	timer[TIME_POSTERIOR_SAMPLE].start();	
 	mpi.bcast(mean);
 	mpi.bcast(C);
 
@@ -336,18 +333,23 @@ void ML::cmaes()
 	}
 	else{
 		timer[TIME_SCALE_COVARIANCE].start();
-		if(false){
-			if(mpi.core == 0) cout << "Calculate covariance..." << endl;
-			C = calculate_covariance_martrix(mean);
-			sigma = 1;
+	
+		if(mpi.core == 0) cout << "Calculate covariance..." << endl;
+		auto C_new = calculate_covariance_martrix(mean);	
+		auto CC = calculate_cholesky(C_new);	
+		if(CC[0][0] == UNSET){
+			if(mpi.core == 0) cout << "Cannot calculate directly, scale covariance estimate from CMA-ES..." << endl;
+			sigma = scale_covariance_martrix(mean,C);
 		}
 		else{
-			if(mpi.core == 0) cout << "Scale covariance..." << endl;
-			sigma = scale_covariance_martrix(mean,C);
+			C = C_new; sigma = 1;
 		}
 		timer[TIME_SCALE_COVARIANCE].stop();
 	}
 	
+	vector <Particle> particle_store;
+	auto num_per_core = nsample/mpi.ncore;
+
 	if(mpi.core == 0) cout << "SMC sampler..." << endl;	
 	auto psamp = sample_param(mean,C,sigma,num_per_core);
 	for(auto i = 0u; i < num_per_core; i++){               // Generates the final posterior samples
@@ -359,14 +361,26 @@ void ML::cmaes()
 			particle_store.push_back(state.create_particle(UNSET));
 		}
 	}
+	
+	// This generates extra parameter samples if needed (parameter samples are much faster in CMAES)
+	auto num_param_per_core = int((POST_PARAM_SAMPLE-nsample)/mpi.ncore);
+	vector <ParamSample> param_store;
+	auto psamp_extra = sample_param(mean,C,sigma,num_param_per_core);
+	for(auto i = 0u; i < num_param_per_core; i++){
+		ParamSample ps; ps.run = 0; ps.EF = UNSET;
+		ps.paramval = psamp_extra[i];
+			
+		param_store.push_back(ps);
+	}
+	
 	timer[TIME_POSTERIOR_SAMPLE].stop();
 
 	if(mpi.core == 0) cout << "Output results..." << endl;
 
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generate visualisation
 	
-	output.generate_graphs(particle_store,invT);		
-
+	output.generate_graphs(param_store,particle_store,invT);		
+	
 	if(mpi.core == 0) model_evidence(mean,C,sigma);  
 }
 
@@ -504,8 +518,7 @@ bool ML::terminate_generation(unsigned int g, const vector <double> &EFbest_stor
 				for(auto i = ng-ML_GENERATION_TERM_COND; i < ng; i++) av += EFbest_store.size();
 				av /= ML_GENERATION_TERM_COND;
 				
-				//auto tol = av/1000;
-				auto tol = 0.1;
+				auto tol = 0.01;
 				auto value = EFbest_store[ng-1];
 				auto i = ng-ML_GENERATION_TERM_COND; 
 				while(i < ng && EFbest_store[i] > value-tol && EFbest_store[i] < value+tol) i++;
@@ -747,7 +760,7 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 	
 	for(auto i = 0u; i < nvar; i++){  
 		auto approx = model.prior_normal_approx(var[i]);
-		d[i] = 0.0001*sqrt(approx.var);
+		d[i] = 0.001*sqrt(approx.var);
 		if(d[i] == 0) emsgEC("ML",43);
 	}
 	
@@ -932,7 +945,7 @@ void ML::find_jump_distance(double &eta, const vector <double> &param, vector <d
 			param_new[th] += eta*p[i];
 		}
 		model.calculate_dirichlet_missing(param_new,false);
-			cout << "j\n";
+		
 		if(model.inbounds(param_new) == false) L_new = -LARGE;
 		else L_new = state.likelihood_approx(param_new,obs_slice,invT,ac) +  model.prior(param_new);
 				
@@ -1111,7 +1124,7 @@ void ML::model_evidence(const vector <double> &mean, const vector < vector <doub
 	auto det = nvar*log(sigma) + determinant_SIMD(C,ac);
 
 	auto nvar = C.size();
-	auto occum_factor = 0.5*nvar*log(2*M_PI) - 0.5*det;
+	auto occum_factor = 0.5*nvar*log(2*M_PI) + 0.5*det;
 	
 	auto ME = L + Pr + occum_factor;
 	

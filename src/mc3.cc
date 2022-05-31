@@ -89,7 +89,7 @@ void MC3::run()
 	
 	model_evidence();                                         // Calculates the model evidence
 
-	output.generate_graphs(part_plot,invT_final);	            // Draws the final pdf
+	output.generate_graphs(part_plot,invT_final);	            // Generates visualisation
 
 	diagnostics();                                            // Outputs diagnostic information
 }

@@ -21,19 +21,19 @@ OPTIONS: prediction_start, prediction_end, modification, nsim_per_sample
 
 MAP inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="map"
-OPTIONS: nparticle, ngeneration / cpu_time, nsample_final, posterior_particle
+OPTIONS: nparticle, ngeneration / cpu_time, nsample, posterior_particle
 
 ABC-MBP inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, nrun
 
 ABC-CONT inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abccont" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, cor_max, cor_max_last, nrun
 
 PAS inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / invT_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / invT_final / cpu_time,  cor_max, cor_max_last, nrun
 
 Simple ABC inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.1 nrun=4
@@ -45,15 +45,15 @@ OPTIONS: nsample, ngeneration / cutoff_final / cpu_time, cutoff_frac, nrun
 
 PMCMC inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=20 nsample=200
-OPTIONS: nparticle, nsample / GR_max / ESSmin, invT, nburnin, nthin, nrun
+OPTIONS: nparticle, nsample / ESSmin, invT, nburnin, nthin, nrun
 
 MCMC-MBP inference:
 mpirun -n 4 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=303 nsample=200 nrun=4
-OPTIONS: nsample / GR_max, invT, nburnin, nthin, nrun
+OPTIONS: nsample, invT, nburnin, nthin, nrun
 
 MC3 inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
-OPTIONS: nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
+OPTIONS: nchain, nsample, invT_start, invT_final, nburnin, nquench, nthin, nrun
 */
 
 #include <iostream>

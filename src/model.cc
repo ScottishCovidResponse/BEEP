@@ -274,10 +274,26 @@ void Model::add_probreach()
 	for(auto i = 0u; i < name.size(); i++){
 		ProbReach pr;
 		pr.name = name[i];
-		emsg("TO DO");
-		//pr.comp = get_compartment(comp[i],FIRST);		
+		pr.comps = get_compartments(comp[i]);	
+		if(pr.comps.size() == 0) emsgroot("In 'prob_reach' cannot find comparment '"+comp[i]+"'");  
 		prob_reach.push_back(pr);
 	}
+}
+
+
+/// Returns all the compartments with a given name
+vector <unsigned int> Model::get_compartments(string compname) const 
+{
+	vector <unsigned int> comps;
+	
+	for(auto c = 0u; c < comp.size(); c++){
+		if(compname == comp[c].name){
+			if(comp[c].num == UNSET || comp[c].num == 0){
+				comps.push_back(c);
+			}
+		}
+	}	
+	return comps;
 }
 
 
@@ -1664,7 +1680,7 @@ double Model::spline_prior(const vector<double> &paramv) const
 						if(value == UNSET) emsgroot("For the spline '"+spl.name+"' a value for 'smooth' must be set");
 						
 						switch(spl.smoothtype){
-							case LOGSMOOTH:                                    // This is the pdf for the log-normal distribution
+							case LOGSMOOTH:                                    // This is the p.d.f. for the log-normal distribution
 								{
 									double mu = log(paramv_dir[par1]*spli[i].multfac);
 									double logx = log(paramv_dir[par2]*spli[i+1].multfac);							
@@ -1924,7 +1940,10 @@ vector <double> Model::calculate_probreach(const vector<double> &paramv_dir, con
 		auto sum = 0.0, wsum = 0.0;
 		for(auto dp = 0u; dp < data.ndemocatpos_per_strain; dp++){
 			auto w = data.democatpos_dist[dp];
-			sum += compprob[probr.comp].value[dp]*w;
+			auto prob_sum = 0.0;
+			for(auto c : probr.comps) prob_sum += compprob[c].value[dp];
+				
+			sum += prob_sum*w;
 			wsum += w;
 		}
 		sum /= wsum;
@@ -2123,13 +2142,13 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 			auto &probr = prob_reach[pr];
 			DerivedParam dp;
 			dp.name = probr.name;
-			dp.file = probr.name;
-			dp.desc = "The probability of reaching "+comp[probr.comp].name;
-			if(data.nstrain > 0){
+			dp.file = probr.name+".csv";
+			dp.desc = "The probability of reaching "+comp[probr.comps[0]].name;
+			if(data.nstrain > 1){
 				auto name = data.strain[st].name;
-				dp.name += " for strain "+name;
+				dp.name += " "+name;
 				dp.desc += " for strain "+name;
-				dp.file += " for strain "+name;
+				dp.file = probr.name+"_"+name+".csv";
 			}
 			dp.value = prvec[pr];
 			derpar.push_back(dp);
@@ -2147,6 +2166,7 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 			auto name = data.strain[st].name;
 			dp.name += " "+name;
 			dp.desc += " for "+name;
+			dp.file = dp.name+"_"+name+".csv";
 		}
 		dp.value = exf_ninf[st];
 		derpar.push_back(dp);
@@ -3386,7 +3406,7 @@ string Model::print() const
 		ss << "Probability of reaching:" << endl; 
 		for(auto pr = 0u; pr < prob_reach.size(); pr++){
 			auto probr = prob_reach[pr];
-			ss << "  Name = " << probr.name << "   Compartment = " << comp[probr.comp].name << endl;
+			ss << "  Name = " << probr.name << "   Compartment = " << comp[probr.comps[0]].name << endl;
 		}
 	}
 	

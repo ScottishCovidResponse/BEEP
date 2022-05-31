@@ -85,7 +85,7 @@ void ABCMBP::run()
 	
 	//paramprop.output_prop_vec();
 
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generates visualisation
 
 	output.generate_graphs(part,UNSET);	
 	
