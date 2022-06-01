@@ -14,30 +14,37 @@ C. M. Pooley† \[1\], I. Hinder \[2\], R. Bailey \[3\], R. Williams\[4\], S. Ca
 
 Email: [chris.pooley@bioss.ac.uk](mailto:chris.pooley@bioss.ac.uk)
 
-BEEP (Bayesian Estimation of Epidemic Parameters) is a general-purpose software tool for simulating and performing inference on epidemiological compartmental models. Inference is the method by which suitable model parameters are chosen from available data. To perform inference BEEP accepts a variety of population-based data (time-series giving the rate of transitions, populations in different compartments and marginal distributions). For example, when analysing COVID-19 disease transmission the following data are used: daily hospitalisations, deaths, populations in hospital as well as overall age distributions for these quantities. 
+BEEP (Bayesian Estimation of Epidemiological Parameters) is a general-purpose software tool for simulating and performing inference on compartmental models. 
 
-In BEEP priors on model parameters can be specified from a large range of possibilities. The outputs consist of posterior estimates, a pdf containing numerous plots relating to posterior variation in the model parameters and system state as well as diagnostic information. 
+BEEP incorporates three modes of operation:
+
+**Simulation** – Given a set of model parameters, potential system dynamics can be sampled from the model (note, compartmental models are inherently stochastic, so random differences in disease transmission naturally lead to differences in epidemic outcome).
+
+**Inference** – This is the method by which model parameters are estimated from available data (along with associated uncertainties in these estimates). BEEP accepts a variety of different data types: time series measurements giving transition numbers between selected compartments (e.g. daily cases or weekly deaths), populations in different compartments (e.g. hospitalised population measured each week) and marginal data (e.g. distribution for total number of deaths for different age groups). 
+
+**Prediction** – Based on the results of inference, predictions from the model can be made. These can either estimate future behaviour (scenario analysis), or can be used to look at how things would have turned out differently had the model been altered in some specified way (counterfactual analysis).
+
 
 ## Epidemiological model features:
-*	Specify an arbitrary compartmental epidemiological model.
-*	Incorporate spatial and age-structured models.
-*	Capture time-variation in reproduction number Rt and external force of infection. 
+*	Specify arbitrary compartmental epidemiological models.
+*	Capture time-variation in reproduction number Rt and external force of infection.
+*	Incorporate spatial stratification.
 *	Split population into arbitrary demographic classifications (e.g. age and/or sex). 
 *	Incorporate susceptibility variation for different demographic groups.
-*	Incorporate area-based covariates to modify the force of infection, either fixed (e.g. population density) or time-varying (e.g. temperature). 
+*	Incorporate area-based covariates that modify the force of infection, either fixed effects (e.g. population density) or time-varying effects (e.g. temperature). 
 *	Incorporate a user specified age-mixing matrix (along with potential time modification). 
 *	Specify a matrix for mixing between different areas (along with potential time modification).
-*	Perform prediction, counterfactuals as well as posterior predictive checks.
+*	Perform predictions, scenario and counterfactual analysis as well as posterior predictive checks.
 
 ## Data features:
-*	Accepts a variety of different data types (informing transition, populations and marginal).
-*	Incorporate splines to relate measured data to system properties.
+*	Accepts a variety of different data types (from transitions, populations and marginal distributions).
+*	Incorporate splines to relate measured data to system properties (e.g. to account for the fact that only a fraction of true cases are observed).
 
-## Software implementation features:
-*	Efficient parallel implementation (written in C++ with MPI).
-*	Choose from 7 different inference algorithms.
+## Software implementation:
+*	Efficient parallel code (written in C++ with MPI).
+*	Choose from 8 different inference algorithms.
 *	A web browser visualisation tool for viewing results on maps, graphs, histograms and tables.
-*	Additionally a pdf report for output of graphs.
+
 
 ## Downloading and running
 
@@ -45,4 +52,4 @@ All information about downloading and running BEEP can be found in the [user man
 
 ## Requirements
 
-You need to have MPI installed and the mpicxx compiler to compile and run this code.
+MPI must be installed to allow for parallelisation. Building and compiling the code requires CMake (minimum version 3.13 required) and mpicxx.
