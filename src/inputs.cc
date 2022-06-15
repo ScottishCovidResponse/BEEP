@@ -7,6 +7,11 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <stdlib.h>
+
+#include <ghc/filesystem.hpp>
+#include <fdp/fdp.hxx>
+
 
 using namespace std;
 
@@ -26,6 +31,31 @@ Inputs::Inputs(int argc, char** argv)
 	inputfilename = "/dev/null";
 	if(cmdlineparams.count("inputfile") == 1) {
 		inputfilename = cmdlineparams["inputfile"];
+	}
+
+	if (ghc::filesystem::path(inputfilename).extension() != "toml")
+	{
+		cout << "input file not a toml file trying to use datapipeline api" << endl;
+		try
+		{
+			std::string token = getEnvVar("FDP_LOCAL_TOKEN");
+			ghc::filesystem::path fdp_path = getEnvVar("FDP_CONFIG_DIR");
+			ghc::filesystem::path config_path = fdp_path / "config.yaml";
+#ifdef _WIN32
+			ghc::filesystem::path script_path = fdp_path / "script.bat";
+#else
+			ghc::filesystem::path script_path = fdp_path / "script.sh";
+#endif
+			cout << "initialising Pipeline" << endl;
+			datapipeline = FairDataPipeline::DataPipeline::construct(config_path.string(), script_path.string(), token);
+			cout << "reading dataproduct " << inputfilename << endl;
+			inputfilename = datapipeline->link_read(inputfilename).string();
+		}
+		catch (const std::exception& e) {
+		std::ostringstream oss;
+		oss << "Failed to initialise Pipeline Error: " << endl << e.what();
+		emsgroot(oss.str());
+		}	
 	}
 
 	ifstream ip(inputfilename);
@@ -1694,7 +1724,7 @@ void Inputs::find_nrun(unsigned int &nrun)
 /// Checks if a filename is valid or not 
 void Inputs::check_filename(const string &str) const
 {
-	string invalid = "#£%&{}\\/$!'\":+`|=<>*?@";
+	string invalid = "#£%&{}$!'\":+`|=<>*?@";
 	
 	for(auto i = 0u; i < str.length(); i++){
 		for(auto j = 0u; j < invalid.length(); j++){
@@ -2169,4 +2199,18 @@ void Inputs::print_commands_not_used() const
 		}
 		cout << endl << endl;
 	}
+}
+
+std::string Inputs::getEnvVar( std::string const & key )
+{
+    char * val = getenv( key.c_str() );
+    return val == NULL ? std::string("") : std::string(val);
+}
+
+bool Inputs::use_datapipeline(){
+	if(!datapipeline)
+	{
+		return false;
+	}
+	return true;
 }

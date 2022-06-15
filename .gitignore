@@ -11,3 +11,7 @@ gitversion.hh
 /COVID-19
 /Output*/
 .vscode
+/examples/Output*/
+.fair/
+venv/
+data_store/

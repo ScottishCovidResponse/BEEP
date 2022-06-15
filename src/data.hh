@@ -12,15 +12,14 @@ using namespace tinyxml2;
 #include "details.hh"
 #include "inputs.hh"
 #include "mpi.hh"
-
-class DataPipeline;
+#include <fdp/fdp.hxx>
 
 class Data
 {
 	public:
-		Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp=0);
+		Data(Inputs &inputs, const Details &details, Mpi &mpi, FairDataPipeline::DataPipeline::sptr dp = nullptr);
 
-		DataPipeline *datapipeline;              // DataPipeline object
+		FairDataPipeline::DataPipeline::sptr datapipeline;             // DataPipeline object
 		
 		string data_directory; 						    	 // The data directory
 
@@ -95,13 +94,16 @@ class Data
 		void make_circle_boundary(const string xcol, vector < vector < vector <Coord> > > &bound) const;
 		string observation_description(const DataType type, const string obs, const unsigned int timestep = 1) const;
 		string print() const;
+
+		string datapipeline_output_data_product() const;
+		string datapipeline_output_type() const;
 	
 	private:
 		void calc_democatpos();
 		void read_data_files(Inputs &inputs, Mpi &mpi);
 		void copy_data(unsigned int core);
 		Table load_table(const string file, const string dir="", const bool heading=true, const bool supop=false) const;
-		Table load_table_from_datapipeline(const string file) const;
+		Table load_table_from_datapipeline(const string file, const bool heading, const bool supop) const;
 		Table load_table_from_file(const string file, const string dir, const bool heading, const bool supop, const char sep) const;
 		void read_covars();
 		void read_level_effect();

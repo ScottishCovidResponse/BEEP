@@ -1,0 +1,52 @@
+run_metadata:
+  default_input_namespace: rfield
+  default_output_namespace: rfield
+  description: CPP Pipeline Example EX
+  script:  ./build/bin/BEEP inputfile="Pipeline_EX" mode="sim"
+  remote_repo: https://github.com/ScottishCovidResponse/BEEP.git
+
+register:
+- namespace: BioSS
+  full_name: Biomathematics and Statistics Scotland 
+  website: https://www.bioss.ac.uk/
+
+- data_product: Pipeline_EX
+  namespace_name: BioSS
+  root: file://${{REPO_DIR}}
+  path: /examples/Pipeline_EX/EX.toml
+  title: Example (EX) Initial Parameters
+  unique_name: Pipeline_EX Inital Parameters
+  description: Initial parameters of the model
+  file_type: toml
+  release_date: ${{DATETIME}}
+  version: "1.0.0"
+  primary: True
+
+- data_product: Input_EX/population
+  namespace_name: BioSS
+  root: file://${{REPO_DIR}}
+  path: /examples/Data_EX/population.csv
+  title: Example (EX) Population Parameters
+  unique_name: Pipeline_EX Population Parameters
+  description: Population Parameters for EX Model
+  file_type: csv
+  release_date: ${{DATETIME}}
+  version: "1.0.0"
+  primary: True
+
+write:
+- data_product: Output_EX/Parameter_Estimates
+  description: Parameter Estimates
+  file_type: csv
+
+- data_product: Output_EX/R
+  description: R output
+  file_type: csv
+
+- data_product: Output_EX/E-I
+  description: E to I output
+  file_type: csv
+
+- data_product: Output_EX/Files
+  description: Output Files
+  file_type: zip

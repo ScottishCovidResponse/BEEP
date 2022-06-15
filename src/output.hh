@@ -2,10 +2,12 @@
 #define BEEP__OUTPUT_HH
 
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 
 #include "utils.hh"
+#include <ghc/filesystem.hpp>
 
 struct OutputLine{                                            // Specifies a line within an output plot
 	string name;                                                // The name of the line 
@@ -77,6 +79,8 @@ class Output
 		Statistics get_statistic_75_percent(const vector <double> &vec) const;
 		void print_percentage(const double s, const unsigned int nsamp, unsigned int &percentage) const;
 		void ensure_directory(const string &path) const; // temporarily made public
+
+		void generate_ouput_for_pipeline();
 		
 	private:
 		void EF_datatable_plot(const string file, const vector <Generation> &generation) const;
