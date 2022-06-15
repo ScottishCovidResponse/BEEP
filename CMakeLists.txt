@@ -38,5 +38,7 @@ endif()
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
+add_definitions(-DPARTIO_USE_ZLIB)
+
 # Add the src dirctory compiling it's CMakeLists.txt
 ADD_SUBDIRECTORY( src )

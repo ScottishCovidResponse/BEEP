@@ -13,13 +13,8 @@ using namespace std;
 #include "inputs.hh"
 #include "mpi.hh"
 
-#ifdef USE_Data_PIPELINE
-#include "datapipeline.hh"
-#include "table.hh"
-#endif
-
 /// Initialises data
-Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, DataPipeline *dp) : datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details), inputs(inputs)
+Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, FairDataPipeline::DataPipeline::sptr dp) : datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details), inputs(inputs)
 {
 	// The data directory
 	if(data_directory == "UNSET") emsgroot("'data_directory' must be set.");
@@ -1859,40 +1854,29 @@ vector <GeographicMap> Data::create_geomap(const Table &tab, const string geo) c
 
 		
 /// Loads a table from the data pipeline
-Table Data::load_table_from_datapipeline(const string file) const
+Table Data::load_table_from_datapipeline(const string file, const bool heading, const bool supop) const
 {
-	Table tab;
-#ifdef USE_Data_PIPELINE
-	Table dptable = datapipeline->read_table(file,"default");
-
-	tab.file = filebasename(file);
-	tab.heading = dptable.get_column_names();
-	tab.ncol = tab.heading.size();
-	
-	vector< vector <string> > cols;
-	
-	// Load each column as a string into cols
-	for (size_t j = 0; j < tab.ncol; j++) {
-		cols.push_back(dptable.get_column_as_string(tab.heading.at(j)));
+	string file_ = file; // Convert from constant to allow pass by reference.
+	if (!datapipeline) emsgroot("Data Pipeline not initialised");
+	string filename = "";
+	try {
+		filename = datapipeline->link_read(file_).string();
 	}
+	catch (const std::exception& e) {
+		std::ostringstream oss;
+		oss << "Failed to Read data_product : " << endl << e.what();
+		emsgroot(oss.str());
+	}	
 
-	for (size_t i = 0; i < dptable.get_column_size(); i++) {
-		vector<string> vec;
-
-		for (size_t j = 0; j < tab.ncol; j++) {
-			vec.push_back(cols.at(j).at(i));
-		}
-		tab.ele.push_back(vec);
+	if (ghc::filesystem::path(filename).extension().string() == ".txt"){
+		return load_table_from_file(filename, "", heading, supop, '\t');
 	}
-
-	tab.nrow = tab.ele.size();
-
-	cout << "Loaded table '" << file << "' from data pipeline" << endl;
-#else
-	emsgroot("load_tablefromdatapipeline for '"+file+"' cannot be called as data pipeline is not compiled in");
-#endif
-
-	return tab;
+	else if (ghc::filesystem::path(filename).extension().string() == ".csv"){
+		return load_table_from_file(filename, "", heading, supop, ',');
+	}
+	else {
+		emsgroot("File type: " + ghc::filesystem::path(filename).extension().string() + " Not Supported");
+	}
 }
 
 
@@ -1959,7 +1943,7 @@ Table Data::load_table(const string file, const string dir, const bool heading, 
 	if(stringhasending(file,".txt")){ return load_table_from_file(file,dir,heading,supop,'\t');} 
 	else {
 		if(stringhasending(file,".csv")){ return load_table_from_file(file,dir,heading,supop,',');} 
-		else return load_table_from_datapipeline(file);
+		else return load_table_from_datapipeline(file, heading, supop);
 	}
 }
 
@@ -2300,4 +2284,12 @@ void Data::print_obs() const
 		cout << "dp_sel: "; for(auto dp : ob.dp_sel) cout << dp << ",  ";
 		cout << endl << endl;
 	}
+}
+
+string Data::datapipeline_output_data_product() const{
+	return inputs.find_string("datapipeline_output_data_product", "Files");
+}
+
+string Data::datapipeline_output_type() const{
+	return inputs.find_string("datapipeline_output_type", "zip");
 }

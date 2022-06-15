@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip> 
+#include "ZIP/ZIP.h"
 
 using namespace std;
 
@@ -2971,6 +2972,19 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 			cout << "  Generating data file '" << file << "'" << endl;
 			
 			string sep;
+
+			if(data.datapipeline){
+				try {
+					filefull = data.datapipeline->link_write(file).string();
+					file = ghc::filesystem::path(filefull).filename().string();
+				}
+				catch (const std::exception& e) {
+					std::ostringstream oss;
+					oss << "Failed to Write data_product : " << endl << e.what();
+					emsgroot(oss.str());
+				}	
+			}
+
 			if(stringhasending(file,".txt")) sep = "\t";
 			else{
 				if(stringhasending(file,".csv")) sep = ",";
@@ -3758,6 +3772,39 @@ void Output::generate_graphs(vector <ParamSample> &psamp_extra, vector <Particle
 	timer[TIME_RESULTS].stop();
 }
 
+void Output::generate_ouput_for_pipeline(){
+	string data_product = data.datapipeline_output_data_product();
+	string output_type = data.datapipeline_output_type();
+	ghc::filesystem::path output_directory = ghc::filesystem::path(details.output_directory);
+
+	try{
+		string output_filename = data.datapipeline->link_write(data_product).string();
+		if(output_type == "zip")
+		{
+
+			Partio::ZipFileWriter zip(output_filename);
+
+			cout << "Generating Zip File" << endl;
+			for (const ghc::filesystem::directory_entry& dir_entry: ghc::filesystem::recursive_directory_iterator(output_directory)) {
+				if(!dir_entry.is_directory()){
+					cout << "Zipping " << dir_entry.path().string() << endl;
+					std::ifstream file_(dir_entry.path().string());
+					std::ostream* o = zip.Add_File(dir_entry.path().string());
+					*o << file_.rdbuf();
+					delete o;
+				}
+			}
+		}
+		else {
+			emsgroot("Currently only Zip format is supported for datapipeline data_product output");
+		}
+	}
+	catch (const std::exception& e) {
+		std::ostringstream oss;
+		oss << "Failed to write output data_product: " << endl << e.what();
+		emsgroot(oss.str());
+	}
+};
 
 /// Prints percentage complete
 void Output::print_percentage(const double s, const unsigned int nsamp, unsigned int &percentage) const

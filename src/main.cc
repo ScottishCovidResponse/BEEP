@@ -89,14 +89,7 @@ OPTIONS: nchain, nsample, invT_start, invT_final, nburnin, nquench, nthin, nrun
 #include "ml.hh"
 #include "consts.hh"
 
-#ifdef USE_Data_PIPELINE
-#include "pybind11/embed.h"
-#include "datapipeline.hh"
-#endif
-
 using namespace std;
-
-string gitversion();
 
 unsigned int signum;
 
@@ -118,10 +111,6 @@ int main(int argc, char** argv)
   MPI_Init(&argc,&argv);
   #endif
 
-	if(false){                                                 	// Outputs the git version
-		cout << "BEEP version " << gitversion() << endl << endl; 
-	}	
-
 	Inputs inputs(argc,argv);                                   // Loads command line arguments and TOML file into inputs
 
 	Details details(inputs);                                    // Loads up various details of the model
@@ -131,24 +120,18 @@ int main(int argc, char** argv)
 	bool verbose = (mpi.core == 0);                             // Parameter which ensures that only core 0 outputs results
 	
 	if(verbose) cout << endl;
+
+	Data *data = nullptr; // forward declare
 	
-#ifdef USE_Data_PIPELINE                                      // Sets up data
-	pybind11::scoped_interpreter guard{};
-
-	using namespace pybind11::literals;
-
-  pybind11::module::import("logging").attr("basicConfig")("level"_a="DEBUG", "format"_a="%(asctime)s %(filename)s:%(lineno)s %(levelname)s - %(message)s");
-
- 	DataPipeline *dp = new DataPipeline(
-		"dpconfig.yaml", "https://github.com/ScottishCovidResponse/BEEP",
-		gitversion());
-
-	Data data(inputs,details,mpi,dp);   
-#else
-	Data data(inputs,details,mpi); 
-#endif
+	if(inputs.use_datapipeline())
+	{
+		data = new Data(inputs,details,mpi, inputs.datapipeline); 
+	}
+	else{
+		data = new Data(inputs,details,mpi); 
+	}
 	
-	Model model(inputs,details,data,mpi);                       // Loads up the model
+	Model model(inputs,details,*data,mpi);                       // Loads up the model
 	
 	auto seed = inputs.find_integer("seed",0);                  // Sets up the random seed
 
@@ -157,93 +140,93 @@ int main(int argc, char** argv)
 	default: sran(mpi.core*10000+seed+100); break;
 	}
 	
-	ObservationModel obsmodel(details,data,model);              // Creates an observation model
+	ObservationModel obsmodel(details,*data,model);              // Creates an observation model
 
-	Output output(details,data,model,inputs,obsmodel,mpi);      // Creates an output class
+	Output output(details,*data,model,inputs,obsmodel,mpi);      // Creates an output class
 
 	if(verbose) cout << endl << "Running...." << endl << endl;
 
 	switch(details.mode){
 	case SIM:                                                   // Performs a single simulation from the model 
 		{		
-			Simulate simu(details,data,model,inputs,output,obsmodel,mpi);
+			Simulate simu(details,*data,model,inputs,output,obsmodel,mpi);
 			simu.run();
 		}
 		break;
 	
 	case MULTISIM:                                              // Performs multiple simulations from the model
 		{
-			Simulate simu(details,data,model,inputs,output,obsmodel,mpi);
+			Simulate simu(details,*data,model,inputs,output,obsmodel,mpi);
 			simu.multisim();
 		}
 		break;
 			
 	case PREDICTION:                                            // Performs prediction from the model using posterior samples
 		{
-			Simulate simu(details,data,model,inputs,output,obsmodel,mpi);
+			Simulate simu(details,*data,model,inputs,output,obsmodel,mpi);
 			simu.model_modification();
 		}
 		break;
 			
 	case ABC_SIMPLE:                                            // Performs inference using a simple ABC rejection algorithm
 		{	
-			ABC abc(details,data,model,inputs,output,obsmodel,mpi);
+			ABC abc(details,*data,model,inputs,output,obsmodel,mpi);
 			abc.run();
 		}
 		break;
 		
 	case ABC_SMC:                                               // Performs inference using the ABC-SMC algorithm
 		{	
-			ABCSMC abcsmc(details,data,model,inputs,output,obsmodel,mpi);
+			ABCSMC abcsmc(details,*data,model,inputs,output,obsmodel,mpi);
 			abcsmc.run();
 		}
 		break;
 		
 	case ABC_MBP:                                               // Peforms inference using the ABC-MBP algorithm
 		{	
-			ABCMBP abcmbp(details,data,model,inputs,output,obsmodel,mpi);
+			ABCMBP abcmbp(details,*data,model,inputs,output,obsmodel,mpi);
 			abcmbp.run();
 		}
 		break;
 		
 	case ABC_CONT:                                               // Peforms inference using the ABC-DA algorithm
 		{	
-			ABCCONT abccont(details,data,model,inputs,output,obsmodel,mpi);
+			ABCCONT abccont(details,*data,model,inputs,output,obsmodel,mpi);
 			abccont.run();
 		}
 		break;
 		
 	case MC3_INF:                                               // Peforms inference using the MC3 algorithm
 		{	
-			MC3 mc3(details,data,model,inputs,output,obsmodel,mpi);
+			MC3 mc3(details,*data,model,inputs,output,obsmodel,mpi);
 			mc3.run();
 		}
 		break;
 		
 	case MCMC_MBP:                                              // Peforms inference using the MCMC-MBP algorithm
 		{	
-			MC3 mc3(details,data,model,inputs,output,obsmodel,mpi);
+			MC3 mc3(details,*data,model,inputs,output,obsmodel,mpi);
 			mc3.run();
 		}
 		break;
 		
 	case PAS_INF:                                              // Peforms inference using the PAS algorithm
 		{	
-			PAS pas(details,data,model,inputs,output,obsmodel,mpi);
+			PAS pas(details,*data,model,inputs,output,obsmodel,mpi);
 			pas.run();
 		}
 		break;
 		
 	case PMCMC_INF:                                             // Peforms inference using the PMCMC algorithm
 		{
-			PMCMC pmcmc(details,data,model,inputs,output,obsmodel,mpi);
+			PMCMC pmcmc(details,*data,model,inputs,output,obsmodel,mpi);
 			pmcmc.run();
 		}
 		break;
 
 	case ML_INF:                                               // Peforms inference using maximum likelihood approach
 		{	
-			ML ml(details,data,model,inputs,output,obsmodel,mpi);
+			ML ml(details,*data,model,inputs,output,obsmodel,mpi);
 			ml.run();
 		}
 		break;
@@ -252,7 +235,7 @@ int main(int argc, char** argv)
 		{
 			vector <Particle> particle_store;
 			auto param = model.sample_from_prior();   
-			State state(details,data,model,obsmodel);
+			State state(details,*data,model,obsmodel);
 			state.simulate(param);
 			particle_store.push_back(state.create_particle(0));
 			output.generate_graphs(particle_store,1); 
@@ -266,6 +249,18 @@ int main(int argc, char** argv)
 	
 	if(details.siminf == INFERENCE){
 		output_timers(details.output_directory+"/Diagnostics/CPU_timings.txt",mpi);
+	}
+
+	if(inputs.use_datapipeline()){
+	try {
+		output.generate_ouput_for_pipeline();
+		inputs.datapipeline->finalise();
+	}
+	catch (const std::exception& e) {
+		std::ostringstream oss;
+		oss << "Failed to finalise pipeline : " << endl << e.what();
+		emsgroot(oss.str());
+	}	
 	}
 	
 	auto time_av = mpi.average(timer[TIME_TOTAL].val);
@@ -285,12 +280,11 @@ int main(int argc, char** argv)
 			cout << "Mpi wait time: "  <<double(wait_time_sum)/(60.0*CLOCKS_PER_SEC) << " minutes." << endl;
 		}
 	}
-	
-#ifdef USE_Data_PIPELINE
-	delete dp;
-#endif
 
 #ifdef USE_MPI
 	MPI_Finalize();
 #endif
+
+delete data;
+
 }

@@ -10,6 +10,8 @@ using namespace std;
 #include "utils.hh"
 #include "reader.hh"
 
+#include "fdp/fdp.hxx"
+
 class Inputs
 {
 	public:
@@ -80,6 +82,11 @@ class Inputs
 		void print_commands_not_used() const;
 		
 		string inputfilename;                                                 // The name of the TOML file
+
+		static std::string getEnvVar( std::string const & key );
+
+		bool use_datapipeline();
+		FairDataPipeline::DataPipeline::sptr datapipeline = nullptr;
 		
 	private:
 		void set_command_line_params(int argc, char *argv[]);  
@@ -121,6 +128,7 @@ class Inputs
 	
 		map<string,string> cmdlineparams;                                 // A map of all the parameters entered on the command line
 		InputData *basedata;
+		bool _use_pipeline = false;
 }; 
 
 const vector<string> definedparams = {                                // A list of all supported commands
@@ -144,6 +152,8 @@ const vector<string> definedparams = {                                // A list 
 		"cutoff_frac",
 		"cutoff_frac_init",
 		"datadir", 
+		"datapipeline_output_data_product",
+		"datapipeline_output_type",
 		"data_tables",
 		"democats",
 		"democat_change",
@@ -204,7 +214,8 @@ const vector<string> definedparams = {                                // A list 
 		"time_format",
 		"time_labels",
 		"trans",//
-		"tv_covars"//
+		"tv_covars",//
+		"with_datapipeline"
 	};
 	
 #endif
