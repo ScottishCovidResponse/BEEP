@@ -10,13 +10,13 @@
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=200 ngeneration=10
 
 # Inference using PAS-MBP:  
-# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=200 ngeneration=10
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=200 ngeneration=20
 
 # Inference using ABC:  
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.001 
 
 # Inference using ABC-SMC:
-# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=6 nsample=200
+# mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcsmc" ngeneration=8 nsample=200
 
 # Inference using PMCMC:
 # mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=100 nsample=1000

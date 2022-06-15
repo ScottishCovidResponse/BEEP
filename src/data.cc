@@ -680,7 +680,10 @@ vector <double> Data::get_table_column(const unsigned int col, const Table &tab)
 	
 	if(tab.file == "") emsgEC("Data",33);
 	if(col >= tab.ncol) emsgroot("The file '"+tab.file+"' does not have column "+to_string(col));
-	for(auto row = 0u; row < tab.nrow; row++) result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
+	for(auto row = 0u; row < tab.nrow; row++){
+		result.push_back(get_double(tab.ele[row][col],"In file '"+tab.file+"'"));
+	}
+	
 	return result;
 }
 
@@ -1481,7 +1484,7 @@ vector <DataFilter> Data::get_datafilter(const Table &tabarea, const string geo_
 	vector <DataFilter> datafilter;
 	
 	if(democats_dep != ""){
-		auto dc = 0u; while(dc < democat.size() && democat[dc].name != democats_dep) dc++;
+		auto dc = 0u; while(dc < democat.size() && toLower(democat[dc].name) != toLower(democats_dep)) dc++;
 		if(dc == democat.size()){
 			emsgroot("For file '"+datafile+"', the expression 'democats_dep="+democats_dep+"' is not a value in 'democats'");
 		}
@@ -1608,6 +1611,7 @@ void Data::set_obs_sd()
 			
 			if(ob.obsmodel == NORMAL_PERCENT_OBSMODEL){
 				auto ef = datatable[dt].epsilon_factor;
+				//cout << ef << "ef\n";
 				ob.sd = (ob.value*(1-ef) + graph_value_max[gr]*ef)*0.01*datatable[dt].percent;
 			}
 		}			

@@ -64,6 +64,7 @@ class Output
 		Output(const Details &details, const Data &data, const Model &model, Inputs &inputs, const ObservationModel &obsmodel, Mpi &mpi);
 		
 		void generate_graphs(vector <Particle> &particle_store, const double invT) const;
+		void generate_graphs(vector <ParamSample> &psamp_extra, vector <Particle> &particle_store, const double invT) const;
 		void final_model_evidence(const vector <double> &ME_list, const double invT_final, const double cutoff_final) const;
 		void trace_plot_inititialise(const string name, ofstream &trace) const;
 		void trace_plot(const unsigned int samp, const double Li, const vector <double> &paramval, ofstream &trace) const;

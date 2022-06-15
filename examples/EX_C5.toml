@@ -8,14 +8,14 @@ description = "Objective: This example looks at incorporating a factor (m_t in E
 
 time_format = "number"
 start = "0"
-end = "140"
+end = "200"
 
 datadir = "examples/Data_EX_C5"
 outputdir = "examples/Output_EX_C5"
 
 geo_mixing_matrix = "M_Scotland_LA.csv"
 
-geo_mixing_modify = [{value="1", prior="Uniform(0,2)"}]
+geo_mixing_modify = [{value="0.3", prior="Uniform(0,1)"}]
  
 comps = [
 {name="S"},
@@ -32,7 +32,7 @@ trans = [
 
 R_spline = [{ value="2", prior="Uniform(0.5,4)"}]
 
-efoi_spline = [{ value="1"}]
+efoi_spline = [{ value="0.05"}]
 
 areas = "Scotland_LA.csv"
 

@@ -39,7 +39,7 @@ Output::Output(const Details &details, const Data &data, const Model &model, Inp
 }
 	
 
-/// Generates the output files along with the final pdf report that gives graphical outputs
+/// Generates the output files that give graphical outputs
 void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> &opsamp, const double invT) const
 { 
 	if(mpi.core == 0){
@@ -54,10 +54,10 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 		else cout << details.analysis_type << " outputs in directory '" << details.output_directory << "':" << endl;
 	}
 
-	vector <OutputPlot> op;                                             // Stores the plots for the final pdf
+	vector <OutputPlot> op;                                             // Stores the plots
 
 	compartmental_model(op);                                            // Generates all the different types of plot
-		
+	
 	if(details.mode == DATAONLY){
 		posterior_parameter_estimates(psamp,op);
 		
@@ -121,9 +121,9 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 			generate_pdf_description(op,grfile);                              // Generates a text descrition of the pdf file
 		}
 	}
-	
+
 	if(details.siminf == INFERENCE){
-		vector <OutputPlot> op_diag;                                    // Stores the plots for the diagnostic pdf
+		vector <OutputPlot> op_diag;                                        // Stores the plots 
 
 		add_generation_plots(op_diag);
 		
@@ -144,10 +144,10 @@ void Output::generate_graphs(vector <ParamSample> &psamp, const vector <Sample> 
 	
 		for(auto opu : op_diag) op.push_back(opu);
 	}
-	
+
 	generate_visualisation(op,"vis_files/BEEP_output.js");         // Generates a file used by the visualisation software
-	
-	if(1 == 0) EF_dist(psamp);                                        // This is used for the figure in the paper
+
+	if(false) EF_dist(psamp);                                      // This is used for the figure in the paper
 }
 
 
@@ -307,7 +307,7 @@ void Output::generate_pdf_description(vector <OutputPlot> &op, const string grfi
 }
 
 
-/// Generates a text description of the pdf file
+/// Generates visBEEP in the output directory
 void Output::generate_visualisation(const vector <OutputPlot> &op, const string grfile) const
 {
 	auto opdir = details.output_directory;
@@ -319,8 +319,8 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 	system(ss2.str().c_str());
 	
 	stringstream vis;
-	vis << fixed;
-
+	vis << fixed << setprecision(12);
+  
 	vis << "{";
 
 	vis << "\"time_labels\" : [";
@@ -400,7 +400,7 @@ void Output::generate_visualisation(const vector <OutputPlot> &op, const string 
 		
 		string source = opi.source; rem_pagebreak(source);
 		vis << ",\"source\":\"" << source << "\"";	
-		
+
 		switch(opi.type){
 			case OP_ANIM_MAP: case OP_AREA_TV_COVAR: case OP_LEVEL_EFFECT:
 				{
@@ -1506,7 +1506,7 @@ void Output::posterior_parameter_estimates(const vector <ParamSample> &psamp, ve
 			paramout << endl; 
 			
 			if(false){ // Outputs estimates to terminal 
-				cout << model.param[p].name << "  " << stat.mean << "," <<  stat.CImin << "," << stat.CImax << "endl\n"; 
+				cout << model.param[p].name << "  " << stat.mean << "," <<  stat.CImin << "," << stat.CImax << endl; 
 			}
 		}
 	}
@@ -2146,7 +2146,7 @@ void Output::add_generation_plots(vector <OutputPlot> &op) const
 	unsigned int col;
 	
 	switch(details.mode){
-		case ABC_MBP: case ABC_SMC: case ABC_DA: case ABC_CONT:
+		case ABC_MBP: case ABC_SMC: case ABC_CONT:
 			EF_flag = true; label = "log(EF cut-off)"; tab3 = "Error function"; tab4 = "Cut-off"; col = 4;
 			break;
 		
@@ -2484,7 +2484,7 @@ void Output::level_data(vector <OutputPlot> &op) const
 void Output::spatial_mixing_map(vector <OutputPlot> &op) const
 {
 	if(data.narea == 1) return;
-	
+
 	{
 		auto fulldesc = "Spatial mixing within areas: This shows the average percentage of daily contacts (which could potentially transmit infection) made by an individual within a given area with other individuals in that area (with all other contacts made elsewhere). This visualises the *"+data.genQ.M_name+"* input file.";
 		OutputPlot oppl(OP_MIXING_WITHIN_MAP,"This is a visualistation of the '"+data.genQ.M_name+"' input file",fulldesc,"Data","Spatial Mixing","Within areas","","","",UNSET,UNSET);
@@ -3488,7 +3488,7 @@ void Output::generation_plot(const string file, const vector <Generation> &gener
 				pw.val = psamp[i].paramval[th];
 				switch(details.mode){
 					case ABC_SMC: pw.w = gen.w[i]; break;
-					case ABC_MBP: case ABC_DA: case ABC_CONT: case PAS_INF: case MC3_INF: case MCMC_MBP:
+					case ABC_MBP: case ABC_CONT: case PAS_INF: case MC3_INF: case MCMC_MBP:
 					case ML_INF:
 						pw.w = 1;
 						break;
@@ -3559,8 +3559,8 @@ void Output::generation_results(const vector <Generation> &generation) const
 void Output::ensure_directories()
 {
 	post_dir = "Posterior";
-	if(details.mode == SIM) post_dir = "Simulation_Results";
-	if(details.mode == MULTISIM) post_dir = "Multisim_Results";
+	if(details.mode == SIM) post_dir = "Simulation_results";
+	if(details.mode == MULTISIM) post_dir = "Multisim_results";
 		
 	ensure_directory(details.output_directory);
 	if(details.siminf != SIMULATE) ensure_directory(details.output_directory+"/Diagnostics");
@@ -3600,6 +3600,25 @@ void Output::print_model_specification() const
 	auto file = details.output_directory+"/Model_specification.txt";
 	ofstream modspec(file); 
 	if(!modspec) emsg("Cannot open the file '"+file+"'");
+	               
+	modspec << "Analysis type: ";
+	switch(details.mode){
+		case SIM: modspec << "Simulation"; break;
+		case MULTISIM: modspec << "Multiple simulations"; break;
+		case PREDICTION: modspec << "Prediction"; break;
+		case ABC_SIMPLE: modspec << "Inference using the ABC rejection-sampling algorithm"; break;
+		case ABC_SMC: modspec << "Inference using the ABC-SMC algorithm"; break;
+		case ABC_MBP: modspec << "Inference using the ABC-MBP algorithm"; break;
+		case ABC_CONT: modspec << "Inference using the ABC continuum algorithm"; break;
+		case MC3_INF: modspec << "Inference using the MCMCMC algorithm"; break;
+		case MCMC_MBP: modspec << "Inference using the MCMC-MBP algorithm"; break;
+		case PAS_INF: modspec << "Inference using the PAS-MBP algorithm"; break;
+		case PMCMC_INF: modspec << "Inference using the PMCMC algorithm"; break;
+		case ML_INF: modspec << "Inference via MAP using the CMA-ES algorithm"; break;
+		case DATAONLY: modspec << "Data only"; break;
+	}
+	modspec << endl;
+	
 	modspec << data.print();                             
 	modspec << model.print();
 }
@@ -3661,17 +3680,13 @@ void Output::readme() const
 			
 	read << "## Parameter_estimates.csv" << endl << endl;
 	
-	read << "If inference is performed, this file gives the posterior means and 95% credible intervals for each of the model parameters." << endl;
+	read << "If inference is performed, this file gives the posterior means, 95% credible intervals, standard deviation and priors for each of the model parameters." << endl;
 	
 	read << endl;
 	
-	read << "## Graphs.pdf" << endl << endl;
+	read << "## visBEEP.html" << endl << endl;
 	
-	read << "This visualises outputs from BEEP." << endl << endl;
-	
-	read << "## Graphs_description.txt" << endl << endl;
-	
-	read << "Provides information about the source data for the graphs." << endl << endl;
+	read << "This visualises outputs from BEEP and can be opened in a web browser." << endl << endl;
 			
 	read << "## Model_specification.txt" << endl << endl;
 	
@@ -3721,9 +3736,37 @@ void Output::generate_graphs(vector <Particle> &particle_store, const double inv
 		
 	mpi.gather_samples(psamp,opsamp,particle_store,state,dir);
 	mpi.barrier();
-	
+
 	if(mpi.core == 0) generate_graphs(psamp,opsamp,invT);
+
+	mpi.barrier();
 	
+	timer[TIME_RESULTS].stop();
+}
+
+
+/// This generates graphs from state and parameter separately (so many more parameter samples can be made)
+void Output::generate_graphs(vector <ParamSample> &psamp_extra, vector <Particle> &particle_store, const double invT) const 
+{
+	timer[TIME_RESULTS].start();
+				
+	State state(details,data,model,obsmodel);
+
+	auto dir = details.output_directory+"/"+post_dir+"/samples/";
+	vector <ParamSample> psamp;
+	vector <Sample> opsamp;
+	
+	mpi.barrier(); if(mpi.core == 0 && mpi.ncore > 1) cout << "Gathering samples..." << endl << flush;
+		
+	mpi.gather_samples(psamp,opsamp,particle_store,state,dir);
+	
+	auto psamp_extra_tot = mpi.gather_psamp(psamp_extra);
+	if(mpi.core == 0){
+		for(auto &ps : psamp_extra_tot) psamp.push_back(ps);	
+	}
+
+	if(mpi.core == 0) generate_graphs(psamp,opsamp,invT);
+
 	mpi.barrier();
 	
 	timer[TIME_RESULTS].stop();

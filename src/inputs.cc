@@ -259,7 +259,7 @@ Mode Inputs::mode()
 	if(val == "UNSET") emsgroot("The 'mode' property must be set");
 	
 	Mode mode;
-	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abcda", ABC_DA}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pas", PAS_INF}, {"pmcmc", PMCMC_INF}, {"importance", IMPORTANCE_INF}, {"map", ML_INF}};
+	map<string,Mode>  modemap{{"sim", SIM}, {"multisim", MULTISIM}, {"prediction", PREDICTION}, {"data", DATAONLY}, {"abc", ABC_SIMPLE}, {"abcsmc", ABC_SMC}, {"abcmbp", ABC_MBP}, {"abccont", ABC_CONT}, {"mc3", MC3_INF}, {"mcmcmbp", MCMC_MBP}, {"pas", PAS_INF}, {"pmcmc", PMCMC_INF}, {"map", ML_INF}};
 	if (modemap.count(val) != 0) mode = modemap[val];
 	else emsgroot("Unrecoginsed value '" + val + "' for 'mode'");
 	
@@ -435,7 +435,7 @@ vector <DataTable> Inputs::find_datatable(const Details &details)
 			datatab.line_colour = get_line_colour(td.stringfield("line_colour",""));
 	
 			datatab.percent = UNSET;
-			datatab.epsilon_factor = 0.05;
+			datatab.epsilon_factor = EPISILON_FACTOR;
 			auto epsilon_factor = td.stringfield("epsilon_factor","");
 			if(epsilon_factor != "") datatab.epsilon_factor = get_double_positive(epsilon_factor,"In 'data_tables' for 'epsilon_factor'");
 	
@@ -1737,7 +1737,7 @@ void Inputs::check_filename(const string &str) const
 
 
 /// Finds the algorithm type for maximum likelihood approaches
-void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample_final, const unsigned int core, const unsigned int ncore, const unsigned int nvar)
+void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample, const unsigned int core, const unsigned int ncore, const unsigned int nvar)
 {
 	string val = toLower(find_string("algorithm","cmaes"));
 
@@ -1771,19 +1771,18 @@ void Inputs::find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int 
 	
 		P = find_positive_integer("posterior_particle",UNSET);
 		if(P == UNSET){
-			P = 100;
-			//WP = 20;
+			P = POST_PARTICLE;
 			if(core == 0) cout << "By default 'posterior_particle' is set to " << P << "." << endl;
 			//emsgroot("'posterior_particle' must be set to a positive integer. This determines the number of particles used when generating the final posterior samples (this would typically be over 100).");
 		}
 		
-		nsample_final = find_positive_integer("nsample_final",UNSET);
-		if(nsample_final == UNSET){
-			nsample_final = (int((400+ncore-1)/(ncore)))*ncore;
-			if(core == 0) cout << "By default 'nsample_final' is set to " << nsample_final << "." << endl;
+		nsample = find_positive_integer("nsample",UNSET);
+		if(nsample == UNSET){
+			nsample = (int((POST_STATE_SAMPLE+ncore-1)/(ncore)))*ncore;
+			if(core == 0) cout << "By default 'nsample' is set to " << nsample << "." << endl;
 		}
 		else{
-			if(nsample_final%ncore != 0) emsgroot("'nsample_final' must be a multiple of the number of cores");
+			if(nsample%ncore != 0) emsgroot("'nsample' must be a multiple of the number of cores");
 		}
 	}		
 }

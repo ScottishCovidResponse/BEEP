@@ -426,16 +426,7 @@ void State::set_transmean(const unsigned int sett, const unsigned int c)
 			else{
 				auto a = data.democatpos[dp][0];
 				tmean[tr][dpp] = dt*popu*susceptibility[dpp]*(be*NMI[a] + eta_age[a]);
-				if(std::isnan(tmean[tr][dpp])){
-					for(auto th = 0u; th < model.param.size(); th++){
-						
-						cout << model.param[th].name << " " << paramval[th] << " param\n";
-						if(paramval[th]  <= 0) cout << "  HHHHHHHHH\n";
-					}
-					
-					cout << popu << " " << susceptibility[dpp] << be << " " << NMI[a] << " " << eta_age[a] << " jj\n";
-					emsgEC("State",4);
-				}
+				if(std::isnan(tmean[tr][dpp])) emsgEC("State",4);
 			}
 			dpp++;
 		}
@@ -681,7 +672,7 @@ string State::print_populations(const unsigned int sett) const
 }
 
 
-/// Creates a sample from the current state (these are used to create the final pdf)
+/// Creates a sample from the current state (these are used to create the final visualisations)
 Sample State::create_sample() const 
 {
 	Sample sample;

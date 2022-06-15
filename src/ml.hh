@@ -33,7 +33,7 @@ private:
 	
 	unsigned int P;                          // The nunber of particles used to obtain the posterior samples
 	
-	unsigned int nsample_final;              // The numner of final posterior samples
+	unsigned int nsample;                    // The numner of final posterior samples
 	
 	unsigned int npart;                      // The number of particles used for CMAES
 	unsigned int npart_per_core;             // The number of particles per core 
@@ -49,9 +49,14 @@ private:
 	PointInfo calculate_point_info(vector <double> param);
 	void calculate_mimimum();
 	vector < vector <double> > calculate_covariance_martrix(const vector <double> &mean);
-	double scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &covar);
+	double scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &C);
 	vector < vector <double> > calculate_hessian(const vector <double> &mean, MatrixType mattype);
 	void calculate_heatmap();
+	void BFGS(vector <double> &param);
+	void find_jump_distance(double &eta, const vector <double> &param, vector <double> &param_new, const double L, double &L_new, const vector <double> &grad, const vector <double> &p);
+	void BHHH(vector <double> &param);
+	void newton_raphson(vector <double> &param);
+	void model_evidence(const vector <double> &mean, const vector < vector <double> > &C, const double sigma);
 	
 	const Details &details;
 	const Data &data;

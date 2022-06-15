@@ -20,24 +20,20 @@ mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="prediction"
 OPTIONS: prediction_start, prediction_end, modification, nsim_per_sample
 
 MAP inference:
-mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1toml" mode="map"
-OPTIONS: nparticle, ngeneration / cpu_time, nsample_final, posterior_particle
+mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="map"
+OPTIONS: nparticle, ngeneration / cpu_time, nsample, posterior_particle
 
 ABC-MBP inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcmbp" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
-
-ABC-DA inference:
-mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abcda" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, nrun
 
 ABC-CONT inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abccont" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / cutoff_final / cpu_time, cor_max, cor_max_last, nrun
 
 PAS inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pas" nparticle=50 ngeneration=5 nrun=4
-OPTIONS: nparticle, ngeneration / invT_final / cpu_time, GR_max, nrun
+OPTIONS: nparticle, ngeneration / invT_final / cpu_time,  cor_max, cor_max_last, nrun
 
 Simple ABC inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="abc" nsample=100 cutoff_frac=0.1 nrun=4
@@ -49,19 +45,15 @@ OPTIONS: nsample, ngeneration / cutoff_final / cpu_time, cutoff_frac, nrun
 
 PMCMC inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="pmcmc" nparticle=20 nsample=200
-OPTIONS: nparticle, nsample / GR_max / ESSmin, invT, nburnin, nthin, nrun
+OPTIONS: nparticle, nsample / ESSmin, invT, nburnin, nthin, nrun
 
 MCMC-MBP inference:
 mpirun -n 4 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mcmcmbp" invT=303 nsample=200 nrun=4
-OPTIONS: nsample / GR_max, invT, nburnin, nthin, nrun
+OPTIONS: nsample, invT, nburnin, nthin, nrun
 
 MC3 inference:
 mpirun -n 20 build/bin/BEEP inputfile="examples/EX_A1.toml" mode="mc3" nchain=20 invT_final=303 nsample=200 nrun=4
-OPTIONS: nchain, nsample / GR_max, invT_start, invT_final, nburnin, nquench, nthin, nrun
-
-ML using cma-es
-mpirun -n 20 build/bin/BEEP inputfile="analysis/England_da.toml" mode="ml" algorithm="cmaes"  nparticle="400" ngeneration="300"
-
+OPTIONS: nchain, nsample, invT_start, invT_final, nburnin, nquench, nthin, nrun
 */
 
 #include <iostream>
@@ -89,13 +81,11 @@ mpirun -n 20 build/bin/BEEP inputfile="analysis/England_da.toml" mode="ml" algor
 #include "simulate.hh"
 #include "abc.hh"
 #include "abcmbp.hh"
-#include "abcda.hh"
 #include "abccont.hh"
 #include "abcsmc.hh"
 #include "mc3.hh"
 #include "pas.hh"
 #include "pmcmc.hh"
-#include "importance.hh"
 #include "ml.hh"
 #include "consts.hh"
 
@@ -198,13 +188,6 @@ int main(int argc, char** argv)
 			abcmbp.run();
 		}
 		break;
-			
-	case ABC_DA:                                               // Peforms inference using the ABC-DA algorithm
-		{	
-			ABCDA abcda(details,*data,model,inputs,output,obsmodel,mpi);
-			abcda.run();
-		}
-		break;
 		
 	case ABC_CONT:                                               // Peforms inference using the ABC-DA algorithm
 		{	
@@ -241,13 +224,6 @@ int main(int argc, char** argv)
 		}
 		break;
 
-	case IMPORTANCE_INF:
-		{
-			IMPORTANCE importance(details,*data,model,inputs,output,obsmodel,mpi);
-			importance.run();
-		}
-		break;
-		
 	case ML_INF:                                               // Peforms inference using maximum likelihood approach
 		{	
 			ML ml(details,*data,model,inputs,output,obsmodel,mpi);

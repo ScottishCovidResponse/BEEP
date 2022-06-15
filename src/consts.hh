@@ -30,7 +30,7 @@ const double num_updates_max = 10;                     // The maximum number for
 const double num_updates_min = 1;                      // The minimun number for num_updates
 
 enum Mode { SIM, MULTISIM, PREDICTION,                 // Different modes of operation 
-            ABC_SIMPLE, ABC_SMC, ABC_MBP, ABC_DA, ABC_CONT, MC3_INF, MCMC_MBP, PAS_INF, PMCMC_INF, IMPORTANCE_INF, ML_INF,
+            ABC_SIMPLE, ABC_SMC, ABC_MBP, ABC_CONT, MC3_INF, MCMC_MBP, PAS_INF, PMCMC_INF, ML_INF,
 						DATAONLY};       
 
 enum SimInf { SIMULATE, INFERENCE, DATAVIEW};          // Determines if simulation or inference is being performed
@@ -168,6 +168,14 @@ const unsigned int sample_try = 10000;                           // The number o
 const unsigned int initialise_param_samp = 100;                  // Number of random parameter samples to initialise param_samp
 
 const unsigned int ML_GENERATION_TERM_COND = 10;                 // The number of generation used in termination (CMAES)
+
+const unsigned int POST_PARAM_SAMPLE = 2000;                     // Number of parameter samples for CMAES
+
+const unsigned int POST_STATE_SAMPLE = 200;                      // Default number of state samples for CMAES
+
+const unsigned int POST_PARTICLE = 40;                           // Default number of particles (CMAES)
+
+const double EPISILON_FACTOR = 0.01;                             // The factor used for percent normal obsmodel
 
 const double map_ratio = 1.22;                                   // The ratio of the map (used when plotting
 

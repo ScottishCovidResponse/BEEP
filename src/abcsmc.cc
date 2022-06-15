@@ -119,7 +119,7 @@ void ABCSMC::run()
 		
 	if(mpi.core == 0) print_model_evidence();                            // Prints the final model evidence
 
-	results();                                                           // Generates pdf of graphs
+	results();                                                           // Generates visualisation
 }
 
 /// Stores parameter and state sample 
@@ -197,7 +197,6 @@ bool ABCSMC::terminate(const Generation &gen) const
 		auto N = Ntot;
 		if(gen.num == G-1) N = Ntot_final;
 		auto co = cutoff_frac; if(gen.num == 0) co = cutoff_frac_init;
-		//cout << Neff << " " << N/co << "Neff\n"; 
 		if(Neff >= N/co) term = true;
 	}
 	
@@ -284,7 +283,7 @@ void ABCSMC::normalise_particle_weights(Generation &gen)
 }
 
 	
-/// Generates pdf of graphs
+/// Generates visualisation
 void ABCSMC::results()
 {
 	output.generation_results(generation);   

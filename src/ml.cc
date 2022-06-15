@@ -20,7 +20,7 @@ ML::ML(const Details &details, const Data &data, const Model &model, Inputs &inp
 {
 	find_parameters();
 	
-	inputs.find_algorithm(algorithm,npart,G,cpu_time,P,nsample_final,mpi.core,mpi.ncore,nvar);
+	inputs.find_algorithm(algorithm,npart,G,cpu_time,P,nsample,mpi.core,mpi.ncore,nvar);
 	
 	invT = inputs.find_double("invT",1);  
 	
@@ -133,7 +133,7 @@ void ML::gradient_decent()
 	vector <Particle> particle_store; 
 	
 	if(mpi.core == 0){
-		state.EF = -0.5*state.likelihood_approx(param,obs_slice,invT,ac);		
+		state.EF = -2*state.likelihood_approx(param,obs_slice,invT,ac);		
 		particle_store.push_back(state.create_particle(UNSET));
 	}
 	
@@ -315,21 +315,41 @@ void ML::cmaes()
 		g++;
 	}while(terminate_generation(g,EFbest_store) == false);
 
+
 	if(mpi.core == 0) cout << "Generating posterior samples..." << endl;
 
-	timer[TIME_POSTERIOR_SAMPLE].start();
-	vector <Particle> particle_store;
-	auto num_per_core = nsample_final/mpi.ncore;
-	
+	timer[TIME_POSTERIOR_SAMPLE].start();	
 	mpi.bcast(mean);
 	mpi.bcast(C);
 
-	timer[TIME_SCALE_COVARIANCE].start();
-	//auto covar = calculate_covariance_martrix(mean);
-	if(mpi.core == 0) cout << "Scale covariance..." << endl;
-	sigma = scale_covariance_martrix(mean,C);
-	timer[TIME_SCALE_COVARIANCE].stop();
-			
+	if(false){
+		BFGS(mean); 
+		//BHHH(mean);
+		//newton_raphson(mean);
+		timer[TIME_SCALE_COVARIANCE].start();
+		C = calculate_covariance_martrix(mean);
+		sigma = 1;
+		timer[TIME_SCALE_COVARIANCE].stop();
+	}
+	else{
+		timer[TIME_SCALE_COVARIANCE].start();
+	
+		if(mpi.core == 0) cout << "Calculate covariance..." << endl;
+		auto C_new = calculate_covariance_martrix(mean);	
+		auto CC = calculate_cholesky(C_new);	
+		if(CC[0][0] == UNSET){
+			if(mpi.core == 0) cout << "Cannot calculate directly, scale covariance estimate from CMA-ES..." << endl;
+			sigma = scale_covariance_martrix(mean,C);
+		}
+		else{
+			C = C_new; sigma = 1;
+		}
+		timer[TIME_SCALE_COVARIANCE].stop();
+	}
+	
+	vector <Particle> particle_store;
+	auto num_per_core = nsample/mpi.ncore;
+
 	if(mpi.core == 0) cout << "SMC sampler..." << endl;	
 	auto psamp = sample_param(mean,C,sigma,num_per_core);
 	for(auto i = 0u; i < num_per_core; i++){               // Generates the final posterior samples
@@ -341,13 +361,27 @@ void ML::cmaes()
 			particle_store.push_back(state.create_particle(UNSET));
 		}
 	}
+	
+	// This generates extra parameter samples if needed (parameter samples are much faster in CMAES)
+	auto num_param_per_core = int((POST_PARAM_SAMPLE-nsample)/mpi.ncore);
+	vector <ParamSample> param_store;
+	auto psamp_extra = sample_param(mean,C,sigma,num_param_per_core);
+	for(auto i = 0u; i < num_param_per_core; i++){
+		ParamSample ps; ps.run = 0; ps.EF = UNSET;
+		ps.paramval = psamp_extra[i];
+			
+		param_store.push_back(ps);
+	}
+	
 	timer[TIME_POSTERIOR_SAMPLE].stop();
 
 	if(mpi.core == 0) cout << "Output results..." << endl;
 
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generate visualisation
 	
-	output.generate_graphs(particle_store,invT);		  
+	output.generate_graphs(param_store,particle_store,invT);		
+	
+	if(mpi.core == 0) model_evidence(mean,C,sigma);  
 }
 
 
@@ -363,9 +397,8 @@ void ML::generate_samples(vector <ParamSample> &ps_per_core, const vector <doubl
 		
 		if(details.stochastic == true){
 			auto L = state.likelihood_approx(param,obs_slice,invT,ac);
-
 			auto Pr = model.prior(param);
-			ps_per_core[i].EF = -(L + Pr);
+			ps_per_core[i].EF = -2*(L + Pr);
  			if(ps_per_core[i].EF < 0) emsgEC("ML",44);
 		}
 		else{
@@ -380,7 +413,7 @@ void ML::generate_samples(vector <ParamSample> &ps_per_core, const vector <doubl
 }
 
 
-/// Samples a set of parameters from a given set of parameters
+/// Samples a set of parameters from a given set of priors
 vector < vector <double> > ML::sample_param(const vector <double> &mean, const vector < vector <double> > &C, const double sigma, const unsigned int num) const
 {
 	MVN mv("MVN",var,sigma,ALL_PARAM,MULTIPLE);
@@ -450,7 +483,8 @@ vector < vector <double> > ML::sample_param(const vector <double> &mean, const v
 				sum = summax;						
 			}
 			
-			if(sum > 1) emsgEC("ML",13);
+			if(sum > 1) emsgEC("ML",13); 
+			
 			param[dir.param[0].th] = 1-sum;
 		}
 
@@ -484,7 +518,7 @@ bool ML::terminate_generation(unsigned int g, const vector <double> &EFbest_stor
 				for(auto i = ng-ML_GENERATION_TERM_COND; i < ng; i++) av += EFbest_store.size();
 				av /= ML_GENERATION_TERM_COND;
 				
-				auto tol = av/1000;
+				auto tol = 0.01;
 				auto value = EFbest_store[ng-1];
 				auto i = ng-ML_GENERATION_TERM_COND; 
 				while(i < ng && EFbest_store[i] > value-tol && EFbest_store[i] < value+tol) i++;
@@ -502,9 +536,7 @@ bool ML::terminate_generation(unsigned int g, const vector <double> &EFbest_stor
 
 /// Calculates the gradient in the likelihood for the non-fixed parameters
 PointInfo ML::calculate_point_info(vector <double> param) 
-{
-	const auto delta = 0.1;
-	
+{	
 	mpi.bcast(param);
 	
 	vector <double> val(param_per_core), dif(param_per_core);
@@ -513,17 +545,24 @@ PointInfo ML::calculate_point_info(vector <double> param)
 	
 		if(p < nvar){
 			auto th = var[p];
+			
+			auto approx = model.prior_normal_approx(th);
+			auto delta = 0.0001*sqrt(approx.var);
+			if(delta == 0) emsgEC("ML",43);
+			
 			auto param_st = param[th];
 			param[th] += delta; 
 			if(model.inbounds(param) == true){
+				model.calculate_dirichlet_missing(param);
 				val[k] = state.likelihood_approx(param,obs_slice,invT,ac) + model.prior(param);
 				dif[k] = delta;
 			}
 			else{
 				param[th] -= 2*delta;
 				if(model.inbounds(param) == false) emsgEC("ML",1);
+				model.calculate_dirichlet_missing(param);
 				val[k] = state.likelihood_approx(param,obs_slice,invT,ac) + model.prior(param);
-				dif[k] = delta;
+				dif[k] = -delta;
 			}
 			param[th] = param_st;
 		}
@@ -668,44 +707,49 @@ void ML::calculate_heatmap()
 vector < vector <double> > ML::calculate_covariance_martrix(const vector <double> &mean)
 {
 	auto H = calculate_hessian(mean,FULL);
-
-	return invert_matrix(H);
+	auto C = invert_matrix(H);
+	for(auto &Crow : C){
+		for(auto &val : Crow) val *= -1;
+	}
+	
+	return C;
 }
 
 
 /// Works out the scaling factor for the covaiance matrix
-double ML::scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &covar)
+double ML::scale_covariance_martrix(const vector <double> &mean, const vector < vector <double> > &C)
 {
 	auto H_diag = calculate_hessian(mean,DIAG);
 
 	double ratio;
 	if(mpi.core == 0){
-		auto H = invert_matrix(covar);
+		auto Cinv = invert_matrix(C);
 	
 		if(false){
-			print_matrix("H",H);
+			print_matrix("Cinv",Cinv);
 			print_matrix("H_diag",H_diag);
 		
 			for(auto i = 0u; i < nvar; i++){
-				cout << H[i][i] << " " << H_diag[i][i] << " " << H_diag[i][i]/H[i][i] << " compare" << endl;
+				cout << Cinv[i][i] << " " << H_diag[i][i] << " " << -H_diag[i][i]/Cinv[i][i] << " compare" << endl;
 			}
 		}
 		
 		auto sum_log_ratio = 0.0;
 		for(auto i = 0u; i < nvar; i++){
-			auto ra = H[i][i]/H_diag[i][i];
+			auto ra = -Cinv[i][i]/H_diag[i][i];
 			if(ra < 0.0001) ra = 0.0001;
 			if(ra > 10000) ra = 10000;
 			sum_log_ratio += log(ra);
 		}
 		sum_log_ratio /= nvar;
 		
-		ratio = exp(0.5*sum_log_ratio);
+		ratio = exp(sum_log_ratio);
 	}
+	auto sigma = sqrt(ratio);
 	
-	mpi.bcast(ratio);
+	mpi.bcast(sigma);
 
-	return ratio;
+	return sigma;
 }
 
 
@@ -716,7 +760,7 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 	
 	for(auto i = 0u; i < nvar; i++){  
 		auto approx = model.prior_normal_approx(var[i]);
-		d[i] = 0.01*sqrt(approx.var);
+		d[i] = 0.001*sqrt(approx.var);
 		if(d[i] == 0) emsgEC("ML",43);
 	}
 	
@@ -741,20 +785,20 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 		if(l < matrix_element.size()){	
 			auto &el = matrix_element[l];
 	
-			auto vari = el.i, varj = el.i;
-			
+			auto vari = el.i, varj = el.j;
+	
 			auto param = mean; param[var[vari]] += d[vari]; param[var[varj]] += d[varj];
 			model.calculate_dirichlet_missing(param);
 			ur.push_back(state.likelihood_approx(param,obs_slice,invT,DOUBLE) + model.prior(param));
-			
+		
 			param = mean; param[var[vari]] += d[vari]; param[var[varj]] -= d[varj];
 			model.calculate_dirichlet_missing(param);
 			dr.push_back(state.likelihood_approx(param,obs_slice,invT,DOUBLE) + model.prior(param));
-			
+		
 			param = mean; param[var[vari]] -= d[vari]; param[var[varj]] += d[varj];
 			model.calculate_dirichlet_missing(param);
 			ul.push_back(state.likelihood_approx(param,obs_slice,invT,DOUBLE) + model.prior(param));
-			
+		
 			param = mean; param[var[vari]] -= d[vari]; param[var[varj]] -= d[varj];
 			model.calculate_dirichlet_missing(param);
 			dl.push_back(state.likelihood_approx(param,obs_slice,invT,DOUBLE) + model.prior(param));
@@ -778,7 +822,7 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 	if(mpi.core == 0){	
 		for(auto k = 0u; k < matrix_element.size(); k++){
 			const auto &el = matrix_element[k];
-			H[el.j][el.i] = -(ur_tot[k] + dl_tot[k] - ul_tot[k] - dr_tot[k])/(4*d[el.i]*d[el.j]);
+			H[el.j][el.i] = (ur_tot[k] + dl_tot[k] - ul_tot[k] - dr_tot[k])/(4*d[el.i]*d[el.j]);
 			H[el.i][el.j] = H[el.j][el.i];
 		}
 		
@@ -801,3 +845,288 @@ vector < vector <double> > ML::calculate_hessian(const vector <double> &mean, Ma
 
 	return H;
 }
+
+
+/// The Broyden–Fletcher–Goldfarb–Shanno algorithm
+void ML::BFGS(vector <double> &param)
+{	
+	auto B = calculate_hessian(param,DIAG);
+	
+	for(auto j = 0u; j < nvar; j++){
+		for(auto i = 0u; i < nvar; i++){
+			if(i != j) B[j][i] = 0;
+		}
+	}
+	if(mpi.core == 0){
+		print_matrix("Bstart",B);
+	}
+	
+	auto pi =	calculate_point_info(param);
+	auto L = pi.value;
+	auto L_new = L;
+		
+	auto grad = pi.grad;
+	vector <double> grad_new(nvar);
+	vector <double> param_new(model.param.size());
+	vector <double> p(nvar);
+	
+	auto eta = 1.0;
+	
+	for(auto loop = 0u; loop < 5; loop++){
+		Generation gen;
+	
+		//B = calculate_hessian(param,FULL);
+	 
+		if(mpi.core == 0){	
+			auto Binv = invert_matrix(B);
+			p = matrix_mult(Binv,grad); for(auto i = 0u; i < nvar; i++) p[i] *= -1;
+		
+			eta = 1;
+			find_jump_distance(eta,param,param_new,L,L_new,grad,p);	
+		}
+			
+		mpi.bcast(param_new);
+		mpi.bcast(L_new);
+		auto pi_new =	calculate_point_info(param_new);
+		
+		if(mpi.core == 0) grad_new = pi_new.grad;
+		mpi.bcast(grad_new);
+		
+		if(mpi.core == 0){
+			auto y = vec_subtract(grad_new,grad);
+			auto s = p; for(auto i = 0u; i < nvar; i++) s[i] *= eta;
+		
+			auto Bs = matrix_mult(B,s);
+			auto ys = vec_dot(y,s);
+			auto sBs = vec_dot(s,Bs);
+			
+			for(auto j = 0u; j < nvar; j++){
+				for(auto i = 0u; i < nvar; i++){
+					B[j][i] += (y[j]*y[i]/ys) - (Bs[j]*Bs[i]/(sBs));
+				}
+			}
+		}
+		
+		auto B_true = calculate_hessian(param_new,FULL);
+		if(mpi.core == 0){
+			print_matrix("B",B);
+			print_matrix("B true", B_true);
+		}
+		
+		if(mpi.core == 0){
+			gen.param_samp.push_back(state.create_param_sample(0));
+			gen.EF_datatable.push_back(obsmodel.get_EF_datatable(&state));
+				
+			cout << "Generation " << generation.size() << " " << L_new << endl;
+		}
+	
+		output.set_generation_time(gen);                        // Sets the CPU time for the generation
+	
+		generation.push_back(gen);
+			
+		param = param_new;
+		grad = grad_new;
+		L = L_new;
+	}
+}
+
+
+/// Finds the distance for jumping along a given direction
+void ML::find_jump_distance(double &eta, const vector <double> &param, vector <double> &param_new, const double L, double &L_new, const vector <double> &grad, const vector <double> &p)
+{
+	auto dot = vec_dot(p,grad);
+	if(dot < 0){ eta *= -1; cout << "wrong dir\n";}
+	
+	do{
+		cout << eta <<  "eta\n";
+		param_new = param;
+		for(auto i = 0u; i < nvar; i++){
+			auto th = var[i];
+			param_new[th] += eta*p[i];
+		}
+		model.calculate_dirichlet_missing(param_new,false);
+		
+		if(model.inbounds(param_new) == false) L_new = -LARGE;
+		else L_new = state.likelihood_approx(param_new,obs_slice,invT,ac) +  model.prior(param_new);
+				
+		if(L_new < L-0.0001){
+			eta /= 2;
+			if(eta < 0.000000000001) emsg("Convergence problem");
+		}
+		else{
+			return;
+		}
+	}while(true);
+}
+
+	
+/// The Berndt–Hall–Hall–Hausman algorithm 
+void ML::BHHH(vector <double> &param)
+{
+	auto thresh = 0.0001;
+	if(mpi.core == 0) cout << "Use BHHH algorithm" << endl;
+	
+	auto L = state.likelihood_approx(param,obs_slice,invT,ac) +  model.prior(param);
+	auto log_eta = 0.0;
+
+	while(true){ 
+		Generation gen;
+		
+		auto pi =	calculate_point_info(param);
+		auto H_h = calculate_hessian(param,FULL);
+		
+		vector < vector <double> > H;
+		H.resize(nvar);
+		cout << nvar << "nvar\n";
+		for(auto j = 0u; j < nvar; j++){
+			H[j].resize(nvar);
+			for(auto i = 0u; i < nvar; i++){
+				H[j][i] = -pi.grad[j]*pi.grad[i];
+			}
+		}			
+		print_matrix("H",H);
+		print_matrix("H_h",H_h);
+		
+		log_eta = 0.0;
+		 
+		auto L_new = L;
+		if(mpi.core == 0){
+			auto Hinv = invert_matrix(H);
+			auto dif = matrix_mult(Hinv,pi.grad);
+			
+			auto param_new = param;
+				
+			do{
+				auto eta = exp(log_eta);
+				cout << eta <<  "eta\n";
+				param_new = param;
+				for(auto i = 0u; i < nvar; i++){
+					auto th = var[i];
+					param_new[th] -= eta*dif[i];
+				}
+				model.calculate_dirichlet_missing(param_new,false);
+			
+				if(model.inbounds(param_new) == false) L_new = -LARGE;
+				else L_new = state.likelihood_approx(param_new,obs_slice,invT,ac) +  model.prior(param_new);
+				
+				if(L_new < L-thresh){
+					log_eta -= 2;
+					if(log_eta < -20) emsg("Convergence problem");
+				}
+				else{
+					log_eta += 2; if(log_eta > 0) log_eta = 0;
+					break;
+				}
+			}while(true);
+			
+			param = param_new;
+			
+			gen.param_samp.push_back(state.create_param_sample(0));
+			gen.EF_datatable.push_back(obsmodel.get_EF_datatable(&state));
+				
+			cout << "Generation " << generation.size() << " " << L_new << endl;
+		}
+	
+		output.set_generation_time(gen);                        // Sets the CPU time for the generation
+	
+		generation.push_back(gen);
+			
+		mpi.bcast(L_new);
+		mpi.bcast(log_eta);
+		
+		if(mpi.core == 0) cout << L << " " << L_new << " Lnew\n";
+		//if(L_new-L < thresh && log_eta == 0){if(mpi.core == 0)  cout << "end\n"; break;}
+		if(L_new-L < thresh){if(mpi.core == 0)  cout << "end\n"; break;}
+	L = L_new;
+		mpi.bcast(param);
+	}
+}
+
+
+// The Newton-Raphson method for optimisation
+void ML::newton_raphson(vector <double> &param)
+{
+	auto thresh = 0.0001;
+	if(mpi.core == 0) cout << "Use Newton-Raphson" << endl;
+	
+	auto L = state.likelihood_approx(param,obs_slice,invT,ac) +  model.prior(param);
+	auto log_eta = 0.0;
+
+	while(true){ 
+		Generation gen;
+		
+		auto pi =	calculate_point_info(param);
+		auto H = calculate_hessian(param,FULL);
+		
+		log_eta = 0.0;
+		 
+		auto L_new = L;
+		if(mpi.core == 0){
+			auto Hinv = invert_matrix(H);
+			auto dif = matrix_mult(Hinv,pi.grad);
+			
+			auto param_new = param;
+				
+			do{
+				auto eta = exp(log_eta);
+				cout << eta <<  "eta\n";
+				param_new = param;
+				for(auto i = 0u; i < nvar; i++){
+					auto th = var[i];
+					param_new[th] -= eta*dif[i];
+				}
+				model.calculate_dirichlet_missing(param_new,false);
+			
+				if(model.inbounds(param_new) == false) L_new = -LARGE;
+				else L_new = state.likelihood_approx(param_new,obs_slice,invT,ac) +  model.prior(param_new);
+				
+				if(L_new < L-thresh){
+					log_eta -= 2;
+					if(log_eta < -20) emsg("Convergence problem");
+				}
+				else{
+					log_eta += 2; if(log_eta > 0) log_eta = 0;
+					break;
+				}
+			}while(true);
+			
+			param = param_new;
+			
+			gen.param_samp.push_back(state.create_param_sample(0));
+			gen.EF_datatable.push_back(obsmodel.get_EF_datatable(&state));
+				
+			cout << "Generation " << generation.size() << " " << L_new << endl;
+		}
+	
+		output.set_generation_time(gen);                        // Sets the CPU time for the generation
+	
+		generation.push_back(gen);
+			
+		mpi.bcast(L_new);
+		mpi.bcast(log_eta);
+		
+		if(mpi.core == 0) cout << L << " " << L_new << " Lnew\n";
+		if(L_new-L < thresh && log_eta == 0){if(mpi.core == 0)  cout << "end\n"; break;}
+		L = L_new;
+		mpi.bcast(param);
+	}
+}
+
+
+/// Calculates the model evidence using the Laplace approximation
+void ML::model_evidence(const vector <double> &mean, const vector < vector <double> > &C, const double sigma)
+{
+	auto psamp = sample_param(mean,C,0,1);
+
+	auto L = state.likelihood_approx(psamp[0],obs_slice,invT,ac);
+	auto Pr = model.prior(psamp[0]);
+	
+	auto det = nvar*log(sigma) + determinant_SIMD(C,ac);
+
+	auto nvar = C.size();
+	auto occum_factor = 0.5*nvar*log(2*M_PI) + 0.5*det;
+	
+	auto ME = L + Pr + occum_factor;
+	
+	cout << endl << "The log of the model evidence is " << ME << endl;
+}	

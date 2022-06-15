@@ -274,10 +274,26 @@ void Model::add_probreach()
 	for(auto i = 0u; i < name.size(); i++){
 		ProbReach pr;
 		pr.name = name[i];
-		emsg("TO DO");
-		//pr.comp = get_compartment(comp[i],FIRST);		
+		pr.comps = get_compartments(comp[i]);	
+		if(pr.comps.size() == 0) emsgroot("In 'prob_reach' cannot find comparment '"+comp[i]+"'");  
 		prob_reach.push_back(pr);
 	}
+}
+
+
+/// Returns all the compartments with a given name
+vector <unsigned int> Model::get_compartments(string compname) const 
+{
+	vector <unsigned int> comps;
+	
+	for(auto c = 0u; c < comp.size(); c++){
+		if(compname == comp[c].name){
+			if(comp[c].num == UNSET || comp[c].num == 0){
+				comps.push_back(c);
+			}
+		}
+	}	
+	return comps;
 }
 
 
@@ -1574,10 +1590,18 @@ void Model::setup_modification()
 double Model::prior(const vector<double> &paramv) const 
 {
 	double Pr = 0;
-	
+
 	for(auto th = 0u; th < param.size(); th++){
 		switch(param[th].priortype){
-			case FIXED_PRIOR: case UNIFORM_PRIOR:
+			case FIXED_PRIOR:
+				break;
+
+			case UNIFORM_PRIOR:
+				{
+					auto min = get_val1(th,paramv);
+					auto max = get_val2(th,paramv);
+					Pr += log(1.0/(max-min));
+				}
 				break;
 			
 			case EXP_PRIOR:
@@ -1606,7 +1630,6 @@ double Model::prior(const vector<double> &paramv) const
 						if(beta != 1) emsgEC("Model",54);
 						if(alpha != 1){
 							Pr += (alpha-1)*log(val);
-							//cout << param[th].name << " " << alpha << " "<< beta << " " << val << " hh\n";
 						}
 					}
 					else{
@@ -1639,6 +1662,8 @@ double Model::prior(const vector<double> &paramv) const
 /// Calculates the smoothing spline prior
 double Model::spline_prior(const vector<double> &paramv) const
 {
+	auto paramv_dir = dirichlet_correct(paramv);
+	
 	auto Pr = 0.0;
 	if(details.siminf == SIMULATE) return Pr;
 	
@@ -1653,19 +1678,19 @@ double Model::spline_prior(const vector<double> &paramv) const
 					if(param[par1].priortype != FIXED_PRIOR || param[par2].priortype != FIXED_PRIOR){
 						auto value = spli[i].smooth_value;
 						if(value == UNSET) emsgroot("For the spline '"+spl.name+"' a value for 'smooth' must be set");
-							
+						
 						switch(spl.smoothtype){
-							case LOGSMOOTH:                                    // This is the pdf for the log-normal distribution
+							case LOGSMOOTH:                                    // This is the p.d.f. for the log-normal distribution
 								{
-									double mu = log(paramv[par1]*spli[i].multfac);
-									double logx = log(paramv[par2]*spli[i+1].multfac);							
+									double mu = log(paramv_dir[par1]*spli[i].multfac);
+									double logx = log(paramv_dir[par2]*spli[i+1].multfac);							
 									Pr += -(logx-mu)*(logx-mu)/(2*value*value) - logx; 
 								}
 								break;
 								
 							case SMOOTH:
 								{
-									double d = paramv[par1] - paramv[par2];
+									double d = paramv_dir[par1] - paramv_dir[par2];
 									Pr += -d*d/(2*value*value); 
 								}
 								break;
@@ -1915,7 +1940,10 @@ vector <double> Model::calculate_probreach(const vector<double> &paramv_dir, con
 		auto sum = 0.0, wsum = 0.0;
 		for(auto dp = 0u; dp < data.ndemocatpos_per_strain; dp++){
 			auto w = data.democatpos_dist[dp];
-			sum += compprob[probr.comp].value[dp]*w;
+			auto prob_sum = 0.0;
+			for(auto c : probr.comps) prob_sum += compprob[c].value[dp];
+				
+			sum += prob_sum*w;
 			wsum += w;
 		}
 		sum /= wsum;
@@ -2114,13 +2142,13 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 			auto &probr = prob_reach[pr];
 			DerivedParam dp;
 			dp.name = probr.name;
-			dp.file = probr.name;
-			dp.desc = "The probability of reaching "+comp[probr.comp].name;
-			if(data.nstrain > 0){
+			dp.file = probr.name+".csv";
+			dp.desc = "The probability of reaching "+comp[probr.comps[0]].name;
+			if(data.nstrain > 1){
 				auto name = data.strain[st].name;
-				dp.name += " for strain "+name;
+				dp.name += " "+name;
 				dp.desc += " for strain "+name;
-				dp.file += " for strain "+name;
+				dp.file = probr.name+"_"+name+".csv";
 			}
 			dp.value = prvec[pr];
 			derpar.push_back(dp);
@@ -2138,6 +2166,7 @@ vector <DerivedParam> Model::get_derived_param(const vector<double> &paramv_dir,
 			auto name = data.strain[st].name;
 			dp.name += " "+name;
 			dp.desc += " for "+name;
+			dp.file = dp.name+"_"+name+".csv";
 		}
 		dp.value = exf_ninf[st];
 		derpar.push_back(dp);
@@ -3014,7 +3043,6 @@ void Model::set_dirichlet()
 							
 					if(nmdir == dir.param.size()){ // This applies a modified Dirichlet prior
 						auto kappa = param[dir.param[0].th].dir_mean;
-						// cout << kappa << "kappa\n";
 						auto beta = ((dir.param.size()-1)/(kappa*kappa))-1;
 						
 						for(auto i = 0u; i < dir.param.size(); i++){
@@ -3038,14 +3066,14 @@ void Model::set_dirichlet()
 			for(auto dp : dir.param){
 				cout << param[dp.th].name << ", ";
 			}
-			cout << " Dirichlet params\n";
+			cout << " Dirichlet params" << endl;
 		}
 	}
 }
 
 
 /// If N-1 direchlet varaibles are set then this calculates the last missing value
-void Model::calculate_dirichlet_missing(vector <double> &param) const
+void Model::calculate_dirichlet_missing(vector <double> &param, bool warning) const
 {
 	for(const auto &dir : dirichlet){                       // Fills in dependent diriclet values
 		auto sum = 0.0;				
@@ -3053,7 +3081,7 @@ void Model::calculate_dirichlet_missing(vector <double> &param) const
 			sum += param[dir.param[j].th];
 		}
 		
-		if(sum > 1) emsg("Dirichlet varaibles out of range");
+		if(sum > 1 && warning == true) emsg("Dirichlet varaibles out of range");
 		param[dir.param[0].th] = 1-sum;
 	}
 }
@@ -3283,7 +3311,7 @@ string Model::print_prior(const unsigned int p) const
 string Model::print() const
 {                      
 	stringstream ss;
-                
+ 
 	switch(details.siminf){
 		case SIMULATE:
 			ss << "Parameters:" << endl;
@@ -3327,11 +3355,7 @@ string Model::print() const
 	ss << endl;
 		
 	ss << "Compartments:" << endl; 
-	auto num = 0u;
-	for(const auto &co : comp){
-		ss << num << "  "; num++;
-		for(auto tr : co.trans) ss << tr << ","; ss << "   ";
-			
+	for(const auto &co : comp){	
 		ss << "  " << co.name;
 		if(co.num != UNSET && co.num > 0) ss << co.num;
 		if(co.shape != UNSET){
@@ -3348,16 +3372,14 @@ string Model::print() const
 		}
 		
 		auto th = co.infectivity_param;
-		if(param[th].name != "zero") ss << "  Infectivity: " << param[th].name;
+		if(param[th].name != "zero") ss << "  Infectivity: '" << param[th].name << "'";
 		if(co.mean_dep != "") ss << "  Dependency: " << co.mean_dep;
 		ss << endl; 		
 	}
 	ss << endl;
 	
 	ss << "Transitions:" << endl; 
-	auto num2 = 0u;
 	for(const auto &tr : trans){
-		ss << num2 << "   " << tr.from << "->" << tr.to << "   "; num2++;
 		const auto &coi = comp[tr.from];
 		const auto &cof = comp[tr.to];
 		
@@ -3384,7 +3406,7 @@ string Model::print() const
 		ss << "Probability of reaching:" << endl; 
 		for(auto pr = 0u; pr < prob_reach.size(); pr++){
 			auto probr = prob_reach[pr];
-			ss << "  Name = " << probr.name << "   Compartment = " << comp[probr.comp].name << endl;
+			ss << "  Name = " << probr.name << "   Compartment = " << comp[probr.comps[0]].name << endl;
 		}
 	}
 	
@@ -3532,7 +3554,7 @@ vector <unsigned int> Model::trans_comp_divide(unsigned int tr, unsigned int dir
 	if(false){
 		cout << trans[tr].name << ":   ";
 		for(auto c = 0u; c < comp.size(); c++) cout << comp[c].name << ":" << map[c] << ", ";
-		cout << "\n"; 
+		cout << endl; 
 	}
 	
 	vector <unsigned int> clist;

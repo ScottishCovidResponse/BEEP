@@ -89,7 +89,7 @@ void MC3::run()
 	
 	model_evidence();                                         // Calculates the model evidence
 
-	output.generate_graphs(part_plot,invT_final);	            // Draws the final pdf
+	output.generate_graphs(part_plot,invT_final);	            // Generates visualisation
 
 	diagnostics();                                            // Outputs diagnostic information
 }
@@ -501,7 +501,7 @@ void MC3::find_nchain_optimum() const
 				if(j == jmax) break;
 			}
 		
-			cout << ch << " " << invT_fin << " " << nch << " Answer\n";
+			cout << ch << " " << invT_fin << " " << nch << " Answer " << endl;
 			/*
 			for(auto c = 0u; c < nch; c++){
 				auto kap = double(c)/(nch-1);
@@ -509,7 +509,6 @@ void MC3::find_nchain_optimum() const
 				cout << c << " " <<  invT << " " << stat_new[c].CImin << " " << stat_new[c].CImax << " CI answer" << endl;
 			}
 			*/
-			cout << "\n";
 		}
 	}
 }

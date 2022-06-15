@@ -150,83 +150,10 @@ void MVN::calculate_cholesky_matrix()
 {	
 	auto fail = 0u;
 
-	auto fl=0u;
 	do{
-		if(true){ // Algorithm 1
-			cholesky_matrix.resize(nvar);
-			for(auto v1 = 0u; v1 < nvar; v1++) cholesky_matrix[v1].resize(nvar);
-			
-			for(auto i = 0u; i < nvar; i++) {
-				for(auto j = 0u; j <= i; j++) {
-					auto sum = 0.0; for(auto k = 0u; k < j; k++) sum += cholesky_matrix[i][k]*cholesky_matrix[j][k];
-
-					if (i == j) cholesky_matrix[i][j] = sqrt(M[i][i] - sum);
-					else cholesky_matrix[i][j] = (1.0/cholesky_matrix[j][j]*(M[i][j] - sum));
-				}
-			}
-		}
-		else{    // Algorithm 2
-			vector <vector <double> > A;
-			A.resize(nvar);
-			cholesky_matrix.resize(nvar);
-			for(auto v1 = 0u; v1 < nvar; v1++){
-				A[v1].resize(nvar);
-				cholesky_matrix[v1].resize(nvar);
-				for(auto v2 = 0u; v2 < nvar; v2++){
-					A[v1][v2] = M[v1][v2];
-					if(v1 == v2) cholesky_matrix[v1][v2] = 1; else cholesky_matrix[v1][v2] = 0;
-				}
-			}
-
-			vector < vector <double> > Lch, Tch;
-			Lch.resize(nvar); Tch.resize(nvar);
-			for(auto i = 0u; i < nvar; i++){ Lch[i].resize(nvar); Tch[i].resize(nvar);}
+		cholesky_matrix = calculate_cholesky(M);
 		
-			for(auto i = 0u; i < nvar; i++){
-				for(auto v1 = 0u; v1 < nvar; v1++){
-					for(auto v2 = 0u; v2 < nvar; v2++){
-						if(v1 == v2) Lch[v1][v2] = 1; else Lch[v1][v2] = 0;
-					}
-				}
-
-				double aii = A[i][i];
-				Lch[i][i] = sqrt(aii);
-				for(auto j = i+1; j < nvar; j++){
-					Lch[j][i] = A[j][i]/sqrt(aii);
-				}
-
-				for(auto ii = i+1; ii < nvar; ii++){
-					for(auto jj = i+1; jj < nvar; jj++){
-						A[jj][ii] -= A[ii][i]*A[jj][i]/aii;
-					}
-				}
-				A[i][i] = 1;
-				for(auto j = i+1; j < nvar; j++){ A[j][i] = 0; A[i][j] = 0;}
-
-				for(auto v1 = 0u; v1 < nvar; v1++){
-					for(auto v2 = 0u; v2 < nvar; v2++){
-						double sum = 0u; for(auto ii = 0u; ii < nvar; ii++) sum += cholesky_matrix[v1][ii]*Lch[ii][v2];
-					
-						Tch[v1][v2] = sum;
-					}
-				}
-
-				for(auto v1 = 0u; v1 < nvar; v1++){
-					for(auto v2 = 0u; v2 < nvar; v2++){
-						cholesky_matrix[v1][v2] = Tch[v1][v2];
-					}
-				}
-			}
-		}
-		
-		fl = 0;
-		for(auto v1 = 0u; v1 < nvar; v1++){
-			for(auto v2 = 0u; v2 < nvar; v2++){
-				if(std::isnan(cholesky_matrix[v1][v2])) fl = 1;
-			}
-		}
-		
-		if(fl == 1){                                                  // Reduces correlations to allow for convergence
+		if(cholesky_matrix[0][0] == UNSET){                // Reduces correlations to allow for convergence
 			for(auto v1 = 0u; v1 < nvar; v1++){
 				for(auto v2 = 0u; v2 < nvar; v2++){
 					if(v1 != v2) M[v1][v2] /= 2;
@@ -235,7 +162,6 @@ void MVN::calculate_cholesky_matrix()
 			
 			int core; MPI_Comm_rank(MPI_COMM_WORLD,&core);
 			if(core == 0) cout << "Cholesky convergence" << endl;
-			
 			
 			fail++;
 			if(fail == 10 && core == 0){
@@ -248,7 +174,8 @@ void MVN::calculate_cholesky_matrix()
 				emsg("Could not get Cholesky convergence");
 			}
 		}
-	}while(fl == 1);
+		else break;
+	}while(true);
 
 	inv_M = invert_matrix(M);
 }
@@ -339,7 +266,7 @@ Status MVN::MH_PMCMC(double al, const double self_ac, const ParamUpdate pup)
 	}
 	
 	ntr++; nac += al;
-	//cout << self_ac << " " << size << " " << al << "al\n";
+
 	if(ran() < al) return SUCCESS;
 	
 	return FAIL;

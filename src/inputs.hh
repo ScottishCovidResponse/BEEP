@@ -53,7 +53,7 @@ class Inputs
 		void find_invT(double &invT);
 		void find_sd(double &sd);
 		void find_nrun(unsigned int &nrun);
-		void find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample_final, const unsigned int core, const unsigned int ncore, const unsigned int nvar);
+		void find_algorithm(MLAlg &algorithm, unsigned int &npart, unsigned int &G, double &cpu_time, unsigned int &P, unsigned int &nsample, const unsigned int core, const unsigned int ncore, const unsigned int nvar);
 		void find_stateuncer(StateUncertainty &stateuncer);
 		void find_nparticle(unsigned int &npart, unsigned int &Ntot, unsigned int &N, const unsigned int nrun, const unsigned int ncore);
 		void find_cor_max(double &cor_max, double &cor_max_last);
@@ -165,7 +165,6 @@ const vector<string> definedparams = {                                // A list 
 		"ESS_min",
 		"geo_mixing_matrix",
 		"geo_mixing_modify",
-		"GR_max",
 		"init_pop",
 		"invT",
 		"invT_start",

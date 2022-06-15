@@ -83,9 +83,9 @@ void ABCMBP::run()
 
 	if(mpi.core == 0) model_evidence(generation);             // Calculates the model evidence
 	
-	paramprop.output_prop_vec();
+	//paramprop.output_prop_vec();
 
-	output.generation_results(generation);                    // Generates pdf of graphs
+	output.generation_results(generation);                    // Generates visualisation
 
 	output.generate_graphs(part,UNSET);	
 	
@@ -155,17 +155,6 @@ void ABCMBP::EF_cutoff(Generation &gen, vector <Particle> &part, vector <unsigne
 		//}		
 
 		EFmin = partef[int(0.025*Ntot)].EF; EFmax = partef[int(0.975*Ntot)].EF;
-	
-	/*
-		for(i = 0; i < npart; i++) cout << EFtot[i] << ","; cout << "EFlist" << endl << flush;
-		
-		cout << EFcut << " EF cut\n";
-		auto num = 0u;
-		for(i = 0; i < npart; i++){
-				if(EFtot[i] < EFcut) num++;
-		}
-		cout << npart << " " << num << "  num\n";
-	*/
 	
 		if(true){   // Copies and particles
 			for(auto j = 0u; j < Ntot/2; j++){ 
