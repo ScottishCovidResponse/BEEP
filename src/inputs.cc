@@ -33,7 +33,7 @@ Inputs::Inputs(int argc, char** argv)
 		inputfilename = cmdlineparams["inputfile"];
 	}
 
-	if (ghc::filesystem::path(inputfilename).extension() != "toml")
+	if (ghc::filesystem::path(inputfilename).extension() != ".toml")
 	{
 		cout << "input file not a toml file trying to use datapipeline api" << endl;
 		try
