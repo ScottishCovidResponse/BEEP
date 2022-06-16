@@ -14,7 +14,7 @@ using namespace std;
 #include "mpi.hh"
 
 /// Initialises data
-Data::Data(Inputs &inputs, const Details &details, Mpi &mpi, FairDataPipeline::DataPipeline::sptr dp) : datapipeline(dp), data_directory(inputs.find_string("datadir","UNSET")), details(details), inputs(inputs)
+Data::Data(Inputs &inputs, const Details &details, Mpi &mpi): datapipeline(inputs.datapipeline), data_directory(inputs.find_string("datadir","UNSET")), details(details), inputs(inputs)
 {
 	// The data directory
 	if(data_directory == "UNSET") emsgroot("'data_directory' must be set.");

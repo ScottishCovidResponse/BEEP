@@ -128,7 +128,6 @@ class Inputs
 	
 		map<string,string> cmdlineparams;                                 // A map of all the parameters entered on the command line
 		InputData *basedata;
-		bool _use_pipeline = false;
 }; 
 
 const vector<string> definedparams = {                                // A list of all supported commands

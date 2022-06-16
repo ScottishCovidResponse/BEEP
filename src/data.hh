@@ -17,7 +17,7 @@ using namespace tinyxml2;
 class Data
 {
 	public:
-		Data(Inputs &inputs, const Details &details, Mpi &mpi, FairDataPipeline::DataPipeline::sptr dp = nullptr);
+		Data(Inputs &inputs, const Details &details, Mpi &mpi);
 
 		FairDataPipeline::DataPipeline::sptr datapipeline;             // DataPipeline object
 		
