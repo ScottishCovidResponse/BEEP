@@ -1860,7 +1860,7 @@ Table Data::load_table_from_datapipeline(const string file, const bool heading, 
 	if (!datapipeline) emsgroot("Data Pipeline not initialised");
 	string filename = "";
 	try {
-		filename = datapipeline->link_read(file_).string();
+		filename = datapipeline->link_read(file_);
 	}
 	catch (const std::exception& e) {
 		std::ostringstream oss;

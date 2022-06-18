@@ -49,7 +49,7 @@ Inputs::Inputs(int argc, char** argv)
 			cout << "initialising Pipeline" << endl;
 			datapipeline = FairDataPipeline::DataPipeline::construct(config_path.string(), script_path.string(), token);
 			cout << "reading dataproduct " << inputfilename << endl;
-			inputfilename = datapipeline->link_read(inputfilename).string();
+			inputfilename = datapipeline->link_read(inputfilename);
 		}
 		catch (const std::exception& e) {
 		std::ostringstream oss;

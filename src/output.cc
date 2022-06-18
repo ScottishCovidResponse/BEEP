@@ -2975,7 +2975,7 @@ void Output::simulated_data(const vector <double> &obs_value, const string dir) 
 
 			if(data.datapipeline){
 				try {
-					filefull = data.datapipeline->link_write(file).string();
+					filefull = data.datapipeline->link_write(file);
 					file = ghc::filesystem::path(filefull).filename().string();
 				}
 				catch (const std::exception& e) {
@@ -3778,7 +3778,7 @@ void Output::generate_ouput_for_pipeline(){
 	ghc::filesystem::path output_directory = ghc::filesystem::path(details.output_directory);
 
 	try{
-		string output_filename = data.datapipeline->link_write(data_product).string();
+		string output_filename = data.datapipeline->link_write(data_product);
 		if(output_type == "zip")
 		{
 
